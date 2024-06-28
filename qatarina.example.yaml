@@ -1,0 +1,24 @@
+server:
+  fqdn: "qatarina.example.com"
+  host: "localhost"
+  port: 4597
+
+db:
+  host: "localhost"
+  port: 5432
+  username: "qatarina"
+  password: "qatarina123"
+  database: "qatarina"
+  options: "sslmode=disable&connect_timeout=30"
+  conn_max_lifetime: 3600
+
+admin:
+  email: "administrator@nndi.cloud"
+  username: "admin"
+  password: "base64-encoded"
+  enabled: true
+
+platform:
+  securityKey: "some-security-key-base-64"
+  allowAnonymousTestCaseSubmission: false
+  disableSignup: true

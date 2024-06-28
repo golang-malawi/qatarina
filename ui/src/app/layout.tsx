@@ -12,7 +12,7 @@ import Sidebar from "@/components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TeamTestKit",
+  title: "QATARINA",
   description: "Next-Generation platform for Testing Software",
 };
 
@@ -24,7 +24,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-
         <Grid
           templateAreas={`"header header"
                   "nav main"
@@ -37,7 +36,7 @@ export default function RootLayout({
           fontWeight='bold'
         >
           <GridItem pl='2' area={'header'}>
-            TEAM TEST KIT
+            QATARINA
           </GridItem>
           <GridItem pl='2' area={'nav'}>
             <Sidebar />
