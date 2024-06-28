@@ -1,6 +1,16 @@
 package datastore
 
-type UserRepository interface{}
+import (
+	"context"
+
+	"github.com/golang-malawi/qatarina/internal/models"
+)
+
+type UserRepository interface {
+	FindAll(context.Context) ([]models.User, error)
+	FindAllPaginated(ctx context.Context, limit, offset int) ([]models.User, error)
+	FindOneByUsername(context.Context, string) (*models.User, error)
+}
 
 type OrgRepository interface{}
 

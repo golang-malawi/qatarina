@@ -19,13 +19,13 @@ type Config struct {
 }
 
 type DatabaseConfiguration struct {
-	Host               string `mapstructure:"host" envconfig:"QATARINA_DB_HOST"`                            // :               "localhost",
-	Username           string `mapstructure:"username" envconfig:"QATARINA_DB_USERNAME"`                    // :           "postgres",
-	Password           string `mapstructure:"password" envconfig:"QATARINA_DB_PASSWORD"`                    // :           "postgres",
-	Database           string `mapstructure:"database" envconfig:"QATARINA_DB_DATABASE"`                    // :           "convoy",
-	Options            string `mapstructure:"options" envconfig:"QATARINA_DB_OPTIONS"`                      // :
-	Port               int    `mapstructure:"port" envconfig:"QATARINA_DB_PORT"`                            // :               5432,
-	SetConnMaxLifetime int    `mapstructure:"conn_max_lifetime" envconfig:"QATARINA_DB_CONN_MAX_LIFE_TIME"` // : 3600,
+	Host               string `mapstructure:"host" envconfig:"QATARINA_DB_HOST"`
+	Username           string `mapstructure:"username" envconfig:"QATARINA_DB_USERNAME"`
+	Password           string `mapstructure:"password" envconfig:"QATARINA_DB_PASSWORD"`
+	Database           string `mapstructure:"database" envconfig:"QATARINA_DB_DATABASE"`
+	Options            string `mapstructure:"options" envconfig:"QATARINA_DB_OPTIONS"`
+	Port               int    `mapstructure:"port" envconfig:"QATARINA_DB_PORT"`
+	SetConnMaxLifetime int    `mapstructure:"conn_max_lifetime" envconfig:"QATARINA_DB_CONN_MAX_LIFE_TIME"`
 }
 
 type HTTPServerConfiguration struct {
