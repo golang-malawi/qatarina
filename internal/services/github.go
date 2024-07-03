@@ -10,7 +10,7 @@ import (
 
 type GitHubProjectFetcher struct {
 	clientSecret string
-	authSettings pbsettings.AuthProviderConfig
+	authSettings any
 	client       *github.Client
 }
 

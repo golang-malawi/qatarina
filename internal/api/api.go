@@ -30,7 +30,11 @@ func NewAPI(config *config.Config) *API {
 	}
 }
 
-func routes(app *fiber.App) {
+func (a *API) routes(app *fiber.App) {
+	app.Get("/healthz", a.getSystemHealthz)
+	app.Get("/metrics", a.getSystemMetrics)
+	app.Get("/system/info", a.getSystemInfo)
+
 	root := app.Group("/v1")
 
 	usersV1 := root.Group("/users")

@@ -23,9 +23,15 @@ func init() {
 	// rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "base project directory eg. github.com/spf13/")
 	rootCmd.PersistentFlags().Bool("vvv", true, "Verbose output")
 
+	newUserCmd.Flags().String("name", "", "Fullname or displayname of the user")
+	newUserCmd.Flags().String("email", "", "Email of the user to be used for login")
+	newUserCmd.Flags().String("password", "", "Password of the user")
+	userCmd.AddCommand(newUserCmd)
+
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(adminCmd)
+	rootCmd.AddCommand(userCmd)
 }
 
 var rootCmd = &cobra.Command{

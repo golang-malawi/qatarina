@@ -3,6 +3,14 @@ server:
   host: "localhost"
   port: 4597
 
+auth:
+  signup_enabled: true
+  require_verified_accounts: true
+  max_login_attempts: 3
+  jwt_secret_key: "secret-key"
+  jwt_issuer: "qatarina.example.com"
+  jwt_expiry_timeout: 36000
+
 db:
   host: "localhost"
   port: 5432
