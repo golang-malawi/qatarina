@@ -32,6 +32,8 @@ var migrateCmd = &cobra.Command{
 		goose.SetDialect("postgres")
 		goose.SetBaseFS(db.MigrationsFS) //
 
+		dbConn.MustExec("SET search_path TO public;")
+
 		if err != nil {
 			panic("failed to connect database")
 		}

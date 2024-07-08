@@ -2,5 +2,5 @@ package ui
 
 import "embed"
 
-//go:embed "dist:all"
+//go:embed "all:dist"
 var FrontendFS embed.FS

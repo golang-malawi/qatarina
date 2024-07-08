@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
-	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/datastore"
 	"github.com/jackc/pgx/v5"
@@ -30,15 +29,8 @@ func NewAPI(config *config.Config) *API {
 	}
 }
 
-func (a *API) routes(app *fiber.App) {
-	app.Get("/healthz", a.getSystemHealthz)
-	app.Get("/metrics", a.getSystemMetrics)
-	app.Get("/system/info", a.getSystemInfo)
-
-	root := app.Group("/v1")
-
-	usersV1 := root.Group("/users")
-	apiv1.UsersRoutes(usersV1)
+func (api *API) registerRoutes() {
+	api.routes()
 	// projectsV1 := root.Group("/projects")
 	// apiv1.ProjectsRoutes(projectsV1)
 
@@ -55,6 +47,7 @@ func (a *API) routes(app *fiber.App) {
 }
 
 func (api *API) Start(address string) error {
+	api.registerRoutes()
 	api.logger.Debug("Starting API on ", "address", address)
 	return api.app.Listen(address)
 }
