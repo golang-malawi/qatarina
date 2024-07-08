@@ -5,21 +5,23 @@ go 1.22.3
 require (
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/google/go-github/v62 v62.0.0
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
 	github.com/lucasepe/homedir v0.0.0-20190526081923-f2b92ef978a0
 	github.com/pressly/goose/v3 v3.21.1
 	github.com/riverqueue/river v0.8.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.8.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
+	github.com/sqlc-dev/pqtype v0.3.0
 )
 
 require (
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
