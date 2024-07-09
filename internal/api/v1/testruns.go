@@ -119,3 +119,43 @@ func DeleteTestRun(datastore.TestRunService) fiber.Handler {
 		return problemdetail.NotImplemented(c, "failed to delete TestRun")
 	}
 }
+
+// PassTestRun godoc
+//
+//	@ID				PassTestRun
+//	@Summary		Mark a Test Run as passed
+//	@Description	Mark a Test Run as passed
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string		true	"Test Run ID"
+//	@Param			request		body		interface{}	true	"Test Run update data"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/test-runs/{testRunID}/passed [post]
+func PassTestRun(datastore.TestRunService) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		return problemdetail.NotImplemented(ctx, "not yet implemented")
+	}
+}
+
+// FailTestRun godoc
+//
+//	@ID				FailTestRun
+//	@Summary		Mark a Test Run as failed
+//	@Description	Mark a Test Run as failed
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string		true	"Test Run ID"
+//	@Param			request		body		interface{}	true	"Test Run update data"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/test-runs/{testRunID}/failed [post]
+func FailTestRun(datastore.TestRunService) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		return problemdetail.NotImplemented(ctx, "not yet implemented")
+	}
+}

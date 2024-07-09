@@ -50,6 +50,18 @@ func (api *API) routes() {
 		testPlansV1.Delete("/{testPlanID}", apiv1.DeleteTestPlan(api.TestPlansService))
 	}
 
+	testRunsV1 := router.Group("/v1/test-plans")
+	{
+		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
+		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
+		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService))
+		testRunsV1.Get("/{testRunID}", apiv1.GetOneTestRun(api.TestRunsService))
+		testRunsV1.Post("/{testRunID}", apiv1.UpdateTestRun(api.TestRunsService))
+		testRunsV1.Post("/{testRunID}/passed", apiv1.PassTestRun(api.TestRunsService))
+		testRunsV1.Post("/{testRunID}/failed", apiv1.FailTestRun(api.TestRunsService))
+		testRunsV1.Delete("/{testRunID}", apiv1.DeleteTestRun(api.TestRunsService))
+	}
+
 	testersV1 := router.Group("/v1/testers")
 	{
 		testersV1.Get("", apiv1.ListTesters(api.TesterService))
