@@ -37,9 +37,9 @@ func UpdateProject(datastore.ProjectRepository) fiber.Handler {
 	}
 }
 
-func InviteProject(datastore.ProjectRepository) fiber.Handler {
+func ImportProject(datastore.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to invite Project")
+		return problemdetail.NotImplemented(c, "failed to import Project")
 	}
 }
 
