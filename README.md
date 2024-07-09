@@ -22,7 +22,15 @@ The initial tech stack is as follows, we may eventually swap out parts of this s
 - Docker
 - TestContainers
 - WASM
-- Taskfile
+
+### Dev tools 
+
+You will need to have the following developer tools installed:
+
+- [SQLC](https://sqlc.dev)
+- [Swag](https://github.com/swaggo/swag)
+- [Taskfile](https://taskfile.dev)
+
 
 ## Integrations
 
