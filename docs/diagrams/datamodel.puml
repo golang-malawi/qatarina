@@ -1,0 +1,102 @@
+@startuml 'UAT Testing scenarios'
+
+User --> (Create a UAT / Testing Session)
+User --> (Invite Testers via E-mail)
+User --> (Create Test Scenario)
+User --> (Create Test Case)
+User --> (Assign Testers to Test Cases)
+User --> (List UAT / Testing Sessions)
+User --> (View Testing Session)
+User --> (View Test Session - Test Results)
+Tester --> (Complete Test Case)
+Tester --> (Add New Test Case)
+
+@enduml
+
+@startuml 'UAT-Testing-Classes'
+
+enum TestScenarioKind {
+    GENERAL_TESTING
+    ADHOC_TESTING
+    INTEGRATION_TESTING
+    USER_ACCEPTANCE_TESTING
+    REGRESSION_TESTING
+    SECURITY_TESTING
+    USER_INTERFACE_TESTING
+    TRIAGING
+}
+
+class User {
+    username: string
+    email: string
+}
+
+class Project{
+    title: String
+    description: String 
+    cover_picture: String 
+    project_url: String
+    is_active: boolean 
+    start_date: Date 
+    end_date: Date 
+}
+
+class TestSession {
+    id: String 
+    code: String
+    description: String 
+    starts_at: Date 
+    ends_at: Date 
+}
+
+class TestCase {
+    id: String 
+    is_draft: Boolean
+    code: String
+    description: String
+    num_results: integer
+    created_by: Tester
+    tags: List<String>
+}
+
+class TestCaseGroup {
+    id: String 
+    title: String 
+    code: String
+    test_cases: List<TestCase>
+}
+
+class TestScenario{}
+
+class TestResult{
+    test_case: TestCase
+    notes: String 
+    recorded_by: Tester 
+    reported_at: Timestamp
+    passed: boolean
+}
+
+class TesterGroup {
+    name: String 
+}
+
+class Tester extends User {
+    is_internal: boolean
+}
+
+class TestReport {}
+
+
+Project -> TestSession: has many
+TestSession *-- TestScenario: contains
+TestScenario -- TestScenarioKind: is of a
+TestScenario *-- TestCase: has many 
+TestCase --> TestResult: results in a
+TestCase --> Tester: created by
+TestCase --- TestCaseGroup: can be part of a
+TestResult --> Tester: reported by
+TestScenario <-- TestReport: reports on results of
+Tester <-- TesterGroup: formed by group of
+
+@enduml
+
