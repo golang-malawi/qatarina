@@ -12,7 +12,9 @@ func (api *API) routes() {
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))
 
-	usersV1 := router.Group("/v1/users")
+	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
+
+	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
 		usersV1.Get("", apiv1.ListUsers(api.UsersRepo))
 		usersV1.Post("", apiv1.CreateUser(api.UsersRepo))
@@ -23,7 +25,7 @@ func (api *API) routes() {
 		usersV1.Delete("/{userID}", apiv1.DeleteUser(api.UsersRepo))
 	}
 
-	projectsV1 := router.Group("/v1/projects")
+	projectsV1 := router.Group("/v1/projects", authenticationMiddleware)
 	{
 		projectsV1.Get("", apiv1.ListProjects(api.ProjectsRepo))
 		projectsV1.Post("", apiv1.CreateProject(api.ProjectsRepo))
@@ -33,7 +35,7 @@ func (api *API) routes() {
 		projectsV1.Delete("/{projectID}", apiv1.DeleteProject(api.ProjectsRepo))
 	}
 
-	testCasesV1 := router.Group("/v1/test-cases")
+	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService))
@@ -43,7 +45,7 @@ func (api *API) routes() {
 		testCasesV1.Delete("/{testCaseID}", apiv1.DeleteTestCase(api.TestCasesService))
 	}
 
-	testPlansV1 := router.Group("/v1/test-plans")
+	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
 	{
 		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService))
 		testPlansV1.Post("", apiv1.CreateTestPlan(api.TestPlansService))
@@ -53,7 +55,7 @@ func (api *API) routes() {
 		testPlansV1.Delete("/{testPlanID}", apiv1.DeleteTestPlan(api.TestPlansService))
 	}
 
-	testRunsV1 := router.Group("/v1/test-plans")
+	testRunsV1 := router.Group("/v1/test-plans", authenticationMiddleware)
 	{
 		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
 		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
@@ -65,7 +67,7 @@ func (api *API) routes() {
 		testRunsV1.Delete("/{testRunID}", apiv1.DeleteTestRun(api.TestRunsService))
 	}
 
-	testersV1 := router.Group("/v1/testers")
+	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
 	{
 		testersV1.Get("", apiv1.ListTesters(api.TesterService))
 		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService))
@@ -73,7 +75,7 @@ func (api *API) routes() {
 		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService))
 	}
 
-	settingsApi := router.Group("/v1/settings")
+	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
 	{
 		settingsApi.Get("", apiv1.GetSettings(api.Config))
 		settingsApi.Patch("/{settingKey}", apiv1.UpdateSetting(api.Config))
