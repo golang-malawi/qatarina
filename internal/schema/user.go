@@ -1,5 +1,12 @@
 package schema
 
+type UserCompact struct {
+	ID          int64  `json:"id"`
+	DisplayName string `json:"displayName"`
+	Email       string `json:"username"`
+	CreatedAt   string `json:"createdAt"`
+}
+
 type SignUpRequest struct{}
 
 type NewUserRequest struct{}
