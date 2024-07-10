@@ -37,6 +37,7 @@ var migrateCmd = &cobra.Command{
 		if err != nil {
 			panic("failed to connect database")
 		}
+		// TODO: support migrate down too and specifying a migration version
 		if err := goose.Up(dbConn.DB, "migrations"); err != nil { //
 			panic(err)
 		}

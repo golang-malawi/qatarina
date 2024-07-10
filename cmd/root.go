@@ -20,7 +20,6 @@ var (
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/qatarina.toml)")
-	// rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "l", "", "base project directory eg. github.com/spf13/")
 	rootCmd.PersistentFlags().Bool("vvv", true, "Verbose output")
 
 	newUserCmd.Flags().String("name", "", "Fullname or displayname of the user")
