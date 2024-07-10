@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users [get]
-func ListUsers(datastore.UserRepository) fiber.Handler {
+func ListUsers(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list users")
 	}
@@ -37,7 +37,7 @@ func ListUsers(datastore.UserRepository) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users/query [get]
-func SearchUsers(datastore.UserRepository) fiber.Handler {
+func SearchUsers(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search users")
 	}
@@ -56,7 +56,7 @@ func SearchUsers(datastore.UserRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users/{userID} [get]
-func GetOneUser(datastore.UserRepository) fiber.Handler {
+func GetOneUser(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one user")
 	}
@@ -75,7 +75,7 @@ func GetOneUser(datastore.UserRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users [post]
-func CreateUser(datastore.UserRepository) fiber.Handler {
+func CreateUser(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create user")
 	}
@@ -95,7 +95,7 @@ func CreateUser(datastore.UserRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users/{userID} [post]
-func UpdateUser(datastore.UserRepository) fiber.Handler {
+func UpdateUser(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update user")
 	}
@@ -115,7 +115,7 @@ func UpdateUser(datastore.UserRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users/invite/{email} [post]
-func InviteUser(datastore.UserRepository) fiber.Handler {
+func InviteUser(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to invite user")
 	}
@@ -134,7 +134,7 @@ func InviteUser(datastore.UserRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users/{userID} [delete]
-func DeleteUser(datastore.UserRepository) fiber.Handler {
+func DeleteUser(services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete user")
 	}

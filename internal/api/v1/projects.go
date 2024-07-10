@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/repository"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects [get]
-func ListProjects(datastore.ProjectRepository) fiber.Handler {
+func ListProjects(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list Projects")
 	}
@@ -37,7 +37,7 @@ func ListProjects(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/query [get]
-func SearchProjects(datastore.ProjectRepository) fiber.Handler {
+func SearchProjects(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search Projects")
 	}
@@ -56,7 +56,7 @@ func SearchProjects(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [get]
-func GetOneProject(datastore.ProjectRepository) fiber.Handler {
+func GetOneProject(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one Project")
 	}
@@ -75,7 +75,7 @@ func GetOneProject(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects [post]
-func CreateProject(datastore.ProjectRepository) fiber.Handler {
+func CreateProject(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create Project")
 	}
@@ -95,7 +95,7 @@ func CreateProject(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [post]
-func UpdateProject(datastore.ProjectRepository) fiber.Handler {
+func UpdateProject(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update Project")
 	}
@@ -114,7 +114,7 @@ func UpdateProject(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/import [post]
-func ImportProject(datastore.ProjectRepository) fiber.Handler {
+func ImportProject(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to import Project")
 	}
@@ -133,7 +133,7 @@ func ImportProject(datastore.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [delete]
-func DeleteProject(datastore.ProjectRepository) fiber.Handler {
+func DeleteProject(repository.ProjectRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete Project")
 	}

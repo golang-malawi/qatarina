@@ -16,23 +16,23 @@ func (api *API) routes() {
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
-		usersV1.Get("", apiv1.ListUsers(api.UsersRepo))
-		usersV1.Post("", apiv1.CreateUser(api.UsersRepo))
-		usersV1.Get("/query", apiv1.SearchUsers(api.UsersRepo))
-		usersV1.Get("/{userID}", apiv1.GetOneUser(api.UsersRepo))
-		usersV1.Post("/{userID}", apiv1.UpdateUser(api.UsersRepo))
-		usersV1.Post("/{email}", apiv1.InviteUser(api.UsersRepo))
-		usersV1.Delete("/{userID}", apiv1.DeleteUser(api.UsersRepo))
+		usersV1.Get("", apiv1.ListUsers(api.UserService))
+		usersV1.Post("", apiv1.CreateUser(api.UserService))
+		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
+		usersV1.Get("/{userID}", apiv1.GetOneUser(api.UserService))
+		usersV1.Post("/{userID}", apiv1.UpdateUser(api.UserService))
+		usersV1.Post("/{email}", apiv1.InviteUser(api.UserService))
+		usersV1.Delete("/{userID}", apiv1.DeleteUser(api.UserService))
 	}
 
 	projectsV1 := router.Group("/v1/projects", authenticationMiddleware)
 	{
-		projectsV1.Get("", apiv1.ListProjects(api.ProjectsRepo))
-		projectsV1.Post("", apiv1.CreateProject(api.ProjectsRepo))
-		projectsV1.Get("/query", apiv1.SearchProjects(api.ProjectsRepo))
-		projectsV1.Get("/{projectID}", apiv1.GetOneProject(api.ProjectsRepo))
-		projectsV1.Post("/{projectID}", apiv1.UpdateProject(api.ProjectsRepo))
-		projectsV1.Delete("/{projectID}", apiv1.DeleteProject(api.ProjectsRepo))
+		projectsV1.Get("", apiv1.ListProjects(api.ProjectsService))
+		projectsV1.Post("", apiv1.CreateProject(api.ProjectsService))
+		projectsV1.Get("/query", apiv1.SearchProjects(api.ProjectsService))
+		projectsV1.Get("/{projectID}", apiv1.GetOneProject(api.ProjectsService))
+		projectsV1.Post("/{projectID}", apiv1.UpdateProject(api.ProjectsService))
+		projectsV1.Delete("/{projectID}", apiv1.DeleteProject(api.ProjectsService))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)

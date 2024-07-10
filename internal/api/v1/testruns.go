@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs [get]
-func ListTestRuns(datastore.TestRunService) fiber.Handler {
+func ListTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list TestRuns")
 	}
@@ -37,7 +37,7 @@ func ListTestRuns(datastore.TestRunService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/query [get]
-func SearchTestRuns(datastore.TestRunService) fiber.Handler {
+func SearchTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestRuns")
 	}
@@ -56,7 +56,7 @@ func SearchTestRuns(datastore.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID} [get]
-func GetOneTestRun(datastore.TestRunService) fiber.Handler {
+func GetOneTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestRun")
 	}
@@ -75,7 +75,7 @@ func GetOneTestRun(datastore.TestRunService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs [post]
-func CreateTestRun(datastore.TestRunService) fiber.Handler {
+func CreateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create TestRun")
 	}
@@ -95,7 +95,7 @@ func CreateTestRun(datastore.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID} [post]
-func UpdateTestRun(datastore.TestRunService) fiber.Handler {
+func UpdateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestRun")
 	}
@@ -114,7 +114,7 @@ func UpdateTestRun(datastore.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID} [delete]
-func DeleteTestRun(datastore.TestRunService) fiber.Handler {
+func DeleteTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestRun")
 	}
@@ -134,7 +134,7 @@ func DeleteTestRun(datastore.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID}/passed [post]
-func PassTestRun(datastore.TestRunService) fiber.Handler {
+func PassTestRun(services.TestRunService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		return problemdetail.NotImplemented(ctx, "not yet implemented")
 	}
@@ -154,7 +154,7 @@ func PassTestRun(datastore.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID}/failed [post]
-func FailTestRun(datastore.TestRunService) fiber.Handler {
+func FailTestRun(services.TestRunService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		return problemdetail.NotImplemented(ctx, "not yet implemented")
 	}

@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases [get]
-func ListTestCases(datastore.TestCaseService) fiber.Handler {
+func ListTestCases(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list TestCases")
 	}
@@ -37,7 +37,7 @@ func ListTestCases(datastore.TestCaseService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases/query [get]
-func SearchTestCases(datastore.TestCaseService) fiber.Handler {
+func SearchTestCases(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestCases")
 	}
@@ -56,7 +56,7 @@ func SearchTestCases(datastore.TestCaseService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases/{testCaseID} [get]
-func GetOneTestCase(datastore.TestCaseService) fiber.Handler {
+func GetOneTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestCase")
 	}
@@ -75,7 +75,7 @@ func GetOneTestCase(datastore.TestCaseService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases [post]
-func CreateTestCase(datastore.TestCaseService) fiber.Handler {
+func CreateTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create TestCase")
 	}
@@ -95,7 +95,7 @@ func CreateTestCase(datastore.TestCaseService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases/{testCaseID} [post]
-func UpdateTestCase(datastore.TestCaseService) fiber.Handler {
+func UpdateTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestCase")
 	}
@@ -114,7 +114,7 @@ func UpdateTestCase(datastore.TestCaseService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases/{testCaseID} [delete]
-func DeleteTestCase(datastore.TestCaseService) fiber.Handler {
+func DeleteTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestCase")
 	}

@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/testers [get]
-func ListTesters(datastore.TesterService) fiber.Handler {
+func ListTesters(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list Testers")
 	}
@@ -37,7 +37,7 @@ func ListTesters(datastore.TesterService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/testers.query [get]
-func SearchTesters(datastore.TesterService) fiber.Handler {
+func SearchTesters(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search Testers")
 	}
@@ -56,7 +56,7 @@ func SearchTesters(datastore.TesterService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/testers/{testerID} [get]
-func GetOneTester(datastore.TesterService) fiber.Handler {
+func GetOneTester(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one Tester")
 	}
@@ -76,7 +76,7 @@ func GetOneTester(datastore.TesterService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/testers/invite/{email} [post]
-func InviteTester(datastore.TesterService) fiber.Handler {
+func InviteTester(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to invite Tester")
 	}

@@ -1,4 +1,12 @@
-package datastore
+package services
+
+type UserService interface {
+	FindAll() ([]any, error)
+}
+
+type ProjectService interface {
+	FindAll() ([]any, error)
+}
 
 type TestCaseService interface {
 	FindAll() ([]any, error)

@@ -3,7 +3,7 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/datastore"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,7 +19,7 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans [get]
-func ListTestPlans(datastore.TestPlanService) fiber.Handler {
+func ListTestPlans(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list TestPlans")
 	}
@@ -37,7 +37,7 @@ func ListTestPlans(datastore.TestPlanService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans [get]
-func SearchTestPlans(datastore.TestPlanService) fiber.Handler {
+func SearchTestPlans(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestPlans")
 	}
@@ -56,7 +56,7 @@ func SearchTestPlans(datastore.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans/{testPlanID} [get]
-func GetOneTestPlan(datastore.TestPlanService) fiber.Handler {
+func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestPlan")
 	}
@@ -75,7 +75,7 @@ func GetOneTestPlan(datastore.TestPlanService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans [post]
-func CreateTestPlan(datastore.TestPlanService) fiber.Handler {
+func CreateTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create TestPlan")
 	}
@@ -95,7 +95,7 @@ func CreateTestPlan(datastore.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans/{testPlanID} [post]
-func UpdateTestPlan(datastore.TestPlanService) fiber.Handler {
+func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestPlan")
 	}
@@ -114,7 +114,7 @@ func UpdateTestPlan(datastore.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans/{testPlanID} [delete]
-func DeleteTestPlan(datastore.TestPlanService) fiber.Handler {
+func DeleteTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestPlan")
 	}
