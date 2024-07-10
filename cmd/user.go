@@ -1,9 +1,14 @@
 package cmd
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/golang-malawi/qatarina/internal/models"
+	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/spf13/cobra"
 )
 
@@ -26,14 +31,29 @@ var newUserCmd = &cobra.Command{
 			return fmt.Errorf("name, email and password cannot be nil or empty")
 		}
 
-		user := models.User{
-			ID:          0,
-			DisplayName: name.Value.String(),
-			Username:    email.Value.String(),
-			Password:    password.Value.String(),
+		nameparts := strings.SplitN(name.Value.String(), " ", 2)
+
+		user := dbsqlc.CreateUserParams{
+			FirstName:    nameparts[0],
+			LastName:     nameparts[1],
+			DisplayName:  sql.NullString{String: name.Value.String(), Valid: true},
+			Email:        email.Value.String(),
+			Password:     common.MustHashPassword(password.Value.String()),
+			IsActivated:  sql.NullBool{Bool: true, Valid: true},
+			IsReviewed:   sql.NullBool{Bool: true, Valid: true},
+			IsSuperAdmin: sql.NullBool{Bool: true, Valid: true},
+			IsVerified:   sql.NullBool{Bool: true, Valid: true},
+			CreatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+			UpdatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 		}
 
-		fmt.Println("creating user ", user)
+		queries := dbsqlc.New(qatarinaConfig.OpenDB())
+
+		_, err := queries.CreateUser(context.Background(), user)
+		if err != nil {
+			return fmt.Errorf("failed to create user got %v", err)
+		}
+		fmt.Println("created user with email", user.Email)
 		return nil
 	},
 }
