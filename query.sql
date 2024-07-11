@@ -5,6 +5,15 @@ ORDER BY created_at DESC;
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 
+-- name: UserExists :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1);
+
+-- name: FindUserLoginByEmail :one
+SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL;
+
+-- name: UpdateUserLastLogin :execrows
+UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL;
+
 -- name: CreateUser :execrows
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,
@@ -50,6 +59,18 @@ WHERE p.project_id = $1;
 
 -- name: ListTestCasesByCreator :many
 SELECT * FROM test_cases WHERE created_by_id = $1;
+
+-- name: IsTestCaseLinkedToProject :one
+SELECT EXISTS(
+    SELECT * FROM test_cases
+    INNER JOIN test_plans p ON p.test_case_id = test_cases.id
+    WHERE p.project_id = $1
+);
+
+-- name: CountTestCasesNotLinkedToProject :one
+SELECT COUNT(*) FROM test_cases
+RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id
+WHERE p.project_id IS NULL;
 
 -- name: CreateTestCase :execrows
 INSERT INTO test_cases (

@@ -14,6 +14,19 @@ import (
 	"github.com/lib/pq"
 )
 
+const countTestCasesNotLinkedToProject = `-- name: CountTestCasesNotLinkedToProject :one
+SELECT COUNT(*) FROM test_cases
+RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id
+WHERE p.project_id IS NULL
+`
+
+func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTestCasesNotLinkedToProject)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProject = `-- name: CreateProject :execrows
 INSERT INTO projects (
     title, description, version, is_active, is_public, website_url,
@@ -179,6 +192,31 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return result.RowsAffected()
 }
 
+const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
+SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
+`
+
+type FindUserLoginByEmailRow struct {
+	ID          int32
+	DisplayName sql.NullString
+	Email       string
+	Password    string
+	LastLoginAt sql.NullTime
+}
+
+func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindUserLoginByEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, findUserLoginByEmail, email)
+	var i FindUserLoginByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.Email,
+		&i.Password,
+		&i.LastLoginAt,
+	)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects WHERE id = $1
 `
@@ -260,6 +298,21 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one
+SELECT EXISTS(
+    SELECT test_cases.id, test_cases.kind, code, feature_or_module, title, test_cases.description, parent_test_case_id, is_draft, tags, test_cases.created_by_id, test_cases.created_at, test_cases.updated_at, p.id, project_id, assigned_to_id, p.created_by_id, updated_by_id, p.kind, p.description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, p.created_at, p.updated_at FROM test_cases
+    INNER JOIN test_plans p ON p.test_case_id = test_cases.id
+    WHERE p.project_id = $1
+)
+`
+
+func (q *Queries) IsTestCaseLinkedToProject(ctx context.Context, projectID int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseLinkedToProject, projectID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const listProjects = `-- name: ListProjects :many
@@ -523,4 +576,32 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows
+UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL
+`
+
+type UpdateUserLastLoginParams struct {
+	LastLoginAt sql.NullTime
+	ID          int32
+}
+
+func (q *Queries) UpdateUserLastLogin(ctx context.Context, arg UpdateUserLastLoginParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateUserLastLogin, arg.LastLoginAt, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const userExists = `-- name: UserExists :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1)
+`
+
+func (q *Queries) UserExists(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, userExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

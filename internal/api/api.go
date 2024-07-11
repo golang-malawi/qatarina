@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/repository"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/jackc/pgx/v5"
@@ -28,10 +29,14 @@ type API struct {
 }
 
 func NewAPI(config *config.Config) *API {
+
+	dbConn := dbsqlc.New(config.OpenDB())
+
 	return &API{
-		logger: slog.Default(),
-		app:    fiber.New(),
-		Config: config,
+		logger:      slog.Default(),
+		app:         fiber.New(),
+		Config:      config,
+		AuthService: services.NewAuthService(&config.Auth, dbConn),
 	}
 }
 
