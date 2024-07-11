@@ -2,7 +2,7 @@ QATARINA
 ========
 
 This is an experimental project to build tooling for Software Quality Assurance and User Acceptance Testing.
-We hope it will become the standard for such processes for teams. 
+We hope it will become the standard for such processes for teams.
 We have some exciting ideas to make it a good tool.
 
 So in the next 6 months we will be working on this as an experiment and trying to validate its existence.
@@ -14,11 +14,23 @@ So in the next 6 months we will be working on this as an experiment and trying t
 The initial tech stack is as follows, we may eventually swap out parts of this stack as the project grows.
 
 - Go 1.22+
-- PocketBase 
-- SQLite (because of PocketBase)
-- React
-  - NextJS
-  - ChakraUI
+  - Fiber
+  - pgx and sqlx
+  - Riverqueue
+- PostgreSQL 15+
+- VueJS with TypeScript
+- Docker
+- TestContainers
+- WASM
+
+### Dev tools 
+
+You will need to have the following developer tools installed:
+
+- [SQLC](https://sqlc.dev)
+- [Swag](https://github.com/swaggo/swag)
+- [Taskfile](https://taskfile.dev)
+
 
 ## Integrations
 

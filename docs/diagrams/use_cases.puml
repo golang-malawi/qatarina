@@ -1,0 +1,50 @@
+@startuml UserActions
+left to right direction
+User --- (Login)
+User --- (Initiate Password Reset)
+User --- (Change Password)
+User --- (Request Invite)
+User --- (Create Account / Sign Up)
+@enduml
+
+@startuml TestCaseUseCases
+left to right direction
+User --- (Create TestCase)
+User --- (Update TestCase)
+User --- (Delete TestCase)
+User --- (List TestCases)
+User --- (Search TestCases)
+User --- (Duplicate/Clone TestCase)
+' (Duplicate TestCase) ---> (Add TestCase to TestPlan): includes
+@enduml
+
+@startuml ProjectUseCases
+left to right direction
+User --- (Create Project)
+User --- (Update Project)
+User --- (Delete Project)
+User --- (List Project)
+User --- (Search Project)
+User --- (Import Project)
+User --- (Archive Project)
+@enduml
+
+@startuml UserAdminTasks
+left to right direction
+Admin --- (Create User)
+Admin --- (Invite User)
+Admin --- (Remove User)
+Admin --- (List Users)
+Admin --- (Search Users) 
+Admin --- (Assign Users to Project)
+@enduml
+
+@startuml TesterUsesCases
+left to right direction
+Admin --- (Create Tester)
+Admin --- (Invite Tester)
+Admin --- (Remove Tester)
+Admin --- (List Testers)
+Admin --- (Search Testers) 
+Admin --- (Fetch Testers By Project)
+@enduml

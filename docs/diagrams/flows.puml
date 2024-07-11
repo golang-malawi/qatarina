@@ -1,0 +1,13 @@
+@startuml
+
+start;
+:Authorize GitHub;
+:Select Repository;
+:Fetch Issues;
+:Generate draft Test Cases from Issues;
+:Fetch Commits;
+:Generate draft Test Cases from Commits;
+:Send Approval Request for Test Cases;
+stop
+
+@enduml
