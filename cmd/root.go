@@ -27,10 +27,14 @@ func init() {
 	newUserCmd.Flags().String("password", "", "Password of the user")
 	userCmd.AddCommand(newUserCmd)
 
+	testCaseImporterCmd.Flags().String("repo", "", "Repository directory path")
+	testCaseCmd.AddCommand(testCaseImporterCmd)
+
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(adminCmd)
 	rootCmd.AddCommand(userCmd)
+	rootCmd.AddCommand(testCaseCmd)
 }
 
 var rootCmd = &cobra.Command{

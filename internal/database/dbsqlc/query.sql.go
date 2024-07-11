@@ -8,10 +8,111 @@ package dbsqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+const createProject = `-- name: CreateProject :execrows
+INSERT INTO projects (
+    title, description, version, is_active, is_public, website_url,
+    github_url, trello_url, jira_url, monday_url,
+    owner_user_id, created_at, updated_at, deleted_at
+)
+VALUES(
+    $1, $2, $3, $4, $5, $6,
+    $7, $8, $9, $10,
+    $11, $12, $13, $14
+)
+`
+
+type CreateProjectParams struct {
+	Title       string
+	Description string
+	Version     sql.NullString
+	IsActive    sql.NullBool
+	IsPublic    sql.NullBool
+	WebsiteUrl  sql.NullString
+	GithubUrl   sql.NullString
+	TrelloUrl   sql.NullString
+	JiraUrl     sql.NullString
+	MondayUrl   sql.NullString
+	OwnerUserID int32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   sql.NullTime
+}
+
+func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createProject,
+		arg.Title,
+		arg.Description,
+		arg.Version,
+		arg.IsActive,
+		arg.IsPublic,
+		arg.WebsiteUrl,
+		arg.GithubUrl,
+		arg.TrelloUrl,
+		arg.JiraUrl,
+		arg.MondayUrl,
+		arg.OwnerUserID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.DeletedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const createTestCase = `-- name: CreateTestCase :execrows
+INSERT INTO test_cases (
+    id, kind, code, feature_or_module, title, description, parent_test_case_id,
+    is_draft, tags, created_by_id, created_at, updated_at
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11, $12
+)
+`
+
+type CreateTestCaseParams struct {
+	ID               uuid.UUID
+	Kind             TestKind
+	Code             string
+	FeatureOrModule  sql.NullString
+	Title            string
+	Description      string
+	ParentTestCaseID sql.NullInt32
+	IsDraft          sql.NullBool
+	Tags             []string
+	CreatedByID      int32
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+}
+
+func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createTestCase,
+		arg.ID,
+		arg.Kind,
+		arg.Code,
+		arg.FeatureOrModule,
+		arg.Title,
+		arg.Description,
+		arg.ParentTestCaseID,
+		arg.IsDraft,
+		pq.Array(arg.Tags),
+		arg.CreatedByID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
 
 const createUser = `-- name: CreateUser :execrows
 INSERT INTO users (
