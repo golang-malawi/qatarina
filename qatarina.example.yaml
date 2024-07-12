@@ -26,7 +26,6 @@ admin:
   password: "base64-encoded"
   enabled: true
 
-platform:
-  securityKey: "some-security-key-base-64"
-  allowAnonymousTestCaseSubmission: false
-  disableSignup: true
+logging:
+  file: "/var/log/qatarina.log"
+  level: "debug"

@@ -8,6 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
@@ -20,12 +21,14 @@ type AuthService interface {
 type authServiceImpl struct {
 	authConfig *config.AuthConfiguration
 	queries    *dbsqlc.Queries
+	logger     logging.Logger
 }
 
-func NewAuthService(authConfig *config.AuthConfiguration, db *dbsqlc.Queries) AuthService {
+func NewAuthService(authConfig *config.AuthConfiguration, db *dbsqlc.Queries, logger logging.Logger) AuthService {
 	return &authServiceImpl{
 		authConfig: authConfig,
 		queries:    db,
+		logger:     logger,
 	}
 }
 
@@ -43,10 +46,12 @@ func generateJWTToken(res *schema.LoginResponse, expireAfter int64) *jwt.Token {
 func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginResponse, error) {
 	user, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
 	if err != nil {
+		a.logger.Error("auth-service", "failed to process login request", "error", err)
 		return nil, err
 	}
 
 	if ok := common.CheckPasswordHash(request.Password, user.Password); !ok {
+		a.logger.Error("auth-service", "invalid password provided", "error", err)
 		return nil, fmt.Errorf("invalid email and password combination")
 	}
 
@@ -60,6 +65,7 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 	token := generateJWTToken(res, 3600)
 	tokenStr, err := token.SignedString([]byte(a.authConfig.JwtSecretKey))
 	if err != nil {
+		a.logger.Error("auth-service", "failed to create a token", "error", err)
 		return nil, fmt.Errorf("failed to generate auth token, got: %v", err)
 	}
 
