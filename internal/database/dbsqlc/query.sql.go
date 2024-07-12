@@ -27,7 +27,7 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
-const createProject = `-- name: CreateProject :execrows
+const createProject = `-- name: CreateProject :one
 INSERT INTO projects (
     title, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
@@ -37,7 +37,7 @@ VALUES(
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10,
     $11, $12, $13, $14
-)
+) RETURNING id
 `
 
 type CreateProjectParams struct {
@@ -57,8 +57,8 @@ type CreateProjectParams struct {
 	DeletedAt   sql.NullTime
 }
 
-func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, createProject,
+func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, createProject,
 		arg.Title,
 		arg.Description,
 		arg.Version,
@@ -74,13 +74,12 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 		arg.UpdatedAt,
 		arg.DeletedAt,
 	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
-const createTestCase = `-- name: CreateTestCase :execrows
+const createTestCase = `-- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
     is_draft, tags, created_by_id, created_at, updated_at
@@ -89,6 +88,7 @@ VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12
 )
+RETURNING id
 `
 
 type CreateTestCaseParams struct {
@@ -106,8 +106,8 @@ type CreateTestCaseParams struct {
 	UpdatedAt        sql.NullTime
 }
 
-func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, createTestCase,
+func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, createTestCase,
 		arg.ID,
 		arg.Kind,
 		arg.Code,
@@ -121,13 +121,12 @@ func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) 
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
-const createUser = `-- name: CreateUser :execrows
+const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,
     org_id, country_iso, city, address,
@@ -140,6 +139,7 @@ VALUES(
     $11, $12, $13, $14,
     $15, $16, $17, $18, $19
 )
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -164,8 +164,8 @@ type CreateUserParams struct {
 	DeletedAt        sql.NullTime
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, createUser,
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, createUser,
 		arg.FirstName,
 		arg.LastName,
 		arg.DisplayName,
@@ -186,10 +186,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.UpdatedAt,
 		arg.DeletedAt,
 	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one

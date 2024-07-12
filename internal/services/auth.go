@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -62,7 +63,7 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 		ExpiresAt:   0,
 	}
 
-	token := generateJWTToken(res, 3600)
+	token := generateJWTToken(res, time.Now().Add(time.Hour*6).Unix())
 	tokenStr, err := token.SignedString([]byte(a.authConfig.JwtSecretKey))
 	if err != nil {
 		a.logger.Error("auth-service", "failed to create a token", "error", err)
