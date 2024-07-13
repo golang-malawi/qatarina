@@ -3,7 +3,9 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-malawi/qatarina/internal/repository"
+	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
@@ -19,9 +21,15 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects [get]
-func ListProjects(repository.ProjectRepository) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to list Projects")
+func ListProjects(projectService services.ProjectService) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		projects, err := projectService.FindAll()
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
+		}
+		return ctx.JSON(fiber.Map{
+			"projects": projects,
+		})
 	}
 }
 
@@ -37,7 +45,7 @@ func ListProjects(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/query [get]
-func SearchProjects(repository.ProjectRepository) fiber.Handler {
+func SearchProjects(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search Projects")
 	}
@@ -56,7 +64,7 @@ func SearchProjects(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [get]
-func GetOneProject(repository.ProjectRepository) fiber.Handler {
+func GetOneProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one Project")
 	}
@@ -75,9 +83,21 @@ func GetOneProject(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects [post]
-func CreateProject(repository.ProjectRepository) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to create Project")
+func CreateProject(projectService services.ProjectService) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		var request schema.NewProjectRequest
+		_, err := common.ParseBodyThenValidate(ctx, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(ctx, "invalid data in the request", err)
+		}
+
+		project, err := projectService.Create(&request)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
+		}
+		return ctx.JSON(fiber.Map{
+			"project": project,
+		})
 	}
 }
 
@@ -95,7 +115,7 @@ func CreateProject(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [post]
-func UpdateProject(repository.ProjectRepository) fiber.Handler {
+func UpdateProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update Project")
 	}
@@ -114,7 +134,7 @@ func UpdateProject(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/import [post]
-func ImportProject(repository.ProjectRepository) fiber.Handler {
+func ImportProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to import Project")
 	}
@@ -133,7 +153,7 @@ func ImportProject(repository.ProjectRepository) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects/{projectID} [delete]
-func DeleteProject(repository.ProjectRepository) fiber.Handler {
+func DeleteProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete Project")
 	}
