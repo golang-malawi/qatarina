@@ -4,7 +4,6 @@
 ## Data Model
 
 
-
 ## Use Cases
 
 ![[]](./diagrams/UserActions.png)
@@ -40,3 +39,14 @@
 ## Configuration
 
 
+## Integrations
+
+We want to have the following integrations:
+
+- Google APIs: for access to Auth via Google, Google Sheets, Google Docs
+- GitHub APIs: for access to Auth via GitHub, GitHub Issues, Commit History, GitHub Actions
+- APIs for Task / Project Management platforms
+    - Trello
+    - JIRA
+    - Monday
+    - Asana

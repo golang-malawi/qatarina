@@ -23,7 +23,7 @@ The initial tech stack is as follows, we may eventually swap out parts of this s
 - TestContainers
 - WASM
 
-### Dev tools 
+### Dev tools
 
 You will need to have the following developer tools installed:
 
@@ -32,17 +32,24 @@ You will need to have the following developer tools installed:
 - [Taskfile](https://taskfile.dev)
 
 
-## Integrations
+## Building and running
 
-We want to have the following integrations:
+In order to build the server you can run
 
-- Google APIs: for access to Auth via Google, Google Sheets, Google Docs
-- GitHub APIs: for access to Auth via GitHub, GitHub Issues, Commit History, GitHub Actions
-- APIs for Task / Project Management platforms
-    - Trello
-    - JIRA
-    - Monday
-    - Asana
+```sh
+$ go build
+
+# Copy the configuration and edit with appropriate values
+$ cp qatarina.example.yaml qatarina.yaml
+
+# This runs migrations to setup the database
+$ ./qatarina migrate
+
+# The command below starts the web server
+$ ./qatarina server
+```
+
+More documentation about the project is in [./docs/](./docs/)
 
 ## Contributing
 
