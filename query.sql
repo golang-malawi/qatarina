@@ -35,6 +35,9 @@ SELECT * FROM projects ORDER BY created_at DESC;
 -- name: GetProject :one
 SELECT * FROM projects WHERE id = $1;
 
+-- name: DeleteProject :execrows
+DELETE FROM projects WHERE id = $1;
+
 -- name: CreateProject :one
 INSERT INTO projects (
     title, description, version, is_active, is_public, website_url,

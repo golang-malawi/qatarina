@@ -49,7 +49,7 @@ $ ./qatarina migrate
 $ ./qatarina server
 ```
 
-More documentation about the project is in [./docs/](./docs/)
+More documentation about the project is in [./docs/developer.md](./docs/developer.md)
 
 ## Contributing
 

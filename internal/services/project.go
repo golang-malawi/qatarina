@@ -53,5 +53,29 @@ func (s *projectServiceImpl) Create(request *schema.NewProjectRequest) (*dbsqlc.
 
 // FindAll implements ProjectService.
 func (s *projectServiceImpl) FindAll() ([]dbsqlc.Project, error) {
-	return s.db.ListProjects(context.Background())
+	if projects, err := s.db.ListProjects(context.Background()); err != nil {
+		s.logger.Error(s.name, "failed to fetch projects", "error", err)
+		return nil, err
+	} else {
+		return projects, nil
+	}
+}
+
+// FindByID implements ProjectService.
+func (s *projectServiceImpl) FindByID(projectID int64) (*dbsqlc.Project, error) {
+	if project, err := s.db.GetProject(context.Background(), int32(projectID)); err != nil {
+		s.logger.Error(s.name, "failed to fetch project", "projectID", projectID, "error", err)
+		return nil, err
+	} else {
+		return &project, nil
+	}
+}
+
+// DeleteProject implements ProjectService.
+func (s *projectServiceImpl) DeleteProject(projectID int64) error {
+	if _, err := s.db.DeleteProject(context.Background(), int32(projectID)); err != nil {
+		s.logger.Error(s.name, "failed to delete projects", "projectID", projectID, "error", err)
+		return err
+	}
+	return nil
 }
