@@ -2,7 +2,13 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
+	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
@@ -120,11 +126,11 @@ func DeleteTestRun(services.TestRunService) fiber.Handler {
 	}
 }
 
-// PassTestRun godoc
+// CommitTestRun godoc
 //
-//	@ID				PassTestRun
-//	@Summary		Mark a Test Run as passed
-//	@Description	Mark a Test Run as passed
+//	@ID				CommitTestRun
+//	@Summary		Mark a Test Run as committed
+//	@Description	Mark a Test Run as committed
 //	@Tags			test-runs
 //	@Accept			json
 //	@Produce		json
@@ -133,10 +139,25 @@ func DeleteTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID}/passed [post]
-func PassTestRun(services.TestRunService) fiber.Handler {
+//	@Router			/api/v1/test-runs/{testRunID}/commit [post]
+func CommitTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		return problemdetail.NotImplemented(ctx, "not yet implemented")
+		request := new(schema.CommitTestRunResult)
+		_, err := common.ParseBodyThenValidate(ctx, request)
+		if err != nil {
+			return problemdetail.ValidationErrors(ctx, "invalid data in the request", err)
+		}
+
+		testRunID := ctx.Params("testRunID", "")
+		if request.TestRunID != testRunID {
+			return problemdetail.BadRequest(ctx, "'test_run_id' in request body and parameter does not match")
+		}
+		request.UserID = authutil.GetAuthUserID(ctx)
+
+		testRun, err := testRunService.Commit(context.Background(), request)
+		return ctx.JSON(fiber.Map{
+			"testRun": testRun,
+		})
 	}
 }
 

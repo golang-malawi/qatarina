@@ -14,6 +14,49 @@ import (
 	"github.com/lib/pq"
 )
 
+const commitTestRunResult = `-- name: CommitTestRunResult :one
+UPDATE test_runs SET
+    tested_by_id = $2,
+    updated_at = $3,
+    result_state = $4,
+    is_closed = $5,
+    notes = $6,
+    tested_on = $7,
+    actual_result = $8,
+    expected_result = $9
+WHERE id = $1
+RETURNING id
+`
+
+type CommitTestRunResultParams struct {
+	ID             uuid.UUID
+	TestedByID     int32
+	UpdatedAt      sql.NullTime
+	ResultState    TestRunState
+	IsClosed       sql.NullBool
+	Notes          string
+	TestedOn       time.Time
+	ActualResult   sql.NullString
+	ExpectedResult sql.NullString
+}
+
+func (q *Queries) CommitTestRunResult(ctx context.Context, arg CommitTestRunResultParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, commitTestRunResult,
+		arg.ID,
+		arg.TestedByID,
+		arg.UpdatedAt,
+		arg.ResultState,
+		arg.IsClosed,
+		arg.Notes,
+		arg.TestedOn,
+		arg.ActualResult,
+		arg.ExpectedResult,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const countTestCasesNotLinkedToProject = `-- name: CountTestCasesNotLinkedToProject :one
 SELECT COUNT(*) FROM test_cases
 RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id
@@ -301,6 +344,18 @@ func (q *Queries) DeleteAllTestPlansInProject(ctx context.Context, projectID int
 	return result.RowsAffected()
 }
 
+const deleteAllTestRunsInProject = `-- name: DeleteAllTestRunsInProject :execrows
+DELETE FROM test_runs WHERE project_id = $1
+`
+
+func (q *Queries) DeleteAllTestRunsInProject(ctx context.Context, projectID int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteAllTestRunsInProject, projectID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteProject = `-- name: DeleteProject :execrows
 DELETE FROM projects WHERE id = $1
 `
@@ -319,6 +374,18 @@ DELETE FROM test_plans WHERE id = $1
 
 func (q *Queries) DeleteTestPlan(ctx context.Context, id int64) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteTestPlan, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteTestRun = `-- name: DeleteTestRun :execrows
+DELETE FROM test_runs WHERE id = $1
+`
+
+func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestRun, id)
 	if err != nil {
 		return 0, err
 	}
@@ -424,6 +491,37 @@ func (q *Queries) GetTestPlan(ctx context.Context, id int64) (TestPlan, error) {
 		&i.IsComplete,
 		&i.IsLocked,
 		&i.HasReport,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTestRun = `-- name: GetTestRun :one
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE id = $1
+`
+
+func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error) {
+	row := q.db.QueryRowContext(ctx, getTestRun, id)
+	var i TestRun
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.TestPlanID,
+		&i.TestCaseID,
+		&i.OwnerID,
+		&i.TestedByID,
+		&i.AssignedToID,
+		&i.AssigneeCanChangeCode,
+		&i.Code,
+		&i.ExternalIssueID,
+		&i.ResultState,
+		&i.IsClosed,
+		&i.Notes,
+		&i.ActualResult,
+		&i.ExpectedResult,
+		&i.Reactions,
+		&i.TestedOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -765,6 +863,241 @@ func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) (
 			&i.IsComplete,
 			&i.IsLocked,
 			&i.HasReport,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRuns = `-- name: ListTestRuns :many
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs ORDER BY created_at DESC
+`
+
+func (q *Queries) ListTestRuns(ctx context.Context) ([]TestRun, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRuns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRun
+	for rows.Next() {
+		var i TestRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.OwnerID,
+			&i.TestedByID,
+			&i.AssignedToID,
+			&i.AssigneeCanChangeCode,
+			&i.Code,
+			&i.ExternalIssueID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.Reactions,
+			&i.TestedOn,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunsAssignedToUser = `-- name: ListTestRunsAssignedToUser :many
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE assigned_to_id = $1
+`
+
+func (q *Queries) ListTestRunsAssignedToUser(ctx context.Context, assignedToID int32) ([]TestRun, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunsAssignedToUser, assignedToID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRun
+	for rows.Next() {
+		var i TestRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.OwnerID,
+			&i.TestedByID,
+			&i.AssignedToID,
+			&i.AssigneeCanChangeCode,
+			&i.Code,
+			&i.ExternalIssueID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.Reactions,
+			&i.TestedOn,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunsByOwner = `-- name: ListTestRunsByOwner :many
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE owner_id = $1
+`
+
+func (q *Queries) ListTestRunsByOwner(ctx context.Context, ownerID int32) ([]TestRun, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunsByOwner, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRun
+	for rows.Next() {
+		var i TestRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.OwnerID,
+			&i.TestedByID,
+			&i.AssignedToID,
+			&i.AssigneeCanChangeCode,
+			&i.Code,
+			&i.ExternalIssueID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.Reactions,
+			&i.TestedOn,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunsByPlan = `-- name: ListTestRunsByPlan :many
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE test_plan_id = $1
+`
+
+func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]TestRun, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunsByPlan, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRun
+	for rows.Next() {
+		var i TestRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.OwnerID,
+			&i.TestedByID,
+			&i.AssignedToID,
+			&i.AssigneeCanChangeCode,
+			&i.Code,
+			&i.ExternalIssueID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.Reactions,
+			&i.TestedOn,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunsByProject = `-- name: ListTestRunsByProject :many
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE project_id = $1
+`
+
+func (q *Queries) ListTestRunsByProject(ctx context.Context, projectID int32) ([]TestRun, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRun
+	for rows.Next() {
+		var i TestRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.OwnerID,
+			&i.TestedByID,
+			&i.AssignedToID,
+			&i.AssigneeCanChangeCode,
+			&i.Code,
+			&i.ExternalIssueID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.Reactions,
+			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

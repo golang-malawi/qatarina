@@ -115,6 +115,29 @@ VALUES (
 )
 RETURNING id;
 
+-- name: ListTestRuns :many
+SELECT * FROM test_runs ORDER BY created_at DESC;
+
+-- name: ListTestRunsByPlan :many
+SELECT * FROM test_runs WHERE test_plan_id = $1;
+
+-- name: ListTestRunsAssignedToUser :many
+SELECT * FROM test_runs WHERE assigned_to_id = $1;
+
+-- name: ListTestRunsByOwner :many
+SELECT * FROM test_runs WHERE owner_id = $1;
+
+-- name: ListTestRunsByProject :many
+SELECT * FROM test_runs WHERE project_id = $1;
+
+-- name: GetTestRun :one
+SELECT * FROM test_runs WHERE id = $1;
+
+-- name: DeleteTestRun :execrows
+DELETE FROM test_runs WHERE id = $1;
+
+-- name: DeleteAllTestRunsInProject :execrows
+DELETE FROM test_runs WHERE project_id = $1;
 
 -- name: CreateNewTestRun :one
 INSERT INTO test_runs (
@@ -125,4 +148,17 @@ VALUES (
 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
 'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
 )
+RETURNING id;
+
+-- name: CommitTestRunResult :one
+UPDATE test_runs SET
+    tested_by_id = $2,
+    updated_at = $3,
+    result_state = $4,
+    is_closed = $5,
+    notes = $6,
+    tested_on = $7,
+    actual_result = $8,
+    expected_result = $9
+WHERE id = $1
 RETURNING id;
