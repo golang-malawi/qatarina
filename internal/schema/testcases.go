@@ -25,5 +25,5 @@ type UpdateTestCaseRequest struct {
 
 type BulkCreateTestCases struct {
 	ProjectID int64                   `json:"project_id" validate:"required"`
-	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required"`
+	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required,min=1,max=100"`
 }
