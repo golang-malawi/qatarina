@@ -2,7 +2,12 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
@@ -75,9 +80,27 @@ func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans [post]
-func CreateTestPlan(services.TestPlanService) fiber.Handler {
+func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to create TestPlan")
+
+		request := new(schema.CreateTestPlan)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := testPlanService.Create(context.Background(), request)
+		if err != nil {
+			logger.Error("api-test-cases", "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test cases created",
+		})
 	}
 }
 

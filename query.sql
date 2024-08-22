@@ -86,3 +86,43 @@ VALUES (
     $8, $9, $10, $11, $12
 )
 RETURNING id;
+
+-- name: ListTestPlans :many
+SELECT * FROM test_plans ORDER BY created_at DESC;
+
+-- name: ListTestPlansByProject :many
+SELECT * FROM test_plans WHERE project_id = $1;
+
+-- name: GetTestPlan :one
+SELECT * FROM test_plans WHERE id = $1;
+
+-- name: DeleteTestPlan :execrows
+DELETE FROM test_plans WHERE id = $1;
+
+-- name: DeleteAllTestPlansInProject :execrows
+DELETE FROM test_plans WHERE project_id = $1;
+
+-- name: CreateTestPlan :one
+INSERT INTO test_plans (
+    project_id, assigned_to_id, created_by_id, updated_by_id,
+    kind, description, start_at, closed_at, scheduled_end_at,
+    num_test_cases, num_failures, is_complete, is_locked, has_report,
+    created_at, updated_at
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15
+)
+RETURNING id;
+
+
+-- name: CreateNewTestRun :one
+INSERT INTO test_runs (
+id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
+result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result
+)
+VALUES (
+$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
+)
+RETURNING id;

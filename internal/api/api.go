@@ -33,12 +33,18 @@ func NewAPI(config *config.Config) *API {
 	logger := logging.NewFromConfig(&config.Logging)
 
 	return &API{
+		logger:           logger,
 		app:              fiber.New(),
 		Config:           config,
-		logger:           logger,
 		AuthService:      services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:  services.NewProjectService(dbConn, logger),
 		TestCasesService: services.NewTestCaseService(dbConn, logger),
+		TestPlansService: services.NewTestPlanService(dbConn, logger),
+		TestRunsService:  services.NewTestRunService(dbConn, logger),
+		OrgRepo:          nil,
+		UserService:      nil,
+		TesterService:    nil,
+		TestersRepo:      nil,
 	}
 }
 

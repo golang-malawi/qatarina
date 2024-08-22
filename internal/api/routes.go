@@ -49,7 +49,7 @@ func (api *API) routes() {
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
 	{
 		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService))
-		testPlansV1.Post("", apiv1.CreateTestPlan(api.TestPlansService))
+		testPlansV1.Post("", apiv1.CreateTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService))
 		testPlansV1.Get("/{testPlanID}", apiv1.GetOneTestPlan(api.TestPlansService))
 		testPlansV1.Post("/{testPlanID}", apiv1.UpdateTestPlan(api.TestPlansService))

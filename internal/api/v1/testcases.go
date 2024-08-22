@@ -31,10 +31,9 @@ func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 			// TODO: log error
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test cases")
 		}
-		c.JSON(fiber.Map{
+		return c.JSON(fiber.Map{
 			"testCases": testCases,
 		})
-		return problemdetail.NotImplemented(c, "failed to list TestCases")
 	}
 }
 

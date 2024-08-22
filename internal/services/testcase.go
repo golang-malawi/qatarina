@@ -114,8 +114,8 @@ func (t *testCaseServiceImpl) DeleteByTestRunID(context.Context, string) error {
 }
 
 // FindAll implements TestCaseService.
-func (t *testCaseServiceImpl) FindAll(context.Context) ([]dbsqlc.TestCase, error) {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListTestCases(ctx)
 }
 
 // FindAllByProjectID implements TestCaseService.
