@@ -1,5 +1,7 @@
 package services
 
+import "context"
+
 type ProjectFetcherService interface {
-	FetchProjects() ([]string, error)
+	FetchProjects(context.Context) ([]string, error)
 }

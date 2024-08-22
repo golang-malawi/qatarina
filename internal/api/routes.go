@@ -39,6 +39,7 @@ func (api *API) routes() {
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService))
+		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Get("/{testCaseID}", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/{testCaseID}", apiv1.UpdateTestCase(api.TestCasesService))

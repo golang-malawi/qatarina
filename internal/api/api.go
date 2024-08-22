@@ -1,8 +1,6 @@
 package api
 
 import (
-	"log/slog"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -14,7 +12,7 @@ import (
 )
 
 type API struct {
-	logger           *slog.Logger
+	logger           logging.Logger
 	app              *fiber.App
 	Config           *config.Config
 	RiverClient      *river.Client[pgx.Tx]
@@ -35,11 +33,12 @@ func NewAPI(config *config.Config) *API {
 	logger := logging.NewFromConfig(&config.Logging)
 
 	return &API{
-		logger:          slog.Default(),
-		app:             fiber.New(),
-		Config:          config,
-		AuthService:     services.NewAuthService(&config.Auth, dbConn, logger),
-		ProjectsService: services.NewProjectService(dbConn, logger),
+		app:              fiber.New(),
+		Config:           config,
+		logger:           logger,
+		AuthService:      services.NewAuthService(&config.Auth, dbConn, logger),
+		ProjectsService:  services.NewProjectService(dbConn, logger),
+		TestCasesService: services.NewTestCaseService(dbConn, logger),
 	}
 }
 

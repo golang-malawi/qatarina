@@ -11,8 +11,11 @@ import (
 )
 
 type ProjectService interface {
-	Create(*schema.NewProjectRequest) (*dbsqlc.Project, error)
-	FindAll() ([]dbsqlc.Project, error)
+	Create(context.Context, *schema.NewProjectRequest) (*dbsqlc.Project, error)
+	FindAll(context.Context) ([]dbsqlc.Project, error)
+	FindByID(context.Context, int64) (*dbsqlc.Project, error)
+	Update(context.Context, *schema.UpdateProjectRequest) (*dbsqlc.Project, error)
+	DeleteProject(context.Context, int64) error
 }
 
 type projectServiceImpl struct {
@@ -30,7 +33,7 @@ func NewProjectService(db *dbsqlc.Queries, logger logging.Logger) ProjectService
 }
 
 // Create implements ProjectService.
-func (s *projectServiceImpl) Create(request *schema.NewProjectRequest) (*dbsqlc.Project, error) {
+func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProjectRequest) (*dbsqlc.Project, error) {
 	projectID, err := s.db.CreateProject(context.Background(), dbsqlc.CreateProjectParams{
 		Title:       request.Name,
 		Description: request.Description,
@@ -52,7 +55,7 @@ func (s *projectServiceImpl) Create(request *schema.NewProjectRequest) (*dbsqlc.
 }
 
 // FindAll implements ProjectService.
-func (s *projectServiceImpl) FindAll() ([]dbsqlc.Project, error) {
+func (s *projectServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.Project, error) {
 	if projects, err := s.db.ListProjects(context.Background()); err != nil {
 		s.logger.Error(s.name, "failed to fetch projects", "error", err)
 		return nil, err
@@ -62,7 +65,18 @@ func (s *projectServiceImpl) FindAll() ([]dbsqlc.Project, error) {
 }
 
 // FindByID implements ProjectService.
-func (s *projectServiceImpl) FindByID(projectID int64) (*dbsqlc.Project, error) {
+func (s *projectServiceImpl) FindByID(ctx context.Context, projectID int64) (*dbsqlc.Project, error) {
+	if project, err := s.db.GetProject(context.Background(), int32(projectID)); err != nil {
+		s.logger.Error(s.name, "failed to fetch project", "projectID", projectID, "error", err)
+		return nil, err
+	} else {
+		return &project, nil
+	}
+}
+
+// FindByID implements ProjectService.
+func (s *projectServiceImpl) Update(ctx context.Context, request *schema.UpdateProjectRequest) (*dbsqlc.Project, error) {
+	projectID := request.ID
 	if project, err := s.db.GetProject(context.Background(), int32(projectID)); err != nil {
 		s.logger.Error(s.name, "failed to fetch project", "projectID", projectID, "error", err)
 		return nil, err
@@ -72,7 +86,7 @@ func (s *projectServiceImpl) FindByID(projectID int64) (*dbsqlc.Project, error) 
 }
 
 // DeleteProject implements ProjectService.
-func (s *projectServiceImpl) DeleteProject(projectID int64) error {
+func (s *projectServiceImpl) DeleteProject(ctx context.Context, projectID int64) error {
 	if _, err := s.db.DeleteProject(context.Background(), int32(projectID)); err != nil {
 		s.logger.Error(s.name, "failed to delete projects", "projectID", projectID, "error", err)
 		return err

@@ -15,8 +15,8 @@ import (
 
 type AuthService interface {
 	SignIn(*schema.LoginRequest) (*schema.LoginResponse, error)
-	ResetPassword(email string) error
-	ChangePassword(*schema.ChangePasswordRequest) error
+	ResetPassword(ctx context.Context, email string) error
+	ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error
 }
 
 type authServiceImpl struct {
@@ -74,10 +74,10 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 	return res, nil
 }
 
-func (a *authServiceImpl) ResetPassword(email string) error {
+func (a *authServiceImpl) ResetPassword(ctx context.Context, email string) error {
 	panic("not implemented")
 }
 
-func (a *authServiceImpl) ChangePassword(request *schema.ChangePasswordRequest) error {
+func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error {
 	panic("not implemented")
 }

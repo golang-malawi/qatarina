@@ -14,8 +14,8 @@ type GitHubProjectFetcher struct {
 	client       *github.Client
 }
 
-func (g *GitHubProjectFetcher) FetchProjects() ([]string, error) {
-	repos, _, err := g.client.Repositories.ListByAuthenticatedUser(context.Background(), &github.RepositoryListByAuthenticatedUserOptions{
+func (g *GitHubProjectFetcher) FetchProjects(ctx context.Context) ([]string, error) {
+	repos, _, err := g.client.Repositories.ListByAuthenticatedUser(ctx, &github.RepositoryListByAuthenticatedUserOptions{
 		Type: "owner",
 	})
 	if _, ok := err.(*github.RateLimitError); ok {
@@ -30,6 +30,6 @@ func (g *GitHubProjectFetcher) FetchProjects() ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (g *GitHubProjectFetcher) ListIssues(project string) ([]any, error) {
+func (g *GitHubProjectFetcher) ListIssues(ctx context.Context, project string) ([]any, error) {
 	return nil, fmt.Errorf("failed to list issues")
 }

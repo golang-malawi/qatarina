@@ -2,6 +2,8 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -23,7 +25,7 @@ import (
 //	@Router			/api/v1/projects [get]
 func ListProjects(projectService services.ProjectService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		projects, err := projectService.FindAll()
+		projects, err := projectService.FindAll(context.Background())
 		if err != nil {
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
@@ -91,7 +93,7 @@ func CreateProject(projectService services.ProjectService) fiber.Handler {
 			return problemdetail.ValidationErrors(ctx, "invalid data in the request", err)
 		}
 
-		project, err := projectService.Create(&request)
+		project, err := projectService.Create(context.Background(), &request)
 		if err != nil {
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
