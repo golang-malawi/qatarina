@@ -142,3 +142,31 @@ func DeleteTestPlan(services.TestPlanService) fiber.Handler {
 		return problemdetail.NotImplemented(c, "failed to delete TestPlan")
 	}
 }
+
+func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.AssignTestsToPlanRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		planID, _ := common.ParseIDFromCtx(c, "testPlanID")
+		if request.PlanID != planID {
+			return problemdetail.BadRequest(c, "plan_id in request body and param do not match")
+		}
+
+		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request)
+		if err != nil {
+			logger.Error("api-test-cases", "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test cases created and assigned",
+		})
+	}
+}

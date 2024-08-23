@@ -15,6 +15,7 @@ import (
 type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
+	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -97,4 +98,41 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 // FindAll implements TestPlanService.
 func (t *testPlanService) FindAll(ctx context.Context) ([]dbsqlc.TestPlan, error) {
 	return t.queries.ListTestPlans(ctx)
+}
+
+// AddTestCaseToPlan implements TestPlanService.
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error) {
+	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
+	if err != nil {
+		return nil, err
+	}
+	testPlanID := request.PlanID
+	for _, assignedTestCase := range request.PlannedTests {
+		for _, userID := range assignedTestCase.UserIds {
+			testRunID, err := uuid.NewV7()
+			testRunParams := dbsqlc.CreateNewTestRunParams{
+				ID:           testRunID,
+				ProjectID:    int32(request.ProjectID),
+				TestPlanID:   int32(testPlanID),
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				OwnerID:      int32(testPlan.CreatedByID),
+				TestedByID:   int32(userID),
+				AssignedToID: int32(userID),
+				Code:         fmt.Sprintf("TC-%d-%d", request.ProjectID, userID),
+				CreatedAt: sql.NullTime{
+					Time: time.Now(), Valid: true,
+				},
+				UpdatedAt: sql.NullTime{
+					Time: time.Now(), Valid: true,
+				},
+			}
+
+			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &testPlan, nil
 }

@@ -53,6 +53,7 @@ func (api *API) routes() {
 		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService))
 		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService))
 		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService))
+		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService))
 	}
 

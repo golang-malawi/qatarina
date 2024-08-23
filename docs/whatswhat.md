@@ -85,6 +85,23 @@ documentation in other files, or other places. We will see.
 	]
 }
 ```
+**Add more tests to the plan**
+
+`POST /v1/test-plans/4/test-cases`
+
+```json
+{
+	"project_id": 19,
+	"test_plan_id": 4,
+	"planned_tests": [
+		{
+			"test_case_id": "0191768b-1689-7dea-b3c5-62fe150284f8",
+			"user_ids": [ 3, 4 ]
+		}
+	]
+}
+```
+
 
 4. Each Tester can then record result of their test runs.
 
