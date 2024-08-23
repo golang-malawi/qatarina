@@ -15,6 +15,7 @@ import (
 type TestRunService interface {
 	FindAll(context.Context) ([]dbsqlc.TestRun, error)
 	Commit(context.Context, *schema.CommitTestRunResult) (*dbsqlc.TestRun, error)
+	CommitBulk(context.Context, *schema.BulkCommitTestResults) (bool, error)
 }
 
 type testRunService struct {
@@ -66,4 +67,16 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 		return nil, err
 	}
 	return &testRun, nil
+}
+
+// CommitBulk implements TestRunService.
+func (t *testRunService) CommitBulk(ctx context.Context, bulkRequest *schema.BulkCommitTestResults) (bool, error) {
+	for _, request := range bulkRequest.TestResults {
+		request.UserID = bulkRequest.UserID
+		_, err := t.Commit(ctx, &request)
+		if err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }

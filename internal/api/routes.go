@@ -61,6 +61,7 @@ func (api *API) routes() {
 		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
 		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
 		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService))
+		testRunsV1.Post("/bulk/commit", apiv1.CommitBulkTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService))
 		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))

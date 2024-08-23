@@ -155,8 +155,29 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 		request.UserID = authutil.GetAuthUserID(ctx)
 
 		testRun, err := testRunService.Commit(context.Background(), request)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
+		}
 		return ctx.JSON(fiber.Map{
 			"testRun": testRun,
+		})
+	}
+}
+
+func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		request := new(schema.BulkCommitTestResults)
+		_, err := common.ParseBodyThenValidate(ctx, request)
+		if err != nil {
+			return problemdetail.ValidationErrors(ctx, "invalid data in the request", err)
+		}
+		request.UserID = authutil.GetAuthUserID(ctx)
+		_, err = testRunService.CommitBulk(context.Background(), request)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
+		}
+		return ctx.JSON(fiber.Map{
+			"message": "Committed all test test results",
 		})
 	}
 }
