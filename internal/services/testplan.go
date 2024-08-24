@@ -65,6 +65,10 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 		return nil, err
 	}
 	for _, assignedTestCase := range request.PlannedTests {
+		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
+		if err != nil {
+			return nil, err
+		}
 		for _, userID := range assignedTestCase.UserIds {
 			testRunID, err := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
@@ -75,7 +79,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				OwnerID:      int32(request.CreatedByID),
 				TestedByID:   int32(userID),
 				AssignedToID: int32(userID),
-				Code:         fmt.Sprintf("TC-%d-%d", request.ProjectID, userID),
+				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,
 				},
@@ -108,6 +112,10 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	}
 	testPlanID := request.PlanID
 	for _, assignedTestCase := range request.PlannedTests {
+		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
+		if err != nil {
+			return nil, err
+		}
 		for _, userID := range assignedTestCase.UserIds {
 			testRunID, err := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
@@ -118,7 +126,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 				OwnerID:      int32(testPlan.CreatedByID),
 				TestedByID:   int32(userID),
 				AssignedToID: int32(userID),
-				Code:         fmt.Sprintf("TC-%d-%d", request.ProjectID, userID),
+				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,
 				},
