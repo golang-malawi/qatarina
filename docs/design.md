@@ -3,6 +3,7 @@
 
 ## Data Model
 
+See [domainmodel.md](./domainmodel.md)
 
 ## Use Cases
 
@@ -15,6 +16,16 @@
 ![[]](./diagrams/TestCaseUseCases.png)
 
 ![[]](./diagrams/TesterUsesCases.png)
+
+## Creating Test Cases
+
+We want to have several ways in which test cases can be created
+
+- Creation via the API endpoint to create one test case
+- Creation via API to create multiple test-cases at once
+- Import via GitHub issues
+- Import via Git repository commit history
+- Creation via service integrations (JIRA, Asana, Monday)
 
 ## Events
 
