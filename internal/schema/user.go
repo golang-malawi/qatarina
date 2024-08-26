@@ -26,6 +26,11 @@ type LoginResponse struct {
 	ExpiresAt   int64  `json:"expires_at"`
 }
 
+// ResetPasswordResponse Reset Password Response
+type ResetPasswordResponse struct {
+	Message string `json:"message"`
+}
+
 // ChangePasswordRequest request to change a password
 type ChangePasswordRequest struct {
 	UserID          int64  `json:"user_id" validate:"required"`
