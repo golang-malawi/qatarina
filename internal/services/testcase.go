@@ -94,8 +94,29 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 }
 
 // Create implements TestCaseService.
-func (t *testCaseServiceImpl) Create(context.Context, *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
+	uuidVal, _ := uuid.NewV7()
+	params := dbsqlc.CreateTestCaseParams{
+		ID:               uuidVal,
+		Kind:             dbsqlc.TestKind(request.Kind),
+		Code:             request.Code,
+		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
+		Title:            request.Title,
+		Description:      request.Description,
+		ParentTestCaseID: sql.NullInt32{},
+		IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
+		Tags:             request.Tags,
+		CreatedByID:      1,
+		CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+	}
+
+	createdID, err := t.queries.CreateTestCase(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	res, err := t.queries.GetTestCase(ctx, createdID)
+	return &res, err
 }
 
 // DeleteByID implements TestCaseService.

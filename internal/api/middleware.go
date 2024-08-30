@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	jwtware "github.com/gofiber/jwt/v2"
 )
 
@@ -16,7 +15,7 @@ func (api *API) middleware() {
 		AllowOrigins: "*", // TODO: use cors origins from configuration
 	}))
 	app.Use(pprof.New())
-	app.Use(recover.New())
+	// app.Use(recover.New())
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	}))
