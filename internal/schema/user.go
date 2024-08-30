@@ -7,7 +7,13 @@ type UserCompact struct {
 	CreatedAt   string `json:"createdAt"`
 }
 
-type SignUpRequest struct{}
+type SignUpRequest struct {
+	FirstName   string `json:"firstname"`
+	LastName    string `json:"lastname"`
+	DisplayName string `json:"display_name"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+}
 
 type NewUserRequest struct{}
 

@@ -27,3 +27,10 @@ type BulkCreateTestCases struct {
 	ProjectID int64                   `json:"project_id" validate:"required"`
 	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required,min=1,max=100"`
 }
+
+type ImportFromGithubRequest struct {
+	Owner       string
+	Repository  string
+	GitHubToken string
+	ProjectID   int64
+}
