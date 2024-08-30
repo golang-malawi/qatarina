@@ -18,7 +18,12 @@ The initial tech stack is as follows, we may eventually swap out parts of this s
   - pgx and sqlx
   - Riverqueue
 - PostgreSQL 15+
-- VueJS with TypeScript
+- React with
+  - TypeScript
+  - ChakraUI
+  - ReactRouter
+  - ReactQuery
+  - axios
 - Docker
 - TestContainers
 - WASM
