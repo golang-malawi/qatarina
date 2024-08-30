@@ -16,8 +16,8 @@ type ProblemDetail struct {
 func BadRequestProblemDetail(message string) ProblemDetail {
 	return ProblemDetail{
 		Type:    "problemdetail.example.com/http/types/BadRequest",
-		Title:   message,
-		Detail:  "Invalid data in the request body",
+		Title:   "Invalid data in the request body",
+		Detail:  message,
 		Context: nil,
 	}
 }

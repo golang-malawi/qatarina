@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
@@ -31,5 +33,26 @@ func AuthLogin(authService services.AuthService) fiber.Handler {
 func AuthRefreshToken(authService services.AuthService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		return problemdetail.NotImplemented(ctx, "not implemented yet")
+	}
+}
+
+func Signup(authService services.AuthService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.SignUpRequest)
+		_, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse request body")
+		}
+		token, err := authService.SignUp(request)
+		if err != nil {
+			if errors.Is(err, services.ErrUserAlreadyExists) {
+				return problemdetail.BadRequest(c, fmt.Sprintf("failed to sign up - %v", err))
+			}
+			return problemdetail.ServerErrorProblem(c, "failed to sign up")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Sign up process completed successfully",
+			"token":   token,
+		})
 	}
 }

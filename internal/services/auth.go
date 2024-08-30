@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,8 +15,11 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
+var ErrUserAlreadyExists = errors.New("user with given email already exists")
+
 type AuthService interface {
 	SignIn(*schema.LoginRequest) (*schema.LoginResponse, error)
+	SignUp(*schema.SignUpRequest) (*schema.LoginResponse, error)
 	ResetPassword(ctx context.Context, email string) error
 	ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error
 }
@@ -60,6 +65,51 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 		UserID:      int64(user.ID),
 		DisplayName: user.DisplayName.String,
 		Email:       user.Email,
+		ExpiresAt:   0,
+	}
+
+	token := generateJWTToken(res, time.Now().Add(time.Hour*6).Unix())
+	tokenStr, err := token.SignedString([]byte(a.authConfig.JwtSecretKey))
+	if err != nil {
+		a.logger.Error("auth-service", "failed to create a token", "error", err)
+		return nil, fmt.Errorf("failed to generate auth token, got: %v", err)
+	}
+
+	res.Token = tokenStr
+	return res, nil
+}
+
+func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginResponse, error) {
+	_, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
+	// TODO: make this error handling better - this is clunky
+	if !errors.Is(err, sql.ErrNoRows) {
+		a.logger.Error("auth-service", "user with given email already exists", "email", request.Email, "error", err)
+		return nil, ErrUserAlreadyExists
+	}
+
+	userParams := dbsqlc.CreateUserParams{
+		FirstName:    request.FirstName,
+		LastName:     request.LastName,
+		DisplayName:  sql.NullString{String: request.DisplayName, Valid: true},
+		Email:        request.Email,
+		Password:     common.MustHashPassword(request.Password),
+		IsActivated:  sql.NullBool{Bool: true, Valid: true},
+		IsReviewed:   sql.NullBool{Bool: false, Valid: true},
+		IsSuperAdmin: sql.NullBool{Bool: false, Valid: true},
+		IsVerified:   sql.NullBool{Bool: false, Valid: true},
+		CreatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	}
+
+	userID, err := a.queries.CreateUser(context.Background(), userParams)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user got %v", err)
+	}
+
+	res := &schema.LoginResponse{
+		UserID:      int64(userID),
+		DisplayName: request.DisplayName,
+		Email:       request.Email,
 		ExpiresAt:   0,
 	}
 
