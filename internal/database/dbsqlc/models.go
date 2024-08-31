@@ -184,6 +184,8 @@ type TestCase struct {
 	CreatedByID int32
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
+	// Project for the test cases
+	ProjectID sql.NullInt32
 }
 
 type TestPlan struct {

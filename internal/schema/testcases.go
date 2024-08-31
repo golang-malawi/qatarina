@@ -9,6 +9,7 @@ type CreateTestCaseRequest struct {
 	IsDraft         bool     `json:"is_draft" validate:"required"`
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
+	ProjectID       int64    `json:"-" validate:"-"`
 }
 
 type UpdateTestCaseRequest struct {

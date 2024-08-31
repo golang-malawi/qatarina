@@ -85,6 +85,7 @@ func (g *GitHubIntegration) CreateTestCasesFromOpenIssues(ctx context.Context, o
 			return nil, fmt.Errorf("Test case title cannot be empty")
 		}
 		createdCase, err := g.testCaseService.Create(ctx, &schema.CreateTestCaseRequest{
+			ProjectID:       projectID,
 			Kind:            "general",
 			Code:            fmt.Sprintf("GH-%d", issue.ID),
 			FeatureOrModule: "none",

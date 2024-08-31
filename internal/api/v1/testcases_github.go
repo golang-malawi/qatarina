@@ -22,9 +22,8 @@ func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, t
 
 		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
 		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, testCaseService)
-		projectID, _ := c.ParamsInt("projecID", -1)
 
-		testCases, err := githubIntegration.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, int64(projectID))
+		testCases, err := githubIntegration.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, request.ProjectID)
 		if err != nil {
 			logger.Error("github-api-import", "failed to process data import", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to complete import of issues")

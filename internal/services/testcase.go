@@ -65,6 +65,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 		uuidVal, _ := uuid.NewV7()
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
+			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
 			Kind:             dbsqlc.TestKind(request.Kind),
 			Code:             request.Code,
 			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
@@ -98,6 +99,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 	uuidVal, _ := uuid.NewV7()
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
+		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 		Kind:             dbsqlc.TestKind(request.Kind),
 		Code:             request.Code,
 		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
