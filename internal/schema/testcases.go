@@ -55,7 +55,7 @@ func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
 }
 
 type UpdateTestCaseRequest struct {
-	// TODO: update the fields here..
+	ID              string   `json:"id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code" validate:"required"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
