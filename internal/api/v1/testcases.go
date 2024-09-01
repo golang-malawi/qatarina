@@ -32,7 +32,7 @@ func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test cases")
 		}
 		return c.JSON(fiber.Map{
-			"testCases": testCases,
+			"test_cases": schema.NewTestCaseResponseList(testCases),
 		})
 	}
 }
