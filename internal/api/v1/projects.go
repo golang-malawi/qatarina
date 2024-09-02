@@ -30,7 +30,7 @@ func ListProjects(projectService services.ProjectService) fiber.Handler {
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{
-			"projects": projects,
+			"projects": schema.NewProjectResponseList(projects),
 		})
 	}
 }
@@ -98,7 +98,7 @@ func CreateProject(projectService services.ProjectService) fiber.Handler {
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{
-			"project": project,
+			"project": schema.NewProjectResponse(project, nil), // TODO: fetch owner
 		})
 	}
 }

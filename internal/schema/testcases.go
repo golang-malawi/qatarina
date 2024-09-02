@@ -1,5 +1,7 @@
 package schema
 
+import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+
 type CreateTestCaseRequest struct {
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code" validate:"required"`
@@ -12,8 +14,48 @@ type CreateTestCaseRequest struct {
 	ProjectID       int64    `json:"-" validate:"-"`
 }
 
+type TestCaseResponse struct {
+	ID              string   `json:"id"`
+	ProjectID       int64    `json:"project_id"`
+	CreatedByID     int64    `json:"created_by"`
+	Kind            string   `json:"kind"`
+	Code            string   `json:"code"`
+	FeatureOrModule string   `json:"feature_or_module"`
+	Title           string   `json:"title"`
+	Description     string   `json:"description"`
+	IsDraft         bool     `json:"is_draft"`
+	Tags            []string `json:"tags"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"created_at"`
+}
+
+func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
+	return TestCaseResponse{
+		ID:              e.ID.String(),
+		ProjectID:       int64(e.ProjectID.Int32),
+		CreatedByID:     int64(e.CreatedByID),
+		Kind:            string(e.Kind),
+		Code:            e.Code,
+		FeatureOrModule: e.FeatureOrModule.String,
+		Title:           e.Title,
+		Description:     e.Description,
+		IsDraft:         e.IsDraft.Bool,
+		Tags:            e.Tags,
+		CreatedAt:       formatSqlDateTime(e.CreatedAt),
+		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
+	}
+}
+
+func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
+	res := make([]TestCaseResponse, 0)
+	for _, item := range items {
+		res = append(res, NewTestCaseResponse(&item))
+	}
+	return res
+}
+
 type UpdateTestCaseRequest struct {
-	// TODO: update the fields here..
+	ID              string   `json:"id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code" validate:"required"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`

@@ -25,8 +25,8 @@ func BadRequestProblemDetail(message string) ProblemDetail {
 func PaymentRequiredProblemDetail(message string) ProblemDetail {
 	return ProblemDetail{
 		Type:    "problemdetail.example.com/http/types/PaymentRequired",
-		Title:   message,
-		Detail:  "Payment is required to perform the operation....",
+		Title:   "Payment is required to perform the operation....",
+		Detail:  message,
 		Context: nil,
 	}
 }
