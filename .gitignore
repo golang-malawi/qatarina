@@ -60,3 +60,5 @@ production.yml
 /notes/
 **/system.log
 /logs/
+
+*.exe
