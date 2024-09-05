@@ -1,7 +1,6 @@
 import {
   createBrowserRouter,
   createRoutesFromElements,
-  Outlet,
   Route,
   RouterProvider
 } from "react-router-dom";
@@ -9,15 +8,11 @@ import './App.css';
 import AuthLayout from "./app/AuthLayout";
 import DashboardPage from "./app/dashboard";
 import Home from "./app/Home";
+import Root from "./app/Layout";
 import LoginPage from "./app/login";
 import ProjectPage from "./app/projects";
+import CreateProject from "./app/projects/CreateProject";
 
-
-function Root({ }) {
-  return (
-    <Outlet />
-  )
-}
 
 function App() {
   return (
@@ -27,6 +22,7 @@ function App() {
           <Route path="/" element={<Root />}>
             <Route path="" element={<Home />} />
             <Route path="projects" element={<ProjectPage />} />
+            <Route path="/projects/new" element={<CreateProject />} />
             <Route
               path="dashboard"
               element={<DashboardPage />}

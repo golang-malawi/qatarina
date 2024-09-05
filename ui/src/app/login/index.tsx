@@ -5,8 +5,9 @@ import { useState } from 'react';
 import { useNavigate } from "react-router";
 
 interface LoginData {
+    user_id: number
     token: string
-    user: string
+    displayName: string
 }
 
 export default function LoginPage() {
@@ -23,8 +24,12 @@ export default function LoginPage() {
 
         if (res.status == 200) {
             const loginData: LoginData = res.data;
-            localStorage.setItem('auth.user', loginData.user);
+            localStorage.setItem('auth.user_id', loginData.user_id);
+            localStorage.setItem('auth.displayName', loginData.displayName);
             localStorage.setItem('auth.token', loginData.token);
+
+            axios.defaults.withCredentials = false;
+            axios.defaults.headers.common["Authorization"] = `Bearer ${loginData.token}`;
             redirect('/dashboard');
         }
         return false;
