@@ -14,6 +14,7 @@ func (api *API) middleware() {
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*", // TODO: use cors origins from configuration
+		AllowMethods: "*",
 	}))
 	app.Use(pprof.New())
 	app.Use(recover.New())

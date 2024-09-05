@@ -1,34 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Route,
+  RouterProvider
+} from "react-router-dom";
+import './App.css';
+import AuthLayout from "./app/AuthLayout";
+import DashboardPage from "./app/dashboard";
+import Home from "./app/Home";
+import Root from "./app/Layout";
+import LoginPage from "./app/login";
+import ProjectPage from "./app/projects";
+import CreateProject from "./app/projects/CreateProject";
+
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <RouterProvider router={// Configure nested routes with JSX
+      createBrowserRouter(
+        createRoutesFromElements(
+          <Route path="/" element={<Root />}>
+            <Route path="" element={<Home />} />
+            <Route path="projects" element={<ProjectPage />} />
+            <Route path="/projects/new" element={<CreateProject />} />
+            <Route
+              path="dashboard"
+              element={<DashboardPage />}
+            />
+            <Route element={<AuthLayout />}>
+              <Route
+                path="login"
+                element={<LoginPage />}
+              // loader={redirectIfUser}
+              />
+              {/* <Route path="logout" action={logoutUser} /> */}
+            </Route>
+          </Route>
+        )
+      )} />
   )
 }
 

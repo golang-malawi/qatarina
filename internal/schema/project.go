@@ -11,7 +11,7 @@ type NewProjectRequest struct {
 	WebsiteURL      string `json:"website_url,omitempty" validate:"required"`
 	Version         string `json:"version" validate:"required"`
 	GitHubURL       string `json:"github_url,omitempty" validate:""`
-	ProjectOwnerID  int64  `json:"project_owner_id,omitempty" validate:"required"`
+	ProjectOwnerID  int64  `json:"project_owner_id,omitempty" validate:"-"`
 	ParentProjectID int64  `json:"parent_project_id,omitempty"`
 }
 

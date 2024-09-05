@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -92,6 +93,8 @@ func CreateProject(projectService services.ProjectService) fiber.Handler {
 		if err != nil {
 			return problemdetail.ValidationErrors(ctx, "invalid data in the request", err)
 		}
+
+		request.ProjectOwnerID = authutil.GetAuthUserID(ctx)
 
 		project, err := projectService.Create(context.Background(), &request)
 		if err != nil {
