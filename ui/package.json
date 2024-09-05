@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/react": "^2.8.2",
+    "@tabler/icons-react": "^3.14.0",
     "@tanstack/react-form": "^0.31.0",
     "@tanstack/react-query": "^5.53.3",
     "@tanstack/react-table": "^8.20.5",
@@ -20,6 +22,7 @@
     "react-dom": "^18.3.1",
     "react-helmet": "^6.1.0",
     "react-router": "^6.24.0",
+    "react-router-dom": "^6.26.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
