@@ -25,7 +25,7 @@ func (api *API) routes() {
 		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
 		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService))
 		usersV1.Post("/:userID", apiv1.UpdateUser(api.UserService))
-		usersV1.Post("/:email", apiv1.InviteUser(api.UserService))
+		usersV1.Post("/invite/:email", apiv1.InviteUser(api.UserService))
 		usersV1.Delete("/:userID", apiv1.DeleteUser(api.UserService))
 	}
 
@@ -42,7 +42,7 @@ func (api *API) routes() {
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
-		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService))
+		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
@@ -71,8 +71,6 @@ func (api *API) routes() {
 		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService))
 		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
-		// testRunsV1.Post("/:testRunID/passed", apiv1.PassTestRun(api.TestRunsService, api.logger))
-		// testRunsV1.Post("/:testRunID/failed", apiv1.FailTestRun(api.TestRunsService))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService))
 	}
 

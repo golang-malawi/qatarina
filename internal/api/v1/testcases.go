@@ -87,9 +87,26 @@ func GetOneTestCase(services.TestCaseService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases [post]
-func CreateTestCase(services.TestCaseService) fiber.Handler {
+func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to create TestCase")
+		request := new(schema.CreateTestCaseRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := testCaseService.Create(context.Background(), request)
+		if err != nil {
+			logger.Error("api-test-cases", "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test case created",
+		})
 	}
 }
 

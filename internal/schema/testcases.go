@@ -8,10 +8,10 @@ type CreateTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`
-	IsDraft         bool     `json:"is_draft" validate:"required"`
+	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
-	ProjectID       int64    `json:"-" validate:"-"`
+	ProjectID       int64    `json:"project_id" validate:"-"`
 }
 
 type TestCaseResponse struct {

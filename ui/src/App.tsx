@@ -12,6 +12,7 @@ import Root from "./app/Layout";
 import LoginPage from "./app/login";
 import ProjectPage from "./app/projects";
 import CreateProject from "./app/projects/CreateProject";
+import CreateTestCase from "./app/testcase/new";
 
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="" element={<Home />} />
             <Route path="projects" element={<ProjectPage />} />
             <Route path="/projects/new" element={<CreateProject />} />
+            <Route path="/projects/:projectID/test-cases/new" element={<CreateTestCase />} />
             <Route
               path="dashboard"
               element={<DashboardPage />}

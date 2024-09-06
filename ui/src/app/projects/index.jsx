@@ -38,7 +38,9 @@ export default function Projects() {
                     <Button bg="blue" color="white">Start Test Session</Button>
                 </Box>
                 <Box>
-                    <Button bg="blue" color="white">Add Test Cases</Button>
+                    <Link to={`/projects/${record.id}/test-cases/new`}>
+                        <Button bg="blue" color="white">Add Test Cases</Button>
+                    </Link>
                 </Box>
                 <Box>
                     <Button bg="red" color="white"><IconTrash /></Button>
