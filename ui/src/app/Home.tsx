@@ -1,19 +1,44 @@
-import { IconDashboard, IconList, IconPlayerPlay, IconReport, IconSettings, IconTestPipe, IconUsersGroup } from "@tabler/icons-react";
+import { Box, Flex, Heading } from "@chakra-ui/react";
+import { IconUser } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1>Home </h1>
-      <ul>
-        <li><Link to="/dashboard"><IconDashboard /> Dashboard</Link></li>
-        <li><Link to="/projects"><IconList /> Projects</Link></li>
-        <li><Link to="/testers"><IconUsersGroup /> Testers</Link></li>
-        <li><Link to="/test-cases"><IconTestPipe /> Test Cases</Link></li>
-        <li><Link to="/test-runs"><IconPlayerPlay /> Test Runs</Link></li>
-        <li><Link to="/reports"><IconReport /> Reports</Link></li>
-        <li><Link to="/insights"><IconSettings /> Settings</Link></li>
-      </ul>
+      <Heading as='h1' size='2xl'>Welcome to the future of Software Quality Assurance</Heading>
+      <Box>
+        <Heading size='1xl'><IconUser /> Invite Your People</Heading>
+        <Flex>
+          <Box>
+            <Link to="/testers/invite">Invite a Tester</Link>
+          </Box>
+          <Box>
+            <Link to="/testers/invite">Invite an Admin</Link>
+          </Box>
+        </Flex>
+      </Box>
+      <Box>
+        <Heading size='1xl'><IconUser /> Configure Your Projects</Heading>
+        <Flex>
+          <Box>
+            <Link to="/testers/invite">Create a Project</Link>
+          </Box>
+          <Box>
+            <Link to="/testers/invite">Import Projects from GitHub</Link>
+          </Box>
+        </Flex>
+      </Box>
+      <Box>
+        <Heading size='1xl'><IconUser /> Manage Integrations</Heading>
+        <Flex>
+          <Box>
+            <Link to="/testers/invite">Asana Integration</Link>
+          </Box>
+          <Box>
+            <Link to="/testers/invite">Trello Integration</Link>
+          </Box>
+        </Flex>
+      </Box>
     </main>
   );
 }
