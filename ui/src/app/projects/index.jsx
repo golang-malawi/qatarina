@@ -3,6 +3,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import axios from 'axios';
 import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
+import useAuthHeaders from '../../hooks/useAuthHeaders';
 
 export default function Projects() {
     const [records, setRecords] = useState([]);
@@ -10,7 +11,7 @@ export default function Projects() {
     useEffect(() => {
 
         async function getProjects() {
-            const res = await axios.get('http://localhost:4597/v1/projects')
+            const res = await axios.get('http://localhost:4597/v1/projects', useAuthHeaders())
             if (res.status == 200) {
                 setRecords(res.data.projects)
             }

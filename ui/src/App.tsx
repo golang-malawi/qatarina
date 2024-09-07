@@ -12,6 +12,8 @@ import Root from "./app/Layout";
 import LoginPage from "./app/login";
 import ProjectPage from "./app/projects";
 import CreateProject from "./app/projects/CreateProject";
+import ExecuteTestPlan from "./app/projects/ExecuteTestPlan";
+import TestCasePage from "./app/testcase";
 import CreateTestCase from "./app/testcase/new";
 
 
@@ -25,6 +27,8 @@ function App() {
             <Route path="projects" element={<ProjectPage />} />
             <Route path="/projects/new" element={<CreateProject />} />
             <Route path="/projects/:projectID/test-cases/new" element={<CreateTestCase />} />
+            <Route path="/projects/:projectID/test-plan/execute" element={<ExecuteTestPlan />} />
+            <Route path="test-cases" element={<TestCasePage />} />
             <Route
               path="dashboard"
               element={<DashboardPage />}
