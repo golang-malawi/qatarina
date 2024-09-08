@@ -2,7 +2,12 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
@@ -75,9 +80,26 @@ func GetOneUser(services.UserService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/users [post]
-func CreateUser(services.UserService) fiber.Handler {
+func CreateUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to create user")
+		request := new(schema.NewUserRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("api-users", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := userService.Create(context.Background(), request)
+		if err != nil {
+			logger.Error("api-users", "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "User created",
+		})
 	}
 }
 

@@ -42,7 +42,7 @@ func NewAPI(config *config.Config) *API {
 		TestPlansService: services.NewTestPlanService(dbConn, logger),
 		TestRunsService:  services.NewTestRunService(dbConn, logger),
 		OrgRepo:          nil,
-		UserService:      nil,
+		UserService:      services.NewUserService(dbConn, logger),
 		TesterService:    nil,
 		TestersRepo:      nil,
 	}
