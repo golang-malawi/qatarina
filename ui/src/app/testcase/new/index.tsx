@@ -12,6 +12,7 @@ import axios from 'axios';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import SelectTestKind from "../../../components/SelectTestKind";
+import useAuthHeaders from "../../../hooks/useAuthHeaders";
 
 
 export default function NewTestCases() {
@@ -38,7 +39,7 @@ export default function NewTestCases() {
       description,
       is_draft,
       tags: tags,
-    })
+    }, useAuthHeaders())
 
     if (res.status == 200) {
       toast({

@@ -142,13 +142,13 @@ func (t *testCaseServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.TestCase, e
 }
 
 // FindAllByProjectID implements TestCaseService.
-func (t *testCaseServiceImpl) FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error) {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListTestCasesByProject(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
 }
 
 // FindAllCreatedBy implements TestCaseService.
-func (t *testCaseServiceImpl) FindAllCreatedBy(context.Context, int64) ([]dbsqlc.TestCase, error) {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) FindAllCreatedBy(ctx context.Context, createdByID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListTestCasesByCreator(ctx, int32(createdByID))
 }
 
 // Update implements TestCaseService.

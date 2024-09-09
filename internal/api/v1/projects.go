@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -70,6 +71,68 @@ func SearchProjects(projectService services.ProjectService) fiber.Handler {
 func GetOneProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one Project")
+	}
+}
+
+// GetProjectTestCases godoc
+//
+//	@ID				GetProjectTestCases
+//	@Summary		Get a single Project's test cases
+//	@Description	Get a single Project's test cases
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/projects/{projectID}/test-cases [get]
+func GetProjectTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		testCases, err := testCaseService.FindAllByProjectID(context.Background(), projectID)
+		if err != nil {
+			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_cases": testCases,
+		})
+	}
+}
+
+// GetProjectTestPlans godoc
+//
+//	@ID				GetProjectTestPlans
+//	@Summary		Get a single Project's test plans
+//	@Description	Get a single Project's test plans
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/projects/{projectID}/test-cases [get]
+func GetProjectTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		testPlans, err := testPlanService.FindAllByProjectID(context.Background(), projectID)
+		if err != nil {
+			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_plans": testPlans,
+		})
 	}
 }
 

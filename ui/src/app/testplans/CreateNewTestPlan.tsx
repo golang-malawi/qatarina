@@ -1,23 +1,52 @@
 import {
     Box,
     Button,
+    Checkbox,
+    Flex,
     FormControl,
     FormHelperText,
     FormLabel,
     Heading,
     Input,
+    Select,
     useToast
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import axios from "axios";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import useAuthHeaders from "../../hooks/useAuthHeaders";
 
 export default function CreateNewTestPlan() {
     const toast = useToast();
     const params = useParams();
+    const [testCases, setTestCases] = useState([]);
     const redirect = useNavigate();
     const project_id = params.projectID;
+
+    useEffect(() => {
+        async function fetchTestCases(projectID) {
+            const res = await axios.get(`http://localhost:4597/v1/projects/${projectID}/test-cases`, useAuthHeaders())
+            if (res.status == 200) {
+                setTestCases(res.data.test_cases);
+            }
+        }
+
+        fetchTestCases(project_id);
+    }, [project_id]);
+
+    const testCaseList = testCases.map(t => (<Box key={t.ID}>
+        <Flex>
+            <Box>
+                <Checkbox name={`testCase-${t.ID}`} /> {t.Code} - {t.Title} (Tags: {t.Tags?.join(', ')})
+            </Box>
+            <Box>
+                <Select>
+                    <option>Tester name</option>
+                </Select>
+            </Box>
+        </Flex>
+    </Box>))
 
     async function handleSubmit(data) {
         const res = await axios.post('http://localhost:4597/v1/test-plans', {
@@ -124,7 +153,7 @@ export default function CreateNewTestPlan() {
                 <Button type='submit'>Create Plan</Button>
             </form>
             <Heading>Select & Assign Test Cases</Heading>
-
+            {testCaseList}
         </Box>
     )
 }
