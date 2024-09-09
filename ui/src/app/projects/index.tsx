@@ -44,6 +44,11 @@ export default function Projects() {
                     </Link>
                 </Box>
                 <Box>
+                    <Link to={`/projects/${record.id}/test-plans/new`}>
+                        <Button bg="blue" color="white">Create Test Plan</Button>
+                    </Link>
+                </Box>
+                <Box>
                     <Button bg="red" color="white"><IconTrash /></Button>
                 </Box>
             </Flex>

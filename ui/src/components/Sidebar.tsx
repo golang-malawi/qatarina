@@ -1,6 +1,6 @@
 "use client";
 import { Box, Flex, List, ListItem } from "@chakra-ui/react";
-import { IconDashboard, IconList, IconPlayerPlay, IconReport, IconSettings, IconTestPipe, IconUsersGroup } from "@tabler/icons-react";
+import { IconDashboard, IconList, IconLogout, IconPlayerPlay, IconReport, IconSettings, IconTestPipe, IconUser, IconUsersGroup } from "@tabler/icons-react";
 import { Link } from 'react-router-dom';
 export default function Sidebar() {
 
@@ -8,10 +8,12 @@ export default function Sidebar() {
     { icon: <IconDashboard />, href: "/dashboard", text: 'Dashboard' },
     { icon: <IconList />, href: "/projects", text: 'Projects' },
     { icon: <IconTestPipe />, href: "/test-cases", text: 'Test Cases' },
-    { icon: <IconPlayerPlay />, href: "/sessions", text: 'Sessions' },
+    { icon: <IconPlayerPlay />, href: "/test-plans", text: 'Test Plans' },
     { icon: <IconUsersGroup />, href: "/testers", text: 'Testers' },
     { icon: <IconSettings />, href: "/integrations", text: 'Integrations' },
     { icon: <IconReport />, href: "/reports", text: 'Reports' },
+    { icon: <IconUser />, href: "/users", text: 'Users' },
+    { icon: <IconLogout />, href: "/logout", text: 'Logout' },
     // <li>
     //   <Link href={"/reports"}>Account Info</Link>
     //   <ul>
