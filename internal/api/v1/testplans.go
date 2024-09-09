@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -91,6 +92,12 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 			logger.Error("api-test-cases", "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
+
+		userID := authutil.GetAuthUserID(c)
+
+		request.CreatedByID = userID
+		request.AssignedToID = userID
+		request.UpdatedByID = userID
 
 		_, err := testPlanService.Create(context.Background(), request)
 		if err != nil {

@@ -87,6 +87,8 @@ func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginRe
 		return nil, ErrUserAlreadyExists
 	}
 
+	// TODO: create organization for the user
+
 	userParams := dbsqlc.CreateUserParams{
 		FirstName:    request.FirstName,
 		LastName:     request.LastName,

@@ -8,14 +8,21 @@ type UserCompact struct {
 }
 
 type SignUpRequest struct {
-	FirstName   string `json:"firstname"`
-	LastName    string `json:"lastname"`
-	DisplayName string `json:"display_name"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
+	FirstName   string `json:"firstname" validate:"required"`
+	LastName    string `json:"lastname" validate:"required"`
+	DisplayName string `json:"display_name" validate:"required"`
+	Email       string `json:"email" validate:"required"`
+	Password    string `json:"password" validate:"required"`
 }
 
-type NewUserRequest struct{}
+type NewUserRequest struct {
+	OrgID       int64  `json:"organization_id" validate:"-"`
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	DisplayName string `json:"display_name" validate:"required"`
+	Email       string `json:"email" validate:"required"`
+	Password    string `json:"password" validate:"required"`
+}
 
 // LoginRequest request to authenticate a user on the platform
 type LoginRequest struct {

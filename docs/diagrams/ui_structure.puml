@@ -1,0 +1,25 @@
+@startmindmap
+
+
+* Dashboard
+* Projects
+** List Projects 
+** Search Projects 
+** View Project Detail
+*** Add Test Case
+*** Add Test Plan 
+*** Add/Invite Tester
+*** View Test Runs
+** TestPlans
+*** List Plans (filter :open, :closed)
+*** Perform Tests  
+**** Generate Report
+** Confirm Delete Project 
+* Testers
+** Invite Tester
+** Create Tester Profile 
+** List Testers
+*** View Tester Profile 
+**** List Completed Tests 
+
+@endmindmap

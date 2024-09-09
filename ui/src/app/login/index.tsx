@@ -24,7 +24,7 @@ export default function LoginPage() {
 
         if (res.status == 200) {
             const loginData: LoginData = res.data;
-            localStorage.setItem('auth.user_id', loginData.user_id);
+            localStorage.setItem('auth.user_id', `${loginData.user_id}`);
             localStorage.setItem('auth.displayName', loginData.displayName);
             localStorage.setItem('auth.token', loginData.token);
 

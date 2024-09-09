@@ -1,6 +1,6 @@
 import { Box, Flex, Heading } from "@chakra-ui/react";
-import { IconDashboard, IconList, IconPlayerPlay, IconReport, IconSettings, IconTestPipe, IconUsersGroup } from "@tabler/icons-react";
 import { Link, Outlet } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
 
 export default function Home() {
   return (
@@ -12,15 +12,7 @@ export default function Home() {
       </Box>
       <Flex>
         <Box w="20%" borderRight={'1px solid rgba(200, 200, 200, 1)'} h="100vh">
-          <ul>
-            <li><Link to="/dashboard"><IconDashboard /> Dashboard</Link></li>
-            <li><Link to="/projects"><IconList /> Projects</Link></li>
-            <li><Link to="/testers"><IconUsersGroup /> Testers</Link></li>
-            <li><Link to="/test-cases"><IconTestPipe /> Test Cases</Link></li>
-            <li><Link to="/test-runs"><IconPlayerPlay /> Test Runs</Link></li>
-            <li><Link to="/reports"><IconReport /> Reports</Link></li>
-            <li><Link to="/insights"><IconSettings /> Settings</Link></li>
-          </ul>
+          <Sidebar />
         </Box>
         <Box padding={4}>
           <Outlet />

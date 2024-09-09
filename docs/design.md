@@ -61,3 +61,8 @@ We want to have the following integrations:
     - JIRA
     - Monday
     - Asana
+- SAML/OIDC integration
+- Integration with Slack for a /qatarina bot command
+- Integration with PagerDuty?
+- Integration with ReviewDog
+ 
