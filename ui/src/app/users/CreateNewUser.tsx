@@ -16,8 +16,8 @@ export default function CreateNewUser() {
   const toast = useToast();
 
   async function handleSubmit(e) {
-    const res = await axios.post('http://localhost:4597/v1/projects', {
-      username: e.username,
+    const res = await axios.post('http://localhost:4597/v1/users', {
+      display_name: `${e.first_name} ${e.last_name}`,
       first_name: e.first_name,
       last_name: e.last_name,
       password: e.password,
@@ -28,13 +28,13 @@ export default function CreateNewUser() {
 
     if (res.status == 200) {
       toast({
-        title: 'Project created.',
+        title: 'User created.',
         description: "We've created your new Team mate.",
         status: 'success',
         duration: 3000,
         isClosable: true,
       })
-      redirect('/projects')
+      redirect('/users')
     }
 
     return false;
@@ -42,7 +42,7 @@ export default function CreateNewUser() {
 
   const form = useForm({
     defaultValues: {
-      username: '',
+      display_name: '',
       first_name: '',
       last_name: '',
       password: '',
