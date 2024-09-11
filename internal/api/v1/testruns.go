@@ -120,9 +120,19 @@ func UpdateTestRun(services.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-runs/{testRunID} [delete]
-func DeleteTestRun(services.TestRunService) fiber.Handler {
+func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to delete TestRun")
+		testRunID := c.Params("testRunID", "")
+		if testRunID == "" {
+			return problemdetail.BadRequest(c, "invalid parameter in url for testRunID")
+		}
+		err := testRunService.DeleteByID(context.Background(), testRunID)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Test Run deleted successfully",
+		})
 	}
 }
 
@@ -179,25 +189,5 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		return ctx.JSON(fiber.Map{
 			"message": "Committed all test test results",
 		})
-	}
-}
-
-// FailTestRun godoc
-//
-//	@ID				FailTestRun
-//	@Summary		Mark a Test Run as failed
-//	@Description	Mark a Test Run as failed
-//	@Tags			test-runs
-//	@Accept			json
-//	@Produce		json
-//	@Param			testRunID	path		string		true	"Test Run ID"
-//	@Param			request		body		interface{}	true	"Test Run update data"
-//	@Success		200			{object}	interface{}
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID}/failed [post]
-func FailTestRun(services.TestRunService) fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
-		return problemdetail.NotImplemented(ctx, "not yet implemented")
 	}
 }

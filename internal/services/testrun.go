@@ -14,6 +14,8 @@ import (
 
 type TestRunService interface {
 	FindAll(context.Context) ([]dbsqlc.TestRun, error)
+	DeleteByID(context.Context, string) error
+	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestRun, error)
 	Commit(context.Context, *schema.CommitTestRunResult) (*dbsqlc.TestRun, error)
 	CommitBulk(context.Context, *schema.BulkCommitTestResults) (bool, error)
 }
@@ -31,9 +33,13 @@ func NewTestRunService(conn *dbsqlc.Queries, logger logging.Logger) TestRunServi
 }
 
 // FindAll implements TestRunService.
-func (t *testRunService) FindAll(context.Context) ([]dbsqlc.TestRun, error) {
-	// return t.queries.ListTestRuns()
-	panic("not implemented")
+func (t *testRunService) FindAll(ctx context.Context) ([]dbsqlc.TestRun, error) {
+	return t.queries.ListTestRuns(ctx)
+}
+
+// FindAllByProjectID implements TestRunService.
+func (t *testRunService) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestRun, error) {
+	return t.queries.ListTestRunsByProject(ctx, int32(projectID))
 }
 
 // Commit implements TestRunService.
@@ -79,4 +85,10 @@ func (t *testRunService) CommitBulk(ctx context.Context, bulkRequest *schema.Bul
 		}
 	}
 	return true, nil
+}
+
+// DeleteByID implements TestRunService.
+func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error {
+	_, err := t.queries.DeleteTestRun(ctx, uuid.MustParse(testRunID))
+	return err
 }

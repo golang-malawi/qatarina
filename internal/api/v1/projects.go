@@ -136,6 +136,37 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 	}
 }
 
+// GetProjectTestRuns godoc
+//
+//	@ID				GetProjectTestRuns
+//	@Summary		Get a single Project's test runs
+//	@Description	Get a single Project's test runs
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/projects/{projectID}/test-runs [get]
+func GetProjectTestRuns(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		testPlans, err := testRunService.FindAllByProjectID(context.Background(), projectID)
+		if err != nil {
+			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_plans": testPlans,
+		})
+	}
+}
+
 // CreateProject godoc
 //
 //	@ID				CreateProject

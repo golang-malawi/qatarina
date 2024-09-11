@@ -34,7 +34,7 @@ type TestCaseService interface {
 	// DeleteByID deletes a single test case by ID
 	DeleteByID(context.Context, string) error
 
-	// DeleteByID delets all test cases linked to the given ProjectID
+	// DeleteByID deletes all test cases linked to the given ProjectID
 	DeleteByProjectID(context.Context, string) error
 
 	// DeleteByTestRunID delets all test cases linked to the given TestRun
@@ -122,8 +122,8 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 }
 
 // DeleteByID implements TestCaseService.
-func (t *testCaseServiceImpl) DeleteByID(context.Context, string) error {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) DeleteByID(ctx context.Context, id string) error {
+	// t.queries.DeleteTestCaseByID(ctx, id)
 }
 
 // DeleteByProjectID implements TestCaseService.

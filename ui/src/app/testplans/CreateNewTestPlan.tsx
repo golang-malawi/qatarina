@@ -8,7 +8,6 @@ import {
     FormLabel,
     Heading,
     Input,
-    Select,
     useToast
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
@@ -17,10 +16,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import useAuthHeaders from "../../hooks/useAuthHeaders";
 
+
+interface SelectAssignedTestCase {
+    test_case_id: string;
+    user_ids: number[]
+}
+
 export default function CreateNewTestPlan() {
     const toast = useToast();
     const params = useParams();
     const [testCases, setTestCases] = useState([]);
+    const [selectedTestCases, setSelectedTestCases] = useState<SelectAssignedTestCase[]>([]);
     const redirect = useNavigate();
     const project_id = params.projectID;
 
@@ -35,15 +41,27 @@ export default function CreateNewTestPlan() {
         fetchTestCases(project_id);
     }, [project_id]);
 
+    function showSelectTesterTray(testCaseID) {
+
+    }
+
     const testCaseList = testCases.map(t => (<Box key={t.ID}>
         <Flex>
             <Box>
-                <Checkbox name={`testCase-${t.ID}`} /> {t.Code} - {t.Title} (Tags: {t.Tags?.join(', ')})
+                <Checkbox name={`testCase-${t.ID}`}
+                    onChange={(e) => {
+                        if (e.target.checked) {
+                            const newSelected = {
+                                test_case_id: t.ID,
+                                user_ids: []
+                            };
+                            setSelectedTestCases([...selectedTestCases, newSelected]);
+                        }
+                    }}
+                /> {t.Code} - {t.Title} (Tags: {t.Tags?.join(', ')})
             </Box>
             <Box>
-                <Select>
-                    <option>Tester name</option>
-                </Select>
+                <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button>
             </Box>
         </Flex>
     </Box>))

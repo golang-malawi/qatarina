@@ -144,7 +144,7 @@ func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans/{testPlanID} [delete]
-func DeleteTestPlan(services.TestPlanService) fiber.Handler {
+func DeleteTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestPlan")
 	}
