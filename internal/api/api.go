@@ -5,7 +5,6 @@ import (
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
-	"github.com/golang-malawi/qatarina/internal/repository"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
@@ -17,10 +16,8 @@ type API struct {
 	Config           *config.Config
 	RiverClient      *river.Client[pgx.Tx]
 	AuthService      services.AuthService
-	OrgRepo          repository.OrgRepository
 	UserService      services.UserService
 	ProjectsService  services.ProjectService
-	TestersRepo      repository.TesterRepository
 	TestCasesService services.TestCaseService
 	TestPlansService services.TestPlanService
 	TestRunsService  services.TestRunService
@@ -41,10 +38,8 @@ func NewAPI(config *config.Config) *API {
 		TestCasesService: services.NewTestCaseService(dbConn, logger),
 		TestPlansService: services.NewTestPlanService(dbConn, logger),
 		TestRunsService:  services.NewTestRunService(dbConn, logger),
-		OrgRepo:          nil,
 		UserService:      services.NewUserService(dbConn, logger),
-		TesterService:    nil,
-		TestersRepo:      nil,
+		TesterService:    services.NewTesterService(dbConn, logger),
 	}
 }
 

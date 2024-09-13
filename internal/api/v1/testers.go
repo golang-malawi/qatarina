@@ -2,6 +2,8 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -19,9 +21,15 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/testers [get]
-func ListTesters(services.TesterService) fiber.Handler {
+func ListTesters(testerService services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to list Testers")
+		testers, err := testerService.FindAll(context.Background())
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to fetch testers")
+		}
+		return c.JSON(fiber.Map{
+			"testers": testers,
+		})
 	}
 }
 

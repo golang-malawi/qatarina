@@ -1,11 +1,15 @@
 package validation
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
+
+var TagRE = regexp.MustCompile(`\A[\w][\w\-]+[\w]\z`)
 
 var validate = validator.New()
 
@@ -39,4 +43,18 @@ func (v validationErrors) Error() string {
 	}
 
 	return strings.Join(arr, ",")
+}
+
+func ValidateTags(tags []string) error {
+	for _, tag := range tags {
+		if len(tag) > 255 {
+			return errors.New("tags should be a maximum of 255 characters long")
+		}
+		if TagRE.MatchString(tag) {
+			continue
+		} else {
+			return fmt.Errorf("tag '%s' is invalid ", tag)
+		}
+	}
+	return nil
 }

@@ -14,6 +14,7 @@ import { useForm } from "@tanstack/react-form";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import SelectTesterModal from "../../components/SelectTesterModal";
 import useAuthHeaders from "../../hooks/useAuthHeaders";
 
 
@@ -61,7 +62,8 @@ export default function CreateNewTestPlan() {
                 /> {t.Code} - {t.Title} (Tags: {t.Tags?.join(', ')})
             </Box>
             <Box>
-                <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button>
+                <SelectTesterModal testCaseID={t.ID} />
+                {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
             </Box>
         </Flex>
     </Box>))

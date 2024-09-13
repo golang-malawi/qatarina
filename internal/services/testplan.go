@@ -17,6 +17,7 @@ type TestPlanService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
+	DeleteByID(context.Context, int64) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -147,4 +148,8 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	}
 
 	return &testPlan, nil
+}
+
+func (t *testPlanService) DeleteByID(context.Context, int64) error {
+	panic("unimplemented")
 }

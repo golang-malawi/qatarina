@@ -146,6 +146,12 @@ func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 //	@Router			/api/v1/test-plans/{testPlanID} [delete]
 func DeleteTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		testPlanID, _ := c.ParamsInt("testPlanID", 0)
+		err := testPlanService.DeleteByID(context.Background(), int64(testPlanID))
+		if err != nil {
+
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
 		return problemdetail.NotImplemented(c, "failed to delete TestPlan")
 	}
 }
