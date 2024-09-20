@@ -1,9 +1,15 @@
-interface ProjectService {
-}
+import axios from "axios";
+import useAuthHeaders from "../hooks/useAuthHeaders";
 
-class PocketBaseProjectService implements ProjectService {
+export default class ProjectService {
+  apiEndpoint: string;
 
-  findAll() {
+  constructor(apiEndpoint: string) {
+    this.apiEndpoint = apiEndpoint;
+  }
 
+  async findAll() {
+    const res = await axios.get(`${this.apiEndpoint}/v1/projects`, useAuthHeaders())
+    return res.data
   }
 }

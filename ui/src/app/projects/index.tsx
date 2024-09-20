@@ -5,8 +5,14 @@ import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
 import useAuthHeaders from '../../hooks/useAuthHeaders';
 
+interface Project {
+    id: string;
+    title: string;
+    project_url: string;
+}
+
 export default function Projects() {
-    const [records, setRecords] = useState([]);
+    const [records, setRecords] = useState<Project[]>([]);
 
     useEffect(() => {
 
@@ -26,7 +32,7 @@ export default function Projects() {
         <Container key={record.id} className="w-full">
             <h2>{record.title}</h2>
             <p>
-                URL: <Link href={record.project_url}>{record.project_url}</Link>
+                URL: <a href={record.project_url}>{record.project_url}</a>
             </p>
             <Flex>
                 <Box>

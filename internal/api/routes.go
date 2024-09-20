@@ -1,6 +1,14 @@
 package api
 
-import apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+import (
+	"fmt"
+	"io/fs"
+	"net/http"
+
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/ui"
+)
 
 func (api *API) routes() {
 	router := api.app
@@ -90,4 +98,16 @@ func (api *API) routes() {
 		settingsApi.Get("", apiv1.GetSettings(api.Config))
 		settingsApi.Patch("/:settingKey", apiv1.UpdateSetting(api.Config))
 	}
+
+	frontendAssets, err := fs.Sub(ui.FrontendDistFS, "dist")
+	if err != nil {
+		panic(fmt.Errorf("failed to embed dist directory, cannot start Server. Got %v", err))
+	}
+
+	// Serves the app at the root path  "/"
+	router.Use(filesystem.New(filesystem.Config{
+		Root:         http.FS(frontendAssets),
+		Browse:       false,
+		NotFoundFile: "index.html",
+	}))
 }

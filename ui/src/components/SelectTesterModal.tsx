@@ -12,7 +12,7 @@ import {
     useDisclosure
 } from '@chakra-ui/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import useAuthHeaders from '../hooks/useAuthHeaders';
 
 interface TesterRecord {
@@ -21,11 +21,17 @@ interface TesterRecord {
     last_login_at: string;
 }
 
-export default function SelectTesterModal({ testCaseID }) {
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const [selectedTesters, setSelectedTesters] = useState<number>([]);
-    const [testers, setTesters] = useState<TesterRecord[]>([]);
+interface SelectTesterModalProps {
+    testCaseID: number
+    selectedTesters: number[]
+    setSelectedTesters: Dispatch<SetStateAction<number[]>>
+}
 
+export default function SelectTesterModal({ testCaseID }: SelectTesterModalProps) {
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [selectedTesters, setSelectedTesters] = useState<number[]>([]);
+    const [testers, setTesters] = useState<TesterRecord[]>([]);
+    console.log("Selecting testers for ", testCaseID)
     async function fetchTesters() {
         const res = await axios.get("http://localhost:4597/v1/testers", useAuthHeaders())
         if (res.status == 200) {

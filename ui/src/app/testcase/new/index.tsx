@@ -9,7 +9,7 @@ import {
   useToast
 } from "@chakra-ui/react";
 import axios from 'axios';
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import SelectTestKind from "../../../components/SelectTestKind";
 import useAuthHeaders from "../../../hooks/useAuthHeaders";
@@ -26,9 +26,9 @@ export default function NewTestCases() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [is_draft, setIs_draft] = useState(false);
-  const [tags, setTags] = useState([]);
+  const [tags, setTags] = useState<string[]>([]);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const res = await axios.post('http://localhost:4597/v1/test-cases', {
       project_id: parseInt(`${project_id}`),

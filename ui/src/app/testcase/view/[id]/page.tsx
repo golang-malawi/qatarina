@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@chakra-ui/react';
 
-export default function ViewTestCase({ id }) {
+export default function ViewTestCase() {
   return (
     <div className="card">
       <Tabs>

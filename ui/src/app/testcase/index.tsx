@@ -84,7 +84,7 @@ export default function TestCasePage() {
       <h1>Test Cases</h1>
 
       <Flex align={'right'} mb={2} gap={3} alignItems={'flex-end'} className="actions">
-        <Link href="/testcase/new">
+        <Link to="/testcase/new">
           <Button bg="black" color="white">Create New</Button>
         </Link>
         <Button bg="green" color="white">Import from Excel</Button>

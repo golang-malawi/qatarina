@@ -18,33 +18,38 @@ import SelectTesterModal from "../../components/SelectTesterModal";
 import useAuthHeaders from "../../hooks/useAuthHeaders";
 
 
+interface TestCase {
+    ID: number;
+    Title?: string;
+    Code?: string;
+    Description?: string;
+    Tags?: string[];
+}
+
 interface SelectAssignedTestCase {
-    test_case_id: string;
+    test_case_id: number;
     user_ids: number[]
 }
 
 export default function CreateNewTestPlan() {
     const toast = useToast();
     const params = useParams();
-    const [testCases, setTestCases] = useState([]);
+    const [testCases, setTestCases] = useState<TestCase[]>([]);
     const [selectedTestCases, setSelectedTestCases] = useState<SelectAssignedTestCase[]>([]);
+    const [selectedTesters, setSelectedTesters] = useState<number[]>([]);
     const redirect = useNavigate();
     const project_id = params.projectID;
 
     useEffect(() => {
-        async function fetchTestCases(projectID) {
+        async function fetchTestCases(projectID: number) {
             const res = await axios.get(`http://localhost:4597/v1/projects/${projectID}/test-cases`, useAuthHeaders())
             if (res.status == 200) {
                 setTestCases(res.data.test_cases);
             }
         }
 
-        fetchTestCases(project_id);
+        fetchTestCases(parseInt(project_id!));
     }, [project_id]);
-
-    function showSelectTesterTray(testCaseID) {
-
-    }
 
     const testCaseList = testCases.map(t => (<Box key={t.ID}>
         <Flex>
@@ -62,15 +67,15 @@ export default function CreateNewTestPlan() {
                 /> {t.Code} - {t.Title} (Tags: {t.Tags?.join(', ')})
             </Box>
             <Box>
-                <SelectTesterModal testCaseID={t.ID} />
+                <SelectTesterModal testCaseID={t.ID} selectedTesters={selectedTesters} setSelectedTesters={setSelectedTesters} />
                 {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
             </Box>
         </Flex>
     </Box>))
 
-    async function handleSubmit(data) {
+    async function handleSubmit(data: { kind: any; description: any; start_at: any; closed_at: any; scheduled_end_at: any; assigned_to_id?: any; }) {
         const res = await axios.post('http://localhost:4597/v1/test-plans', {
-            project_id: parseInt(project_id),
+            project_id: parseInt(project_id!),
             assigned_to_id: data.assigned_to_id,
             kind: data.kind,
             description: data.description,

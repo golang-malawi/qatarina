@@ -15,7 +15,7 @@ export default function CreateNewUser() {
   const redirect = useNavigate();
   const toast = useToast();
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: { display_name?: string; first_name: any; last_name: any; password: any; email: any; }) {
     const res = await axios.post('http://localhost:4597/v1/users', {
       display_name: `${e.first_name} ${e.last_name}`,
       first_name: e.first_name,

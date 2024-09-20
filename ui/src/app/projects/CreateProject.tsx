@@ -8,7 +8,6 @@ import {
 } from "@chakra-ui/react";
 import { useForm } from '@tanstack/react-form';
 import axios from 'axios';
-import { useState } from "react";
 
 import { useNavigate } from "react-router";
 
@@ -24,7 +23,7 @@ export default function CreateProject() {
   const redirect = useNavigate();
   const toast = useToast();
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: { name: any; description: any; version: any; website_url: any; }) {
     const res = await axios.post('http://localhost:4597/v1/projects', {
       name: e.name,
       description: e.description,
@@ -57,12 +56,6 @@ export default function CreateProject() {
       return handleSubmit(value);
     }
   })
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [version, setVersion] = useState('');
-  const [website_url, setWebsite_url] = useState('');
-
-
 
   return (
     <form
@@ -72,29 +65,60 @@ export default function CreateProject() {
         form.handleSubmit()
       }}
     >
-      <FormControl>
-        <FormLabel>Name</FormLabel>
-        <Input type='text' name='name' onChange={(e) => setName(e.target.value)} />
-        <FormHelperText>Project Title.</FormHelperText>
-      </FormControl>
 
-      <FormControl>
-        <FormLabel>Description</FormLabel>
-        <Input type='text' name='description' onChange={(e) => setDescription(e.target.value)} />
-        <FormHelperText>Project description.</FormHelperText>
-      </FormControl>
+      <form.Field
+        name="name"
+        children={(field) => (
+          <FormControl>
+            <FormLabel>Name</FormLabel>
+            <Input type='text' value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)} />
+            <FormHelperText>Project title</FormHelperText>
+          </FormControl>
+        )}
+      />
 
-      <FormControl>
-        <FormLabel>Version</FormLabel>
-        <Input type='text' name='version' onChange={(e) => setVersion(e.target.value)} />
-        <FormHelperText>Project version.</FormHelperText>
-      </FormControl>
 
-      <FormControl>
-        <FormLabel>Website URL</FormLabel>
-        <Input type='text' name='website_url' onChange={(e) => setWebsite_url(e.target.value)} />
-        <FormHelperText>Project version.</FormHelperText>
-      </FormControl>
+      <form.Field
+        name="description"
+        children={(field) => (
+          <FormControl>
+            <FormLabel>Description</FormLabel>
+            <Input type='text' value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)} />
+            <FormHelperText>Description</FormHelperText>
+          </FormControl>
+        )}
+      />
+
+      <form.Field
+        name="version"
+        children={(field) => (
+          <FormControl>
+            <FormLabel>Project Version</FormLabel>
+            <Input type='text' value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)} />
+            <FormHelperText>Project Version</FormHelperText>
+          </FormControl>
+        )}
+      />
+
+      <form.Field
+        name="website_url"
+        children={(field) => (
+          <FormControl>
+            <FormLabel>Website URL</FormLabel>
+            <Input type='text' value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)} />
+            <FormHelperText>Website URL</FormHelperText>
+          </FormControl>
+        )}
+      />
+
 
       <Button type='submit'>Submit</Button>
     </form>

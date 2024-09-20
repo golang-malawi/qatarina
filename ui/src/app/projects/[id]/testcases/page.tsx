@@ -1,56 +1,53 @@
 "use client";
-import Image from "next/image";
-import PocketBase, { RecordModel } from "pocketbase";
 import {
-  Table,
-  Thead,
-  Tbody,
-  Tfoot,
-  Tr,
-  Th,
-  Td,
-  TableCaption,
-  TableContainer,
   Avatar,
   AvatarGroup,
   Button,
+  ButtonGroup,
+  Flex,
+  Heading,
+  IconButton,
   Input,
+  Link,
   Menu,
   MenuButton,
-  MenuList,
   MenuItem,
-  TabPanels,
-  TabPanel,
-  TabList,
-  Tabs,
+  MenuList,
   Tab,
-  Flex,
-  ButtonGroup,
-  IconButton,
-  Heading,
-} from '@chakra-ui/react'
+  Table,
+  TableCaption,
+  TableContainer,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Tbody,
+  Td,
+  Tfoot,
+  Th,
+  Thead,
+  Tr
+} from '@chakra-ui/react';
+import { IconAlertTriangle, IconChevronDown, IconClock, IconList, IconListCheck, IconListDetails, IconRefreshDot, IconTable } from "@tabler/icons-react";
+import axios from 'axios';
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { IconAlertTriangle, IconCheck, IconChevronDown, IconClock, IconGrid4x4, IconGridPattern, IconList, IconListCheck, IconListDetails, IconRefreshDot, IconTable } from "@tabler/icons-react";
+import useAuthHeaders from '../../../../hooks/useAuthHeaders';
 
-const testcases = [
-  {
-    title: 'Test Feature #1',
-    createdAt: 'yesterday',
-    author: '@zikani03'
-  }
-];
+interface TestCase {
+  code: string;
+  description: string;
+  usage_count: number;
+}
+
 
 export default function TestCase() {
-  const [testCases, setTestCases] = useState<RecordModel[]>([])
-
-  const pb = new PocketBase('http://127.0.0.1:8090');
+  const [testCases, setTestCases] = useState<TestCase[]>([])
 
   const fetchTestCases = async () => {
-    const records = await pb.collection('test_cases').getFullList({
-      sort: '-created',
-    });
-    setTestCases(records);
+    const res = await axios.get('http://localhost:4597/v1/test-cases', useAuthHeaders());
+    if (res.status == 200) {
+      setTestCases(res.data.test_casees);
+    }
   }
 
   useEffect(() => {
