@@ -1,6 +1,10 @@
 package api
 
 import (
+	"fmt"
+	"os"
+	"runtime/debug"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -17,7 +21,17 @@ func (api *API) middleware() {
 		AllowMethods: "*",
 	}))
 	app.Use(pprof.New())
-	app.Use(recover.New())
+
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
+			if api.logger != nil {
+				api.logger.Error("failed to process a request", "errorStackTrace", fmt.Sprintf("panic: %v\n%s\n", e, debug.Stack()))
+			} else {
+				_, _ = os.Stderr.WriteString(fmt.Sprintf("panic: %v\n%s\n", e, debug.Stack())) //nolint:errcheck
+			}
+		},
+	}))
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	}))
