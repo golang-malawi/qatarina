@@ -25,10 +25,9 @@ import {
   Tr,
 } from '@chakra-ui/react';
 import { IconChevronDown } from "@tabler/icons-react";
-import axios from 'axios';
 import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
-import useAuthHeaders from '../../hooks/useAuthHeaders';
+import TestCaseService from '../../services/TestCaseService';
 
 interface TestCase {
   code: string;
@@ -37,13 +36,14 @@ interface TestCase {
 }
 
 export default function TestCasePage() {
+  const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT);
   const [testCases, setTestCases] = useState<TestCase[]>([])
 
 
   useEffect(() => {
     const fetchTestCases = async () => {
-      const res = await axios.get('http://localhost:4597/v1/test-cases', useAuthHeaders())
-      setTestCases(res.data.test_cases);
+      const testCaseData = await testCaseService.findAll();
+      setTestCases(testCaseData);
     }
 
     fetchTestCases();

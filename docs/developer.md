@@ -29,3 +29,15 @@ $ qatarina migrate
 # Runs the server
 $ qatarina server
 ```
+
+## Building the Front-end
+
+Use the following instructions to build the frontend for embedding into the final
+binary built with Go.
+
+```sh 
+$ cd ui 
+
+$ npm run build
+```
+

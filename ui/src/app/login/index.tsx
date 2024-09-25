@@ -3,6 +3,7 @@ import { Box, Button, Input, InputGroup, Link } from '@chakra-ui/react';
 import axios from "axios";
 import { FormEvent, useState } from 'react';
 import { useNavigate } from "react-router";
+import { AuthService } from '../../services/AuthService';
 
 interface LoginData {
   user_id: number
@@ -11,16 +12,14 @@ interface LoginData {
 }
 
 export default function LoginPage() {
+  const authService = new AuthService(import.meta.env.API_ENDPOINT)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const redirect = useNavigate();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const res = await axios.post('http://localhost:4597/v1/auth/login', {
-      email,
-      password
-    });
+    const res = await authService.login(email, password);
 
     if (res.status == 200) {
       const loginData: LoginData = res.data;

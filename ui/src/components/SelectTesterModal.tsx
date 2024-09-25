@@ -11,9 +11,8 @@ import {
     ModalOverlay,
     useDisclosure
 } from '@chakra-ui/react';
-import axios from 'axios';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import useAuthHeaders from '../hooks/useAuthHeaders';
+import TesterService from '../services/TesterService';
 
 interface TesterRecord {
     user_id: number;
@@ -28,15 +27,14 @@ interface SelectTesterModalProps {
 }
 
 export default function SelectTesterModal({ testCaseID }: SelectTesterModalProps) {
+    const testerService = new TesterService(import.meta.env.API_ENDPOINT)
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [selectedTesters, setSelectedTesters] = useState<number[]>([]);
     const [testers, setTesters] = useState<TesterRecord[]>([]);
     console.log("Selecting testers for ", testCaseID)
     async function fetchTesters() {
-        const res = await axios.get("http://localhost:4597/v1/testers", useAuthHeaders())
-        if (res.status == 200) {
-            setTesters(res.data.testers)
-        }
+        const res = await testerService.findAll()
+        setTesters(res)
     }
     useEffect(() => {
         fetchTesters()

@@ -8,14 +8,14 @@ import {
   Input,
   useToast
 } from "@chakra-ui/react";
-import axios from 'axios';
 import { FormEvent, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import SelectTestKind from "../../../components/SelectTestKind";
-import useAuthHeaders from "../../../hooks/useAuthHeaders";
+import TestCaseService from "../../../services/TestCaseService";
 
 
 export default function NewTestCases() {
+  const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT)
   const toast = useToast();
   const params = useParams();
   const redirect = useNavigate();
@@ -30,7 +30,7 @@ export default function NewTestCases() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const res = await axios.post('http://localhost:4597/v1/test-cases', {
+    const res = await testCaseService.create({
       project_id: parseInt(`${project_id}`),
       kind,
       code,
@@ -39,7 +39,7 @@ export default function NewTestCases() {
       description,
       is_draft,
       tags: tags,
-    }, useAuthHeaders())
+    });
 
     if (res.status == 200) {
       toast({

@@ -11,11 +11,11 @@ import {
     useToast
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import SelectTesterModal from "../../components/SelectTesterModal";
-import useAuthHeaders from "../../hooks/useAuthHeaders";
+import TestCaseService from "../../services/TestCaseService";
+import TestPlanService from "../../services/TestPlanService";
 
 
 interface TestCase {
@@ -32,6 +32,8 @@ interface SelectAssignedTestCase {
 }
 
 export default function CreateNewTestPlan() {
+    const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT);
+    const testPlanService = new TestPlanService(import.meta.env.API_ENDPOINT);
     const toast = useToast();
     const params = useParams();
     const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -42,10 +44,8 @@ export default function CreateNewTestPlan() {
 
     useEffect(() => {
         async function fetchTestCases(projectID: number) {
-            const res = await axios.get(`http://localhost:4597/v1/projects/${projectID}/test-cases`, useAuthHeaders())
-            if (res.status == 200) {
-                setTestCases(res.data.test_cases);
-            }
+            const res = await testCaseService.findByProjectId(projectID);
+            setTestCases(res);
         }
 
         fetchTestCases(parseInt(project_id!));
@@ -74,7 +74,7 @@ export default function CreateNewTestPlan() {
     </Box>))
 
     async function handleSubmit(data: { kind: any; description: any; start_at: any; closed_at: any; scheduled_end_at: any; assigned_to_id?: any; }) {
-        const res = await axios.post('http://localhost:4597/v1/test-plans', {
+        const res = await testPlanService.create({
             project_id: parseInt(project_id!),
             assigned_to_id: data.assigned_to_id,
             kind: data.kind,
@@ -83,7 +83,7 @@ export default function CreateNewTestPlan() {
             closed_at: data.closed_at,
             scheduled_end_at: data.scheduled_end_at,
             planned_tests: []
-        }, useAuthHeaders());
+        });
 
         if (res.status == 200) {
             toast({

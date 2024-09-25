@@ -1,9 +1,8 @@
 import { Box, Button, Container, Flex } from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import axios from 'axios';
 import { useEffect, useState } from "react";
 import { Link } from 'react-router-dom';
-import useAuthHeaders from '../../hooks/useAuthHeaders';
+import ProjectService from "../../services/ProjectService";
 
 interface Project {
     id: string;
@@ -12,15 +11,14 @@ interface Project {
 }
 
 export default function Projects() {
+    const projectService = new ProjectService(import.meta.env.API_ENDPOINT)
     const [records, setRecords] = useState<Project[]>([]);
 
     useEffect(() => {
 
         async function getProjects() {
-            const res = await axios.get('http://localhost:4597/v1/projects', useAuthHeaders())
-            if (res.status == 200) {
-                setRecords(res.data.projects)
-            }
+            const res = await projectService.findAll();
+            setRecords(res)
         }
 
         getProjects()

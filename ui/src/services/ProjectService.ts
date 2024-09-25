@@ -10,6 +10,17 @@ export default class ProjectService {
 
   async findAll() {
     const res = await axios.get(`${this.apiEndpoint}/v1/projects`, useAuthHeaders())
-    return res.data
+    if (res.status === 200) {
+      return res.data.projects;
+    }
+    throw new Error(res.data);
+  }
+
+  async create(data: any) {
+    const res = await axios.post(`${this.apiEndpoint}/v1/projects`, data, useAuthHeaders())
+    if (res.status === 200) {
+      return res;
+    }
+    throw new Error(res.data);
   }
 }

@@ -7,9 +7,9 @@ import {
   useToast
 } from "@chakra-ui/react";
 import { useForm } from '@tanstack/react-form';
-import axios from 'axios';
 
 import { useNavigate } from "react-router";
+import ProjectService from "../../services/ProjectService";
 
 // interface newProjectRequest = {
 //   name: string;
@@ -20,16 +20,17 @@ import { useNavigate } from "react-router";
 // }
 
 export default function CreateProject() {
+  const projectService = new ProjectService(import.meta.env.API_ENDPOINT)
   const redirect = useNavigate();
   const toast = useToast();
 
   async function handleSubmit(e: { name: any; description: any; version: any; website_url: any; }) {
-    const res = await axios.post('http://localhost:4597/v1/projects', {
+    const res = await projectService.create({
       name: e.name,
       description: e.description,
       version: e.version,
       website_url: e.website_url,
-    })
+    });
 
     if (res.status == 200) {
       toast({

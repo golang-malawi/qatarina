@@ -7,24 +7,22 @@ import {
   useToast
 } from '@chakra-ui/react';
 import { useForm } from '@tanstack/react-form';
-import axios from 'axios';
 import { useNavigate } from 'react-router';
-import useAuthHeaders from '../../hooks/useAuthHeaders';
+import UserService from '../../services/UserService';
 
 export default function CreateNewUser() {
+  const userService = new UserService(import.meta.env.API_ENDPOINT)
   const redirect = useNavigate();
   const toast = useToast();
 
   async function handleSubmit(e: { display_name?: string; first_name: any; last_name: any; password: any; email: any; }) {
-    const res = await axios.post('http://localhost:4597/v1/users', {
+    const res = await userService.create({
       display_name: `${e.first_name} ${e.last_name}`,
       first_name: e.first_name,
       last_name: e.last_name,
       password: e.password,
       email: e.email
-    },
-      useAuthHeaders()
-    );
+    });
 
     if (res.status == 200) {
       toast({
