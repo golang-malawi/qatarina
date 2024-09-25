@@ -5,7 +5,7 @@ export default class TesterService {
     apiEndpoint: string;
 
     constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint;
+        this.apiEndpoint = apiEndpoint || "";
     }
 
     async findAll() {

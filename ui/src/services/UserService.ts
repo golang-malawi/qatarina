@@ -5,7 +5,7 @@ export default class UserService {
     apiEndpoint: string;
 
     constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint;
+        this.apiEndpoint = apiEndpoint || "";
     }
 
     async create(data: any) {

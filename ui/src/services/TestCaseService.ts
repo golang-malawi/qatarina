@@ -4,7 +4,7 @@ import useAuthHeaders from "../hooks/useAuthHeaders";
 export default class TestCaseService {
     apiEndpoint: string;
     constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint;
+        this.apiEndpoint = apiEndpoint || "";
     }
 
     async findAll() {
