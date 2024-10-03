@@ -1,11 +1,12 @@
 import axios from "axios";
+import { getApiEndpoint } from "../common/request";
 
 export class AuthService {
     apiEndpoint: string;
 
 
-    constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint
+    constructor() {
+        this.apiEndpoint = getApiEndpoint()
     }
 
     async login(email: string, password: string) {

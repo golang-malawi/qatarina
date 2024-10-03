@@ -1,16 +1,17 @@
 import axios from "axios";
+import { getApiEndpoint } from "../common/request";
 import useAuthHeaders from "../hooks/useAuthHeaders";
 
 export default class TestCaseService {
     apiEndpoint: string;
-    constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint || "";
+    constructor() {
+        this.apiEndpoint = getApiEndpoint();
     }
 
     async findAll() {
         var res = await axios.get(`${this.apiEndpoint}/v1/test-cases`, useAuthHeaders())
         if (res.status == 200) {
-            return res.data.test_cases;
+            return res.data.test_cases || [];
         }
         throw new Error(res.data);
     }
@@ -28,7 +29,7 @@ export default class TestCaseService {
     async findByProjectId(projectID: number) {
         var res = await axios.get(`${this.apiEndpoint}/v1/projects/${projectID}/test-cases`, useAuthHeaders())
         if (res.status === 200) {
-            return res.data.test_case;
+            return res.data.test_cases || [];
         }
         throw new Error(res.data);
     }

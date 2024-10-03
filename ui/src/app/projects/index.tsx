@@ -1,6 +1,6 @@
 import { Box, Button, Container, Flex } from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import ProjectService from "../../services/ProjectService";
 
@@ -11,22 +11,21 @@ interface Project {
 }
 
 export default function Projects() {
-    const projectService = new ProjectService(import.meta.env.API_ENDPOINT)
-    const [records, setRecords] = useState<Project[]>([]);
+    const projectService = new ProjectService();
+    const { data: projects, isPending, error } = useQuery<Project[]>({
+        queryFn: () => projectService.findAll().then(data => data),
+        queryKey: ['projects'],
+    });
 
-    useEffect(() => {
+    if (isPending) {
+        return 'Loading Projects...'
+    }
 
-        async function getProjects() {
-            const res = await projectService.findAll();
-            setRecords(res)
-        }
+    if (error) {
+        return <div className="error">Error: error fetching</div>
+    }
 
-        getProjects()
-
-        return () => { }
-    }, []);
-
-    const projectList = records.map(record => (
+    const projectList = projects.map(record => (
         <Container key={record.id} className="w-full">
             <h2>{record.title}</h2>
             <p>

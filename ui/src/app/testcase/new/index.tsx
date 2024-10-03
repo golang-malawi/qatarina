@@ -15,7 +15,7 @@ import TestCaseService from "../../../services/TestCaseService";
 
 
 export default function NewTestCases() {
-  const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT)
+  const testCaseService = new TestCaseService()
   const toast = useToast();
   const params = useParams();
   const redirect = useNavigate();

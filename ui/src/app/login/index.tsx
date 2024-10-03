@@ -1,8 +1,9 @@
 "use client";
 import { Box, Button, Input, InputGroup, Link } from '@chakra-ui/react';
 import axios from "axios";
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from "react-router";
+import isLoggedIn from '../../hooks/isLoggedIn';
 import { AuthService } from '../../services/AuthService';
 
 interface LoginData {
@@ -12,10 +13,17 @@ interface LoginData {
 }
 
 export default function LoginPage() {
-  const authService = new AuthService(import.meta.env.API_ENDPOINT)
+  const redirect = useNavigate();
+
+  useEffect(() => {
+    if (isLoggedIn()) {
+      redirect('/dashboard')
+    }
+  }, []);
+
+  const authService = new AuthService()
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const redirect = useNavigate();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()

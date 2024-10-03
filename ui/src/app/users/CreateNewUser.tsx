@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router';
 import UserService from '../../services/UserService';
 
 export default function CreateNewUser() {
-  const userService = new UserService(import.meta.env.API_ENDPOINT)
+  const userService = new UserService()
   const redirect = useNavigate();
   const toast = useToast();
 

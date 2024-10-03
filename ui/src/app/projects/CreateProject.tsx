@@ -20,7 +20,7 @@ import ProjectService from "../../services/ProjectService";
 // }
 
 export default function CreateProject() {
-  const projectService = new ProjectService(import.meta.env.API_ENDPOINT)
+  const projectService = new ProjectService()
   const redirect = useNavigate();
   const toast = useToast();
 

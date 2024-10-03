@@ -1,11 +1,12 @@
 import axios from "axios";
+import { getApiEndpoint } from "../common/request";
 import useAuthHeaders from "../hooks/useAuthHeaders";
 
 export default class TestPlanService {
     apiEndpoint: string;
 
-    constructor(apiEndpoint: string) {
-        this.apiEndpoint = apiEndpoint || "";
+    constructor() {
+        this.apiEndpoint = getApiEndpoint();
     }
 
     async findAll() {

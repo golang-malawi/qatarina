@@ -25,7 +25,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 import { IconChevronDown } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import TestCaseService from '../../services/TestCaseService';
 
@@ -36,18 +36,20 @@ interface TestCase {
 }
 
 export default function TestCasePage() {
-  const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT);
-  const [testCases, setTestCases] = useState<TestCase[]>([])
+  const testCaseService = new TestCaseService();
 
+  const { data: testCases, isPending, error } = useQuery<TestCase[]>({
+    queryFn: () => testCaseService.findAll(),
+    queryKey: ['testCases'],
+  });
 
-  useEffect(() => {
-    const fetchTestCases = async () => {
-      const testCaseData = await testCaseService.findAll();
-      setTestCases(testCaseData);
-    }
+  if (isPending) {
+    return 'Loading Projects...'
+  }
 
-    fetchTestCases();
-  }, [])
+  if (error) {
+    return <div className="error">Error: error fetching</div>
+  }
 
 
   const testCaseRows = testCases.map((tc, idx) =>

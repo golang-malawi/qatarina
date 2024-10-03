@@ -1,10 +1,17 @@
 import { Box, Flex, Heading } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import isLoggedIn from "../hooks/isLoggedIn";
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+  const [loggedIn, setIsLoggedIn] = useState<boolean>(false);
+  useEffect(() => {
+    setIsLoggedIn(isLoggedIn())
+  }, [loggedIn])
+
+  const authenticatedLayout = (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24" >
       <Box width={'100%'} bg={'gray.50'} borderBottom={'1px solid #f3f3f3'} padding={4}>
         <Link to="/">
           <Heading size='1xl'>QATARINA </Heading>
@@ -19,5 +26,13 @@ export default function Home() {
         </Box>
       </Flex>
     </main>
+  );
+
+  return (
+    <>
+      {loggedIn ?
+        (authenticatedLayout) :
+        (<Outlet />)}
+    </>
   );
 }

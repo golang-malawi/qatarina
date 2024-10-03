@@ -40,7 +40,7 @@ interface TestCase {
 
 
 export default function TestCase() {
-  const testCaseService = new TestCaseService(import.meta.env.API_ENDPOINT)
+  const testCaseService = new TestCaseService()
   const [testCases, setTestCases] = useState<TestCase[]>([])
 
   const fetchTestCases = async () => {
