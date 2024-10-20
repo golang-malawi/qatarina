@@ -40,7 +40,7 @@ func (api *API) routes() {
 	projectsV1 := router.Group("/v1/projects", authenticationMiddleware)
 	{
 		projectsV1.Get("", apiv1.ListProjects(api.ProjectsService))
-		projectsV1.Post("", apiv1.CreateProject(api.ProjectsService))
+		projectsV1.Post("", apiv1.CreateProject(api.ProjectsService, api.TestPlansService, &api.Config.Platform, api.logger))
 		projectsV1.Get("/query", apiv1.SearchProjects(api.ProjectsService))
 		projectsV1.Get("/:projectID/test-cases", apiv1.GetProjectTestCases(api.TestCasesService, api.logger))
 		projectsV1.Get("/:projectID/test-plans", apiv1.GetProjectTestPlans(api.TestPlansService, api.logger))

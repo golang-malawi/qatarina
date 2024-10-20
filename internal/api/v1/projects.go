@@ -3,10 +3,13 @@ package v1
 
 import (
 	"context"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -180,7 +183,7 @@ func GetProjectTestRuns(testRunService services.TestRunService, logger logging.L
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/projects [post]
-func CreateProject(projectService services.ProjectService) fiber.Handler {
+func CreateProject(projectService services.ProjectService, testPlanService services.TestPlanService, platform *config.PlatformConfiguration, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		var request schema.NewProjectRequest
 		_, err := common.ParseBodyThenValidate(ctx, &request)
@@ -194,6 +197,28 @@ func CreateProject(projectService services.ProjectService) fiber.Handler {
 		if err != nil {
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
+
+		if platform.CreateDefaultTestPlan {
+			logger.Info("projectsv1", "creating a new default Test Plan to get projects ")
+			newDefaultTestPlan := &schema.CreateTestPlan{
+				ProjectID:      int64(project.ID),
+				Kind:           string(dbsqlc.TestKindGeneral),
+				Description:    "Default -- Ongoing Testing",
+				StartAt:        time.Now().Format(time.DateOnly),
+				ClosedAt:       nil,
+				ScheduledEndAt: "2099-01-01",
+				AssignedToID:   int64(project.OwnerUserID),
+				CreatedByID:    int64(project.OwnerUserID),
+				UpdatedByID:    int64(project.OwnerUserID),
+				PlannedTests:   []schema.TestCaseAssignment{},
+			}
+
+			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan)
+			if err != nil {
+				logger.Error("projectsv1", "failed to create a default test plan for project", "projectID", project.ID, "error", err)
+			}
+		}
+
 		return ctx.JSON(fiber.Map{
 			"project": schema.NewProjectResponse(project, nil), // TODO: fetch owner
 		})

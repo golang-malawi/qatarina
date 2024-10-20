@@ -25,9 +25,17 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-plans [get]
-func ListTestPlans(services.TestPlanService) fiber.Handler {
+func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to list TestPlans")
+
+		testPlans, err := testPlanService.FindAll(context.Background())
+		if err != nil {
+			// TODO: logger
+			return problemdetail.ServerErrorProblem(c, "failed to fetch test plans")
+		}
+		return c.JSON(fiber.Map{
+			"test_plans": testPlans,
+		})
 	}
 }
 

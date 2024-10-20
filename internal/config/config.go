@@ -66,7 +66,8 @@ type AdminConfiguration struct {
 }
 
 type PlatformConfiguration struct {
-	AnonymousTestCase bool `mapstructure:"" envconfig:"QATARINA_ANONYMOUS_TEST_CASE"`
+	AnonymousTestCase     bool `mapstructure:"" envconfig:"QATARINA_ANONYMOUS_TEST_CASE"`
+	CreateDefaultTestPlan bool `mapstructure:"create_default_test_plan" envconfig:"QATARINA_ENABLE_DEFAULT_TEST_PLAN"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -127,6 +128,7 @@ var DefaultConfig = Config{
 		File:  "",
 	},
 	Platform: PlatformConfiguration{
-		AnonymousTestCase: false,
+		AnonymousTestCase:     false,
+		CreateDefaultTestPlan: true,
 	},
 }

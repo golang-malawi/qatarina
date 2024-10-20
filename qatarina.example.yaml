@@ -29,3 +29,6 @@ admin:
 logging:
   file: "/var/log/qatarina.log"
   level: "debug"
+
+platform:
+  create_default_test_plan: true
