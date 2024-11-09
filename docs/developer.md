@@ -2,7 +2,7 @@
 
 ## Setup Taskfile (Optional)
 
-You can setup Taskfile to simplify the dev process (or you can run all command manually)
+You can set up Taskfile to simplify the dev process (or you can run all commands manually)
 
 ```bash
 go install github.com/go-task/task/v3/cmd/task@latest
@@ -40,11 +40,10 @@ $ qatarina server
 ```
 
 ## Create new user
-To create a new user after initialising of the first time you can run
+To create a new user after initializing for the first time you can run
 ```bash
 qatarina user new --name="root root" --password=root --email=root@mail.com
 ```
-
 
 ## Building the Front-end
 
