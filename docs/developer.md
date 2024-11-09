@@ -1,5 +1,14 @@
 # QATARINA Developer Docs
 
+## Setup Taskfile (Optional)
+
+You can setup Taskfile to simplify the dev process (or you can run all command manually)
+
+```bash
+go install github.com/go-task/task/v3/cmd/task@latest
+```
+
+You can find most of the commands you need for this project in [Taskfile.yml](../Taskfile.yml)
 
 ## Using `sqlc` for database queries
 
@@ -30,14 +39,20 @@ $ qatarina migrate
 $ qatarina server
 ```
 
+## Create new user
+To create a new user after initialising of the first time you can run
+```bash
+qatarina user new --name="root root" --password=root --email=root@mail.com
+```
+
+
 ## Building the Front-end
 
 Use the following instructions to build the frontend for embedding into the final
 binary built with Go.
 
-```sh 
-$ cd ui 
+```sh
+$ cd ui
 
 $ npm run build
 ```
-
