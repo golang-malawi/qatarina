@@ -23,8 +23,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -46,15 +45,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -83,8 +80,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -112,8 +108,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -140,15 +135,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -158,6 +151,64 @@ paths:
           schema:
             $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Project
+      tags:
+      - projects
+  /api/v1/projects/{projectID}/test-cases:
+    get:
+      consumes:
+      - application/json
+      description: Get a single Project's test plans
+      operationId: GetProjectTestPlans
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Get a single Project's test plans
+      tags:
+      - projects
+  /api/v1/projects/{projectID}/test-runs:
+    get:
+      consumes:
+      - application/json
+      description: Get a single Project's test runs
+      operationId: GetProjectTestRuns
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Get a single Project's test runs
       tags:
       - projects
   /api/v1/projects/import:
@@ -171,15 +222,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -202,8 +251,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -226,8 +274,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -249,15 +296,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -286,8 +331,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -315,8 +359,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -343,15 +386,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -361,6 +402,35 @@ paths:
           schema:
             $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Test Case
+      tags:
+      - test-cases
+  /api/v1/test-cases/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple Test Cases at once
+      operationId: BulkCreateTestCases
+      parameters:
+      - description: Bulk Create Test Case data
+        in: body
+        name: request
+        required: true
+        schema: {}
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Create multiple Test Cases at once
       tags:
       - test-cases
   /api/v1/test-cases/query:
@@ -374,8 +444,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -398,8 +467,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -421,15 +489,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -458,8 +524,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -487,8 +552,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -515,15 +579,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -546,8 +608,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -569,15 +630,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -606,8 +665,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -635,8 +693,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -663,15 +720,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -681,6 +736,40 @@ paths:
           schema:
             $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Test Run
+      tags:
+      - test-runs
+  /api/v1/test-runs/{testRunID}/commit:
+    post:
+      consumes:
+      - application/json
+      description: Mark a Test Run as committed
+      operationId: CommitTestRun
+      parameters:
+      - description: Test Run ID
+        in: path
+        name: testRunID
+        required: true
+        type: string
+      - description: Test Run update data
+        in: body
+        name: request
+        required: true
+        schema: {}
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Mark a Test Run as committed
       tags:
       - test-runs
   /api/v1/test-runs/query:
@@ -694,8 +783,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -718,8 +806,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -742,8 +829,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -772,8 +858,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -801,15 +886,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -832,8 +915,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -855,15 +937,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -892,8 +972,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -921,8 +1000,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -949,15 +1027,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -985,15 +1061,13 @@ paths:
         in: body
         name: request
         required: true
-        schema:
-          type: object
+        schema: {}
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
@@ -1016,8 +1090,7 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            type: object
+          schema: {}
         "400":
           description: Bad Request
           schema:
