@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/golang-malawi/qatarina/internal/services"
+	"github.com/golang-malawi/qatarina/internal/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -32,24 +34,22 @@ var newUserCmd = &cobra.Command{
 		}
 
 		nameparts := strings.SplitN(name.Value.String(), " ", 2)
-
-		user := dbsqlc.CreateUserParams{
-			FirstName:    nameparts[0],
-			LastName:     nameparts[1],
-			DisplayName:  sql.NullString{String: name.Value.String(), Valid: true},
-			Email:        email.Value.String(),
-			Password:     common.MustHashPassword(password.Value.String()),
-			IsActivated:  sql.NullBool{Bool: true, Valid: true},
-			IsReviewed:   sql.NullBool{Bool: true, Valid: true},
-			IsSuperAdmin: sql.NullBool{Bool: true, Valid: true},
-			IsVerified:   sql.NullBool{Bool: true, Valid: true},
-			CreatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
-			UpdatedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		user := &schema.NewUserRequest{
+			OrgID:       0,
+			FirstName:   nameparts[0],
+			LastName:    nameparts[1],
+			DisplayName: name.Value.String(),
+			Email:       email.Value.String(),
+			Password:    common.MustHashPassword(password.Value.String()),
 		}
 
-		queries := dbsqlc.New(qatarinaConfig.OpenDB())
+		validationErrors := validation.ValidateStruct(user)
+		if validationErrors != nil {
+			return fmt.Errorf("failed to create user got %v", validationErrors)
+		}
 
-		_, err := queries.CreateUser(context.Background(), user)
+		service := services.NewUserService(dbsqlc.New(qatarinaConfig.OpenDB()), logging.NewFromConfig(&qatarinaConfig.Logging))
+		_, err := service.Create(context.Background(), user)
 		if err != nil {
 			return fmt.Errorf("failed to create user got %v", err)
 		}
