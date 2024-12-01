@@ -25,10 +25,10 @@ import {
   SelectAssignedTestCase,
   TestCase,
   TesterRecord,
-} from "../../../../../../common/models";
-import TestCaseService from "../../../../../../services/TestCaseService";
-import TestPlanService from "../../../../../../services/TestPlanService";
-import TesterService from "../../../../../../services/TesterService";
+} from "@/common/models";
+import TestCaseService from "@/services/TestCaseService";
+import TestPlanService from "@/services/TestPlanService";
+import TesterService from "@/services/TesterService";
 import {
   createFileRoute,
   useNavigate,

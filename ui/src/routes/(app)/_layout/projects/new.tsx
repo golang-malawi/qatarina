@@ -8,7 +8,7 @@ import {
 } from '@chakra-ui/react'
 import { useForm } from '@tanstack/react-form'
 
-import ProjectService from '../../../../services/ProjectService'
+import ProjectService from '@/services/ProjectService'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(app)/_layout/projects/new')({

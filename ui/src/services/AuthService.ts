@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getApiEndpoint } from "../common/request";
+import { getApiEndpoint } from "@/common/request";
 
 export class AuthService {
     apiEndpoint: string;

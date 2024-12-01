@@ -7,7 +7,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { useForm } from '@tanstack/react-form'
-import UserService from '../../../../services/UserService'
+import UserService from '@/services/UserService'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(app)/_layout/users/new')({

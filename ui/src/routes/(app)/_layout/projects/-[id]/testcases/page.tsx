@@ -30,7 +30,7 @@ import {
 } from '@chakra-ui/react';
 import { IconAlertTriangle, IconChevronDown, IconClock, IconList, IconListCheck, IconListDetails, IconRefreshDot, IconTable } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import TestCaseService from '../../../../../../services/TestCaseService';
+import TestCaseService from '@/services/TestCaseService';
 
 interface TestCase {
   code: string;

@@ -1,6 +1,6 @@
 import axios from "axios";
-import { getApiEndpoint } from "../common/request";
-import useAuthHeaders from "../hooks/useAuthHeaders";
+import { getApiEndpoint } from "@/common/request";
+import useAuthHeaders from "@/hooks/useAuthHeaders";
 
 export default class TestCaseService {
     apiEndpoint: string;

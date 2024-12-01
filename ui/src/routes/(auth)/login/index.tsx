@@ -2,8 +2,8 @@ import { Box, Button, Input, InputGroup, Link } from '@chakra-ui/react'
 import axios from 'axios'
 import { FormEvent, useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import isLoggedIn from '../../../hooks/isLoggedIn'
-import { AuthService } from '../../../services/AuthService'
+import isLoggedIn from '@/hooks/isLoggedIn'
+import { AuthService } from '@/services/AuthService'
 
 export const Route = createFileRoute('/(auth)/login/')({
   component: LoginPage,

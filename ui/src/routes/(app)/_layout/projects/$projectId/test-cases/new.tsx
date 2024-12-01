@@ -8,8 +8,8 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
-import SelectTestKind from "../../../../../../components/SelectTestKind";
-import TestCaseService from "../../../../../../services/TestCaseService";
+import SelectTestKind from "@/components/SelectTestKind";
+import TestCaseService from "@/services/TestCaseService";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute(

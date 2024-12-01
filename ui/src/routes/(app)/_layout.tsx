@@ -1,7 +1,7 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { Providers } from "../../lib/providers";
+import { Providers } from "@/lib/providers";
 import { Box, Flex, Heading } from "@chakra-ui/react";
-import Sidebar from "../../components/Sidebar";
+import Sidebar from "@/components/Sidebar";
 
 export const Route = createFileRoute("/(app)/_layout")({
   component: LayoutComponent,

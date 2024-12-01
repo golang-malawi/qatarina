@@ -1,6 +1,6 @@
 import { Heading } from "@chakra-ui/react";
 import { useEffect } from "react";
-import isLoggedIn from "../hooks/isLoggedIn";
+import isLoggedIn from "@/hooks/isLoggedIn";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({

@@ -1,7 +1,7 @@
 import { Box, Button, Container, Flex, Link as UiLink } from '@chakra-ui/react'
 import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
-import ProjectService from '../../../../services/ProjectService'
+import ProjectService from '@/services/ProjectService'
 import { createFileRoute, Link } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(app)/_layout/projects/')({

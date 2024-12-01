@@ -1,7 +1,7 @@
 import { Box, Heading } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
-import TestPlanService from '../../../../services/TestPlanService'
-import { TestPlan } from '../../../../common/models'
+import TestPlanService from '@/services/TestPlanService'
+import { TestPlan } from '@/common/models'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/(app)/_layout/test-plans/')({
