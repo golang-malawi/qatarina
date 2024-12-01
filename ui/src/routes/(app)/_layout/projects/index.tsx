@@ -1,36 +1,36 @@
-import { Box, Button, Container, Flex, Link as UiLink } from '@chakra-ui/react'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
-import ProjectService from '@/services/ProjectService'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Box, Button, Container, Flex, Link as UiLink } from "@chakra-ui/react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
+import ProjectService from "@/services/ProjectService";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/(app)/_layout/projects/')({
+export const Route = createFileRoute("/(app)/_layout/projects/")({
   component: Projects,
-})
+});
 
 interface Project {
-  id: string
-  title: string
-  project_url: string
+  id: string;
+  title: string;
+  project_url: string;
 }
 
 function Projects() {
-  const projectService = new ProjectService()
+  const projectService = new ProjectService();
   const {
     data: projects,
     isPending,
     error,
   } = useQuery<Project[]>({
     queryFn: () => projectService.findAll().then((data) => data),
-    queryKey: ['projects'],
-  })
+    queryKey: ["projects"],
+  });
 
   if (isPending) {
-    return 'Loading Projects...'
+    return "Loading Projects...";
   }
 
   if (error) {
-    return <div className="error">Error: error fetching</div>
+    return <div className="error">Error: error fetching</div>;
   }
 
   const projectList = projects.map((record) => (
@@ -56,18 +56,18 @@ function Projects() {
           </Button>
         </Box>
         <Box>
-          <UiLink as={Link} to={`/projects/${record.id}/test-cases/new`}>
+          <Link to={`/projects/${record.id}/test-cases/new`}>
             <Button bg="blue" color="white">
               Add Test Cases
             </Button>
-          </UiLink>
+          </Link>
         </Box>
         <Box>
-          <UiLink as={Link} to={`/projects/${record.id}/test-plans/new`}>
+          <Link to={`/projects/${record.id}/test-plans/new`}>
             <Button bg="blue" color="white">
               Create Test Plan
             </Button>
-          </UiLink>
+          </Link>
         </Box>
         <Box>
           <Button bg="red" color="white">
@@ -76,18 +76,20 @@ function Projects() {
         </Box>
       </Flex>
     </Container>
-  ))
+  ));
 
   return (
     <div>
       Projects
-      <UiLink as={Link} to="/projects/new">
-        <Button>
-          <IconPlus /> Create Project
-        </Button>
+      <UiLink asChild>
+        <Link to="/projects/new" href="">
+          <Button>
+            <IconPlus /> Create Project
+          </Button>
+        </Link>
       </UiLink>
       <hr />
       {projectList}
     </div>
-  )
+  );
 }

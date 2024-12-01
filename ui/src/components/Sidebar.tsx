@@ -43,5 +43,5 @@ export default function Sidebar() {
     </Link>
   ));
 
-  return <List padding={4}>{links}</List>;
+  return <List.Root padding={4}>{links}</List.Root>;
 }

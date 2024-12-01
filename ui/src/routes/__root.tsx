@@ -1,3 +1,4 @@
+import { Providers } from "@/lib/providers";
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 
@@ -15,9 +16,9 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <>
+    <Providers>
       <Outlet />
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </Providers>
   );
 }

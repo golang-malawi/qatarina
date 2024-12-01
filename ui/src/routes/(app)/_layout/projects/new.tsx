@@ -1,19 +1,14 @@
-import {
-  Button,
-  FormControl,
-  FormHelperText,
-  FormLabel,
-  Input,
-  useToast,
-} from '@chakra-ui/react'
-import { useForm } from '@tanstack/react-form'
+import { Button, Input } from "@chakra-ui/react";
+import { useForm } from "@tanstack/react-form";
 
-import ProjectService from '@/services/ProjectService'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import ProjectService from "@/services/ProjectService";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toaster } from "@/components/ui/toaster";
+import { Field } from "@/components/ui/field";
 
-export const Route = createFileRoute('/(app)/_layout/projects/new')({
+export const Route = createFileRoute("/(app)/_layout/projects/new")({
   component: CreateProject,
-})
+});
 
 // interface newProjectRequest = {
 //   name: string;
@@ -24,122 +19,112 @@ export const Route = createFileRoute('/(app)/_layout/projects/new')({
 // }
 
 function CreateProject() {
-  const projectService = new ProjectService()
-  const redirect = useNavigate()
-  const toast = useToast()
+  const projectService = new ProjectService();
+  const redirect = useNavigate();
 
   async function handleSubmit(e: {
-    name: unknown
-    description: unknown
-    version: unknown
-    website_url: unknown
+    name: unknown;
+    description: unknown;
+    version: unknown;
+    website_url: unknown;
   }) {
     const res = await projectService.create({
       name: e.name,
       description: e.description,
       version: e.version,
       website_url: e.website_url,
-    })
+    });
 
     if (res.status == 200) {
-      toast({
-        title: 'Project created.',
+      toaster.create({
+        title: "Project created.",
         description: "We've created your Project.",
-        status: 'success',
+        type: "success",
         duration: 9000,
-        isClosable: true,
-      })
-      redirect({ to: '/projects' })
+      });
+      redirect({ to: "/projects" });
     }
 
-    return false
+    return false;
   }
 
   const form = useForm({
     defaultValues: {
-      name: '',
-      description: '',
-      version: '',
-      website_url: '',
+      name: "",
+      description: "",
+      version: "",
+      website_url: "",
     },
     onSubmit: async ({ value }) => {
-      return handleSubmit(value)
+      return handleSubmit(value);
     },
-  })
+  });
 
   return (
     <form
       onSubmit={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        form.handleSubmit()
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
       }}
     >
       <form.Field
         name="name"
         children={(field) => (
-          <FormControl>
-            <FormLabel>Name</FormLabel>
+          <Field label="Name" helperText="Project title">
             <Input
               type="text"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
             />
-            <FormHelperText>Project title</FormHelperText>
-          </FormControl>
+          </Field>
         )}
       />
 
       <form.Field
         name="description"
         children={(field) => (
-          <FormControl>
-            <FormLabel>Description</FormLabel>
+          <Field label="Description" helperText="Description">
             <Input
               type="text"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
             />
-            <FormHelperText>Description</FormHelperText>
-          </FormControl>
+          </Field>
         )}
       />
 
       <form.Field
         name="version"
         children={(field) => (
-          <FormControl>
-            <FormLabel>Project Version</FormLabel>
+          <Field label="Project Version" helperText="Project Version">
             <Input
               type="text"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
             />
-            <FormHelperText>Project Version</FormHelperText>
-          </FormControl>
+          </Field>
         )}
       />
 
       <form.Field
         name="website_url"
         children={(field) => (
-          <FormControl>
-            <FormLabel>Website URL</FormLabel>
+          <Field label="Website URL" helperText="Website URL">
             <Input
               type="text"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
             />
-            <FormHelperText>Website URL</FormHelperText>
-          </FormControl>
+          </Field>
         )}
       />
 
       <Button type="submit">Submit</Button>
     </form>
-  )
+  );
 }

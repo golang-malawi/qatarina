@@ -1,16 +1,11 @@
-import {
-  Button,
-  Checkbox,
-  FormControl,
-  FormHelperText,
-  FormLabel,
-  Input,
-  useToast,
-} from "@chakra-ui/react";
+import { Button, Input } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import SelectTestKind from "@/components/SelectTestKind";
 import TestCaseService from "@/services/TestCaseService";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toaster } from "@/components/ui/toaster";
+import { Field } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute(
   "/(app)/_layout/projects/$projectId/test-cases/new"
@@ -20,7 +15,6 @@ export const Route = createFileRoute(
 
 function NewTestCases() {
   const testCaseService = new TestCaseService();
-  const toast = useToast();
   const project_id = Route.useParams().projectId;
   const redirect = useNavigate();
   const [kind, setKind] = useState("");
@@ -45,12 +39,11 @@ function NewTestCases() {
     });
 
     if (res.status == 200) {
-      toast({
+      toaster.create({
         title: "Test Case created.",
         description: "We've created your Test Case.",
-        status: "success",
+        type: "success",
         duration: 3000,
-        isClosable: true,
       });
       redirect({ to: "/projects" });
     }
@@ -63,63 +56,58 @@ function NewTestCases() {
       <form onSubmit={handleSubmit}>
         <h3>Create Test Cases</h3>
 
-        <FormControl>
-          <FormLabel>Title</FormLabel>
+        <Field label="Title" helperText="Test Case Title">
           <Input
             type="text"
             name="title"
             onChange={(e) => setTitle(e.target.value)}
           />
-          <FormHelperText>Test Case Title.</FormHelperText>
-        </FormControl>
+        </Field>
 
-        <FormControl>
-          <FormLabel>Code</FormLabel>
+        <Field label="Code" helperText="Test Case Code.">
           <Input
             type="text"
             name="code"
             onChange={(e) => setCode(e.target.value)}
           />
-          <FormHelperText>Test Case Code.</FormHelperText>
-        </FormControl>
+        </Field>
 
-        <FormControl>
-          <FormLabel>Feature, Component or Module</FormLabel>
+        <Field
+          label="Feature, Component or Module"
+          helperText="Test Case Feature or Module."
+        >
           <Input
             type="text"
             name="code"
             onChange={(e) => setFeature_or_module(e.target.value)}
           />
-          <FormHelperText>Test Case Feature or Module.</FormHelperText>
-        </FormControl>
+        </Field>
 
-        <FormControl>
-          <FormLabel>Test Kind</FormLabel>
-          <SelectTestKind onChange={(e) => setKind(e.target.value)} />
-          <FormHelperText>Test Kind.</FormHelperText>
-        </FormControl>
+        <Field label="Test Kind" helperText="Test Kind.">
+          <SelectTestKind onChange={(e) => setKind(e)} />
+        </Field>
 
-        <FormControl>
-          <FormLabel>Description</FormLabel>
+        <Field label="Description" helperText="Test Case Description.">
           <Input
             type="text"
             name="description"
             onChange={(e) => setDescription(e.target.value)}
           />
-          <FormHelperText>Test Case Description.</FormHelperText>
-        </FormControl>
+        </Field>
 
-        <FormControl>
-          <FormLabel>Tags</FormLabel>
+        <Field label="Tags" helperText="Test Case tags, separated by comma.">
           <Input
             type="text"
             name="description"
             onChange={(e) => setTags(e.target.value.split(","))}
           />
-          <FormHelperText>Test Case tags, separated by comma.</FormHelperText>
-        </FormControl>
+        </Field>
 
-        <Checkbox onChange={(e) => setIs_draft(e.target.checked)}>
+        <Checkbox
+          onCheckedChange={(e) =>
+            setIs_draft(e.checked == "indeterminate" ? false : e.checked)
+          }
+        >
           Is Draft
         </Checkbox>
 
@@ -128,4 +116,3 @@ function NewTestCases() {
     </div>
   );
 }
-

@@ -1,23 +1,4 @@
-import {
-  Box,
-  Button,
-  Checkbox,
-  Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
-  Heading,
-  Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  useDisclosure,
-  useToast,
-} from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Input } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -29,10 +10,19 @@ import {
 import TestCaseService from "@/services/TestCaseService";
 import TestPlanService from "@/services/TestPlanService";
 import TesterService from "@/services/TesterService";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toaster } from "@/components/ui/toaster";
+import { Field } from "@/components/ui/field";
 import {
-  createFileRoute,
-  useNavigate,
-} from "@tanstack/react-router";
+  DialogActionTrigger,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute(
   "/(app)/_layout/projects/$projectId/test-plans/new"
@@ -44,10 +34,8 @@ function CreateNewTestPlan() {
   const testCaseService = new TestCaseService();
   const testPlanService = new TestPlanService();
   const testerService = new TesterService();
-  const toast = useToast();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
-  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]
@@ -88,10 +76,10 @@ function CreateNewTestPlan() {
     testers.map((tester, idx) => (
       <Box key={idx}>
         <Checkbox
-          value={tester.user_id}
-          onChange={(e) => {
-            if (e.target.checked) {
-              addTesterUser(parseInt(e.target.value));
+          checked={selectedTesters.includes(tester.user_id)}
+          onCheckedChange={(e) => {
+            if (e.checked) {
+              addTesterUser(tester.user_id);
             }
           }}
         />{" "}
@@ -105,8 +93,8 @@ function CreateNewTestPlan() {
         <Box>
           <Checkbox
             name={`testCase-${t.ID}`}
-            onChange={(e) => {
-              if (e.target.checked) {
+            onCheckedChange={(e) => {
+              if (e.checked) {
                 const newSelected = {
                   test_case_id: t.ID,
                   user_ids: [],
@@ -118,7 +106,24 @@ function CreateNewTestPlan() {
           {t.Code} - {t.Title} (Tags: {t.Tags?.join(", ")})
         </Box>
         <Box>
-          <Button onClick={onOpen}>Assign Testers</Button>
+          <DialogRoot>
+            <DialogTrigger asChild>
+              <Button>Assign Testers</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>Select Testers to Assign</DialogHeader>
+              <DialogBody>{testerList}</DialogBody>
+
+              <DialogFooter>
+                <DialogActionTrigger asChild>
+                  <Button colorScheme="blue" mr={3}>
+                    Close
+                  </Button>
+                </DialogActionTrigger>
+                <Button variant="ghost">Assign Testers</Button>
+              </DialogFooter>
+            </DialogContent>
+          </DialogRoot>
           {/* <SelectTesterModal testCaseID={t.ID} selectedTesters={selectedTesters} setSelectedTesters={setSelectedTesters} /> */}
           {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
         </Box>
@@ -146,13 +151,12 @@ function CreateNewTestPlan() {
     });
 
     if (res.status == 200) {
-      toast({
+      toaster.create({
         title: "Test Plan created.",
         description:
           "We've created your Test Plan - please add test cases to it.",
-        status: "success",
+        type: "success",
         duration: 3000,
-        isClosable: true,
       });
       redirect({ to: `/projects/${projectId}/test-plans` });
     }
@@ -185,64 +189,59 @@ function CreateNewTestPlan() {
           <form.Field
             name="description"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Description</FormLabel>
+              <Field label="Description" helperText="Description">
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Description</FormHelperText>
-              </FormControl>
+              </Field>
             )}
           />
 
           <form.Field
             name="start_at"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Start At</FormLabel>
+              <Field label="Start At" helperText="Start At">
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Start At</FormHelperText>
-              </FormControl>
+              </Field>
             )}
           />
 
           <form.Field
             name="scheduled_end_at"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Scheduled to End On</FormLabel>
+              <Field
+                label="Scheduled to End On"
+                helperText="Scheduled to End On"
+              >
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Scheduled to End On</FormHelperText>
-              </FormControl>
+              </Field>
             )}
           />
 
           <form.Field
             name="kind"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Test Plan Kind</FormLabel>
+              <Field label="Test Plan Kind" helperText="Test Plan Kind">
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Test Plan Kind</FormHelperText>
-              </FormControl>
+              </Field>
             )}
           />
 
@@ -251,22 +250,6 @@ function CreateNewTestPlan() {
         <Heading>Select & Assign Test Cases</Heading>
         {testCaseList}
       </Box>
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Select Testers to Assign</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>{testerList}</ModalBody>
-
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={onClose}>
-              Close
-            </Button>
-            <Button variant="ghost">Assign Testers</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </div>
   );
 }
-

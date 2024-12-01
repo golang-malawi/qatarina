@@ -13,7 +13,7 @@ function DashboardPage() {
         Welcome to the future of Software Quality Assurance
       </Heading>
       <Box>
-        <Heading size="1xl">
+        <Heading size="xl">
           <IconUser /> Invite Your People
         </Heading>
         <Flex>
@@ -26,7 +26,7 @@ function DashboardPage() {
         </Flex>
       </Box>
       <Box>
-        <Heading size="1xl">
+        <Heading size="xl">
           <IconUser /> Configure Your Projects
         </Heading>
         <Flex>
@@ -39,7 +39,7 @@ function DashboardPage() {
         </Flex>
       </Box>
       <Box>
-        <Heading size="1xl">
+        <Heading size="xl">
           <IconUser /> Manage Integrations
         </Heading>
         <Flex>

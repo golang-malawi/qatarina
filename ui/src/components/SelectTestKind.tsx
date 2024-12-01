@@ -1,22 +1,48 @@
-import { Select } from "@chakra-ui/react";
-import { ChangeEventHandler } from "react";
+import { createListCollection } from "@chakra-ui/react";
+import {
+  SelectContent,
+  SelectItem,
+  SelectLabel,
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+} from "@/components/ui/select";
 
 export type SelectTestKindProps = {
-    onChange: ChangeEventHandler<HTMLSelectElement>
-}
+  onChange: (value: string) => void;
+};
+
+const testKinds = createListCollection({
+  items: [
+    { label: "general", value: "general" },
+    { label: "adhoc", value: "adhoc" },
+    { label: "triage", value: "triage" },
+    { label: "integration", value: "integration" },
+    { label: "user_acceptance", value: "user_acceptance" },
+    { label: "regression", value: "regression" },
+    { label: "security", value: "security" },
+    { label: "user_interface", value: "user_interface" },
+    { label: "scenario", value: "scenario" },
+  ],
+});
 
 export default function SelectTestKind({ onChange }: SelectTestKindProps) {
-    return (
-        <Select placeholder="Select Test Kind" onChange={onChange}>
-            <option value='general'>general</option>
-            <option value='adhoc'>adhoc</option>
-            <option value='triage'>triage</option>
-            <option value='integration'>integration</option>
-            <option value='user_acceptance'>user_acceptance</option>
-            <option value='regression'>regression</option>
-            <option value='security'>security</option>
-            <option value='user_interface'>user_interface</option>
-            <option value='scenario'>scenario</option>
-        </Select>
-    )
+  return (
+    <SelectRoot
+      collection={testKinds}
+      onValueChange={(e) => onChange(e.value?.[0])}
+    >
+      <SelectLabel>Test Kind</SelectLabel>
+      <SelectTrigger>
+        <SelectValueText placeholder="Select Test Kind" />
+      </SelectTrigger>
+      <SelectContent>
+        {testKinds.items.map((kind) => (
+          <SelectItem item={kind} key={kind.value}>
+            {kind.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </SelectRoot>
+  );
 }
