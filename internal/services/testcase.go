@@ -16,6 +16,9 @@ type TestCaseService interface {
 	// FindAll retrieves all test cases in the database
 	FindAll(context.Context) ([]dbsqlc.TestCase, error)
 
+	// FindAllByID retrieves all test cases in the database by Project ID
+	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
+
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
 
@@ -140,6 +143,12 @@ func (t *testCaseServiceImpl) DeleteByTestRunID(context.Context, string) error {
 // FindAll implements TestCaseService.
 func (t *testCaseServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.TestCase, error) {
 	return t.queries.ListTestCases(ctx)
+}
+
+// FindAllByID implements TestCaseService.
+func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
+	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
+	return &tc, err
 }
 
 // FindAllByProjectID implements TestCaseService.

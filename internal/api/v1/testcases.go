@@ -68,9 +68,16 @@ func SearchTestCases(services.TestCaseService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/api/v1/test-cases/{testCaseID} [get]
-func GetOneTestCase(services.TestCaseService) fiber.Handler {
+func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one TestCase")
+		testCaseID := c.Params("testCaseId", "")
+		testCase, err := testCaseService.FindByID(context.Background(), testCaseID)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to fetch test case with given id")
+		}
+		return c.JSON(fiber.Map{
+			"test_case": schema.NewTestCaseResponse(testCase),
+		})
 	}
 }
 
