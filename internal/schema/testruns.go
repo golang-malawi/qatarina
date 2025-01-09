@@ -1,6 +1,12 @@
 package schema
 
-import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+)
 
 type BulkCommitTestResults struct {
 	UserID      int64                 `json:"-"`
@@ -17,4 +23,42 @@ type CommitTestRunResult struct {
 	ExpectedResult string `json:"expected_result"`
 	// State is the result of the test run
 	State dbsqlc.TestRunState `json:"result_state" validate:"required"`
+}
+
+// NewFoundIssuesRequest contains list of issues which basically translates to "failed test cases/runs"
+type NewFoundIssuesRequest struct {
+	// TestPlanID can be nil or 0, when this happens Tests are linked to Default Test Plan if available
+	TestPlanID int64  `json:"test_plan_id" validate:"-"`
+	UserID     int64  `json:"-"`
+	TestedOn   string `json:"tested_on" validate:"required"`
+	Issues     []CommitTestRunResult
+}
+
+func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content string) ([]CommitTestRunResult, error) {
+	if content == "" {
+		return nil, fmt.Errorf("checklist content cannot be nil")
+	}
+	items := strings.Split(content, "\n")
+
+	testRuns := make([]CommitTestRunResult, 0)
+	for _, entry := range items {
+
+		entryNormalized := strings.Replace(entry, "-", "", 1)
+		entryNormalized = strings.Replace(entryNormalized, "*", "", 1)
+		entryNormalized = strings.TrimSpace(entryNormalized)
+
+		item := CommitTestRunResult{
+			UserID:         userID,
+			TestRunID:      "",
+			Notes:          entryNormalized,
+			IsClosed:       false,
+			TestedOn:       testDate.Format(time.DateOnly),
+			ActualResult:   entryNormalized,
+			ExpectedResult: fmt.Sprintf("Expected different behavior"),
+			State:          dbsqlc.TestRunStateFailed,
+		}
+		testRuns = append(testRuns, item)
+	}
+
+	return testRuns, nil
 }

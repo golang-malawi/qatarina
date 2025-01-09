@@ -18,6 +18,14 @@ type TestRunService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestRun, error)
 	Commit(context.Context, *schema.CommitTestRunResult) (*dbsqlc.TestRun, error)
 	CommitBulk(context.Context, *schema.BulkCommitTestResults) (bool, error)
+	// CreateFromFailedTest records tests without necessarily first creating TestCases.
+	//
+	// A common use case for Quality Assurance process is reporting things, right now,
+	// having to wait for a scheduled Test Plan/Session. This function covers the scenario
+	// where Testers need to just record "Issues" (TODO: reconsider the terminology)
+	// This allows Testers to record failed tests which get backlinked to default test plan or
+	// a specific test plan if specified
+	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
 }
 
 type testRunService struct {
@@ -91,4 +99,9 @@ func (t *testRunService) CommitBulk(ctx context.Context, bulkRequest *schema.Bul
 func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error {
 	_, err := t.queries.DeleteTestRun(ctx, uuid.MustParse(testRunID))
 	return err
+}
+
+// CreateFromFoundIssues implements TestRunService.
+func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
+	panic("unimplemented")
 }
