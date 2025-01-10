@@ -73,6 +73,18 @@ func SearchProjects(projectService services.ProjectService) fiber.Handler {
 //	@Router			/api/v1/projects/{projectID} [get]
 func GetOneProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id from path")
+		}
+		project, err := projectService.FindByID(context.Background(), int64(projectID))
+		if err != nil {
+			// TODO: logging
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"project": schema.NewProjectResponse(project, nil),
+		})
 		return problemdetail.NotImplemented(c, "failed to get one Project")
 	}
 }
@@ -103,7 +115,7 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 		}
 
 		return c.JSON(fiber.Map{
-			"test_cases": testCases,
+			"test_cases": schema.NewTestCaseResponseList(testCases),
 		})
 	}
 }
@@ -134,7 +146,7 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 		}
 
 		return c.JSON(fiber.Map{
-			"test_plans": testPlans,
+			"test_plans": schema.NewTestPlanListResponse(testPlans),
 		})
 	}
 }

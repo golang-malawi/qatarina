@@ -20,6 +20,17 @@ export default class TestPlanService {
     throw new Error(res.data);
   }
 
+  async findAllByProject(projectId: string) {
+    const res = await axios.get(
+      `${this.apiEndpoint}/v1/projects/${projectId}/test-plans`,
+      useAuthHeaders(),
+    );
+    if (res.status === 200) {
+      return res.data.test_plans;
+    }
+    throw new Error(res.data);
+  }
+
   async findById(id: string) {
     const res = await axios.get(
       `${this.apiEndpoint}/v1/test-plans/${id}`,

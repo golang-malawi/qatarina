@@ -24,6 +24,9 @@ import ListTestPlans from "../app/testplans/ListTestPlans";
 import ListUsers from "../app/users";
 import CreateNewUser from "../app/users/CreateNewUser";
 import ViewUserProfile from "../app/users/ViewUserProfile";
+import ViewProject from "../app/projects/view-project";
+import ListProjectTestPlans from "../app/projects/list-project-test-plans";
+import ListProjectTestCases from "../app/projects/list-test-cases";
 
 function Logout() {
   const redirect = useNavigate();
@@ -46,17 +49,34 @@ function appRouter() {
         <Route path="users/new" element={<CreateNewUser />} />
         <Route path="users/view/:userID" element={<ViewUserProfile />} />
         <Route path="projects" element={<ProjectPage />} />
+        <Route
+          path="projects/view/:projectId"
+          element={<ViewProject />}
+          children={[
+            <Route path="test-plans" element={<ListProjectTestPlans />} />,
+            // TODO: use proper component
+            <Route path="test-cases" element={<ListProjectTestCases />} />,
+            // TODO: use proper component
+            <Route path="testers" element={<ListProjectTestPlans />} />,
+            // TODO: use proper component
+            <Route path="insights" element={<ListProjectTestPlans />} />,
+            // TODO: use proper component
+            <Route path="reports" element={<ListProjectTestPlans />} />,
+            // TODO: use proper component
+            <Route path="settings" element={<ListProjectTestPlans />} />,
+          ]}
+        />
         <Route path="/projects/new" element={<CreateProject />} />
         <Route
-          path="/projects/:projectID/test-cases/new"
+          path="/projects/:projectId/test-cases/new"
           element={<CreateTestCase />}
         />
         <Route
-          path="/projects/:projectID/test-plans/new"
+          path="/projects/:projectId/test-plans/new"
           element={<CreateNewTestPlan />}
         />
         <Route
-          path="/projects/:projectID/test-plans/execute"
+          path="/projects/:projectId/test-plans/:testPlanID/execute"
           element={<ExecuteTestPlan />}
         />
         <Route path="test-cases" element={<TestCasePage />} />
