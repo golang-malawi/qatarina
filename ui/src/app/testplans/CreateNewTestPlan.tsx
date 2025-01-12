@@ -91,22 +91,22 @@ export default function CreateNewTestPlan() {
     ));
 
   const testCaseList = testCases.map((t) => (
-    <Box key={t.ID}>
+    <Box key={t.id}>
       <Flex>
         <Box>
           <Checkbox
-            name={`testCase-${t.ID}`}
+            name={`testCase-${t.id}`}
             onChange={(e) => {
               if (e.target.checked) {
                 const newSelected = {
-                  test_case_id: t.ID,
+                  test_case_id: t.id,
                   user_ids: [],
                 };
                 setSelectedTestCases([...selectedTestCases, newSelected]);
               }
             }}
           />{" "}
-          {t.Code} - {t.Title} (Tags: {t.Tags?.join(", ")})
+          {t.code} - {t.title} (Tags: {t.tags?.join(", ")})
         </Box>
         <Box>
           <Button onClick={onOpen}>Assign Testers</Button>

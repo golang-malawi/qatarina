@@ -57,4 +57,4 @@ export default function LoginPage() {
       <Link href="/forgot-password">Forgot Password?</Link>
     </div>
   )
-};
+}

@@ -1,21 +1,28 @@
+export interface Project {
+  id: number;
+  title?: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+}
 export interface TestCase {
-  ID: number;
-  Title?: string;
-  Code?: string;
-  Description?: string;
-  Tags?: string[];
+  id: string;
+  title?: string;
+  code?: string;
+  description?: string;
+  tags?: string[];
 }
 
 export interface TestPlan {
-  ID: number;
-  Title?: string;
-  Code?: string;
-  Description?: string;
-  Tags?: string[];
+  id: number;
+  title?: string;
+  code?: string;
+  description?: string;
+  tags?: string[];
 }
 
 export interface SelectAssignedTestCase {
-  test_case_id: number;
+  test_case_id: string;
   user_ids: number[];
 }
 

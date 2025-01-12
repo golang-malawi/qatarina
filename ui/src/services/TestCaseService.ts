@@ -9,7 +9,7 @@ export default class TestCaseService {
     }
 
     async findAll() {
-        var res = await axios.get(`${this.apiEndpoint}/v1/test-cases`, useAuthHeaders())
+        const res = await axios.get(`${this.apiEndpoint}/v1/test-cases`, useAuthHeaders())
         if (res.status == 200) {
             return res.data.test_cases || [];
         }
@@ -17,8 +17,8 @@ export default class TestCaseService {
     }
 
 
-    async findById(id: String) {
-        var res = await axios.get(`${this.apiEndpoint}/v1/test-cases/${id}`, useAuthHeaders())
+    async findById(id: string) {
+        const res = await axios.get(`${this.apiEndpoint}/v1/test-cases/${id}`, useAuthHeaders())
         if (res.status === 200) {
             return res.data.test_case;
         }
@@ -27,7 +27,7 @@ export default class TestCaseService {
 
 
     async findByProjectId(projectID: number) {
-        var res = await axios.get(`${this.apiEndpoint}/v1/projects/${projectID}/test-cases`, useAuthHeaders())
+        const res = await axios.get(`${this.apiEndpoint}/v1/projects/${projectID}/test-cases`, useAuthHeaders())
         if (res.status === 200) {
             return res.data.test_cases || [];
         }
@@ -35,7 +35,7 @@ export default class TestCaseService {
     }
 
     async create(data: any) {
-        var res = await axios.post(`${this.apiEndpoint}/v1/test-cases`, data, useAuthHeaders())
+        const res = await axios.post(`${this.apiEndpoint}/v1/test-cases`, data, useAuthHeaders())
         if (res.status === 200) {
             // TODO: return a specific shape of the response, not the whole response
             // return res.data.test_case;

@@ -53,7 +53,9 @@ export default function ListProjectTestCases() {
   const [testCases, setTestCases] = useState<TestCase[]>([]);
 
   const fetchTestCases = async () => {
-    const testCaseData = await testCaseService.findByProjectId(projectId!);
+    const testCaseData = await testCaseService.findByProjectId(
+      parseInt(projectId!),
+    );
     setTestCases(testCaseData);
   };
 

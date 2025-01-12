@@ -1,14 +1,14 @@
-import { Box, Button, Container, Flex, Heading } from "@chakra-ui/react";
+import { Button, Container, Flex, Heading } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import TestPlanService from "../../services/TestPlanService";
-import ProjectService from "../../services/ProjectService";
 import { Link } from "react-router-dom";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
+import { TestPlan } from "../../common/models";
 
 export default function ListProjectTestPlans() {
   const { projectId } = useParams();
-  const [testPlans, setTestPlans] = useState([]);
+  const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
   const testPlanService = new TestPlanService();
   // const projectService = new ProjectService();
   useEffect(() => {

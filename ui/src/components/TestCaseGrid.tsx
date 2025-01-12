@@ -43,7 +43,7 @@ export default function TestCaseGrid() {
 
   const getRows = (people: TestCaseTest[]): Row[] => [
     headerRow,
-    ...people.map<Row>((tc, idx) => ({
+    ...people.map<Row>((_, idx) => ({
       rowId: idx,
       cells: [
         { type: "text", text: "Name" },

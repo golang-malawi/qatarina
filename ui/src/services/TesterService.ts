@@ -10,7 +10,7 @@ export default class TesterService {
     }
 
     async findAll() {
-        var res = await axios.get(`${this.apiEndpoint}/v1/testers`, useAuthHeaders());
+        const res = await axios.get(`${this.apiEndpoint}/v1/testers`, useAuthHeaders());
         if (res.status === 200) {
             return res.data.testers;
         }
@@ -18,7 +18,7 @@ export default class TesterService {
     }
 
     async findById(id: string) {
-        var res = await axios.get(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
+        const res = await axios.get(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
         if (res.status === 200) {
             return res.data.tester;
         }
@@ -26,7 +26,7 @@ export default class TesterService {
     }
 
     async deleteTester(id: string) {
-        var res = await axios.delete(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
+        const res = await axios.delete(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
         if (res.status === 200) {
             return res.data.testers;
         }

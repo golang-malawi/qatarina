@@ -13,10 +13,11 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { useParams } from "react-router";
 import TestCaseService from "../../services/TestCaseService";
 import { useEffect, useState } from "react";
+import { TestCase } from "../../common/models";
 
 export default function TestCaseInboxItem() {
   const { testCaseId } = useParams();
-  const [testCase, setTestCase] = useState(null);
+  const [testCase, setTestCase] = useState<TestCase | null>(null);
   const testCaseService = new TestCaseService();
   useEffect(() => {
     testCaseService.findById(testCaseId!).then((data) => {

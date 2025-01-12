@@ -8,13 +8,12 @@ import {
   IconPlayerPlay,
   IconReport,
   IconSettings,
-  IconTestPipe,
   IconUser,
   IconUsersGroup,
 } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
 export default function Sidebar() {
-  var items = [
+  const items = [
     { icon: <IconDashboard />, href: "/dashboard", text: "Dashboard" },
     { icon: <IconInbox />, href: "/test-cases/inbox", text: "Inbox" },
     { icon: <IconList />, href: "/projects", text: "Projects" },

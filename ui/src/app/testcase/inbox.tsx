@@ -1,35 +1,14 @@
 "use client";
 import {
-  Avatar,
-  AvatarGroup,
   Box,
   Button,
   Flex,
   Input,
-  Menu,
-  MenuButton,
   Container,
-  MenuItem,
-  MenuList,
-  Tab,
-  Table,
-  TableCaption,
-  TableContainer,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Tbody,
-  Td,
-  Tfoot,
-  Th,
-  Thead,
-  Tr,
   Heading,
   Stack,
   Badge,
 } from "@chakra-ui/react";
-import { IconChevronDown } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet } from "react-router-dom";
 import TestCaseService from "../../services/TestCaseService";

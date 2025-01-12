@@ -3,10 +3,11 @@ import { Outlet, useParams } from "react-router";
 import ProjectService from "../../services/ProjectService";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
+import { Project } from "../../common/models";
 
 export default function ViewProject() {
   const { projectId } = useParams();
-  const [project, setProject] = useState(null);
+  const [project, setProject] = useState<Project | null>(null);
 
   const projectService = new ProjectService();
   useEffect(() => {
