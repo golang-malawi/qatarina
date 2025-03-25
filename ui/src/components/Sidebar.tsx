@@ -1,4 +1,3 @@
-"use client";
 import { Box, Flex, List, ListItem } from "@chakra-ui/react";
 import {
   IconDashboard,
@@ -12,6 +11,7 @@ import {
   IconUsersGroup,
 } from "@tabler/icons-react";
 import { Link } from "react-router-dom";
+
 export default function Sidebar() {
   const items = [
     { icon: <IconDashboard />, href: "/dashboard", text: "Dashboard" },
@@ -45,3 +45,4 @@ export default function Sidebar() {
 
   return <List padding={4}>{links}</List>;
 }
+

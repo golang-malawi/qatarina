@@ -17,6 +17,7 @@
     "@tabler/icons-react": "^3.14.0",
     "@tanstack/react-form": "^0.31.0",
     "@tanstack/react-query": "^5.53.3",
+    "@tanstack/react-router": "^1.114.27",
     "@tanstack/react-table": "^8.20.5",
     "@tanstack/zod-form-adapter": "^0.31.0",
     "axios": "^1.7.7",
@@ -29,6 +30,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@tanstack/react-router-devtools": "^1.114.27",
+    "@tanstack/router-plugin": "^1.114.27",
+    "@types/node": "^22.13.13",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.13.1",
