@@ -10,24 +10,22 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import TestCaseService from "@/services/TestCaseService";
-import { useEffect, useState } from "react";
-import { TestCase } from "@/common/models";
 import { createFileRoute } from "@tanstack/react-router";
+import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
+  loader: ({ context: { queryClient }, params: { testCaseId } }) =>
+    queryClient.ensureQueryData(findTestCaseByIdQueryOptions(testCaseId)),
   component: TestCaseInboxItem,
 });
 
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
-  const [testCase, setTestCase] = useState<TestCase | null>(null);
-  const testCaseService = new TestCaseService();
-  useEffect(() => {
-    testCaseService.findById(testCaseId!).then((data) => {
-      setTestCase(data);
-    });
-  }, [testCaseId]);
+
+  const { data: testCase } = useSuspenseQuery(
+    findTestCaseByIdQueryOptions(testCaseId)
+  );
 
   return (
     <Box>

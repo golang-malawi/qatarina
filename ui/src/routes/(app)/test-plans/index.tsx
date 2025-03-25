@@ -1,23 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Heading } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import TestPlanService from "@/services/TestPlanService";
-import { TestPlan } from "@/common/models";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
+import { findTestPlansAllQueryOptions } from "@/data/queries/test-plans";
 
 export const Route = createFileRoute("/(app)/test-plans/")({
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(findTestPlansAllQueryOptions),
   component: ListTestPlans,
 });
 
 function ListTestPlans() {
-  const testPlanService = new TestPlanService();
   const {
     data: testPlans,
     isPending,
     error,
-  } = useQuery<TestPlan[]>({
-    queryFn: () => testPlanService.findAll().then((data) => data),
-    queryKey: ["test-plans"],
-  });
+  } = useSuspenseQuery(findTestPlansAllQueryOptions);
 
   if (isPending) {
     return "Loading Test Plans...";

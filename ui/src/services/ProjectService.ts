@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getApiEndpoint } from "@/common/request";
-import useAuthHeaders from "@/hooks/useAuthHeaders";
+import createAuthHeaders from "@/hooks/useAuthHeaders";
 
 export default class ProjectService {
   apiEndpoint: string;
@@ -9,21 +9,10 @@ export default class ProjectService {
     this.apiEndpoint = getApiEndpoint();
   }
 
-  async findAll() {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/projects`,
-      useAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data.projects;
-    }
-    throw new Error(res.data);
-  }
-
   async findById(projectId: string) {
     const res = await axios.get(
       `${this.apiEndpoint}/v1/projects/${projectId}`,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res.data.project;
@@ -35,11 +24,28 @@ export default class ProjectService {
     const res = await axios.post(
       `${this.apiEndpoint}/v1/projects`,
       data,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res;
     }
     throw new Error(res.data);
   }
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  project_url: string;
+}
+
+export async function findAllProjects(): Promise<Project[]> {
+  const res = await axios.get(
+    `${getApiEndpoint()}/v1/projects`,
+    createAuthHeaders()
+  );
+  if (res.status === 200) {
+    return res.data.projects;
+  }
+  throw new Error(res.data);
 }

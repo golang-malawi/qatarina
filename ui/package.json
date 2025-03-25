@@ -17,6 +17,7 @@
     "@tabler/icons-react": "^3.14.0",
     "@tanstack/react-form": "^0.31.0",
     "@tanstack/react-query": "^5.53.3",
+    "@tanstack/react-query-devtools": "^5.69.0",
     "@tanstack/react-router": "^1.114.27",
     "@tanstack/react-table": "^8.20.5",
     "@tanstack/zod-form-adapter": "^0.31.0",

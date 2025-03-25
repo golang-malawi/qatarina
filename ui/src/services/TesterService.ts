@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getApiEndpoint } from "@/common/request";
-import useAuthHeaders from "@/hooks/useAuthHeaders";
+import createAuthHeaders from "@/hooks/useAuthHeaders";
 
 export default class TesterService {
     apiEndpoint: string;
@@ -10,7 +10,7 @@ export default class TesterService {
     }
 
     async findAll() {
-        const res = await axios.get(`${this.apiEndpoint}/v1/testers`, useAuthHeaders());
+        const res = await axios.get(`${this.apiEndpoint}/v1/testers`, createAuthHeaders());
         if (res.status === 200) {
             return res.data.testers;
         }
@@ -18,7 +18,7 @@ export default class TesterService {
     }
 
     async findById(id: string) {
-        const res = await axios.get(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
+        const res = await axios.get(`${this.apiEndpoint}/v1/testers/${id}`, createAuthHeaders());
         if (res.status === 200) {
             return res.data.tester;
         }
@@ -26,7 +26,7 @@ export default class TesterService {
     }
 
     async deleteTester(id: string) {
-        const res = await axios.delete(`${this.apiEndpoint}/v1/testers/${id}`, useAuthHeaders());
+        const res = await axios.delete(`${this.apiEndpoint}/v1/testers/${id}`, createAuthHeaders());
         if (res.status === 200) {
             return res.data.testers;
         }

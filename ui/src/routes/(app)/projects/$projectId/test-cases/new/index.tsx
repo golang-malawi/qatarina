@@ -10,8 +10,8 @@ import {
 import { FormEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
-import TestCaseService from "@/services/TestCaseService";
 import { createFileRoute } from "@tanstack/react-router";
+import { createTestCase } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(app)/projects/$projectId/test-cases/new/"
@@ -20,7 +20,6 @@ export const Route = createFileRoute(
 });
 
 function NewTestCases() {
-  const testCaseService = new TestCaseService();
   const toast = useToast();
   const params = Route.useParams();
   const redirect = useNavigate();
@@ -35,7 +34,7 @@ function NewTestCases() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const res = await testCaseService.create({
+    const res = await createTestCase({
       project_id: parseInt(`${project_id}`),
       kind,
       code,

@@ -1,3 +1,4 @@
+import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
 import {
   Avatar,
   AvatarGroup,
@@ -24,31 +25,21 @@ import {
   Tr,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
-import TestCaseService from "@/services/TestCaseService";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/")({
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(findTestCaseAllQueryOptions),
   component: TestCasePage,
 });
 
-interface TestCase {
-  code: string;
-  description: string;
-  usage_count: number;
-}
-
 function TestCasePage() {
-  const testCaseService = new TestCaseService();
-
   const {
     data: testCases,
     isPending,
     error,
-  } = useQuery<TestCase[]>({
-    queryFn: () => testCaseService.findAll(),
-    queryKey: ["testCases"],
-  });
+  } = useSuspenseQuery(findTestCaseAllQueryOptions);
 
   if (isPending) {
     return "Loading Projects...";

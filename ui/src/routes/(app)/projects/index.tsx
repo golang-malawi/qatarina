@@ -1,30 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Button, Flex, Heading, VStack } from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import ProjectService from "@/services/ProjectService";
+import { allProjectsQueryOptions } from "@/data/queries/projects";
 
 export const Route = createFileRoute("/(app)/projects/")({
-  component: Projects,
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(allProjectsQueryOptions),
+  component: ProjectsPage,
 });
 
-interface Project {
-  id: string;
-  title: string;
-  project_url: string;
-}
-
-function Projects() {
-  const projectService = new ProjectService();
+function ProjectsPage() {
   const {
     data: projects,
     isPending,
     error,
-  } = useQuery<Project[]>({
-    queryFn: () => projectService.findAll().then((data) => data),
-    queryKey: ["projects"],
-  });
+  } = useSuspenseQuery(allProjectsQueryOptions);
 
   if (isPending) {
     return "Loading Projects...";

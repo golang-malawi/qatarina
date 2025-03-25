@@ -1,3 +1,4 @@
+import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
 import {
   Box,
   Button,
@@ -8,32 +9,21 @@ import {
   Stack,
   Badge,
 } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import TestCaseService from "@/services/TestCaseService";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/")({
+  loader: ({ context: { queryClient } }) =>
+    queryClient.ensureQueryData(findTestCaseAllQueryOptions),
   component: TestCasePageInbox,
 });
 
-interface TestCase {
-  id: string;
-  code: string;
-  description: string;
-  usage_count: number;
-}
-
 function TestCasePageInbox() {
-  const testCaseService = new TestCaseService();
-
   const {
     data: testCases,
     isPending,
     error,
-  } = useQuery<TestCase[]>({
-    queryFn: () => testCaseService.findAll(),
-    queryKey: ["testCases"],
-  });
+  } = useSuspenseQuery(findTestCaseAllQueryOptions);
 
   if (isPending) {
     return "Loading Projects...";
@@ -52,7 +42,7 @@ function TestCasePageInbox() {
         }}
         title={tc.description}
       >
-        {tc.code} - {tc.description.substring(0, 40) + "..."}
+        {tc.code} - {tc.description?.substring(0, 40) + "..."}
       </Link>
       <Stack direction="row">
         <Badge>Usage: {tc.usage_count ?? 0}</Badge>

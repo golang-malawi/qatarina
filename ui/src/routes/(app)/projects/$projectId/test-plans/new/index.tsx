@@ -20,26 +20,23 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  SelectAssignedTestCase,
-  TestCase,
-  TesterRecord,
-} from "@/common/models";
-import TestCaseService from "@/services/TestCaseService";
+import { SelectAssignedTestCase, TesterRecord } from "@/common/models";
 import TestPlanService from "@/services/TestPlanService";
 import TesterService from "@/services/TesterService";
+import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 
 export const Route = createFileRoute(
   "/(app)/projects/$projectId/test-plans/new/"
 )({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: CreateNewTestPlan,
 });
 
 function CreateNewTestPlan() {
-  const testCaseService = new TestCaseService();
   const testPlanService = new TestPlanService();
   const testerService = new TesterService();
   const toast = useToast();
@@ -56,13 +53,7 @@ function CreateNewTestPlan() {
     data: testCases,
     isPending,
     error,
-  } = useQuery<TestCase[]>({
-    queryFn: () =>
-      testCaseService
-        .findByProjectId(parseInt!(projectId!))
-        .then((data) => data),
-    queryKey: ["projectTestCases", projectId],
-  });
+  } = useSuspenseQuery(testCasesByProjectIdQueryOptions(projectId));
 
   if (isPending) {
     return "Loading Test Cases...";

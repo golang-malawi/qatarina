@@ -36,34 +36,20 @@ import {
   IconListDetails,
   IconTable,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
-import TestCaseService from "@/services/TestCaseService";
+import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/(app)/projects/$projectId/test-cases/")({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: ListProjectTestCases,
 });
 
-interface TestCase {
-  code: string;
-  description: string;
-  usage_count: number;
-}
-
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
-  const testCaseService = new TestCaseService();
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-
-  const fetchTestCases = async () => {
-    const testCaseData = await testCaseService.findByProjectId(
-      parseInt(projectId!)
-    );
-    setTestCases(testCaseData);
-  };
-
-  useEffect(() => {
-    fetchTestCases();
-  }, []);
+  const { data: testCases } = useSuspenseQuery(
+    testCasesByProjectIdQueryOptions(projectId)
+  );
 
   const testCaseRows = testCases.map((tc, idx) => (
     <Tr key={idx}>
