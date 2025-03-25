@@ -10,7 +10,6 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { useParams } from "react-router";
 import TestCaseService from "@/services/TestCaseService";
 import { useEffect, useState } from "react";
 import { TestCase } from "@/common/models";
@@ -21,7 +20,7 @@ export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
 });
 
 function TestCaseInboxItem() {
-  const { testCaseId } = useParams();
+  const { testCaseId } = Route.useParams();
   const [testCase, setTestCase] = useState<TestCase | null>(null);
   const testCaseService = new TestCaseService();
   useEffect(() => {

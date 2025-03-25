@@ -8,7 +8,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 import UserService from "@/services/UserService";
 
 export const Route = createFileRoute("/(app)/users/new/")({
@@ -43,7 +43,7 @@ function CreateNewUser() {
         duration: 3000,
         isClosable: true,
       });
-      redirect("/users");
+      redirect({ to: "/users" });
     }
 
     return false;

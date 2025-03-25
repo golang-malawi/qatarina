@@ -8,7 +8,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
 import TestCaseService from "@/services/TestCaseService";
 import { createFileRoute } from "@tanstack/react-router";
@@ -22,7 +22,7 @@ export const Route = createFileRoute(
 function NewTestCases() {
   const testCaseService = new TestCaseService();
   const toast = useToast();
-  const params = useParams();
+  const params = Route.useParams();
   const redirect = useNavigate();
   const project_id = params.projectId;
   const [kind, setKind] = useState("");
@@ -54,7 +54,7 @@ function NewTestCases() {
         duration: 3000,
         isClosable: true,
       });
-      redirect("/projects");
+      redirect({ to: "/projects" });
     }
 
     return false;

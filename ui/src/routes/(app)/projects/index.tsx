@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Box, Button, Flex, Heading, VStack } from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import ProjectService from "@/services/ProjectService";
 
 export const Route = createFileRoute("/(app)/projects/")({
@@ -41,17 +41,32 @@ function Projects() {
         URL: <a href={record.project_url}>{record.project_url}</a>
       </p>
       <Flex gap="2">
-        <Link to={`/projects/view/${record.id}`}>
+        <Link
+          to={`/projects/$projectId`}
+          params={{
+            projectId: record.id,
+          }}
+        >
           <Button variant={"outline"} colorScheme="black" size={"sm"}>
             Manage
           </Button>
         </Link>
-        <Link to={`/projects/${record.id}/test-cases/new`}>
+        <Link
+          to={`/projects/$projectId/test-cases/new`}
+          params={{
+            projectId: record.id,
+          }}
+        >
           <Button variant={"outline"} colorScheme="blue" size={"sm"}>
             Add Test Cases
           </Button>
         </Link>
-        <Link to={`/projects/${record.id}/test-plans/new`}>
+        <Link
+          to={`/projects/$projectId/test-plans/new`}
+          params={{
+            projectId: record.id,
+          }}
+        >
           <Button variant={"outline"} colorScheme="blue" size={"sm"}>
             New Test Plan
           </Button>

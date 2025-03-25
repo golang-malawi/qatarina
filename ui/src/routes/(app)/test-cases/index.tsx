@@ -25,9 +25,8 @@ import {
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import TestCaseService from "@/services/TestCaseService";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/")({
   component: TestCasePage,
@@ -100,7 +99,7 @@ function TestCasePage() {
         alignItems={"flex-end"}
         className="actions"
       >
-        <Link to="/testcase/new">
+        <Link to="/test-cases/new">
           <Button bg="black" color="white">
             Create New
           </Button>

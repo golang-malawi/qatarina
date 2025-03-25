@@ -9,9 +9,8 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet } from "react-router-dom";
 import TestCaseService from "@/services/TestCaseService";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/")({
   component: TestCasePageInbox,
@@ -46,7 +45,13 @@ function TestCasePageInbox() {
 
   const testCaseRows = testCases.map((tc, idx) => (
     <Box padding={"6px"} borderBottom={"1px solid #efefef"} key={idx}>
-      <Link to={`/test-cases/inbox/view/${tc.id}`} title={tc.description}>
+      <Link
+        to={`/test-cases/inbox/$testCaseId`}
+        params={{
+          testCaseId: tc.id,
+        }}
+        title={tc.description}
+      >
         {tc.code} - {tc.description.substring(0, 40) + "..."}
       </Link>
       <Stack direction="row">

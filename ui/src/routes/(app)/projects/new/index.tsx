@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 
-import { useNavigate } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 import ProjectService from "@/services/ProjectService";
 
 export const Route = createFileRoute("/(app)/projects/new/")({
@@ -50,7 +50,7 @@ function CreateProject() {
         duration: 9000,
         isClosable: true,
       });
-      redirect("/projects");
+      redirect({ to: "/projects" });
     }
 
     return false;

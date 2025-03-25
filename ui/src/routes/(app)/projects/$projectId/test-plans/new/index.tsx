@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Box,
   Button,
@@ -22,7 +22,7 @@ import {
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   SelectAssignedTestCase,
   TestCase,
@@ -32,18 +32,19 @@ import TestCaseService from "@/services/TestCaseService";
 import TestPlanService from "@/services/TestPlanService";
 import TesterService from "@/services/TesterService";
 
-export const Route = createFileRoute('/(app)/projects/$projectId/test-plans/new/')({
+export const Route = createFileRoute(
+  "/(app)/projects/$projectId/test-plans/new/"
+)({
   component: CreateNewTestPlan,
-})
+});
 
-
- function CreateNewTestPlan() {
+function CreateNewTestPlan() {
   const testCaseService = new TestCaseService();
   const testPlanService = new TestPlanService();
   const testerService = new TesterService();
   const toast = useToast();
   const redirect = useNavigate();
-  const { projectID } = useParams();
+  const { projectId } = Route.useParams();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [selectedTestCases, setSelectedTestCases] = useState<
@@ -58,9 +59,9 @@ export const Route = createFileRoute('/(app)/projects/$projectId/test-plans/new/
   } = useQuery<TestCase[]>({
     queryFn: () =>
       testCaseService
-        .findByProjectId(parseInt!(projectID!))
+        .findByProjectId(parseInt!(projectId!))
         .then((data) => data),
-    queryKey: ["projectTestCases", projectID],
+    queryKey: ["projectTestCases", projectId],
   });
 
   if (isPending) {
@@ -133,7 +134,7 @@ export const Route = createFileRoute('/(app)/projects/$projectId/test-plans/new/
     assigned_to_id?: unknown;
   }) {
     const res = await testPlanService.create({
-      project_id: parseInt(projectID!),
+      project_id: parseInt(projectId!),
       assigned_to_id: data.assigned_to_id,
       kind: data.kind,
       description: data.description,
@@ -152,7 +153,12 @@ export const Route = createFileRoute('/(app)/projects/$projectId/test-plans/new/
         duration: 3000,
         isClosable: true,
       });
-      redirect(`/projects/${projectID}/test-plans`);
+      redirect({
+        to: "/projects/$projectId/test-plans",
+        params: {
+          projectId: projectId,
+        },
+      });
     }
   }
 

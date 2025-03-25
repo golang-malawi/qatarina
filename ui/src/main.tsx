@@ -4,6 +4,8 @@ import { routeTree } from "@/routeTree.gen";
 import { Providers } from "./lib/providers";
 import { StrictMode } from "react";
 
+import "./global.css";
+
 // Set up a Router instance
 const router = createRouter({
   routeTree,

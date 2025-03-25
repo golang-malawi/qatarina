@@ -1,7 +1,7 @@
 import { Box, Button, Input, InputGroup, Link } from "@chakra-ui/react";
 import axios from "axios";
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 import isLoggedIn from "@/hooks/isLoggedIn";
 import { AuthService } from "@/services/AuthService";
 import { createFileRoute } from "@tanstack/react-router";
@@ -21,7 +21,7 @@ function LoginPage() {
 
   useEffect(() => {
     if (isLoggedIn()) {
-      redirect("/dashboard");
+      redirect({ to: "/dashboard" });
     }
   }, []);
 
@@ -42,7 +42,7 @@ function LoginPage() {
       axios.defaults.withCredentials = false;
       axios.defaults.headers.common["Authorization"] =
         `Bearer ${loginData.token}`;
-      redirect("/dashboard");
+      redirect({ to: "/dashboard" });
     }
     return false;
   }

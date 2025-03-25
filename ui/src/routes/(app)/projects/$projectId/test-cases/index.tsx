@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Avatar,
   AvatarGroup,
@@ -38,14 +38,10 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import TestCaseService from "@/services/TestCaseService";
-import { useParams } from "react-router";
-import { Link } from "react-router-dom";
 
-export const Route = createFileRoute('/(app)/projects/$projectId/test-cases/')({
+export const Route = createFileRoute("/(app)/projects/$projectId/test-cases/")({
   component: ListProjectTestCases,
-})
-
-
+});
 
 interface TestCase {
   code: string;
@@ -54,13 +50,13 @@ interface TestCase {
 }
 
 export default function ListProjectTestCases() {
-  const { projectId } = useParams();
+  const { projectId } = Route.useParams();
   const testCaseService = new TestCaseService();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
 
   const fetchTestCases = async () => {
     const testCaseData = await testCaseService.findByProjectId(
-      parseInt(projectId!),
+      parseInt(projectId!)
     );
     setTestCases(testCaseData);
   };
@@ -115,7 +111,10 @@ export default function ListProjectTestCases() {
         alignItems={"flex-end"}
         className="actions"
       >
-        <Link to={`/projects/${projectId}/test-cases/new`}>
+        <Link
+          to={"/projects/$projectId/test-cases/new"}
+          params={{ projectId: projectId }}
+        >
           <Button variant={"outline"} colorScheme="blue" size={"sm"}>
             Add Test Cases
           </Button>

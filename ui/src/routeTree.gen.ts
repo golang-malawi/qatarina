@@ -24,6 +24,7 @@ import { Route as appReportsIndexImport } from './routes/(app)/reports/index'
 import { Route as appProjectsIndexImport } from './routes/(app)/projects/index'
 import { Route as appIntegrationsIndexImport } from './routes/(app)/integrations/index'
 import { Route as appDashboardIndexImport } from './routes/(app)/dashboard/index'
+import { Route as appTestersInviteImport } from './routes/(app)/testers/invite'
 import { Route as appUsersNewIndexImport } from './routes/(app)/users/new/index'
 import { Route as appTestCasesNewIndexImport } from './routes/(app)/test-cases/new/index'
 import { Route as appTestCasesInboxIndexImport } from './routes/(app)/test-cases/inbox/index'
@@ -118,6 +119,12 @@ const appIntegrationsIndexRoute = appIntegrationsIndexImport.update({
 const appDashboardIndexRoute = appDashboardIndexImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+
+const appTestersInviteRoute = appTestersInviteImport.update({
+  id: '/testers/invite',
+  path: '/testers/invite',
   getParentRoute: () => appRouteRoute,
 } as any)
 
@@ -264,6 +271,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof appIndexImport
+      parentRoute: typeof appRouteImport
+    }
+    '/(app)/testers/invite': {
+      id: '/(app)/testers/invite'
+      path: '/testers/invite'
+      fullPath: '/testers/invite'
+      preLoaderRoute: typeof appTestersInviteImport
       parentRoute: typeof appRouteImport
     }
     '/(app)/dashboard/': {
@@ -455,6 +469,7 @@ declare module '@tanstack/react-router' {
 
 interface appRouteRouteChildren {
   appIndexRoute: typeof appIndexRoute
+  appTestersInviteRoute: typeof appTestersInviteRoute
   appDashboardIndexRoute: typeof appDashboardIndexRoute
   appIntegrationsIndexRoute: typeof appIntegrationsIndexRoute
   appProjectsIndexRoute: typeof appProjectsIndexRoute
@@ -485,6 +500,7 @@ interface appRouteRouteChildren {
 
 const appRouteRouteChildren: appRouteRouteChildren = {
   appIndexRoute: appIndexRoute,
+  appTestersInviteRoute: appTestersInviteRoute,
   appDashboardIndexRoute: appDashboardIndexRoute,
   appIntegrationsIndexRoute: appIntegrationsIndexRoute,
   appProjectsIndexRoute: appProjectsIndexRoute,
@@ -529,6 +545,7 @@ export interface FileRoutesByFullPath {
   '/': typeof appIndexRoute
   '/login': typeof authLoginRoute
   '/logout': typeof authLogoutRoute
+  '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/integrations': typeof appIntegrationsIndexRoute
   '/projects': typeof appProjectsIndexRoute
@@ -561,6 +578,7 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/logout': typeof authLogoutRoute
   '/': typeof appIndexRoute
+  '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/integrations': typeof appIntegrationsIndexRoute
   '/projects': typeof appProjectsIndexRoute
@@ -595,6 +613,7 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/logout': typeof authLogoutRoute
   '/(app)/': typeof appIndexRoute
+  '/(app)/testers/invite': typeof appTestersInviteRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
   '/(app)/integrations/': typeof appIntegrationsIndexRoute
   '/(app)/projects/': typeof appProjectsIndexRoute
@@ -629,6 +648,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/logout'
+    | '/testers/invite'
     | '/dashboard'
     | '/integrations'
     | '/projects'
@@ -660,6 +680,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/'
+    | '/testers/invite'
     | '/dashboard'
     | '/integrations'
     | '/projects'
@@ -692,6 +713,7 @@ export interface FileRouteTypes {
     | '/(auth)/login'
     | '/(auth)/logout'
     | '/(app)/'
+    | '/(app)/testers/invite'
     | '/(app)/dashboard/'
     | '/(app)/integrations/'
     | '/(app)/projects/'
@@ -752,6 +774,7 @@ export const routeTree = rootRoute
       "filePath": "(app)/route.tsx",
       "children": [
         "/(app)/",
+        "/(app)/testers/invite",
         "/(app)/dashboard/",
         "/(app)/integrations/",
         "/(app)/projects/",
@@ -788,6 +811,10 @@ export const routeTree = rootRoute
     },
     "/(app)/": {
       "filePath": "(app)/index.tsx",
+      "parent": "/(app)"
+    },
+    "/(app)/testers/invite": {
+      "filePath": "(app)/testers/invite.tsx",
       "parent": "/(app)"
     },
     "/(app)/dashboard/": {

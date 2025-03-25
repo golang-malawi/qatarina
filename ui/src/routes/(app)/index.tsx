@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import { IconUser } from "@tabler/icons-react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute('/(app)/')({
   component: Home,

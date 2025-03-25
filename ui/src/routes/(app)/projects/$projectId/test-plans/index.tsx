@@ -1,9 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button, Container, Flex, Heading } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
 import TestPlanService from "@/services/TestPlanService";
-import { Link } from "react-router-dom";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
 import { TestPlan } from "@/common/models";
 
@@ -12,7 +10,7 @@ export const Route = createFileRoute("/(app)/projects/$projectId/test-plans/")({
 });
 
 function ListProjectTestPlans() {
-  const { projectId } = useParams();
+  const { projectId } = Route.useParams();
   const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
   const testPlanService = new TestPlanService();
   // const projectService = new ProjectService();
@@ -24,7 +22,13 @@ function ListProjectTestPlans() {
 
   const testPlanList = testPlans.map((entry) => (
     <Flex alignItems={"start"} gap="3" p="5">
-      <Link to={`/projects/${projectId}/test-plans/${entry?.id}/execute`}>
+      <Link
+        to={`/projects/$projectId/test-plans/$testPlanID/execute`}
+        params={{
+          projectId: projectId,
+          testPlanID: entry?.id?.toString() ?? "",
+        }}
+      >
         {entry?.description}
       </Link>
       <Button variant={"outline"} colorScheme="orange" size="sm">
