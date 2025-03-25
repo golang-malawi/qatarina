@@ -1,9 +1,16 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { IconDashboard } from "@tabler/icons-react";
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/(app)/dashboard/')({
-  component: RouteComponent,
-})
+export const Route = createFileRoute("/(app)/dashboard/")({
+  component: DashboardPage,
+});
 
-function RouteComponent() {
-  return <div>Hello "/dashboard/"!</div>
+function DashboardPage() {
+  return (
+    <div>
+      <h1>
+        <IconDashboard /> Dashboard
+      </h1>
+    </div>
+  );
 }

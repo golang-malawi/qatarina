@@ -1,13 +1,16 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
+import TestCaseGrid from "@/components/TestCaseGrid";
 
 export const Route = createFileRoute(
-  '/(app)/projects/$projectId/test-plans/$testPlanID/execute/',
+  "/(app)/projects/$projectId/test-plans/$testPlanID/execute/"
 )({
-  component: RouteComponent,
-})
+  component: ExecuteTestPlan,
+});
 
-function RouteComponent() {
+function ExecuteTestPlan() {
   return (
-    <div>Hello "/projects/$projectId/test-plans/$testPlanID/execute/"!</div>
-  )
+    <div>
+      <TestCaseGrid />
+    </div>
+  );
 }

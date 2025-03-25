@@ -1,9 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Box, Heading } from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/(app)/integrations/')({
-  component: RouteComponent,
-})
+export const Route = createFileRoute("/(app)/integrations/")({
+  component: ListIntegrations,
+});
 
-function RouteComponent() {
-  return <div>Hello "/integrations/"!</div>
+function ListIntegrations() {
+  return (
+    <Box>
+      <Heading>Integrations</Heading>
+    </Box>
+  );
 }

@@ -19,6 +19,7 @@ import { Route as appUsersIndexImport } from './routes/(app)/users/index'
 import { Route as appTestersIndexImport } from './routes/(app)/testers/index'
 import { Route as appTestPlansIndexImport } from './routes/(app)/test-plans/index'
 import { Route as appTestCasesIndexImport } from './routes/(app)/test-cases/index'
+import { Route as appSettingsIndexImport } from './routes/(app)/settings/index'
 import { Route as appReportsIndexImport } from './routes/(app)/reports/index'
 import { Route as appProjectsIndexImport } from './routes/(app)/projects/index'
 import { Route as appIntegrationsIndexImport } from './routes/(app)/integrations/index'
@@ -38,6 +39,7 @@ import { Route as appProjectsProjectIdReportsIndexImport } from './routes/(app)/
 import { Route as appProjectsProjectIdInsightsIndexImport } from './routes/(app)/projects/$projectId/insights/index'
 import { Route as appProjectsProjectIdTestPlansNewIndexImport } from './routes/(app)/projects/$projectId/test-plans/new/index'
 import { Route as appProjectsProjectIdTestCasesNewIndexImport } from './routes/(app)/projects/$projectId/test-cases/new/index'
+import { Route as appProjectsProjectIdTestCasesTestCaseIdIndexImport } from './routes/(app)/projects/$projectId/test-cases/$testCaseId/index'
 import { Route as appProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport } from './routes/(app)/projects/$projectId/test-plans/$testPlanID/execute/index'
 
 // Create/Update Routes
@@ -86,6 +88,12 @@ const appTestPlansIndexRoute = appTestPlansIndexImport.update({
 const appTestCasesIndexRoute = appTestCasesIndexImport.update({
   id: '/test-cases/',
   path: '/test-cases/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+
+const appSettingsIndexRoute = appSettingsIndexImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => appRouteRoute,
 } as any)
 
@@ -212,6 +220,13 @@ const appProjectsProjectIdTestCasesNewIndexRoute =
     getParentRoute: () => appRouteRoute,
   } as any)
 
+const appProjectsProjectIdTestCasesTestCaseIdIndexRoute =
+  appProjectsProjectIdTestCasesTestCaseIdIndexImport.update({
+    id: '/projects/$projectId/test-cases/$testCaseId/',
+    path: '/projects/$projectId/test-cases/$testCaseId/',
+    getParentRoute: () => appRouteRoute,
+  } as any)
+
 const appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
   appProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport.update({
     id: '/projects/$projectId/test-plans/$testPlanID/execute/',
@@ -277,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof appReportsIndexImport
+      parentRoute: typeof appRouteImport
+    }
+    '/(app)/settings/': {
+      id: '/(app)/settings/'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof appSettingsIndexImport
       parentRoute: typeof appRouteImport
     }
     '/(app)/test-cases/': {
@@ -398,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexImport
       parentRoute: typeof appRouteImport
     }
+    '/(app)/projects/$projectId/test-cases/$testCaseId/': {
+      id: '/(app)/projects/$projectId/test-cases/$testCaseId/'
+      path: '/projects/$projectId/test-cases/$testCaseId'
+      fullPath: '/projects/$projectId/test-cases/$testCaseId'
+      preLoaderRoute: typeof appProjectsProjectIdTestCasesTestCaseIdIndexImport
+      parentRoute: typeof appRouteImport
+    }
     '/(app)/projects/$projectId/test-cases/new/': {
       id: '/(app)/projects/$projectId/test-cases/new/'
       path: '/projects/$projectId/test-cases/new'
@@ -430,6 +459,7 @@ interface appRouteRouteChildren {
   appIntegrationsIndexRoute: typeof appIntegrationsIndexRoute
   appProjectsIndexRoute: typeof appProjectsIndexRoute
   appReportsIndexRoute: typeof appReportsIndexRoute
+  appSettingsIndexRoute: typeof appSettingsIndexRoute
   appTestCasesIndexRoute: typeof appTestCasesIndexRoute
   appTestPlansIndexRoute: typeof appTestPlansIndexRoute
   appTestersIndexRoute: typeof appTestersIndexRoute
@@ -447,6 +477,7 @@ interface appRouteRouteChildren {
   appProjectsProjectIdTestPlansIndexRoute: typeof appProjectsProjectIdTestPlansIndexRoute
   appProjectsProjectIdTestersIndexRoute: typeof appProjectsProjectIdTestersIndexRoute
   appTestCasesInboxTestCaseIdIndexRoute: typeof appTestCasesInboxTestCaseIdIndexRoute
+  appProjectsProjectIdTestCasesTestCaseIdIndexRoute: typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
   appProjectsProjectIdTestCasesNewIndexRoute: typeof appProjectsProjectIdTestCasesNewIndexRoute
   appProjectsProjectIdTestPlansNewIndexRoute: typeof appProjectsProjectIdTestPlansNewIndexRoute
   appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute: typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
@@ -458,6 +489,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appIntegrationsIndexRoute: appIntegrationsIndexRoute,
   appProjectsIndexRoute: appProjectsIndexRoute,
   appReportsIndexRoute: appReportsIndexRoute,
+  appSettingsIndexRoute: appSettingsIndexRoute,
   appTestCasesIndexRoute: appTestCasesIndexRoute,
   appTestPlansIndexRoute: appTestPlansIndexRoute,
   appTestersIndexRoute: appTestersIndexRoute,
@@ -479,6 +511,8 @@ const appRouteRouteChildren: appRouteRouteChildren = {
     appProjectsProjectIdTestPlansIndexRoute,
   appProjectsProjectIdTestersIndexRoute: appProjectsProjectIdTestersIndexRoute,
   appTestCasesInboxTestCaseIdIndexRoute: appTestCasesInboxTestCaseIdIndexRoute,
+  appProjectsProjectIdTestCasesTestCaseIdIndexRoute:
+    appProjectsProjectIdTestCasesTestCaseIdIndexRoute,
   appProjectsProjectIdTestCasesNewIndexRoute:
     appProjectsProjectIdTestCasesNewIndexRoute,
   appProjectsProjectIdTestPlansNewIndexRoute:
@@ -499,6 +533,7 @@ export interface FileRoutesByFullPath {
   '/integrations': typeof appIntegrationsIndexRoute
   '/projects': typeof appProjectsIndexRoute
   '/reports': typeof appReportsIndexRoute
+  '/settings': typeof appSettingsIndexRoute
   '/test-cases': typeof appTestCasesIndexRoute
   '/test-plans': typeof appTestPlansIndexRoute
   '/testers': typeof appTestersIndexRoute
@@ -516,6 +551,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-plans': typeof appProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers': typeof appProjectsProjectIdTestersIndexRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/projects/$projectId/test-cases/$testCaseId': typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new': typeof appProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new': typeof appProjectsProjectIdTestPlansNewIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/execute': typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
@@ -529,6 +565,7 @@ export interface FileRoutesByTo {
   '/integrations': typeof appIntegrationsIndexRoute
   '/projects': typeof appProjectsIndexRoute
   '/reports': typeof appReportsIndexRoute
+  '/settings': typeof appSettingsIndexRoute
   '/test-cases': typeof appTestCasesIndexRoute
   '/test-plans': typeof appTestPlansIndexRoute
   '/testers': typeof appTestersIndexRoute
@@ -546,6 +583,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/test-plans': typeof appProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers': typeof appProjectsProjectIdTestersIndexRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/projects/$projectId/test-cases/$testCaseId': typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new': typeof appProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new': typeof appProjectsProjectIdTestPlansNewIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/execute': typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
@@ -561,6 +599,7 @@ export interface FileRoutesById {
   '/(app)/integrations/': typeof appIntegrationsIndexRoute
   '/(app)/projects/': typeof appProjectsIndexRoute
   '/(app)/reports/': typeof appReportsIndexRoute
+  '/(app)/settings/': typeof appSettingsIndexRoute
   '/(app)/test-cases/': typeof appTestCasesIndexRoute
   '/(app)/test-plans/': typeof appTestPlansIndexRoute
   '/(app)/testers/': typeof appTestersIndexRoute
@@ -578,6 +617,7 @@ export interface FileRoutesById {
   '/(app)/projects/$projectId/test-plans/': typeof appProjectsProjectIdTestPlansIndexRoute
   '/(app)/projects/$projectId/testers/': typeof appProjectsProjectIdTestersIndexRoute
   '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/(app)/projects/$projectId/test-cases/$testCaseId/': typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/(app)/projects/$projectId/test-cases/new/': typeof appProjectsProjectIdTestCasesNewIndexRoute
   '/(app)/projects/$projectId/test-plans/new/': typeof appProjectsProjectIdTestPlansNewIndexRoute
   '/(app)/projects/$projectId/test-plans/$testPlanID/execute/': typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
@@ -593,6 +633,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/projects'
     | '/reports'
+    | '/settings'
     | '/test-cases'
     | '/test-plans'
     | '/testers'
@@ -610,6 +651,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans'
     | '/projects/$projectId/testers'
     | '/test-cases/inbox/$testCaseId'
+    | '/projects/$projectId/test-cases/$testCaseId'
     | '/projects/$projectId/test-cases/new'
     | '/projects/$projectId/test-plans/new'
     | '/projects/$projectId/test-plans/$testPlanID/execute'
@@ -622,6 +664,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/projects'
     | '/reports'
+    | '/settings'
     | '/test-cases'
     | '/test-plans'
     | '/testers'
@@ -639,6 +682,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans'
     | '/projects/$projectId/testers'
     | '/test-cases/inbox/$testCaseId'
+    | '/projects/$projectId/test-cases/$testCaseId'
     | '/projects/$projectId/test-cases/new'
     | '/projects/$projectId/test-plans/new'
     | '/projects/$projectId/test-plans/$testPlanID/execute'
@@ -652,6 +696,7 @@ export interface FileRouteTypes {
     | '/(app)/integrations/'
     | '/(app)/projects/'
     | '/(app)/reports/'
+    | '/(app)/settings/'
     | '/(app)/test-cases/'
     | '/(app)/test-plans/'
     | '/(app)/testers/'
@@ -669,6 +714,7 @@ export interface FileRouteTypes {
     | '/(app)/projects/$projectId/test-plans/'
     | '/(app)/projects/$projectId/testers/'
     | '/(app)/test-cases/inbox/$testCaseId/'
+    | '/(app)/projects/$projectId/test-cases/$testCaseId/'
     | '/(app)/projects/$projectId/test-cases/new/'
     | '/(app)/projects/$projectId/test-plans/new/'
     | '/(app)/projects/$projectId/test-plans/$testPlanID/execute/'
@@ -710,6 +756,7 @@ export const routeTree = rootRoute
         "/(app)/integrations/",
         "/(app)/projects/",
         "/(app)/reports/",
+        "/(app)/settings/",
         "/(app)/test-cases/",
         "/(app)/test-plans/",
         "/(app)/testers/",
@@ -727,6 +774,7 @@ export const routeTree = rootRoute
         "/(app)/projects/$projectId/test-plans/",
         "/(app)/projects/$projectId/testers/",
         "/(app)/test-cases/inbox/$testCaseId/",
+        "/(app)/projects/$projectId/test-cases/$testCaseId/",
         "/(app)/projects/$projectId/test-cases/new/",
         "/(app)/projects/$projectId/test-plans/new/",
         "/(app)/projects/$projectId/test-plans/$testPlanID/execute/"
@@ -756,6 +804,10 @@ export const routeTree = rootRoute
     },
     "/(app)/reports/": {
       "filePath": "(app)/reports/index.tsx",
+      "parent": "/(app)"
+    },
+    "/(app)/settings/": {
+      "filePath": "(app)/settings/index.tsx",
       "parent": "/(app)"
     },
     "/(app)/test-cases/": {
@@ -824,6 +876,10 @@ export const routeTree = rootRoute
     },
     "/(app)/test-cases/inbox/$testCaseId/": {
       "filePath": "(app)/test-cases/inbox/$testCaseId/index.tsx",
+      "parent": "/(app)"
+    },
+    "/(app)/projects/$projectId/test-cases/$testCaseId/": {
+      "filePath": "(app)/projects/$projectId/test-cases/$testCaseId/index.tsx",
       "parent": "/(app)"
     },
     "/(app)/projects/$projectId/test-cases/new/": {
