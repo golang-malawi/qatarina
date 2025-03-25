@@ -21,9 +21,6 @@ import CreateTestCase from "../app/testcase/new";
 import ListTesters from "../app/testers/ListTesters";
 import CreateNewTestPlan from "../app/testplans/CreateNewTestPlan";
 import ListTestPlans from "../app/testplans/ListTestPlans";
-import ListUsers from "../app/users";
-import CreateNewUser from "../app/users/CreateNewUser";
-import ViewUserProfile from "../app/users/ViewUserProfile";
 import ViewProject from "../app/projects/view-project";
 import ListProjectTestPlans from "../app/projects/list-project-test-plans";
 import ListProjectTestCases from "../app/projects/list-test-cases";
@@ -45,9 +42,6 @@ function appRouter() {
     createRoutesFromElements(
       <Route path="/" element={<Root />}>
         <Route path="" element={<Home />} />
-        <Route path="users" element={<ListUsers />} />
-        <Route path="users/new" element={<CreateNewUser />} />
-        <Route path="users/view/:userID" element={<ViewUserProfile />} />
         <Route path="projects" element={<ProjectPage />} />
         <Route
           path="projects/view/:projectId"
@@ -93,7 +87,6 @@ function appRouter() {
         <Route path="integrations" element={<ListIntegrations />} />
         <Route path="test-plans" element={<ListTestPlans />} />
         <Route path="reports" element={<ListReports />} />
-        <Route path="users" element={<ListUsers />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route
           path="login"
