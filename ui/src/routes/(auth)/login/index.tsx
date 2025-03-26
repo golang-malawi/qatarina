@@ -2,7 +2,6 @@ import { Box, Button, Input, InputGroup, Link } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import {
   redirect,
-  useNavigate,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
@@ -13,7 +12,7 @@ import React from "react";
 
 const fallback = "/dashboard" as const;
 
-export const Route = createFileRoute("/(auth)/login")({
+export const Route = createFileRoute("/(auth)/login/")({
   validateSearch: z.object({
     redirect: z.string().optional().catch(""),
   }),
@@ -27,7 +26,7 @@ export const Route = createFileRoute("/(auth)/login")({
 
 function LoginPage() {
   const auth = useAuth();
-  const navigate = useNavigate();
+  const navigate = Route.useNavigate();
   const router = useRouter();
   const search = Route.useSearch();
 
@@ -44,7 +43,10 @@ function LoginPage() {
       await auth.login(email, password);
       await router.invalidate();
 
-      await navigate({ to: search.redirect || fallback });
+      // TODO: 🥲 dies without this sleep because the context state is not refresing in time
+      await sleep(1)
+
+      await navigate({ to: search.redirect || fallback, replace: true });
       return false;
     } catch (error) {
       console.error("Error logging in: ", error);
@@ -83,4 +85,8 @@ function LoginPage() {
       <Link href="/forgot-password">Forgot Password?</Link>
     </div>
   );
+}
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

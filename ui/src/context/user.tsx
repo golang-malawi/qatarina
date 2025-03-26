@@ -28,7 +28,9 @@ function setStoredUser(user: string | null) {
 interface LoginData {
   user_id: number;
   token: string;
+  email: string;
   displayName: string;
+  expires_at: number;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -52,9 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Something happened while logging in..");
       }
       const loginData: LoginData = res.data;
+
       localStorage.setItem("auth.user_id", `${loginData.user_id}`);
       localStorage.setItem("auth.displayName", loginData.displayName);
+      localStorage.setItem("auth.email", loginData.email);
       localStorage.setItem("auth.token", loginData.token);
+      localStorage.setItem("auth.expires_at", loginData.expires_at.toString());
 
       axios.defaults.withCredentials = false;
       axios.defaults.headers.common["Authorization"] =

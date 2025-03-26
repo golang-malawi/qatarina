@@ -13,8 +13,8 @@
 import { Route as rootRoute } from './routes/__root'
 import { Route as appRouteImport } from './routes/(app)/route'
 import { Route as appIndexImport } from './routes/(app)/index'
-import { Route as authLogoutImport } from './routes/(auth)/logout'
-import { Route as authLoginImport } from './routes/(auth)/login'
+import { Route as authLogoutIndexImport } from './routes/(auth)/logout/index'
+import { Route as authLoginIndexImport } from './routes/(auth)/login/index'
 import { Route as appUsersIndexImport } from './routes/(app)/users/index'
 import { Route as appTestersIndexImport } from './routes/(app)/testers/index'
 import { Route as appTestPlansIndexImport } from './routes/(app)/test-plans/index'
@@ -56,15 +56,15 @@ const appIndexRoute = appIndexImport.update({
   getParentRoute: () => appRouteRoute,
 } as any)
 
-const authLogoutRoute = authLogoutImport.update({
-  id: '/(auth)/logout',
-  path: '/logout',
+const authLogoutIndexRoute = authLogoutIndexImport.update({
+  id: '/(auth)/logout/',
+  path: '/logout/',
   getParentRoute: () => rootRoute,
 } as any)
 
-const authLoginRoute = authLoginImport.update({
-  id: '/(auth)/login',
-  path: '/login',
+const authLoginIndexRoute = authLoginIndexImport.update({
+  id: '/(auth)/login/',
+  path: '/login/',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -252,20 +252,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appRouteImport
       parentRoute: typeof rootRoute
     }
-    '/(auth)/login': {
-      id: '/(auth)/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginImport
-      parentRoute: typeof rootRoute
-    }
-    '/(auth)/logout': {
-      id: '/(auth)/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof authLogoutImport
-      parentRoute: typeof rootRoute
-    }
     '/(app)/': {
       id: '/(app)/'
       path: '/'
@@ -342,6 +328,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/users'
       preLoaderRoute: typeof appUsersIndexImport
       parentRoute: typeof appRouteImport
+    }
+    '/(auth)/login/': {
+      id: '/(auth)/login/'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginIndexImport
+      parentRoute: typeof rootRoute
+    }
+    '/(auth)/logout/': {
+      id: '/(auth)/logout/'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof authLogoutIndexImport
+      parentRoute: typeof rootRoute
     }
     '/(app)/users/view/$userID': {
       id: '/(app)/users/view/$userID'
@@ -543,8 +543,6 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 
 export interface FileRoutesByFullPath {
   '/': typeof appIndexRoute
-  '/login': typeof authLoginRoute
-  '/logout': typeof authLogoutRoute
   '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/integrations': typeof appIntegrationsIndexRoute
@@ -555,6 +553,8 @@ export interface FileRoutesByFullPath {
   '/test-plans': typeof appTestPlansIndexRoute
   '/testers': typeof appTestersIndexRoute
   '/users': typeof appUsersIndexRoute
+  '/login': typeof authLoginIndexRoute
+  '/logout': typeof authLogoutIndexRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/$projectId': typeof appProjectsProjectIdIndexRoute
   '/projects/new': typeof appProjectsNewIndexRoute
@@ -575,8 +575,6 @@ export interface FileRoutesByFullPath {
 }
 
 export interface FileRoutesByTo {
-  '/login': typeof authLoginRoute
-  '/logout': typeof authLogoutRoute
   '/': typeof appIndexRoute
   '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
@@ -588,6 +586,8 @@ export interface FileRoutesByTo {
   '/test-plans': typeof appTestPlansIndexRoute
   '/testers': typeof appTestersIndexRoute
   '/users': typeof appUsersIndexRoute
+  '/login': typeof authLoginIndexRoute
+  '/logout': typeof authLogoutIndexRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/$projectId': typeof appProjectsProjectIdIndexRoute
   '/projects/new': typeof appProjectsNewIndexRoute
@@ -610,8 +610,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/(app)': typeof appRouteRouteWithChildren
-  '/(auth)/login': typeof authLoginRoute
-  '/(auth)/logout': typeof authLogoutRoute
   '/(app)/': typeof appIndexRoute
   '/(app)/testers/invite': typeof appTestersInviteRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
@@ -623,6 +621,8 @@ export interface FileRoutesById {
   '/(app)/test-plans/': typeof appTestPlansIndexRoute
   '/(app)/testers/': typeof appTestersIndexRoute
   '/(app)/users/': typeof appUsersIndexRoute
+  '/(auth)/login/': typeof authLoginIndexRoute
+  '/(auth)/logout/': typeof authLogoutIndexRoute
   '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
   '/(app)/projects/$projectId/': typeof appProjectsProjectIdIndexRoute
   '/(app)/projects/new/': typeof appProjectsNewIndexRoute
@@ -646,8 +646,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
-    | '/logout'
     | '/testers/invite'
     | '/dashboard'
     | '/integrations'
@@ -658,6 +656,8 @@ export interface FileRouteTypes {
     | '/test-plans'
     | '/testers'
     | '/users'
+    | '/login'
+    | '/logout'
     | '/users/view/$userID'
     | '/projects/$projectId'
     | '/projects/new'
@@ -677,8 +677,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans/$testPlanID/execute'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/login'
-    | '/logout'
     | '/'
     | '/testers/invite'
     | '/dashboard'
@@ -690,6 +688,8 @@ export interface FileRouteTypes {
     | '/test-plans'
     | '/testers'
     | '/users'
+    | '/login'
+    | '/logout'
     | '/users/view/$userID'
     | '/projects/$projectId'
     | '/projects/new'
@@ -710,8 +710,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/(app)'
-    | '/(auth)/login'
-    | '/(auth)/logout'
     | '/(app)/'
     | '/(app)/testers/invite'
     | '/(app)/dashboard/'
@@ -723,6 +721,8 @@ export interface FileRouteTypes {
     | '/(app)/test-plans/'
     | '/(app)/testers/'
     | '/(app)/users/'
+    | '/(auth)/login/'
+    | '/(auth)/logout/'
     | '/(app)/users/view/$userID'
     | '/(app)/projects/$projectId/'
     | '/(app)/projects/new/'
@@ -745,14 +745,14 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   appRouteRoute: typeof appRouteRouteWithChildren
-  authLoginRoute: typeof authLoginRoute
-  authLogoutRoute: typeof authLogoutRoute
+  authLoginIndexRoute: typeof authLoginIndexRoute
+  authLogoutIndexRoute: typeof authLogoutIndexRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   appRouteRoute: appRouteRouteWithChildren,
-  authLoginRoute: authLoginRoute,
-  authLogoutRoute: authLogoutRoute,
+  authLoginIndexRoute: authLoginIndexRoute,
+  authLogoutIndexRoute: authLogoutIndexRoute,
 }
 
 export const routeTree = rootRoute
@@ -766,8 +766,8 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/(app)",
-        "/(auth)/login",
-        "/(auth)/logout"
+        "/(auth)/login/",
+        "/(auth)/logout/"
       ]
     },
     "/(app)": {
@@ -802,12 +802,6 @@ export const routeTree = rootRoute
         "/(app)/projects/$projectId/test-plans/new/",
         "/(app)/projects/$projectId/test-plans/$testPlanID/execute/"
       ]
-    },
-    "/(auth)/login": {
-      "filePath": "(auth)/login.tsx"
-    },
-    "/(auth)/logout": {
-      "filePath": "(auth)/logout.tsx"
     },
     "/(app)/": {
       "filePath": "(app)/index.tsx",
@@ -852,6 +846,12 @@ export const routeTree = rootRoute
     "/(app)/users/": {
       "filePath": "(app)/users/index.tsx",
       "parent": "/(app)"
+    },
+    "/(auth)/login/": {
+      "filePath": "(auth)/login/index.tsx"
+    },
+    "/(auth)/logout/": {
+      "filePath": "(auth)/logout/index.tsx"
     },
     "/(app)/users/view/$userID": {
       "filePath": "(app)/users/view/$userID.tsx",

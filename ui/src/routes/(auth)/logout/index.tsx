@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-export const Route = createFileRoute("/(auth)/logout")({
+export const Route = createFileRoute("/(auth)/logout/")({
   component: Logout,
 });
 
@@ -14,7 +14,7 @@ function Logout() {
   useEffect(() => {
     auth.logout().then(() => {
       router.invalidate().finally(() => {
-        navigate({ to: "/" });
+        navigate({ to: "/", replace: true });
       });
     });
   }, [auth, navigate, router]);
