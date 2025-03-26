@@ -11,7 +11,7 @@ export interface AuthContext {
 
 export const AuthContext = React.createContext<AuthContext | null>(null);
 
-const key = "auth.token";
+const key = "auth.user_id";
 
 function getStoredUser() {
   return localStorage.getItem(key);
