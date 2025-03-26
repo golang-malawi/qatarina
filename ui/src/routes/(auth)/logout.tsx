@@ -1,4 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useAuth } from "@/hooks/isLoggedIn";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/(auth)/logout")({
@@ -6,14 +7,17 @@ export const Route = createFileRoute("/(auth)/logout")({
 });
 
 function Logout() {
-  const redirect = useNavigate();
-  
+  const router = useRouter();
+  const navigate = Route.useNavigate();
+  const auth = useAuth();
+
   useEffect(() => {
-    localStorage.removeItem("auth.user_id");
-    localStorage.removeItem("auth.displayName");
-    localStorage.removeItem("auth.token");
-    redirect({ to: "/login" });
-  }, [redirect]);
+    auth.logout().then(() => {
+      router.invalidate().finally(() => {
+        navigate({ to: "/" });
+      });
+    });
+  }, [auth, navigate, router]);
 
   return <></>;
 }

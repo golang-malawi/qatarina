@@ -1,51 +1,60 @@
 import { Box, Button, Input, InputGroup, Link } from "@chakra-ui/react";
-import axios from "axios";
-import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import isLoggedIn from "@/hooks/isLoggedIn";
-import { AuthService } from "@/services/AuthService";
+import { FormEvent, useState } from "react";
+import {
+  redirect,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
+import { useAuth } from "@/hooks/isLoggedIn";
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+import React from "react";
+
+const fallback = "/dashboard" as const;
 
 export const Route = createFileRoute("/(auth)/login")({
+  validateSearch: z.object({
+    redirect: z.string().optional().catch(""),
+  }),
+  beforeLoad: ({ context, search }) => {
+    if (context.auth.isAuthenticated) {
+      throw redirect({ to: search.redirect || fallback });
+    }
+  },
   component: LoginPage,
 });
 
-interface LoginData {
-  user_id: number;
-  token: string;
-  displayName: string;
-}
-
 function LoginPage() {
-  const redirect = useNavigate();
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const search = Route.useSearch();
 
-  useEffect(() => {
-    if (isLoggedIn()) {
-      redirect({ to: "/dashboard" });
-    }
-  }, []);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isLoading = useRouterState({ select: (s) => s.isLoading });
 
-  const authService = new AuthService();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const res = await authService.login(email, password);
+    try {
+      e.preventDefault();
 
-    if (res.status == 200) {
-      const loginData: LoginData = res.data;
-      localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-      localStorage.setItem("auth.displayName", loginData.displayName);
-      localStorage.setItem("auth.token", loginData.token);
+      await auth.login(email, password);
+      await router.invalidate();
 
-      axios.defaults.withCredentials = false;
-      axios.defaults.headers.common["Authorization"] =
-        `Bearer ${loginData.token}`;
-      redirect({ to: "/dashboard" });
+      await navigate({ to: search.redirect || fallback });
+      return false;
+    } catch (error) {
+      console.error("Error logging in: ", error);
+    } finally {
+      setIsSubmitting(false);
     }
-    return false;
   }
+
+  const isLoggingIn = isLoading || isSubmitting;
+
   return (
     <div>
       <p className="text-3xl">QATARINA</p>
@@ -57,14 +66,18 @@ function LoginPage() {
               placeholder="E-mail"
               type="email"
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoggingIn}
             />
             <Input
               type="password"
               placeholder="Password"
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoggingIn}
             />
           </InputGroup>
-          <Button type="submit">Login</Button>
+          <Button type="submit" disabled={isLoggingIn}>
+            Login
+          </Button>
         </Box>
       </form>
       <Link href="/forgot-password">Forgot Password?</Link>

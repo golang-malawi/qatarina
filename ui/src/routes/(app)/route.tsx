@@ -1,10 +1,22 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import Sidebar from "@/components/Sidebar";
 
-export const Route = createFileRoute("/(app)")({ component: RouteComponent });
+export const Route = createFileRoute("/(app)")({
+  beforeLoad: ({ context, location }) => {
+    if (!context.auth.isAuthenticated) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
+  component: BaseLayout,
+});
 
-function RouteComponent() {
+function BaseLayout() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <Box
