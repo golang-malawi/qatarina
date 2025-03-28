@@ -1,3 +1,4 @@
+import { sleep } from "@/lib/utils";
 import { AuthService } from "@/services/AuthService";
 import axios from "axios";
 import * as React from "react";
@@ -41,8 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("auth.user_id");
     localStorage.removeItem("auth.displayName");
     localStorage.removeItem("auth.token");
+    localStorage.removeItem("auth.expires_at");
+    localStorage.removeItem("auth.email");
+
+    axios.defaults.withCredentials = false;
+    axios.defaults.headers.common["Authorization"] = "";
+
     setStoredUser(null);
     setUser(null);
+
+    await sleep(1);
   }, []);
 
   const login = React.useCallback(

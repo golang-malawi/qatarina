@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import React from "react";
+import { sleep } from "@/lib/utils";
 
 const fallback = "/dashboard" as const;
 
@@ -85,8 +86,4 @@ function LoginPage() {
       <Link href="/forgot-password">Forgot Password?</Link>
     </div>
   );
-}
-
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
