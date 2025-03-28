@@ -1,4 +1,9 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+} from "@tanstack/react-router";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import Sidebar from "@/components/Sidebar";
 
