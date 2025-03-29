@@ -1,6 +1,6 @@
 import axios from "axios";
-import { getApiEndpoint } from "../common/request";
-import useAuthHeaders from "../hooks/useAuthHeaders";
+import { getApiEndpoint } from "@/common/request";
+import createAuthHeaders from "@/hooks/useAuthHeaders";
 
 export default class UserService {
     apiEndpoint: string;
@@ -10,7 +10,7 @@ export default class UserService {
     }
 
     async create(data: any) {
-        const res = await axios.post(`${this.apiEndpoint}/v1/users`, data, useAuthHeaders());
+        const res = await axios.post(`${this.apiEndpoint}/v1/users`, data, createAuthHeaders());
         if (res.status === 200) {
             return res;
         }

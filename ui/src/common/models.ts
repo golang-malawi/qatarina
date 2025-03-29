@@ -11,6 +11,7 @@ export interface TestCase {
   code?: string;
   description?: string;
   tags?: string[];
+  usage_count?: number;
 }
 
 export interface TestPlan {

@@ -1,6 +1,7 @@
 import axios from "axios";
-import { getApiEndpoint } from "../common/request";
-import useAuthHeaders from "../hooks/useAuthHeaders";
+import { getApiEndpoint } from "@/common/request";
+import createAuthHeaders from "@/hooks/useAuthHeaders";
+import { TestPlan } from "@/common/models";
 
 export default class TestPlanService {
   apiEndpoint: string;
@@ -9,21 +10,10 @@ export default class TestPlanService {
     this.apiEndpoint = getApiEndpoint();
   }
 
-  async findAll() {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/test-plans`,
-      useAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data.test_plans;
-    }
-    throw new Error(res.data);
-  }
-
   async findAllByProject(projectId: string) {
     const res = await axios.get(
       `${this.apiEndpoint}/v1/projects/${projectId}/test-plans`,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res.data.test_plans;
@@ -34,7 +24,7 @@ export default class TestPlanService {
   async findById(id: string) {
     const res = await axios.get(
       `${this.apiEndpoint}/v1/test-plans/${id}`,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res.data.test_plan;
@@ -42,11 +32,11 @@ export default class TestPlanService {
     throw new Error(res.data);
   }
 
-  async create(data: any) {
+  async create(data: unknown) {
     const res = await axios.post(
       `${this.apiEndpoint}/v1/test-plans`,
       data,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res;
@@ -57,11 +47,22 @@ export default class TestPlanService {
   async deleteTester(id: string) {
     const res = await axios.delete(
       `${this.apiEndpoint}/v1/test-plans/${id}`,
-      useAuthHeaders(),
+      createAuthHeaders()
     );
     if (res.status === 200) {
       return res.data.test_plan;
     }
     throw new Error(res.data);
   }
+}
+
+export async function findAllTestPlans(): Promise<TestPlan[]> {
+  const res = await axios.get(
+    `${getApiEndpoint()}/v1/test-plans`,
+    createAuthHeaders()
+  );
+  if (res.status === 200) {
+    return res.data.test_plans;
+  }
+  throw new Error(res.data);
 }
