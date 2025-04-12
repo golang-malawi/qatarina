@@ -14,7 +14,7 @@ function Home() {
         Welcome to the future of Software Quality Assurance
       </Heading>
       <Box>
-        <Heading size="1xl">
+        <Heading>
           <IconUser /> Invite Your People
         </Heading>
         <Flex>
@@ -27,7 +27,7 @@ function Home() {
         </Flex>
       </Box>
       <Box>
-        <Heading size="1xl">
+        <Heading>
           <IconUser /> Configure Your Projects
         </Heading>
         <Flex>
@@ -40,7 +40,7 @@ function Home() {
         </Flex>
       </Box>
       <Box>
-        <Heading size="1xl">
+        <Heading>
           <IconUser /> Manage Integrations
         </Heading>
         <Flex>

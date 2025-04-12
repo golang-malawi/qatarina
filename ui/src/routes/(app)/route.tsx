@@ -1,11 +1,12 @@
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { Box, Flex } from "@chakra-ui/react";
 import {
-  createFileRoute,
-  Link,
-  Outlet,
-  redirect,
-} from "@tanstack/react-router";
-import { Box, Flex, Heading } from "@chakra-ui/react";
-import Sidebar from "@/components/Sidebar";
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import AppSidebar from "@/components/app-sidebar";
+import { ColorModeButton } from "@/components/ui/color-mode";
 
 export const Route = createFileRoute("/(app)")({
   beforeLoad: ({ context, location }) => {
@@ -23,25 +24,21 @@ export const Route = createFileRoute("/(app)")({
 
 function BaseLayout() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <Box
-        width={"100%"}
-        bg={"gray.50"}
-        borderBottom={"1px solid #f3f3f3"}
-        padding={4}
-      >
-        <Link to="/">
-          <Heading size="1xl">QATARINA </Heading>
-        </Link>
-      </Box>
-      <Flex>
-        <Box w="20%" borderRight={"1px solid rgba(200, 200, 200, 1)"} h="100vh">
-          <Sidebar />
-        </Box>
-        <Box padding={4}>
-          <Outlet />
-        </Box>
-      </Flex>
-    </main>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
+        <Flex width={"100%"} padding={4} justifyContent="space-between">
+          <SidebarTrigger />
+          <ColorModeButton />
+        </Flex>
+        <Flex>
+          <Box w="20%" h="100vh"></Box>
+          <Box padding={4}>
+            <Outlet />
+          </Box>
+        </Flex>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
+
