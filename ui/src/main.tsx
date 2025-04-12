@@ -1,13 +1,13 @@
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "@/routeTree.gen";
-import { Providers } from "./lib/providers";
 import { StrictMode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./global.css";
 import { AuthProvider } from "./context/user";
 import { useAuth } from "./hooks/isLoggedIn";
+import { Provider } from "./components/ui/provider";
 
 const queryClient = new QueryClient();
 
@@ -54,10 +54,11 @@ if (!rootElement.innerHTML) {
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <Providers>
+        <Provider>
           <App />
-        </Providers>
+        </Provider>
       </QueryClientProvider>
     </StrictMode>
   );
 }
+
