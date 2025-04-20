@@ -93,10 +93,12 @@ function LoginPage() {
     <Flex minH="100vh" align="center" justify="center" p={4}>
       <Stack mx="auto" maxW="lg" w={{ sm: "full", md: "450px" }} py={12} px={6}>
         <Stack align="center">
-          <Logo />
-          <Heading fontSize="3xl" textAlign="center" fontWeight="bold">
-            {SiteConfig.name}
-          </Heading>
+          <Flex align="center" direction="row" gap={2}>
+            <Logo />
+            <Heading fontSize="3xl" textAlign="center" fontWeight="bold">
+              {SiteConfig.name}
+            </Heading>
+          </Flex>
           <Text fontSize="md" color="gray.500" textAlign="center">
             {SiteConfig.subtitle}
           </Text>
@@ -104,9 +106,9 @@ function LoginPage() {
 
         <Card.Root>
           <Card.Header>
-            <Card.Title>Sign up</Card.Title>
+            <Card.Title>Welcome back</Card.Title>
             <Card.Description>
-              Fill in the form below to create an account
+              Enter your email and password to continue.
             </Card.Description>
           </Card.Header>
           <Card.Body>
