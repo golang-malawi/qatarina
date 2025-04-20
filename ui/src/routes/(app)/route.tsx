@@ -38,7 +38,7 @@ function BaseLayout() {
         <Box w="20%" borderRight={"1px solid rgba(200, 200, 200, 1)"} h="100vh">
           <Sidebar />
         </Box>
-        <Box padding={4}>
+        <Box padding={4} w="80%">
           <Outlet />
         </Box>
       </Flex>

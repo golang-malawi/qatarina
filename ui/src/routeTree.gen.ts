@@ -25,6 +25,7 @@ import { Route as appProjectsIndexImport } from './routes/(app)/projects/index'
 import { Route as appIntegrationsIndexImport } from './routes/(app)/integrations/index'
 import { Route as appDashboardIndexImport } from './routes/(app)/dashboard/index'
 import { Route as appTestersInviteImport } from './routes/(app)/testers/invite'
+import { Route as appProjectsProjectIdRouteImport } from './routes/(app)/projects/$projectId/route'
 import { Route as appUsersNewIndexImport } from './routes/(app)/users/new/index'
 import { Route as appTestCasesNewIndexImport } from './routes/(app)/test-cases/new/index'
 import { Route as appTestCasesInboxIndexImport } from './routes/(app)/test-cases/inbox/index'
@@ -128,6 +129,12 @@ const appTestersInviteRoute = appTestersInviteImport.update({
   getParentRoute: () => appRouteRoute,
 } as any)
 
+const appProjectsProjectIdRouteRoute = appProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => appRouteRoute,
+} as any)
+
 const appUsersNewIndexRoute = appUsersNewIndexImport.update({
   id: '/users/new/',
   path: '/users/new/',
@@ -153,9 +160,9 @@ const appProjectsNewIndexRoute = appProjectsNewIndexImport.update({
 } as any)
 
 const appProjectsProjectIdIndexRoute = appProjectsProjectIdIndexImport.update({
-  id: '/projects/$projectId/',
-  path: '/projects/$projectId/',
-  getParentRoute: () => appRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => appProjectsProjectIdRouteRoute,
 } as any)
 
 const appUsersViewUserIDRoute = appUsersViewUserIDImport.update({
@@ -173,72 +180,72 @@ const appTestCasesInboxTestCaseIdIndexRoute =
 
 const appProjectsProjectIdTestersIndexRoute =
   appProjectsProjectIdTestersIndexImport.update({
-    id: '/projects/$projectId/testers/',
-    path: '/projects/$projectId/testers/',
-    getParentRoute: () => appRouteRoute,
+    id: '/testers/',
+    path: '/testers/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestPlansIndexRoute =
   appProjectsProjectIdTestPlansIndexImport.update({
-    id: '/projects/$projectId/test-plans/',
-    path: '/projects/$projectId/test-plans/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-plans/',
+    path: '/test-plans/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestCasesIndexRoute =
   appProjectsProjectIdTestCasesIndexImport.update({
-    id: '/projects/$projectId/test-cases/',
-    path: '/projects/$projectId/test-cases/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-cases/',
+    path: '/test-cases/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdSettingsIndexRoute =
   appProjectsProjectIdSettingsIndexImport.update({
-    id: '/projects/$projectId/settings/',
-    path: '/projects/$projectId/settings/',
-    getParentRoute: () => appRouteRoute,
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdReportsIndexRoute =
   appProjectsProjectIdReportsIndexImport.update({
-    id: '/projects/$projectId/reports/',
-    path: '/projects/$projectId/reports/',
-    getParentRoute: () => appRouteRoute,
+    id: '/reports/',
+    path: '/reports/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdInsightsIndexRoute =
   appProjectsProjectIdInsightsIndexImport.update({
-    id: '/projects/$projectId/insights/',
-    path: '/projects/$projectId/insights/',
-    getParentRoute: () => appRouteRoute,
+    id: '/insights/',
+    path: '/insights/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestPlansNewIndexRoute =
   appProjectsProjectIdTestPlansNewIndexImport.update({
-    id: '/projects/$projectId/test-plans/new/',
-    path: '/projects/$projectId/test-plans/new/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-plans/new/',
+    path: '/test-plans/new/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestCasesNewIndexRoute =
   appProjectsProjectIdTestCasesNewIndexImport.update({
-    id: '/projects/$projectId/test-cases/new/',
-    path: '/projects/$projectId/test-cases/new/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-cases/new/',
+    path: '/test-cases/new/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestCasesTestCaseIdIndexRoute =
   appProjectsProjectIdTestCasesTestCaseIdIndexImport.update({
-    id: '/projects/$projectId/test-cases/$testCaseId/',
-    path: '/projects/$projectId/test-cases/$testCaseId/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-cases/$testCaseId/',
+    path: '/test-cases/$testCaseId/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 const appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
   appProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport.update({
-    id: '/projects/$projectId/test-plans/$testPlanID/execute/',
-    path: '/projects/$projectId/test-plans/$testPlanID/execute/',
-    getParentRoute: () => appRouteRoute,
+    id: '/test-plans/$testPlanID/execute/',
+    path: '/test-plans/$testPlanID/execute/',
+    getParentRoute: () => appProjectsProjectIdRouteRoute,
   } as any)
 
 // Populate the FileRoutesByPath interface
@@ -257,6 +264,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof appIndexImport
+      parentRoute: typeof appRouteImport
+    }
+    '/(app)/projects/$projectId': {
+      id: '/(app)/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof appProjectsProjectIdRouteImport
       parentRoute: typeof appRouteImport
     }
     '/(app)/testers/invite': {
@@ -352,10 +366,10 @@ declare module '@tanstack/react-router' {
     }
     '/(app)/projects/$projectId/': {
       id: '/(app)/projects/$projectId/'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
+      path: '/'
+      fullPath: '/projects/$projectId/'
       preLoaderRoute: typeof appProjectsProjectIdIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/new/': {
       id: '/(app)/projects/new/'
@@ -387,45 +401,45 @@ declare module '@tanstack/react-router' {
     }
     '/(app)/projects/$projectId/insights/': {
       id: '/(app)/projects/$projectId/insights/'
-      path: '/projects/$projectId/insights'
+      path: '/insights'
       fullPath: '/projects/$projectId/insights'
       preLoaderRoute: typeof appProjectsProjectIdInsightsIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/reports/': {
       id: '/(app)/projects/$projectId/reports/'
-      path: '/projects/$projectId/reports'
+      path: '/reports'
       fullPath: '/projects/$projectId/reports'
       preLoaderRoute: typeof appProjectsProjectIdReportsIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/settings/': {
       id: '/(app)/projects/$projectId/settings/'
-      path: '/projects/$projectId/settings'
+      path: '/settings'
       fullPath: '/projects/$projectId/settings'
       preLoaderRoute: typeof appProjectsProjectIdSettingsIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/test-cases/': {
       id: '/(app)/projects/$projectId/test-cases/'
-      path: '/projects/$projectId/test-cases'
+      path: '/test-cases'
       fullPath: '/projects/$projectId/test-cases'
       preLoaderRoute: typeof appProjectsProjectIdTestCasesIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/test-plans/': {
       id: '/(app)/projects/$projectId/test-plans/'
-      path: '/projects/$projectId/test-plans'
+      path: '/test-plans'
       fullPath: '/projects/$projectId/test-plans'
       preLoaderRoute: typeof appProjectsProjectIdTestPlansIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/testers/': {
       id: '/(app)/projects/$projectId/testers/'
-      path: '/projects/$projectId/testers'
+      path: '/testers'
       fullPath: '/projects/$projectId/testers'
       preLoaderRoute: typeof appProjectsProjectIdTestersIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/test-cases/inbox/$testCaseId/': {
       id: '/(app)/test-cases/inbox/$testCaseId/'
@@ -436,39 +450,84 @@ declare module '@tanstack/react-router' {
     }
     '/(app)/projects/$projectId/test-cases/$testCaseId/': {
       id: '/(app)/projects/$projectId/test-cases/$testCaseId/'
-      path: '/projects/$projectId/test-cases/$testCaseId'
+      path: '/test-cases/$testCaseId'
       fullPath: '/projects/$projectId/test-cases/$testCaseId'
       preLoaderRoute: typeof appProjectsProjectIdTestCasesTestCaseIdIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/test-cases/new/': {
       id: '/(app)/projects/$projectId/test-cases/new/'
-      path: '/projects/$projectId/test-cases/new'
+      path: '/test-cases/new'
       fullPath: '/projects/$projectId/test-cases/new'
       preLoaderRoute: typeof appProjectsProjectIdTestCasesNewIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/test-plans/new/': {
       id: '/(app)/projects/$projectId/test-plans/new/'
-      path: '/projects/$projectId/test-plans/new'
+      path: '/test-plans/new'
       fullPath: '/projects/$projectId/test-plans/new'
       preLoaderRoute: typeof appProjectsProjectIdTestPlansNewIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
     '/(app)/projects/$projectId/test-plans/$testPlanID/execute/': {
       id: '/(app)/projects/$projectId/test-plans/$testPlanID/execute/'
-      path: '/projects/$projectId/test-plans/$testPlanID/execute'
+      path: '/test-plans/$testPlanID/execute'
       fullPath: '/projects/$projectId/test-plans/$testPlanID/execute'
       preLoaderRoute: typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport
-      parentRoute: typeof appRouteImport
+      parentRoute: typeof appProjectsProjectIdRouteImport
     }
   }
 }
 
 // Create and export the route tree
 
+interface appProjectsProjectIdRouteRouteChildren {
+  appProjectsProjectIdIndexRoute: typeof appProjectsProjectIdIndexRoute
+  appProjectsProjectIdInsightsIndexRoute: typeof appProjectsProjectIdInsightsIndexRoute
+  appProjectsProjectIdReportsIndexRoute: typeof appProjectsProjectIdReportsIndexRoute
+  appProjectsProjectIdSettingsIndexRoute: typeof appProjectsProjectIdSettingsIndexRoute
+  appProjectsProjectIdTestCasesIndexRoute: typeof appProjectsProjectIdTestCasesIndexRoute
+  appProjectsProjectIdTestPlansIndexRoute: typeof appProjectsProjectIdTestPlansIndexRoute
+  appProjectsProjectIdTestersIndexRoute: typeof appProjectsProjectIdTestersIndexRoute
+  appProjectsProjectIdTestCasesTestCaseIdIndexRoute: typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
+  appProjectsProjectIdTestCasesNewIndexRoute: typeof appProjectsProjectIdTestCasesNewIndexRoute
+  appProjectsProjectIdTestPlansNewIndexRoute: typeof appProjectsProjectIdTestPlansNewIndexRoute
+  appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute: typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
+}
+
+const appProjectsProjectIdRouteRouteChildren: appProjectsProjectIdRouteRouteChildren =
+  {
+    appProjectsProjectIdIndexRoute: appProjectsProjectIdIndexRoute,
+    appProjectsProjectIdInsightsIndexRoute:
+      appProjectsProjectIdInsightsIndexRoute,
+    appProjectsProjectIdReportsIndexRoute:
+      appProjectsProjectIdReportsIndexRoute,
+    appProjectsProjectIdSettingsIndexRoute:
+      appProjectsProjectIdSettingsIndexRoute,
+    appProjectsProjectIdTestCasesIndexRoute:
+      appProjectsProjectIdTestCasesIndexRoute,
+    appProjectsProjectIdTestPlansIndexRoute:
+      appProjectsProjectIdTestPlansIndexRoute,
+    appProjectsProjectIdTestersIndexRoute:
+      appProjectsProjectIdTestersIndexRoute,
+    appProjectsProjectIdTestCasesTestCaseIdIndexRoute:
+      appProjectsProjectIdTestCasesTestCaseIdIndexRoute,
+    appProjectsProjectIdTestCasesNewIndexRoute:
+      appProjectsProjectIdTestCasesNewIndexRoute,
+    appProjectsProjectIdTestPlansNewIndexRoute:
+      appProjectsProjectIdTestPlansNewIndexRoute,
+    appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute:
+      appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute,
+  }
+
+const appProjectsProjectIdRouteRouteWithChildren =
+  appProjectsProjectIdRouteRoute._addFileChildren(
+    appProjectsProjectIdRouteRouteChildren,
+  )
+
 interface appRouteRouteChildren {
   appIndexRoute: typeof appIndexRoute
+  appProjectsProjectIdRouteRoute: typeof appProjectsProjectIdRouteRouteWithChildren
   appTestersInviteRoute: typeof appTestersInviteRoute
   appDashboardIndexRoute: typeof appDashboardIndexRoute
   appIntegrationsIndexRoute: typeof appIntegrationsIndexRoute
@@ -480,26 +539,16 @@ interface appRouteRouteChildren {
   appTestersIndexRoute: typeof appTestersIndexRoute
   appUsersIndexRoute: typeof appUsersIndexRoute
   appUsersViewUserIDRoute: typeof appUsersViewUserIDRoute
-  appProjectsProjectIdIndexRoute: typeof appProjectsProjectIdIndexRoute
   appProjectsNewIndexRoute: typeof appProjectsNewIndexRoute
   appTestCasesInboxIndexRoute: typeof appTestCasesInboxIndexRoute
   appTestCasesNewIndexRoute: typeof appTestCasesNewIndexRoute
   appUsersNewIndexRoute: typeof appUsersNewIndexRoute
-  appProjectsProjectIdInsightsIndexRoute: typeof appProjectsProjectIdInsightsIndexRoute
-  appProjectsProjectIdReportsIndexRoute: typeof appProjectsProjectIdReportsIndexRoute
-  appProjectsProjectIdSettingsIndexRoute: typeof appProjectsProjectIdSettingsIndexRoute
-  appProjectsProjectIdTestCasesIndexRoute: typeof appProjectsProjectIdTestCasesIndexRoute
-  appProjectsProjectIdTestPlansIndexRoute: typeof appProjectsProjectIdTestPlansIndexRoute
-  appProjectsProjectIdTestersIndexRoute: typeof appProjectsProjectIdTestersIndexRoute
   appTestCasesInboxTestCaseIdIndexRoute: typeof appTestCasesInboxTestCaseIdIndexRoute
-  appProjectsProjectIdTestCasesTestCaseIdIndexRoute: typeof appProjectsProjectIdTestCasesTestCaseIdIndexRoute
-  appProjectsProjectIdTestCasesNewIndexRoute: typeof appProjectsProjectIdTestCasesNewIndexRoute
-  appProjectsProjectIdTestPlansNewIndexRoute: typeof appProjectsProjectIdTestPlansNewIndexRoute
-  appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute: typeof appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
   appIndexRoute: appIndexRoute,
+  appProjectsProjectIdRouteRoute: appProjectsProjectIdRouteRouteWithChildren,
   appTestersInviteRoute: appTestersInviteRoute,
   appDashboardIndexRoute: appDashboardIndexRoute,
   appIntegrationsIndexRoute: appIntegrationsIndexRoute,
@@ -511,30 +560,11 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appTestersIndexRoute: appTestersIndexRoute,
   appUsersIndexRoute: appUsersIndexRoute,
   appUsersViewUserIDRoute: appUsersViewUserIDRoute,
-  appProjectsProjectIdIndexRoute: appProjectsProjectIdIndexRoute,
   appProjectsNewIndexRoute: appProjectsNewIndexRoute,
   appTestCasesInboxIndexRoute: appTestCasesInboxIndexRoute,
   appTestCasesNewIndexRoute: appTestCasesNewIndexRoute,
   appUsersNewIndexRoute: appUsersNewIndexRoute,
-  appProjectsProjectIdInsightsIndexRoute:
-    appProjectsProjectIdInsightsIndexRoute,
-  appProjectsProjectIdReportsIndexRoute: appProjectsProjectIdReportsIndexRoute,
-  appProjectsProjectIdSettingsIndexRoute:
-    appProjectsProjectIdSettingsIndexRoute,
-  appProjectsProjectIdTestCasesIndexRoute:
-    appProjectsProjectIdTestCasesIndexRoute,
-  appProjectsProjectIdTestPlansIndexRoute:
-    appProjectsProjectIdTestPlansIndexRoute,
-  appProjectsProjectIdTestersIndexRoute: appProjectsProjectIdTestersIndexRoute,
   appTestCasesInboxTestCaseIdIndexRoute: appTestCasesInboxTestCaseIdIndexRoute,
-  appProjectsProjectIdTestCasesTestCaseIdIndexRoute:
-    appProjectsProjectIdTestCasesTestCaseIdIndexRoute,
-  appProjectsProjectIdTestCasesNewIndexRoute:
-    appProjectsProjectIdTestCasesNewIndexRoute,
-  appProjectsProjectIdTestPlansNewIndexRoute:
-    appProjectsProjectIdTestPlansNewIndexRoute,
-  appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute:
-    appProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute,
 }
 
 const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
@@ -543,6 +573,7 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 
 export interface FileRoutesByFullPath {
   '/': typeof appIndexRoute
+  '/projects/$projectId': typeof appProjectsProjectIdRouteRouteWithChildren
   '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/integrations': typeof appIntegrationsIndexRoute
@@ -556,7 +587,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
-  '/projects/$projectId': typeof appProjectsProjectIdIndexRoute
+  '/projects/$projectId/': typeof appProjectsProjectIdIndexRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/inbox': typeof appTestCasesInboxIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -611,6 +642,7 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/(app)': typeof appRouteRouteWithChildren
   '/(app)/': typeof appIndexRoute
+  '/(app)/projects/$projectId': typeof appProjectsProjectIdRouteRouteWithChildren
   '/(app)/testers/invite': typeof appTestersInviteRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
   '/(app)/integrations/': typeof appIntegrationsIndexRoute
@@ -646,6 +678,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/projects/$projectId'
     | '/testers/invite'
     | '/dashboard'
     | '/integrations'
@@ -659,7 +692,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/users/view/$userID'
-    | '/projects/$projectId'
+    | '/projects/$projectId/'
     | '/projects/new'
     | '/test-cases/inbox'
     | '/test-cases/new'
@@ -711,6 +744,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/(app)'
     | '/(app)/'
+    | '/(app)/projects/$projectId'
     | '/(app)/testers/invite'
     | '/(app)/dashboard/'
     | '/(app)/integrations/'
@@ -774,6 +808,7 @@ export const routeTree = rootRoute
       "filePath": "(app)/route.tsx",
       "children": [
         "/(app)/",
+        "/(app)/projects/$projectId",
         "/(app)/testers/invite",
         "/(app)/dashboard/",
         "/(app)/integrations/",
@@ -785,27 +820,33 @@ export const routeTree = rootRoute
         "/(app)/testers/",
         "/(app)/users/",
         "/(app)/users/view/$userID",
-        "/(app)/projects/$projectId/",
         "/(app)/projects/new/",
         "/(app)/test-cases/inbox/",
         "/(app)/test-cases/new/",
         "/(app)/users/new/",
+        "/(app)/test-cases/inbox/$testCaseId/"
+      ]
+    },
+    "/(app)/": {
+      "filePath": "(app)/index.tsx",
+      "parent": "/(app)"
+    },
+    "/(app)/projects/$projectId": {
+      "filePath": "(app)/projects/$projectId/route.tsx",
+      "parent": "/(app)",
+      "children": [
+        "/(app)/projects/$projectId/",
         "/(app)/projects/$projectId/insights/",
         "/(app)/projects/$projectId/reports/",
         "/(app)/projects/$projectId/settings/",
         "/(app)/projects/$projectId/test-cases/",
         "/(app)/projects/$projectId/test-plans/",
         "/(app)/projects/$projectId/testers/",
-        "/(app)/test-cases/inbox/$testCaseId/",
         "/(app)/projects/$projectId/test-cases/$testCaseId/",
         "/(app)/projects/$projectId/test-cases/new/",
         "/(app)/projects/$projectId/test-plans/new/",
         "/(app)/projects/$projectId/test-plans/$testPlanID/execute/"
       ]
-    },
-    "/(app)/": {
-      "filePath": "(app)/index.tsx",
-      "parent": "/(app)"
     },
     "/(app)/testers/invite": {
       "filePath": "(app)/testers/invite.tsx",
@@ -859,7 +900,7 @@ export const routeTree = rootRoute
     },
     "/(app)/projects/$projectId/": {
       "filePath": "(app)/projects/$projectId/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/new/": {
       "filePath": "(app)/projects/new/index.tsx",
@@ -879,27 +920,27 @@ export const routeTree = rootRoute
     },
     "/(app)/projects/$projectId/insights/": {
       "filePath": "(app)/projects/$projectId/insights/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/reports/": {
       "filePath": "(app)/projects/$projectId/reports/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/settings/": {
       "filePath": "(app)/projects/$projectId/settings/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/test-cases/": {
       "filePath": "(app)/projects/$projectId/test-cases/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/test-plans/": {
       "filePath": "(app)/projects/$projectId/test-plans/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/testers/": {
       "filePath": "(app)/projects/$projectId/testers/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/test-cases/inbox/$testCaseId/": {
       "filePath": "(app)/test-cases/inbox/$testCaseId/index.tsx",
@@ -907,19 +948,19 @@ export const routeTree = rootRoute
     },
     "/(app)/projects/$projectId/test-cases/$testCaseId/": {
       "filePath": "(app)/projects/$projectId/test-cases/$testCaseId/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/test-cases/new/": {
       "filePath": "(app)/projects/$projectId/test-cases/new/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/test-plans/new/": {
       "filePath": "(app)/projects/$projectId/test-plans/new/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     },
     "/(app)/projects/$projectId/test-plans/$testPlanID/execute/": {
       "filePath": "(app)/projects/$projectId/test-plans/$testPlanID/execute/index.tsx",
-      "parent": "/(app)"
+      "parent": "/(app)/projects/$projectId"
     }
   }
 }

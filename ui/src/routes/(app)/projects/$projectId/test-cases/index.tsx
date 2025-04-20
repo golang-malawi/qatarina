@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Avatar,
   AvatarGroup,
@@ -36,22 +36,23 @@ import {
   IconListDetails,
   IconTable,
 } from "@tabler/icons-react";
-import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
+import { TestCase } from "@/common/models";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  findTestCaseAllQueryOptions,
+  testCasesByProjectIdQueryOptions,
+} from "@/data/queries/test-cases";
 
 export const Route = createFileRoute("/(app)/projects/$projectId/test-cases/")({
-  loader: ({ context: { queryClient }, params: { projectId } }) =>
-    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
+  // loader: ({ context: { queryClient }, params: { projectId } }) =>
+  //   queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: ListProjectTestCases,
 });
 
-export default function ListProjectTestCases() {
-  const { projectId } = Route.useParams();
-  const { data: testCases } = useSuspenseQuery(
-    testCasesByProjectIdQueryOptions(projectId)
-  );
+function rows(data: TestCase[]): Element | Element[] {
+  if (!data) return <></>;
 
-  const testCaseRows = testCases.map((tc, idx) => (
+  return data.map((tc, idx) => (
     <Tr key={idx}>
       <Td>{tc.code}</Td>
       <Td>{tc.description}</Td>
@@ -81,6 +82,25 @@ export default function ListProjectTestCases() {
       </Td>
     </Tr>
   ));
+}
+
+export default function ListProjectTestCases() {
+  // const { projectId } = Route.useParams();
+  const {
+    data: testCases,
+    // isPending,
+    // error,
+  } = useSuspenseQuery(findTestCaseAllQueryOptions);
+
+  // if (isPending) {
+  //   return "Loading Projects...";
+  // }
+
+  // if (error) {
+  //   return <div className="error">Error: error fetching</div>;
+  // }
+
+  const testCaseRows: Element | Element[] = rows(testCases);
   return (
     <div>
       <Heading as="h6" size="1xl">
@@ -97,14 +117,14 @@ export default function ListProjectTestCases() {
         alignItems={"flex-end"}
         className="actions"
       >
-        <Link
-          to={"/projects/$projectId/test-cases/new"}
-          params={{ projectId: projectId }}
-        >
-          <Button variant={"outline"} colorScheme="blue" size={"sm"}>
-            Add Test Cases
-          </Button>
-        </Link>
+        {/* <Link
+          to={`/projects/${projectId}/test-cases/new`}
+          // params={{ projectId: projectId }}
+        > */}
+        <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          Add Test Cases
+        </Button>
+        {/* </Link> */}
         <Button colorScheme="green" size={"sm"}>
           Import from Excel
         </Button>
@@ -170,7 +190,7 @@ export default function ListProjectTestCases() {
                     <Th>Actions</Th>
                   </Tr>
                 </Thead>
-                <Tbody>{testCaseRows}</Tbody>
+                <Tbody>{testCaseRows && testCaseRows}</Tbody>
                 <Tfoot>
                   <Tr>
                     <Th>Code</Th>
