@@ -4,9 +4,6 @@ import {
   Container,
   Heading,
   Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
@@ -29,22 +26,27 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
-      <Heading size="1">{testCase?.description}</Heading>
-      <Menu>
-        <MenuButton as={Button} rightIcon={<IconChevronDown />}>
-          Actions
-        </MenuButton>
-        <MenuList>
-          <MenuItem>View</MenuItem>
-          <MenuItem>Create a Copy</MenuItem>
-          <MenuItem>Mark as Draft</MenuItem>
-          <MenuItem>Use in Test Plan</MenuItem>
-          <MenuItem color="red">Delete</MenuItem>
-        </MenuList>
-      </Menu>
+      <Heading size="lg">{testCase?.description}</Heading>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <Button>
+            <IconChevronDown />
+            Actions
+          </Button>
+        </Menu.Trigger>
+        <Menu.Content>
+          <Menu.Item value="">View</Menu.Item>
+          <Menu.Item value="">Create a Copy</Menu.Item>
+          <Menu.Item value="">Mark as Draft</Menu.Item>
+          <Menu.Item value="">Use in Test Plan</Menu.Item>
+          <Menu.Item value="" color="red">
+            Delete
+          </Menu.Item>
+        </Menu.Content>
+      </Menu.Root>
 
       <Container p="4" border="1px solid #f3f3f3">
-        <Heading size="1">Record a Test Result on this test case</Heading>
+        <Heading size="lg">Record a Test Result on this test case</Heading>
         <Textarea placeholder="Record a Test Result on this test case" />
         <Button type="button" variant="outline" colorScheme="blue">
           Record Successful Test
@@ -57,3 +59,4 @@ function TestCaseInboxItem() {
     </Box>
   );
 }
+

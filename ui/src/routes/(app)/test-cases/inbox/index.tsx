@@ -55,7 +55,7 @@ function TestCasePageInbox() {
 
   return (
     <div>
-      <Heading size={"3"}>Test Case Inbox</Heading>
+      <Heading size={"3xl"}>Test Case Inbox</Heading>
       <Flex
         align={"right"}
         mb={2}

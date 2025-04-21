@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Avatar,
   AvatarGroup,
   Button,
   ButtonGroup,
@@ -8,24 +7,10 @@ import {
   Heading,
   IconButton,
   Input,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Tab,
-  Table,
   TableCaption,
-  TableContainer,
-  TabList,
-  TabPanel,
-  TabPanels,
   Tabs,
-  Tbody,
-  Td,
-  Tfoot,
-  Th,
-  Thead,
-  Tr,
+  Table,
+  Menu,
 } from "@chakra-ui/react";
 import {
   IconAlertTriangle,
@@ -38,6 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Avatar } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/(app)/projects/$projectId/test-cases/")({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
@@ -52,43 +38,48 @@ export default function ListProjectTestCases() {
   );
 
   const testCaseRows = testCases.map((tc, idx) => (
-    <Tr key={idx}>
-      <Td>{tc.code}</Td>
-      <Td>{tc.description}</Td>
-      <Td isNumeric>{tc.usage_count}</Td>
-      <Td>
-        <AvatarGroup size="md" max={2}>
+    <Table.Row key={idx}>
+      <Table.Cell>{tc.code}</Table.Cell>
+      <Table.Cell>{tc.description}</Table.Cell>
+      <Table.Cell>{tc.usage_count}</Table.Cell>
+      <Table.Cell>
+        <AvatarGroup size="md">
           <Avatar name="Ryan Florence" src="https://bit.ly/ryan-florence" />
           <Avatar name="Segun Adebayo" src="https://bit.ly/sage-adebayo" />
           <Avatar name="Kent Dodds" src="https://bit.ly/kent-c-dodds" />
           <Avatar name="Prosper Otemuyiwa" src="https://bit.ly/prosper-baba" />
           <Avatar name="Christian Nwamba" src="https://bit.ly/code-beast" />
         </AvatarGroup>
-      </Td>
-      <Td>
-        <Menu>
-          <MenuButton as={Button} rightIcon={<IconChevronDown />}>
-            Actions
-          </MenuButton>
-          <MenuList>
-            <MenuItem>View</MenuItem>
-            <MenuItem>Create a Copy</MenuItem>
-            <MenuItem>Mark as Draft</MenuItem>
-            <MenuItem>Use in Test Session</MenuItem>
-            <MenuItem color="red">Delete</MenuItem>
-          </MenuList>
-        </Menu>
-      </Td>
-    </Tr>
+      </Table.Cell>
+      <Table.Cell>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button>
+              <IconChevronDown />
+              Actions
+            </Button>
+          </Menu.Trigger>
+          <Menu.Content>
+            <Menu.Item value="">View</Menu.Item>
+            <Menu.Item value="">Create a Copy</Menu.Item>
+            <Menu.Item value="">Mark as Draft</Menu.Item>
+            <Menu.Item value="">Use in Test Session</Menu.Item>
+            <Menu.Item color="red" value="">
+              Delete
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Root>
+      </Table.Cell>
+    </Table.Row>
   ));
+
   return (
     <div>
-      <Heading as="h6" size="1xl">
+      <Heading as="h6" size="xl">
         Test Cases
       </Heading>
 
       <Flex
-        bgColor={"gray.100"}
         py={"4"}
         px={"4"}
         align={"right"}
@@ -112,21 +103,23 @@ export default function ListProjectTestCases() {
           Import from Google Sheets
         </Button>
 
-        <ButtonGroup isAttached>
+        <ButtonGroup>
           <IconButton
             aria-label="Add to friends"
             bgColor={"grey"}
             color={"white"}
             size={"sm"}
-            icon={<IconListDetails />}
-          />
+          >
+            <IconListDetails />
+          </IconButton>
           <IconButton
             aria-label="Add to friends"
             bgColor={"gray.300"}
             color={"black"}
             size={"sm"}
-            icon={<IconTable />}
-          />
+          >
+            <IconTable />
+          </IconButton>
         </ButtonGroup>
       </Flex>
 
@@ -134,60 +127,57 @@ export default function ListProjectTestCases() {
         <Input placeholder="Search for Test Cases " />
       </div>
 
-      <Tabs>
-        <TabList>
-          <Tab>
+      <Tabs.Root defaultValue="all">
+        <Tabs.List>
+          <Tabs.Trigger value="all">
             <IconList />
             &nbsp; All Test Cases
-          </Tab>
-          <Tab color={"green"}>
+          </Tabs.Trigger>
+          <Tabs.Trigger color={"green"} value="completed">
             <IconListCheck />
             &nbsp;Completed / Closed
-          </Tab>
-          <Tab color={"red"}>
+          </Tabs.Trigger>
+          <Tabs.Trigger color={"red"} value="failing">
             <IconAlertTriangle />
             &nbsp;Failing
-          </Tab>
-          <Tab color={"orange"}>
+          </Tabs.Trigger>
+          <Tabs.Trigger color={"orange"} value="scheduled">
             <IconClock />
             &nbsp;Scheduled
-          </Tab>
-        </TabList>
+          </Tabs.Trigger>
+        </Tabs.List>
 
-        <TabPanels>
-          <TabPanel>
-            <TableContainer>
-              <Table variant="simple">
-                <TableCaption>
-                  Imperial to metric conversion factors
-                </TableCaption>
-                <Thead>
-                  <Tr>
-                    <Th>Code</Th>
-                    <Th>Test Case</Th>
-                    <Th isNumeric>Times Used/Referenced</Th>
-                    <Th>Tested By</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>{testCaseRows}</Tbody>
-                <Tfoot>
-                  <Tr>
-                    <Th>Code</Th>
-                    <Th>Test Case</Th>
-                    <Th isNumeric>Times Used/Referenced</Th>
-                    <Th>Tested By</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Tfoot>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-          <TabPanel>Completed and Closed Test Cases</TabPanel>
-          <TabPanel>Failing Cases</TabPanel>
-          <TabPanel>Scheduled Cases</TabPanel>
-        </TabPanels>
-      </Tabs>
+        <Tabs.Content value="all">
+          <Table.Root>
+            <TableCaption>Imperial to metric conversion factors</TableCaption>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Code</Table.ColumnHeader>
+                <Table.ColumnHeader>Test Case</Table.ColumnHeader>
+                <Table.ColumnHeader>Times Used/Referenced</Table.ColumnHeader>
+                <Table.ColumnHeader>Tested By</Table.ColumnHeader>
+                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>{testCaseRows}</Table.Body>
+            {/* <Tfoot>
+              <Table.Row>
+                <Table.ColumnHeader>Code</Table.ColumnHeader>
+                <Table.ColumnHeader>Test Case</Table.ColumnHeader>
+                <Th isNumeric>Times Used/Referenced</Table.ColumnHeader>
+                <Table.ColumnHeader>Tested By</Table.ColumnHeader>
+                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+               </Table.Row>
+            </Tfoot> */}
+          </Table.Root>
+        </Tabs.Content>
+        <Tabs.Content value="completed">
+          Completed and Closed Test Cases
+        </Tabs.Content>
+        <Tabs.Content value="failing">Failing Cases</Tabs.Content>
+        <Tabs.Content value="scheduled">Scheduled Cases</Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }
+

@@ -20,7 +20,7 @@ export default class ProjectService {
     throw new Error(res.data);
   }
 
-  async create(data: any) {
+  async create(data: unknown) {
     const res = await axios.post(
       `${this.apiEndpoint}/v1/projects`,
       data,

@@ -3,21 +3,16 @@ import {
   Box,
   Button,
   Checkbox,
+  CheckboxGroup,
+  CloseButton,
+  Dialog,
+  Field,
+  Fieldset,
   Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
+  For,
   Heading,
   Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  useDisclosure,
-  useToast,
+  Portal,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
@@ -27,6 +22,7 @@ import { SelectAssignedTestCase, TesterRecord } from "@/common/models";
 import TestPlanService from "@/services/TestPlanService";
 import TesterService from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
+import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
   "/(app)/projects/$projectId/test-plans/new/"
@@ -39,15 +35,14 @@ export const Route = createFileRoute(
 function CreateNewTestPlan() {
   const testPlanService = new TestPlanService();
   const testerService = new TesterService();
-  const toast = useToast();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [open, setOpen] = useState(false);
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]
   >([]);
-  const [selectedTesters, setSelectedTesters] = useState<number[]>([]);
+  const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
 
   const {
     data: testCases,
@@ -69,53 +64,6 @@ function CreateNewTestPlan() {
     queryKey: ["testers"],
   });
 
-  function addTesterUser(testerID: number) {
-    setSelectedTesters([...selectedTesters, testerID]);
-  }
-
-  const testerList =
-    testers &&
-    testers.map((tester, idx) => (
-      <Box key={idx}>
-        <Checkbox
-          value={tester.user_id}
-          onChange={(e) => {
-            if (e.target.checked) {
-              addTesterUser(parseInt(e.target.value));
-            }
-          }}
-        />{" "}
-        {tester.name}
-      </Box>
-    ));
-
-  const testCaseList = testCases.map((t) => (
-    <Box key={t.id}>
-      <Flex>
-        <Box>
-          <Checkbox
-            name={`testCase-${t.id}`}
-            onChange={(e) => {
-              if (e.target.checked) {
-                const newSelected = {
-                  test_case_id: t.id,
-                  user_ids: [],
-                };
-                setSelectedTestCases([...selectedTestCases, newSelected]);
-              }
-            }}
-          />{" "}
-          {t.code} - {t.title} (Tags: {t.tags?.join(", ")})
-        </Box>
-        <Box>
-          <Button onClick={onOpen}>Assign Testers</Button>
-          {/* <SelectTesterModal testCaseID={t.ID} selectedTesters={selectedTesters} setSelectedTesters={setSelectedTesters} /> */}
-          {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
-        </Box>
-      </Flex>
-    </Box>
-  ));
-
   async function handleSubmit(data: {
     kind: unknown;
     description: unknown;
@@ -136,13 +84,12 @@ function CreateNewTestPlan() {
     });
 
     if (res.status == 200) {
-      toast({
+      toaster.create({
         title: "Test Plan created.",
         description:
           "We've created your Test Plan - please add test cases to it.",
-        status: "success",
+        type: "success",
         duration: 3000,
-        isClosable: true,
       });
       redirect({
         to: "/projects/$projectId/test-plans",
@@ -181,87 +128,148 @@ function CreateNewTestPlan() {
           <form.Field
             name="description"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Description</FormLabel>
+              <Field.Root>
+                <Field.Label>Description</Field.Label>
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Description</FormHelperText>
-              </FormControl>
+                <Field.HelperText>Description</Field.HelperText>
+              </Field.Root>
             )}
           />
 
           <form.Field
             name="start_at"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Start At</FormLabel>
+              <Field.Root>
+                <Field.Label>Start At</Field.Label>
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Start At</FormHelperText>
-              </FormControl>
+                <Field.HelperText>Start At</Field.HelperText>
+              </Field.Root>
             )}
           />
 
           <form.Field
             name="scheduled_end_at"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Scheduled to End On</FormLabel>
+              <Field.Root>
+                <Field.Label>Scheduled to End On</Field.Label>
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Scheduled to End On</FormHelperText>
-              </FormControl>
+                <Field.HelperText>Scheduled to End On</Field.HelperText>
+              </Field.Root>
             )}
           />
 
           <form.Field
             name="kind"
             children={(field) => (
-              <FormControl>
-                <FormLabel>Test Plan Kind</FormLabel>
+              <Field.Root>
+                <Field.Label>Test Plan Kind</Field.Label>
                 <Input
                   type="text"
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
-                <FormHelperText>Test Plan Kind</FormHelperText>
-              </FormControl>
+                <Field.HelperText>Test Plan Kind</Field.HelperText>
+              </Field.Root>
             )}
           />
 
           <Button type="submit">Create Plan</Button>
         </form>
         <Heading>Select & Assign Test Cases</Heading>
-        {testCaseList}
+        {testCases.map((testCase) => {
+          return (
+            <Box key={testCase.id}>
+              <Flex>
+                <Box>
+                  <Checkbox.Root
+                    name={`testCase-${testCase.id}`}
+                    onCheckedChange={(e) => {
+                      const checked = e.checked;
+                      if (checked) {
+                        const newSelected = {
+                          test_case_id: testCase.id,
+                          user_ids: [],
+                        };
+                        setSelectedTestCases([
+                          ...selectedTestCases,
+                          newSelected,
+                        ]);
+                      }
+                    }}
+                  />{" "}
+                  {testCase.code} - {testCase.title} (Tags:{" "}
+                  {testCase.tags?.join(", ")})
+                </Box>
+                <Box>
+                  <Button onClick={() => setOpen(true)}>Assign Testers</Button>
+                  {/* <SelectTesterModal testCaseID={t.ID} selectedTesters={selectedTesters} setSelectedTesters={setSelectedTesters} /> */}
+                  {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
+                </Box>
+              </Flex>
+            </Box>
+          );
+        })}
       </Box>
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Select Testers to Assign</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>{testerList}</ModalBody>
-
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={onClose}>
-              Close
-            </Button>
-            <Button variant="ghost">Assign Testers</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <Dialog.Root lazyMount open={open} onOpenChange={(e) => setOpen(e.open)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>Select Testers to Assign</Dialog.Header>
+              <CloseButton />
+              <Dialog.Body>
+                <Fieldset.Root>
+                  <CheckboxGroup
+                    value={selectedTesters}
+                    onValueChange={setSelectedTesters}
+                  >
+                    <Fieldset.Legend fontSize="sm" mb="2">
+                      Select Testers
+                    </Fieldset.Legend>
+                    <Fieldset.Content>
+                      <For each={testers}>
+                        {(value) => (
+                          <Checkbox.Root
+                            key={value.user_id}
+                            value={value.user_id.toString()}
+                          >
+                            <Checkbox.HiddenInput />
+                            <Checkbox.Control />
+                            <Checkbox.Label>{value.name}</Checkbox.Label>
+                          </Checkbox.Root>
+                        )}
+                      </For>
+                    </Fieldset.Content>
+                  </CheckboxGroup>
+                </Fieldset.Root>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.ActionTrigger asChild>
+                  <Button variant="outline">Cancel</Button>
+                </Dialog.ActionTrigger>
+                <Button variant="ghost">Assign Testers</Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </div>
   );
 }
+

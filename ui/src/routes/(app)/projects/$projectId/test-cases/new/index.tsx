@@ -1,17 +1,10 @@
-import {
-  Button,
-  Checkbox,
-  FormControl,
-  FormHelperText,
-  FormLabel,
-  Input,
-  useToast,
-} from "@chakra-ui/react";
+import { Button, Checkbox, Field, Input } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
 import { createFileRoute } from "@tanstack/react-router";
 import { createTestCase } from "@/services/TestCaseService";
+import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
   "/(app)/projects/$projectId/test-cases/new/"
@@ -20,7 +13,6 @@ export const Route = createFileRoute(
 });
 
 function NewTestCases() {
-  const toast = useToast();
   const params = Route.useParams();
   const redirect = useNavigate();
   const project_id = params.projectId;
@@ -46,12 +38,11 @@ function NewTestCases() {
     });
 
     if (res.status == 200) {
-      toast({
+      toaster.create({
         title: "Test Case created.",
         description: "We've created your Test Case.",
-        status: "success",
+        type: "success",
         duration: 3000,
-        isClosable: true,
       });
       redirect({ to: "/projects" });
     }
@@ -64,68 +55,74 @@ function NewTestCases() {
       <form onSubmit={handleSubmit}>
         <h3>Create Test Cases</h3>
 
-        <FormControl>
-          <FormLabel>Title</FormLabel>
+        <Field.Root>
+          <Field.Label>Title</Field.Label>
           <Input
             type="text"
             name="title"
             onChange={(e) => setTitle(e.target.value)}
           />
-          <FormHelperText>Test Case Title.</FormHelperText>
-        </FormControl>
+          <Field.HelperText>Test Case Title.</Field.HelperText>
+        </Field.Root>
 
-        <FormControl>
-          <FormLabel>Code</FormLabel>
+        <Field.Root>
+          <Field.Label>Code</Field.Label>
           <Input
             type="text"
             name="code"
             onChange={(e) => setCode(e.target.value)}
           />
-          <FormHelperText>Test Case Code.</FormHelperText>
-        </FormControl>
+          <Field.HelperText>Test Case Code.</Field.HelperText>
+        </Field.Root>
 
-        <FormControl>
-          <FormLabel>Feature, Component or Module</FormLabel>
+        <Field.Root>
+          <Field.Label>Feature, Component or Module</Field.Label>
           <Input
             type="text"
             name="code"
             onChange={(e) => setFeature_or_module(e.target.value)}
           />
-          <FormHelperText>Test Case Feature or Module.</FormHelperText>
-        </FormControl>
+          <Field.HelperText>Test Case Feature or Module.</Field.HelperText>
+        </Field.Root>
 
-        <FormControl>
-          <FormLabel>Test Kind</FormLabel>
-          <SelectTestKind onChange={(e) => setKind(e.target.value)} />
-          <FormHelperText>Test Kind.</FormHelperText>
-        </FormControl>
+        <Field.Root>
+          <Field.Label>Test Kind</Field.Label>
+          <SelectTestKind onChange={setKind} />
+          <Field.HelperText>Test Kind.</Field.HelperText>
+        </Field.Root>
 
-        <FormControl>
-          <FormLabel>Description</FormLabel>
+        <Field.Root>
+          <Field.Label>Description</Field.Label>
           <Input
             type="text"
             name="description"
             onChange={(e) => setDescription(e.target.value)}
           />
-          <FormHelperText>Test Case Description.</FormHelperText>
-        </FormControl>
+          <Field.HelperText>Test Case Description.</Field.HelperText>
+        </Field.Root>
 
-        <FormControl>
-          <FormLabel>Tags</FormLabel>
+        <Field.Root>
+          <Field.Label>Tags</Field.Label>
           <Input
             type="text"
             name="description"
             onChange={(e) => setTags(e.target.value.split(","))}
           />
-          <FormHelperText>Test Case tags, separated by comma.</FormHelperText>
-        </FormControl>
+          <Field.HelperText>
+            Test Case tags, separated by comma.
+          </Field.HelperText>
+        </Field.Root>
 
-        <Checkbox onChange={(e) => setIs_draft(e.target.checked)}>
+        <Checkbox.Root
+          checked={is_draft}
+          onCheckedChange={(e) => setIs_draft(!!e.checked)}
+        >
           Is Draft
-        </Checkbox>
+        </Checkbox.Root>
 
         <Button type="submit">Create Test Case</Button>
       </form>
     </div>
   );
 }
+
