@@ -9,7 +9,7 @@ export default class UserService {
         this.apiEndpoint = getApiEndpoint();
     }
 
-    async create(data: any) {
+    async create(data: unknown) {
         const res = await axios.post(`${this.apiEndpoint}/v1/users`, data, createAuthHeaders());
         if (res.status === 200) {
             return res;

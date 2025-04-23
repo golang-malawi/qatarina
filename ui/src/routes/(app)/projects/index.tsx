@@ -28,7 +28,7 @@ function ProjectsPage() {
 
   const projectList = projects.map((record) => (
     <Box key={record.id} width={"100%"} p="4">
-      <Heading size="2">{record.title}</Heading>
+      <Heading size="2xl">{record.title}</Heading>
       <p>
         URL: <a href={record.project_url}>{record.project_url}</a>
       </p>

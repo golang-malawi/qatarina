@@ -2,10 +2,11 @@ import { sleep } from "@/lib/utils";
 import { AuthService } from "@/services/AuthService";
 import axios from "axios";
 import * as React from "react";
+import { LoginFormValues } from "@/data/forms/login";
 
 export interface AuthContext {
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (data: LoginFormValues) => Promise<void>;
   logout: () => Promise<void>;
   user: string | null;
 }
@@ -54,31 +55,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await sleep(1);
   }, []);
 
-  const login = React.useCallback(
-    async (username: string, password: string) => {
-      const authService = new AuthService();
-      const res = await authService.login(username, password);
+  const login = React.useCallback(async (data: LoginFormValues) => {
+    const authService = new AuthService();
+    const res = await authService.login(data.email, data.password);
 
-      if (res.status !== 200) {
-        throw new Error("Something happened while logging in..");
-      }
-      const loginData: LoginData = res.data;
+    if (res.status !== 200) {
+      throw new Error("Something happened while logging in..");
+    }
+    const loginData: LoginData = res.data;
 
-      localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-      localStorage.setItem("auth.displayName", loginData.displayName);
-      localStorage.setItem("auth.email", loginData.email);
-      localStorage.setItem("auth.token", loginData.token);
-      localStorage.setItem("auth.expires_at", loginData.expires_at.toString());
+    localStorage.setItem("auth.user_id", `${loginData.user_id}`);
+    localStorage.setItem("auth.displayName", loginData.displayName);
+    localStorage.setItem("auth.email", loginData.email);
+    localStorage.setItem("auth.token", loginData.token);
+    localStorage.setItem("auth.expires_at", loginData.expires_at.toString());
 
-      axios.defaults.withCredentials = false;
-      axios.defaults.headers.common["Authorization"] =
-        `Bearer ${loginData.token}`;
+    axios.defaults.withCredentials = false;
+    axios.defaults.headers.common["Authorization"] =
+      `Bearer ${loginData.token}`;
 
-      setStoredUser(loginData.displayName);
-      setUser(loginData.displayName);
-    },
-    []
-  );
+    setStoredUser(loginData.displayName);
+    setUser(loginData.displayName);
+  }, []);
 
   React.useEffect(() => {
     setUser(getStoredUser());

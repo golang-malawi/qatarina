@@ -1,28 +1,14 @@
+import { Avatar } from "@/components/ui/avatar";
 import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
 import {
-  Avatar,
   AvatarGroup,
   Button,
   Flex,
   Input,
   Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Tab,
   Table,
   TableCaption,
-  TableContainer,
-  TabList,
-  TabPanel,
-  TabPanels,
   Tabs,
-  Tbody,
-  Td,
-  Tfoot,
-  Th,
-  Thead,
-  Tr,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -50,34 +36,38 @@ function TestCasePage() {
   }
 
   const testCaseRows = testCases.map((tc, idx) => (
-    <Tr key={idx}>
-      <Td>{tc.code}</Td>
-      <Td>{tc.description}</Td>
-      <Td isNumeric>{tc.usage_count}</Td>
-      <Td>
-        <AvatarGroup size="md" max={2}>
+    <Table.Row key={idx}>
+      <Table.Cell>{tc.code}</Table.Cell>
+      <Table.Cell>{tc.description}</Table.Cell>
+      <Table.Cell>{tc.usage_count}</Table.Cell>
+      <Table.Cell>
+        <AvatarGroup size="md">
           <Avatar name="Ryan Florence" src="https://bit.ly/ryan-florence" />
           <Avatar name="Segun Adebayo" src="https://bit.ly/sage-adebayo" />
           <Avatar name="Kent Dodds" src="https://bit.ly/kent-c-dodds" />
           <Avatar name="Prosper Otemuyiwa" src="https://bit.ly/prosper-baba" />
           <Avatar name="Christian Nwamba" src="https://bit.ly/code-beast" />
         </AvatarGroup>
-      </Td>
-      <Td>
-        <Menu>
-          <MenuButton as={Button} rightIcon={<IconChevronDown />}>
-            Actions
-          </MenuButton>
-          <MenuList>
-            <MenuItem>View</MenuItem>
-            <MenuItem>Create a Copy</MenuItem>
-            <MenuItem>Mark as Draft</MenuItem>
-            <MenuItem>Use in Test Plan</MenuItem>
-            <MenuItem color="red">Delete</MenuItem>
-          </MenuList>
-        </Menu>
-      </Td>
-    </Tr>
+      </Table.Cell>
+      <Table.Cell>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button>
+              <IconChevronDown /> Actions
+            </Button>
+          </Menu.Trigger>
+          <Menu.Content>
+            <Menu.Item value="">View</Menu.Item>
+            <Menu.Item value="">Create a Copy</Menu.Item>
+            <Menu.Item value="">Mark as Draft</Menu.Item>
+            <Menu.Item value="">Use in Test Plan</Menu.Item>
+            <Menu.Item value="" color="red">
+              Delete
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Root>
+      </Table.Cell>
+    </Table.Row>
   ));
   return (
     <div>
@@ -107,44 +97,38 @@ function TestCasePage() {
         <Input placeholder="Search for Test Cases " />
       </div>
 
-      <Tabs>
-        <TabList>
-          <Tab>All Test Cases</Tab>
-          <Tab>Failing</Tab>
-        </TabList>
-
-        <TabPanels>
-          <TabPanel>
-            <TableContainer>
-              <Table variant="simple">
-                <TableCaption>
-                  Imperial to metric conversion factors
-                </TableCaption>
-                <Thead>
-                  <Tr>
-                    <Th>Code</Th>
-                    <Th>Test Case</Th>
-                    <Th isNumeric>Times Used/Referenced</Th>
-                    <Th>Tested By</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>{testCaseRows}</Tbody>
-                <Tfoot>
-                  <Tr>
-                    <Th>Code</Th>
-                    <Th>Test Case</Th>
-                    <Th isNumeric>Times Used/Referenced</Th>
-                    <Th>Tested By</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Tfoot>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-          <TabPanel>Failing Cases</TabPanel>
-        </TabPanels>
-      </Tabs>
+      <Tabs.Root defaultValue="all">
+        <Tabs.List>
+          <Tabs.Trigger value="all">All Test Cases</Tabs.Trigger>
+          <Tabs.Trigger value="failing">Failing</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="all">
+          <Table.Root>
+            <TableCaption>Imperial to metric conversion factors</TableCaption>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader>Code</Table.ColumnHeader>
+                <Table.ColumnHeader>Test Case</Table.ColumnHeader>
+                <Table.ColumnHeader>Times Used/Referenced</Table.ColumnHeader>
+                <Table.ColumnHeader>Tested By</Table.ColumnHeader>
+                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>{testCaseRows}</Table.Body>
+            {/* <Tfoot>
+                  <Table.Row>
+                    <Table.ColumnHeader>Code</Table.ColumnHeader>
+                    <Table.ColumnHeader>Test Case</Table.ColumnHeader>
+                    <Table.ColumnHeader>Times Used/Referenced</Table.ColumnHeader>
+                    <Table.ColumnHeader>Tested By</Table.ColumnHeader>
+                    <Table.ColumnHeader>Actions</Table.ColumnHeader>
+                   </Table.Row>
+                </Tfoot> */}
+          </Table.Root>
+        </Tabs.Content>
+        <Tabs.Content value="failing">Failing Cases</Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }
+
