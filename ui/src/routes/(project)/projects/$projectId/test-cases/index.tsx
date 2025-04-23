@@ -25,7 +25,7 @@ import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/ui/avatar";
 
-export const Route = createFileRoute("/(app)/projects/$projectId/test-cases/")({
+export const Route = createFileRoute("/(project)/projects/$projectId/test-cases/")({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
     queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: ListProjectTestCases,

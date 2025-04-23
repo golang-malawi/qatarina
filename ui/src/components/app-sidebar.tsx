@@ -12,29 +12,10 @@ import { Sidebar, SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Logo } from "./logo";
 import { Link } from "@tanstack/react-router";
 import { SiteConfig } from "@/lib/config/site";
-import { IconType } from "react-icons";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import React from "react";
-import {
-  FiChevronDown,
-  FiChevronUp,
-  FiHome,
-  FiInbox,
-  FiFolder,
-  FiClipboard,
-  FiUsers,
-  FiLink,
-  FiBarChart2,
-  FiUser,
-  FiLogOut,
-} from "react-icons/fi";
-
-interface NavItem {
-  name: string;
-  icon: IconType;
-  path: string;
-  children?: NavItem[];
-}
+import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { NavItem } from "@/lib/navigation";
 
 interface NavLinkProps {
   item: NavItem;
@@ -42,22 +23,16 @@ interface NavLinkProps {
   depth?: number;
 }
 
-const LinkItems: NavItem[] = [
-  { path: "/dashboard", name: "Dashboard", icon: FiHome },
-  { path: "/test-cases/inbox", name: "Inbox", icon: FiInbox },
-  { path: "/projects", name: "Projects", icon: FiFolder },
-  { path: "/test-plans", name: "Test Plans", icon: FiClipboard },
-  { path: "/testers", name: "Testers", icon: FiUsers },
-  { path: "/integrations", name: "Integrations", icon: FiLink },
-  { path: "/reports", name: "Reports", icon: FiBarChart2 },
-  { path: "/users", name: "Users", icon: FiUser },
-  { path: "/logout", name: "Logout", icon: FiLogOut },
-];
-
-export default function AppSidebar() {
+export default function AppSidebar({
+  items,
+  header,
+}: {
+  items: NavItem[];
+  header?: ReactNode;
+}) {
   return (
     <Sidebar header={<SidebarHeader />}>
-      <SidebarContent />
+      <SidebarContent items={items} header={header} />
     </Sidebar>
   );
 }
@@ -150,12 +125,16 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
   );
 };
 
-interface SidebarProps extends BoxProps {}
+interface SidebarProps extends BoxProps {
+  items: NavItem[];
+  header?: ReactNode;
+}
 
-const SidebarContent = ({ ...rest }: SidebarProps) => {
+const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
   return (
     <Box borderRight="1px" w={"full"} h="full" {...rest}>
-      {LinkItems.map((link) => {
+      {header}
+      {items.map((link) => {
         if (link.children) {
           return (
             <NavLink key={link.path} item={link} expanded={true} depth={1} />

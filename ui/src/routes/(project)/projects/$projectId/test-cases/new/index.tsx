@@ -7,7 +7,7 @@ import { createTestCase } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
-  "/(app)/projects/$projectId/test-cases/new/"
+  "/(project)/projects/$projectId/test-cases/new/"
 )({
   component: NewTestCases,
 });

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/app-sidebar";
 import { ColorModeButton } from "@/components/ui/color-mode";
+import { MainLinkItems } from "@/lib/navigation";
 
 export const Route = createFileRoute("/(app)")({
   beforeLoad: ({ context, location }) => {
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/(app)")({
 function BaseLayout() {
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar items={MainLinkItems}/>
       <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
         <Flex width={"100%"} padding={4} justifyContent="space-between">
           <SidebarTrigger />

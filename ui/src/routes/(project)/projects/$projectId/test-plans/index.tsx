@@ -5,7 +5,7 @@ import TestPlanService from "@/services/TestPlanService";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
 import { TestPlan } from "@/common/models";
 
-export const Route = createFileRoute("/(app)/projects/$projectId/test-plans/")({
+export const Route = createFileRoute("/(project)/projects/$projectId/test-plans/")({
   component: ListProjectTestPlans,
 });
 

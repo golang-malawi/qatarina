@@ -25,7 +25,7 @@ import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
-  "/(app)/projects/$projectId/test-plans/new/"
+  "/(project)/projects/$projectId/test-plans/new/"
 )({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
     queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),

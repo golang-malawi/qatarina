@@ -5,7 +5,7 @@ import ProjectService from "@/services/ProjectService";
 import { Box, Flex, Heading } from "@chakra-ui/react";
 import { Project } from "@/common/models";
 
-export const Route = createFileRoute("/(app)/projects/$projectId/")({
+export const Route = createFileRoute("/(project)/projects/$projectId/")({
   component: ViewProject,
 });
 
