@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Box, Flex } from "@chakra-ui/react";
+import { Container, Flex } from "@chakra-ui/react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -31,12 +31,9 @@ function BaseLayout() {
           <SidebarTrigger />
           <ColorModeButton />
         </Flex>
-        <Flex>
-          <Box w="20%" h="100vh"></Box>
-          <Box padding={4}>
-            <Outlet />
-          </Box>
-        </Flex>
+        <Container>
+          <Outlet />
+        </Container>
       </SidebarInset>
     </SidebarProvider>
   );
