@@ -31,8 +31,8 @@ export default function AppSidebar({
   header?: ReactNode;
 }) {
   return (
-    <Sidebar header={<SidebarHeader />}>
-      <SidebarContent items={items} header={header} />
+    <Sidebar header={header ? header : <SidebarHeader />}>
+      <SidebarContent items={items} />
     </Sidebar>
   );
 }
@@ -127,13 +127,11 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
 
 interface SidebarProps extends BoxProps {
   items: NavItem[];
-  header?: ReactNode;
 }
 
-const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
+const SidebarContent = ({ items, ...rest }: SidebarProps) => {
   return (
     <Box borderRight="1px" w={"full"} h="full" {...rest}>
-      {header}
       {items.map((link) => {
         if (link.children) {
           return (
@@ -145,4 +143,3 @@ const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
     </Box>
   );
 };
-

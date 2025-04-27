@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Box, Container, Flex } from "@chakra-ui/react";
+import { Container, Flex } from "@chakra-ui/react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -17,6 +17,9 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import { MdInsights } from "react-icons/md";
+import { ProjectSiderbarHeader } from "@/components/project-header";
+import { allProjectsQueryOptions } from "@/data/queries/projects";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/(project)/projects/$projectId")({
   component: RouteComponent,
@@ -60,12 +63,21 @@ const createProjectNavItems = (projectId: string): NavItem[] => {
 
 function RouteComponent() {
   const { projectId } = Route.useParams();
+  const { data: projects, isPending } = useSuspenseQuery(
+    allProjectsQueryOptions
+  );
 
   return (
     <SidebarProvider>
       <AppSidebar
         items={createProjectNavItems(projectId)}
-        header={<Box p={2}>Project header</Box>}
+        header={
+          <ProjectSiderbarHeader
+            projects={projects ?? []}
+            activeProject={projectId}
+            loading={isPending}
+          />
+        }
       />
       <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
         <Flex width={"100%"} padding={4} justifyContent="space-between">
@@ -79,4 +91,3 @@ function RouteComponent() {
     </SidebarProvider>
   );
 }
-
