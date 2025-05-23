@@ -162,6 +162,19 @@ type Project struct {
 	DeletedAt   sql.NullTime
 }
 
+type ProjectTester struct {
+	ID int32
+	// The project associated with this tester
+	ProjectID int32
+	// The user who is acting as a tester for the project
+	UserID int32
+	// Role of the tester, roles can be lead, engineer, client, bot or ai_agent
+	Role      string
+	IsActive  bool
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
 type TestCase struct {
 	ID uuid.UUID
 	// The kind of test this case represents

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/version"
 	"github.com/lucasepe/homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -38,8 +39,9 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "qatarina",
-	Short: "qatarina  by Golang Malawi Community",
+	Use:     "qatarina",
+	Short:   "qatarina  by Golang Malawi Community",
+	Version: version.Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	},

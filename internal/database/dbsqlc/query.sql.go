@@ -14,6 +14,34 @@ import (
 	"github.com/lib/pq"
 )
 
+const assignTesterToProject = `-- name: AssignTesterToProject :execrows
+INSERT INTO project_testers (
+    project_id, user_id, role, is_active, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, now(), now()
+)
+`
+
+type AssignTesterToProjectParams struct {
+	ProjectID int32
+	UserID    int32
+	Role      string
+	IsActive  bool
+}
+
+func (q *Queries) AssignTesterToProject(ctx context.Context, arg AssignTesterToProjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, assignTesterToProject,
+		arg.ProjectID,
+		arg.UserID,
+		arg.Role,
+		arg.IsActive,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const commitTestRunResult = `-- name: CommitTestRunResult :one
 UPDATE test_runs SET
     tested_by_id = $2,
@@ -529,6 +557,65 @@ func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error)
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTestersByProject = `-- name: GetTestersByProject :many
+SELECT
+project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1
+`
+
+type GetTestersByProjectRow struct {
+	ID                int32
+	ProjectID         int32
+	UserID            int32
+	Role              string
+	IsActive          bool
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	Project           string
+	TesterName        sql.NullString
+	TesterLastLoginAt sql.NullTime
+}
+
+func (q *Queries) GetTestersByProject(ctx context.Context, projectID int32) ([]GetTestersByProjectRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTestersByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestersByProjectRow
+	for rows.Next() {
+		var i GetTestersByProjectRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UserID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Project,
+			&i.TesterName,
+			&i.TesterLastLoginAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUser = `-- name: GetUser :one
