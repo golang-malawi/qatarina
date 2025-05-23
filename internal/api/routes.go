@@ -45,6 +45,8 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-cases", apiv1.GetProjectTestCases(api.TestCasesService, api.logger))
 		projectsV1.Get("/:projectID/test-plans", apiv1.GetProjectTestPlans(api.TestPlansService, api.logger))
 		projectsV1.Get("/:projectID/test-runs", apiv1.GetProjectTestRuns(api.TestRunsService, api.logger))
+		projectsV1.Get("/:projectID/testers", apiv1.GetProjectTesters(api.ProjectsService, api.TesterService, api.logger))
+		projectsV1.Post("/:projectID/testers", apiv1.AssignTesters(api.TesterService, api.logger))
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService))
