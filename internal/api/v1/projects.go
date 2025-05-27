@@ -294,3 +294,57 @@ func DeleteProject(projectService services.ProjectService) fiber.Handler {
 		return problemdetail.NotImplemented(c, "failed to delete Project")
 	}
 }
+
+// GetProjectTesters godoc
+//
+//	@ID				GetProjectTesters
+//	@Summary		Get all Testers for a specific Project
+//	@Description	Get all Testers for a specific Project
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int	true	"The project ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/api/v1/projects/{projectID}/testers [get]
+func GetProjectTesters(projectService services.ProjectService, testerService services.TesterService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid project id")
+		}
+		testers, err := testerService.FindByProjectID(context.Background(), int64(projectID))
+		if err != nil {
+			logger.Error("api:projects", "failed to fetch testers for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch testers")
+		}
+		return c.JSON(fiber.Map{
+			"testers": testers,
+		})
+	}
+}
+
+func AssignTesters(testerService services.TesterService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
+		var request schema.BulkAssignTesters
+		_, err = common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		}
+
+		if err := testerService.AssignBulk(context.Background(), projectID, &request); err != nil {
+			logger.Error("api:projects", "failed to assign testers to project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to assign testers")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Testers assigned successfully",
+		})
+	}
+}

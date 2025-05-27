@@ -158,3 +158,22 @@ UPDATE test_runs SET
     expected_result = $9
 WHERE id = $1
 RETURNING id;
+
+
+-- name: AssignTesterToProject :execrows
+INSERT INTO project_testers (
+    project_id, user_id, role, is_active, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, now(), now()
+);
+
+-- name: GetTestersByProject :many
+SELECT
+project_testers.*,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1;
