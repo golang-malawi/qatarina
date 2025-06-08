@@ -178,9 +178,9 @@ INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
 
--- name: ProjectModules :one
-INSERT INTO project_modules(
-    project_id, project_name, project_code, modules, created_at, updated_at
+-- name: GetProjectModules :one
+INSERT INTO modules(
+    project_id, name, code, priority, created_at, updated_at
 )VALUES($1, $2, $3, $4, now(), now()
 )
 RETURNING *;
