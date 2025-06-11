@@ -14,3 +14,5 @@
 {"time":"2025-06-10T20:15:20.2448258+02:00","level":"ERROR","msg":"invalid password provided","error":null,"component":"auth-service"}
 {"time":"2025-06-10T21:24:18.7079877+02:00","level":"DEBUG","msg":"Starting API on ","component":"localhost:4597"}
 {"time":"2025-06-10T21:25:06.0714618+02:00","level":"ERROR","msg":"invalid password provided","error":null,"component":"auth-service"}
+{"time":"2025-06-11T11:32:27.0706227+02:00","level":"DEBUG","msg":"Starting API on ","component":"localhost:4597"}
+{"time":"2025-06-11T11:33:37.1751881+02:00","level":"ERROR","msg":"failed to process login request","error":"sql: no rows in result set","component":"auth-service"}
