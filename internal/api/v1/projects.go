@@ -24,10 +24,10 @@ import (
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
+//	@Success		200	{object}	schema.ProjectListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects [get]
+//	@Router			/v1/projects [get]
 func ListProjects(projectService services.ProjectService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		projects, err := projectService.FindAll(context.Background())
@@ -51,7 +51,7 @@ func ListProjects(projectService services.ProjectService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/query [get]
+//	@Router			/v1/projects/query [get]
 func SearchProjects(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search Projects")
@@ -70,7 +70,7 @@ func SearchProjects(projectService services.ProjectService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID} [get]
+//	@Router			/v1/projects/{projectID} [get]
 func GetOneProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
@@ -101,7 +101,7 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID}/test-cases [get]
+//	@Router			/v1/projects/{projectID}/test-cases [get]
 func GetProjectTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
@@ -132,7 +132,7 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID}/test-cases [get]
+//	@Router			/v1/projects/{projectID}/test-cases [get]
 func GetProjectTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
@@ -163,7 +163,7 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID}/test-runs [get]
+//	@Router			/v1/projects/{projectID}/test-runs [get]
 func GetProjectTestRuns(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
@@ -194,7 +194,7 @@ func GetProjectTestRuns(testRunService services.TestRunService, logger logging.L
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects [post]
+//	@Router			/v1/projects [post]
 func CreateProject(projectService services.ProjectService, testPlanService services.TestPlanService, platform *config.PlatformConfiguration, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		var request schema.NewProjectRequest
@@ -250,7 +250,7 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID} [post]
+//	@Router			/v1/projects/{projectID} [post]
 func UpdateProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update Project")
@@ -269,7 +269,7 @@ func UpdateProject(projectService services.ProjectService) fiber.Handler {
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/import [post]
+//	@Router			/v1/projects/import [post]
 func ImportProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to import Project")
@@ -288,7 +288,7 @@ func ImportProject(projectService services.ProjectService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID} [delete]
+//	@Router			/v1/projects/{projectID} [delete]
 func DeleteProject(projectService services.ProjectService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete Project")
@@ -307,7 +307,7 @@ func DeleteProject(projectService services.ProjectService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/projects/{projectID}/testers [get]
+//	@Router			/v1/projects/{projectID}/testers [get]
 func GetProjectTesters(projectService services.ProjectService, testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)

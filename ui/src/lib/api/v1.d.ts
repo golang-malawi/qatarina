@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/projects": {
+    "/v1/projects": {
         parameters: {
             query?: never;
             header?: never;
@@ -28,7 +28,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{projectID}": {
+    "/v1/projects/{projectID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -56,7 +56,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{projectID}/test-cases": {
+    "/v1/projects/{projectID}/test-cases": {
         parameters: {
             query?: never;
             header?: never;
@@ -76,7 +76,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{projectID}/test-runs": {
+    "/v1/projects/{projectID}/test-runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -96,7 +96,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/{projectID}/testers": {
+    "/v1/projects/{projectID}/testers": {
         parameters: {
             query?: never;
             header?: never;
@@ -116,7 +116,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/import": {
+    "/v1/projects/import": {
         parameters: {
             query?: never;
             header?: never;
@@ -136,7 +136,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/projects/query": {
+    "/v1/projects/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -156,7 +156,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-cases": {
+    "/v1/test-cases": {
         parameters: {
             query?: never;
             header?: never;
@@ -180,7 +180,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-cases/{testCaseID}": {
+    "/v1/test-cases/{testCaseID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -208,7 +208,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-cases/bulk": {
+    "/v1/test-cases/bulk": {
         parameters: {
             query?: never;
             header?: never;
@@ -228,7 +228,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-cases/query": {
+    "/v1/test-cases/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -248,7 +248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-plans": {
+    "/v1/test-plans": {
         parameters: {
             query?: never;
             header?: never;
@@ -272,7 +272,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-plans/{testPlanID}": {
+    "/v1/test-plans/{testPlanID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -300,7 +300,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-runs": {
+    "/v1/test-runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -324,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-runs/{testRunID}": {
+    "/v1/test-runs/{testRunID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -352,7 +352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-runs/{testRunID}/commit": {
+    "/v1/test-runs/{testRunID}/commit": {
         parameters: {
             query?: never;
             header?: never;
@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/test-runs/query": {
+    "/v1/test-runs/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -392,7 +392,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/testers": {
+    "/v1/testers": {
         parameters: {
             query?: never;
             header?: never;
@@ -412,7 +412,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/testers.query": {
+    "/v1/testers.query": {
         parameters: {
             query?: never;
             header?: never;
@@ -432,7 +432,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/testers/{testerID}": {
+    "/v1/testers/{testerID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -452,7 +452,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/testers/invite/{email}": {
+    "/v1/testers/invite/{email}": {
         parameters: {
             query?: never;
             header?: never;
@@ -472,7 +472,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users": {
+    "/v1/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -496,7 +496,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/{userID}": {
+    "/v1/users/{userID}": {
         parameters: {
             query?: never;
             header?: never;
@@ -524,7 +524,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/invite/{email}": {
+    "/v1/users/invite/{email}": {
         parameters: {
             query?: never;
             header?: never;
@@ -544,7 +544,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/query": {
+    "/v1/users/query": {
         parameters: {
             query?: never;
             header?: never;
@@ -574,6 +574,25 @@ export interface components {
             title?: string;
             type?: string;
         };
+        "schema.ProjectListResponse": {
+            projects?: components["schemas"]["schema.ProjectResponse"][];
+        };
+        "schema.ProjectResponse": {
+            created_at?: string;
+            description?: string;
+            github_url?: string;
+            id?: number;
+            is_active?: boolean;
+            is_public?: boolean;
+            jira_url?: string;
+            monday_url?: string;
+            owner_user_id?: number;
+            title?: string;
+            trello_url?: string;
+            updated_at?: string;
+            version?: string;
+            website_url?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -602,7 +621,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.ProjectListResponse"];
                 };
             };
             /** @description Bad Request */

@@ -10,6 +10,45 @@ components:
         type:
           type: string
       type: object
+    schema.ProjectListResponse:
+      properties:
+        projects:
+          items:
+            $ref: '#/components/schemas/schema.ProjectResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.ProjectResponse:
+      properties:
+        created_at:
+          type: string
+        description:
+          type: string
+        github_url:
+          type: string
+        id:
+          type: integer
+        is_active:
+          type: boolean
+        is_public:
+          type: boolean
+        jira_url:
+          type: string
+        monday_url:
+          type: string
+        owner_user_id:
+          type: integer
+        title:
+          type: string
+        trello_url:
+          type: string
+        updated_at:
+          type: string
+        version:
+          type: string
+        website_url:
+          type: string
+      type: object
 externalDocs:
   description: ""
   url: ""
@@ -18,7 +57,7 @@ info:
   version: ""
 openapi: 3.1.0
 paths:
-  /api/v1/projects:
+  /v1/projects:
     get:
       description: List Projects available on the platform
       operationId: ListProject
@@ -32,7 +71,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
         "400":
           content:
@@ -81,7 +120,7 @@ paths:
       summary: Create a Project
       tags:
       - projects
-  /api/v1/projects/{projectID}:
+  /v1/projects/{projectID}:
     delete:
       description: Delete a Project
       operationId: DeleteProject
@@ -195,7 +234,7 @@ paths:
       summary: Update a Project
       tags:
       - projects
-  /api/v1/projects/{projectID}/test-cases:
+  /v1/projects/{projectID}/test-cases:
     get:
       description: Get a single Project's test plans
       operationId: GetProjectTestPlans
@@ -233,7 +272,7 @@ paths:
       summary: Get a single Project's test plans
       tags:
       - projects
-  /api/v1/projects/{projectID}/test-runs:
+  /v1/projects/{projectID}/test-runs:
     get:
       description: Get a single Project's test runs
       operationId: GetProjectTestRuns
@@ -271,7 +310,7 @@ paths:
       summary: Get a single Project's test runs
       tags:
       - projects
-  /api/v1/projects/{projectID}/testers:
+  /v1/projects/{projectID}/testers:
     get:
       description: Get all Testers for a specific Project
       operationId: GetProjectTesters
@@ -309,7 +348,7 @@ paths:
       summary: Get all Testers for a specific Project
       tags:
       - projects
-  /api/v1/projects/import:
+  /v1/projects/import:
     post:
       description: Import Projects from some source
       operationId: ImportProject
@@ -342,7 +381,7 @@ paths:
       summary: Import Projects from some source
       tags:
       - projects
-  /api/v1/projects/query:
+  /v1/projects/query:
     get:
       description: Search for a Project
       operationId: SearchProjects
@@ -373,7 +412,7 @@ paths:
       summary: Search for a Project
       tags:
       - projects
-  /api/v1/test-cases:
+  /v1/test-cases:
     get:
       description: List Test Cases
       operationId: ListTestCases
@@ -436,7 +475,7 @@ paths:
       summary: Create a new Test Case
       tags:
       - test-cases
-  /api/v1/test-cases/{testCaseID}:
+  /v1/test-cases/{testCaseID}:
     delete:
       description: Delete a test case
       operationId: DeleteTestCase
@@ -550,7 +589,7 @@ paths:
       summary: Update a Test Case
       tags:
       - test-cases
-  /api/v1/test-cases/bulk:
+  /v1/test-cases/bulk:
     post:
       description: Create multiple Test Cases at once
       operationId: BulkCreateTestCases
@@ -583,7 +622,7 @@ paths:
       summary: Create multiple Test Cases at once
       tags:
       - test-cases
-  /api/v1/test-cases/query:
+  /v1/test-cases/query:
     get:
       description: Search for Test Cases
       operationId: SearchTestCases
@@ -614,7 +653,7 @@ paths:
       summary: Search for Test Cases
       tags:
       - test-cases
-  /api/v1/test-plans:
+  /v1/test-plans:
     get:
       description: Search all Test Plans
       operationId: SearchTestPlans
@@ -677,7 +716,7 @@ paths:
       summary: Create a new Test Plan
       tags:
       - test-plans
-  /api/v1/test-plans/{testPlanID}:
+  /v1/test-plans/{testPlanID}:
     delete:
       description: Delete a Test Plan
       operationId: DeleteTestPlan
@@ -791,7 +830,7 @@ paths:
       summary: Update a Test Plan
       tags:
       - test-plans
-  /api/v1/test-runs:
+  /v1/test-runs:
     get:
       description: List Test Runs
       operationId: ListTestRuns
@@ -854,7 +893,7 @@ paths:
       summary: Create a new Test Run
       tags:
       - test-runs
-  /api/v1/test-runs/{testRunID}:
+  /v1/test-runs/{testRunID}:
     delete:
       description: Delete a Test Run
       operationId: DeleteTestRun
@@ -968,7 +1007,7 @@ paths:
       summary: Update a Test Run
       tags:
       - test-runs
-  /api/v1/test-runs/{testRunID}/commit:
+  /v1/test-runs/{testRunID}/commit:
     post:
       description: Mark a Test Run as committed
       operationId: CommitTestRun
@@ -1008,7 +1047,7 @@ paths:
       summary: Mark a Test Run as committed
       tags:
       - test-runs
-  /api/v1/test-runs/query:
+  /v1/test-runs/query:
     get:
       description: Search for Test Runs
       operationId: SearchTestRuns
@@ -1039,7 +1078,7 @@ paths:
       summary: Search for Test Runs
       tags:
       - test-runs
-  /api/v1/testers:
+  /v1/testers:
     get:
       description: List all Testers
       operationId: ListTesters
@@ -1070,7 +1109,7 @@ paths:
       summary: List all Testers
       tags:
       - testers
-  /api/v1/testers.query:
+  /v1/testers.query:
     get:
       description: Search all Testers
       operationId: SearchTesters
@@ -1101,7 +1140,7 @@ paths:
       summary: Search all Testers
       tags:
       - testers
-  /api/v1/testers/{testerID}:
+  /v1/testers/{testerID}:
     get:
       description: Get a Tester by ID
       operationId: GetOneTester
@@ -1139,7 +1178,7 @@ paths:
       summary: Get a Tester by ID
       tags:
       - testers
-  /api/v1/testers/invite/{email}:
+  /v1/testers/invite/{email}:
     post:
       description: Invite a tester by Email
       operationId: InviteTester
@@ -1179,7 +1218,7 @@ paths:
       summary: Invite a tester by Email
       tags:
       - testers
-  /api/v1/users:
+  /v1/users:
     get:
       description: List all Users
       operationId: ListUsers
@@ -1242,7 +1281,7 @@ paths:
       summary: Create a new User
       tags:
       - users
-  /api/v1/users/{userID}:
+  /v1/users/{userID}:
     delete:
       description: Delete a user
       operationId: DeleteUser
@@ -1356,7 +1395,7 @@ paths:
       summary: Update a User
       tags:
       - users
-  /api/v1/users/invite/{email}:
+  /v1/users/invite/{email}:
     post:
       description: Invite a User by email
       operationId: InviteUser
@@ -1396,7 +1435,7 @@ paths:
       summary: Invite a User by email
       tags:
       - users
-  /api/v1/users/query:
+  /v1/users/query:
     get:
       description: Search all Users
       operationId: SearchUsers

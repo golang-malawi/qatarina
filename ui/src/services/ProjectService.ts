@@ -33,19 +33,3 @@ export default class ProjectService {
   }
 }
 
-export interface Project {
-  id: string;
-  title: string;
-  project_url: string;
-}
-
-export async function findAllProjects(): Promise<Project[]> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/projects`,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    return res.data.projects;
-  }
-  throw new Error(res.data);
-}
