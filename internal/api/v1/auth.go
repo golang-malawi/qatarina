@@ -3,7 +3,6 @@ package v1
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -22,7 +21,9 @@ func AuthLogin(authService services.AuthService) fiber.Handler {
 
 		loginData, err := authService.SignIn(&request)
 		if err != nil {
-			slog.Default().Error("failed to process request", "error", err)
+			if errors.Is(err, services.ErrInvalidCredentials) {
+				return problemdetail.BadRequest(ctx, "invalid credentials provided")
+			}
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 
