@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var PasswordHashCost = bcrypt.DefaultCost
+var PasswordHashCost = 12
 
 // CheckPasswordHash compare password with hash
 func CheckPasswordHash(password, hash string) bool {

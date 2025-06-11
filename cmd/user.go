@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -40,7 +39,7 @@ var newUserCmd = &cobra.Command{
 			LastName:    nameparts[1],
 			DisplayName: name.Value.String(),
 			Email:       email.Value.String(),
-			Password:    common.MustHashPassword(password.Value.String()),
+			Password:    password.Value.String(),
 		}
 
 		validationErrors := validation.ValidateStruct(user)

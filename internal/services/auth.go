@@ -52,13 +52,18 @@ func generateJWTToken(res *schema.LoginResponse, expireAfter int64) *jwt.Token {
 func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginResponse, error) {
 	user, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			a.logger.Debug("auth-service", "failed to find user from login request", "email", request.Email)
+			return nil, ErrInvalidCredentials
+		}
 		a.logger.Error("auth-service", "failed to process login request", "error", err)
 		return nil, err
 	}
+	a.logger.Info("auth-service", "handling request data", "user", user, "request", request)
 
-	if ok := common.CheckPasswordHash(request.Password, user.Password); !ok {
-		a.logger.Error("auth-service", "invalid password provided", "error", err)
-		return nil, fmt.Errorf("invalid email and password combination")
+	if !common.CheckPasswordHash(request.Password, user.Password) {
+		a.logger.Debug("auth-service", "invalid password provided", "email", request.Email, "error", err)
+		return nil, ErrInvalidCredentials
 	}
 
 	res := &schema.LoginResponse{
