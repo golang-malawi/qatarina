@@ -23,7 +23,7 @@ import (
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases [get]
+//	@Router			/v1/test-cases [get]
 func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCases, err := testCasesService.FindAll(context.Background())
@@ -48,7 +48,7 @@ func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/query [get]
+//	@Router			/v1/test-cases/query [get]
 func SearchTestCases(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestCases")
@@ -67,7 +67,7 @@ func SearchTestCases(services.TestCaseService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [get]
+//	@Router			/v1/test-cases/{testCaseID} [get]
 func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCaseID := c.Params("testCaseId", "")
@@ -93,7 +93,7 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases [post]
+//	@Router			/v1/test-cases [post]
 func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
@@ -129,7 +129,7 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/bulk [post]
+//	@Router			/v1/test-cases/bulk [post]
 func BulkCreateTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.BulkCreateTestCases)
@@ -166,7 +166,7 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [post]
+//	@Router			/v1/test-cases/{testCaseID} [post]
 func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateTestCaseRequest)
@@ -202,7 +202,7 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [delete]
+//	@Router			/v1/test-cases/{testCaseID} [delete]
 func DeleteTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestCase")

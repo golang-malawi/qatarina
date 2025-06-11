@@ -3,7 +3,7 @@ version: "3"
 tasks:
   install-tools:
     cmds:
-      - go install github.com/swaggo/swag/cmd/swag@latest
+      - go install github.com/swaggo/swag/v2/cmd/swag@v2.0.0-rc4
       - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
   install:
@@ -19,7 +19,8 @@ tasks:
   generate:
     cmds:
       - sqlc generate
-      - swag init
+      - swag init --v3.1
+      - cd ui && npm run gen:api
 
   dev-ui:
     cmd: cd ui && npm run dev
@@ -28,3 +29,4 @@ tasks:
     cmds:
       - cd ui && npm run build
       - go run main.go server
+

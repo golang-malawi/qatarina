@@ -24,7 +24,7 @@ import (
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs [get]
+//	@Router			/v1/test-runs [get]
 func ListTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list TestRuns")
@@ -42,7 +42,7 @@ func ListTestRuns(services.TestRunService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/query [get]
+//	@Router			/v1/test-runs/query [get]
 func SearchTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestRuns")
@@ -61,7 +61,7 @@ func SearchTestRuns(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [get]
+//	@Router			/v1/test-runs/{testRunID} [get]
 func GetOneTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestRun")
@@ -80,7 +80,7 @@ func GetOneTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs [post]
+//	@Router			/v1/test-runs [post]
 func CreateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create TestRun")
@@ -100,7 +100,7 @@ func CreateTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [post]
+//	@Router			/v1/test-runs/{testRunID} [post]
 func UpdateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestRun")
@@ -119,7 +119,7 @@ func UpdateTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [delete]
+//	@Router			/v1/test-runs/{testRunID} [delete]
 func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testRunID := c.Params("testRunID", "")
@@ -149,7 +149,7 @@ func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID}/commit [post]
+//	@Router			/v1/test-runs/{testRunID}/commit [post]
 func CommitTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.CommitTestRunResult)
