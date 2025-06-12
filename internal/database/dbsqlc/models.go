@@ -106,6 +106,16 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 	return string(ns.TestRunState), nil
 }
 
+type Module struct {
+	ID        int32
+	ProjectID int32
+	Name      string
+	Code      string
+	Priority  int32
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
 type Org struct {
 	ID int32
 	// Name of the organization
@@ -160,16 +170,6 @@ type Project struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   sql.NullTime
-}
-
-type ProjectModule struct {
-	ID          int32
-	ProjectID   int32
-	ProjectName string
-	ProjectCode string
-	Modules     int32
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
 }
 
 type ProjectTester struct {

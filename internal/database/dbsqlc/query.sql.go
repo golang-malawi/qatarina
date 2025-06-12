@@ -474,6 +474,41 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 	return i, err
 }
 
+const getProjectModules = `-- name: GetProjectModules :one
+INSERT INTO modules(
+    project_id, name, code, priority, created_at, updated_at
+)VALUES($1, $2, $3, $4, now(), now()
+)
+RETURNING id, project_id, name, code, priority, created_at, updated_at
+`
+
+type GetProjectModulesParams struct {
+	ProjectID int32
+	Name      string
+	Code      string
+	Priority  int32
+}
+
+func (q *Queries) GetProjectModules(ctx context.Context, arg GetProjectModulesParams) (Module, error) {
+	row := q.db.QueryRowContext(ctx, getProjectModules,
+		arg.ProjectID,
+		arg.Name,
+		arg.Code,
+		arg.Priority,
+	)
+	var i Module
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Code,
+		&i.Priority,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTestCase = `-- name: GetTestCase :one
 SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE id = $1
 `
