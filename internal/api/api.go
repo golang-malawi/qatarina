@@ -52,6 +52,6 @@ func (api *API) registerRoutes() {
 
 func (api *API) Start(address string) error {
 	api.registerRoutes()
-	api.logger.Debug(address, "Starting API on ")
+	api.logger.Debug("startup", "Starting API", "address", address)
 	return api.app.Listen(address)
 }
