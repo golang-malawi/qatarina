@@ -22,6 +22,7 @@ type API struct {
 	TestPlansService services.TestPlanService
 	TestRunsService  services.TestRunService
 	TesterService    services.TesterService
+	ModuleService    services.ModuleService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -40,6 +41,7 @@ func NewAPI(config *config.Config) *API {
 		TestRunsService:  services.NewTestRunService(dbConn, logger),
 		UserService:      services.NewUserService(dbConn, logger),
 		TesterService:    services.NewTesterService(dbConn, logger),
+		ModuleService:    services.NewModuleService(dbConn),
 	}
 }
 
@@ -50,6 +52,6 @@ func (api *API) registerRoutes() {
 
 func (api *API) Start(address string) error {
 	api.registerRoutes()
-	api.logger.Debug("Starting API on ", "address", address)
+	api.logger.Debug("startup", "Starting API", "address", address)
 	return api.app.Listen(address)
 }

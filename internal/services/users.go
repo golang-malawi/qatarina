@@ -10,6 +10,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	_ "github.com/lib/pq"
 )
 
 type UserService interface {
@@ -18,6 +19,8 @@ type UserService interface {
 	// Create creates a new user in the system with the given information
 	// provided that the user's email is not already in use and that the information is valid
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
+	// SignIn allows user to access the system with given credentials
+
 }
 
 type OrganizationUserService interface {
