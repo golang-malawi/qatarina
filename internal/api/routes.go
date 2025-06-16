@@ -19,7 +19,8 @@ func (api *API) routes() {
 
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))
-	router.Post("/modules", apiv1.Modules)
+	router.Post("/modules", apiv1.Module(api.ModuleService))
+	router.Get("/modules/:id", apiv1.GetProjectModule(api.ModuleService))
 
 	if api.Config.Auth.SignupEnabled {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))

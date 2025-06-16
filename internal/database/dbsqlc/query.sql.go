@@ -193,6 +193,41 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 	return id, err
 }
 
+const createProjectModules = `-- name: CreateProjectModules :one
+INSERT INTO modules(
+    project_id, name, code, priority, created_at, updated_at
+)VALUES($1, $2, $3, $4, now(), now()
+)
+RETURNING id, project_id, name, code, priority, created_at, updated_at
+`
+
+type CreateProjectModulesParams struct {
+	ProjectID int32
+	Name      string
+	Code      string
+	Priority  int32
+}
+
+func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectModulesParams) (Module, error) {
+	row := q.db.QueryRowContext(ctx, createProjectModules,
+		arg.ProjectID,
+		arg.Name,
+		arg.Code,
+		arg.Priority,
+	)
+	var i Module
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Code,
+		&i.Priority,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createTestCase = `-- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
@@ -398,6 +433,15 @@ func (q *Queries) DeleteProject(ctx context.Context, id int32) (int64, error) {
 	return result.RowsAffected()
 }
 
+const deleteProjectModule = `-- name: DeleteProjectModule :exec
+DELETE FROM modules WHERE id = $1
+`
+
+func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteProjectModule, id)
+	return err
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -475,27 +519,12 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 }
 
 const getProjectModules = `-- name: GetProjectModules :one
-INSERT INTO modules(
-    project_id, name, code, priority, created_at, updated_at
-)VALUES($1, $2, $3, $4, now(), now()
-)
-RETURNING id, project_id, name, code, priority, created_at, updated_at
+SELECT id, project_id, name, code, priority, created_at, updated_at FROM modules
+WHERE project_id = $1
 `
 
-type GetProjectModulesParams struct {
-	ProjectID int32
-	Name      string
-	Code      string
-	Priority  int32
-}
-
-func (q *Queries) GetProjectModules(ctx context.Context, arg GetProjectModulesParams) (Module, error) {
-	row := q.db.QueryRowContext(ctx, getProjectModules,
-		arg.ProjectID,
-		arg.Name,
-		arg.Code,
-		arg.Priority,
-	)
+func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) (Module, error) {
+	row := q.db.QueryRowContext(ctx, getProjectModules, projectID)
 	var i Module
 	err := row.Scan(
 		&i.ID,
@@ -696,6 +725,46 @@ func (q *Queries) IsTestCaseLinkedToProject(ctx context.Context, projectID sql.N
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const listProjectModules = `-- name: ListProjectModules :many
+SELECT project_id, name, code, priority FROM modules
+ORDER BY id
+`
+
+type ListProjectModulesRow struct {
+	ProjectID int32
+	Name      string
+	Code      string
+	Priority  int32
+}
+
+func (q *Queries) ListProjectModules(ctx context.Context) ([]ListProjectModulesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProjectModules)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProjectModulesRow
+	for rows.Next() {
+		var i ListProjectModulesRow
+		if err := rows.Scan(
+			&i.ProjectID,
+			&i.Name,
+			&i.Code,
+			&i.Priority,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many
@@ -1236,6 +1305,21 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProjectModule = `-- name: UpdateProjectModule :exec
+UPDATE modules SET name = $2
+WHERE project_id = $1
+`
+
+type UpdateProjectModuleParams struct {
+	ProjectID int32
+	Name      string
+}
+
+func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
+	_, err := q.db.ExecContext(ctx, updateProjectModule, arg.ProjectID, arg.Name)
+	return err
 }
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows

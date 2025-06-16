@@ -172,16 +172,6 @@ type Project struct {
 	DeletedAt   sql.NullTime
 }
 
-type ProjectModule struct {
-	ID          int32
-	ProjectID   int32
-	ProjectName string
-	ProjectCode string
-	Modules     int32
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
-}
-
 type ProjectTester struct {
 	ID int32
 	// The project associated with this tester
