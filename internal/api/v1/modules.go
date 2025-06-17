@@ -16,31 +16,6 @@ import (
 
 var logger logging.Logger
 
-/*
-	func Modules(c *fiber.Ctx) error {
-		request := new(schema.ModulesRequest)
-		_, err := common.ParseBodyThenValidate(c, request)
-		if err != nil {
-			logger.Error("v1-modules", "failed to parse request data", "error", err)
-			return problemdetail.BadRequest(c, "failed to parse data in request")
-		}
-		var moduleService services.ModuleService
-		_, err = moduleService.Create(
-			request.ProjectID,
-			request.Name,
-			request.Code,
-			request.Priority,
-		)
-		if err != nil {
-			logger.Error("v1-modules", "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
-		}
-
-		return c.JSON(fiber.Map{
-			"message": "Module created successfully",
-		})
-	}
-*/
 func Module(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ModulesRequest)
