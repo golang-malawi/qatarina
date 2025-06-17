@@ -198,4 +198,4 @@ UPDATE modules SET name = $2
 WHERE project_id = $1;
 
 -- name: DeleteProjectModule :exec
-DELETE FROM modules WHERE id = $1;
+DELETE FROM modules WHERE project_id = $1;
