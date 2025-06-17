@@ -18,7 +18,7 @@ var logger logging.Logger
 
 func Module(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		request := new(schema.ModulesRequest)
+		request := new(schema.CreateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
