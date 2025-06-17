@@ -26,10 +26,9 @@ func NewModuleService(queries *dbsqlc.Queries) ModuleService {
 }
 
 type moduleServiceImpl struct {
-	db *dbsqlc.Queries
+	db     *dbsqlc.Queries
+	logger logging.Logger
 }
-
-var logger logging.Logger
 
 func (m *moduleServiceImpl) Create(
 	projectID int32,
@@ -60,7 +59,7 @@ func (m *moduleServiceImpl) Get(ctx context.Context, projectID int32) (dbsqlc.Mo
 	module, err := m.db.GetProjectModules(ctx, projectID)
 
 	if err != nil {
-		logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
+		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
 		return dbsqlc.Module{}, err
 	}
 
