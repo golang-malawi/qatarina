@@ -6,14 +6,12 @@ import (
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
 type ModuleService interface {
 	Create(
-		projectID int32,
-		name string,
-		code string,
-		priority int32,
+		*schema.CreateProjectModuleRequest,
 	) (bool, error)
 	// Get retrieves all modules in the context
 	Get(ctx context.Context, projectID int32) (dbsqlc.Module, error)
@@ -31,19 +29,16 @@ type moduleServiceImpl struct {
 }
 
 func (m *moduleServiceImpl) Create(
-	projectID int32,
-	name string,
-	code string,
-	priority int32,
+	request *schema.CreateProjectModuleRequest,
 ) (bool, error) {
-	if projectID == 0 || name == "" || code == "" || priority == 0 {
+	if request.ProjectID == 0 || request.Name == "" || request.Code == "" || request.Priority == 0 {
 		return false, fmt.Errorf("empty field(s) found")
 	}
 	_, err := m.db.CreateProjectModules(context.Background(), dbsqlc.CreateProjectModulesParams{
-		ProjectID: projectID,
-		Name:      name,
-		Code:      code,
-		Priority:  priority,
+		ProjectID: request.ProjectID,
+		Name:      request.Name,
+		Code:      request.Code,
+		Priority:  request.Priority,
 	})
 
 	if err != nil {

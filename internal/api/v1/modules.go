@@ -27,13 +27,7 @@ func Module(module services.ModuleService) fiber.Handler {
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		_, err := module.Create(
-
-			request.ProjectID,
-			request.Name,
-			request.Code,
-			request.Priority,
-		)
+		_, err := module.Create(request)
 		if err != nil {
 			logger.Error("api-modules", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process equest")
