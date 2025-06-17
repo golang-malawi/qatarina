@@ -16,7 +16,7 @@ type ModuleService interface {
 		priority int32,
 	) (bool, error)
 	// Get retrieves all modules in the context
-	Get(ctx context.Context, project_id int32) (dbsqlc.Module, error)
+	Get(ctx context.Context, projectID int32) (dbsqlc.Module, error)
 }
 
 func NewModuleService(queries *dbsqlc.Queries) ModuleService {
@@ -56,11 +56,11 @@ func (m *moduleServiceImpl) Create(
 }
 
 // Implement the Get method to retrive modules from the table
-func (m *moduleServiceImpl) Get(ctx context.Context, project_id int32) (dbsqlc.Module, error) {
-	module, err := m.db.GetProjectModules(ctx, project_id)
+func (m *moduleServiceImpl) Get(ctx context.Context, projectID int32) (dbsqlc.Module, error) {
+	module, err := m.db.GetProjectModules(ctx, projectID)
 
 	if err != nil {
-		logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", project_id, err)
+		logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
 		return dbsqlc.Module{}, err
 	}
 
