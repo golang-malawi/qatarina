@@ -141,6 +141,27 @@ func (q *Queries) CreateNewTestRun(ctx context.Context, arg CreateNewTestRunPara
 	return id, err
 }
 
+const createPage = `-- name: CreatePage :one
+INSERT INTO pages(title, owner, created_at) VALUES($1, $2, now()) RETURNING id, title, owner, created_at
+`
+
+type CreatePageParams struct {
+	Title string
+	Owner string
+}
+
+func (q *Queries) CreatePage(ctx context.Context, arg CreatePageParams) (Page, error) {
+	row := q.db.QueryRowContext(ctx, createPage, arg.Title, arg.Owner)
+	var i Page
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Owner,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (
     title, description, version, is_active, is_public, website_url,

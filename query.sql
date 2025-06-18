@@ -199,3 +199,6 @@ WHERE id = $1;
 
 -- name: DeleteProjectModule :exec
 DELETE FROM modules WHERE id = $1;
+
+-- name: CreatePage :one
+INSERT INTO pages(title, owner, created_at) VALUES($1, $2, now()) RETURNING *;

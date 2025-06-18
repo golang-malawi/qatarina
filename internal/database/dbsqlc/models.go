@@ -143,6 +143,13 @@ type OrgMember struct {
 	RemovedAt sql.NullTime
 }
 
+type Page struct {
+	ID        int32
+	Title     string
+	Owner     string
+	CreatedAt sql.NullTime
+}
+
 type Project struct {
 	ID int32
 	// Title of the project
