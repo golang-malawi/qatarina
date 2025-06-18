@@ -24,6 +24,8 @@ func (api *API) routes() {
 	router.Post("/modules/:id", apiv1.UpdateProjectModule(api.ModuleService))
 	router.Delete("/modules/:id", apiv1.DeleteProjectModule(api.ModuleService))
 
+	router.Post("/v1/pages", apiv1.Page(api.PageService))
+
 	if api.Config.Auth.SignupEnabled {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
