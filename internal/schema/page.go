@@ -1,6 +1,6 @@
 package schema
 
-type PageRequest struct {
+type CreatePageRequest struct {
 	Title string `json:"title" validate:"required"`
 	Owner string `json:"owner" validate:"required"`
 }
