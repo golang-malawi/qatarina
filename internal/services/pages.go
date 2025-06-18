@@ -31,7 +31,7 @@ func (p *pageServiceImpl) Create(request *schema.CreatePageRequest) (bool, error
 	})
 
 	if err != nil {
-		p.logger.Error("services-pages", "failed to create user %v", err)
+		p.logger.Error("services-pages", "failed to create page %v", err)
 		return false, fmt.Errorf("failed to create page %v", err)
 
 	}
