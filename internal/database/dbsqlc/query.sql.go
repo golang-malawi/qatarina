@@ -434,11 +434,11 @@ func (q *Queries) DeleteProject(ctx context.Context, id int32) (int64, error) {
 }
 
 const deleteProjectModule = `-- name: DeleteProjectModule :exec
-DELETE FROM modules WHERE project_id = $1
+DELETE FROM modules WHERE id = $1
 `
 
-func (q *Queries) DeleteProjectModule(ctx context.Context, projectID int32) error {
-	_, err := q.db.ExecContext(ctx, deleteProjectModule, projectID)
+func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteProjectModule, id)
 	return err
 }
 
@@ -1309,16 +1309,16 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 
 const updateProjectModule = `-- name: UpdateProjectModule :exec
 UPDATE modules SET name = $2
-WHERE project_id = $1
+WHERE id = $1
 `
 
 type UpdateProjectModuleParams struct {
-	ProjectID int32
-	Name      string
+	ID   int32
+	Name string
 }
 
 func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateProjectModule, arg.ProjectID, arg.Name)
+	_, err := q.db.ExecContext(ctx, updateProjectModule, arg.ID, arg.Name)
 	return err
 }
 

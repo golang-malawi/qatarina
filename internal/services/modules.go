@@ -18,7 +18,7 @@ type ModuleService interface {
 	// Update used to edit module records
 	Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error)
 	// Delete used to delete a module from table
-	Delete(ctx context.Context, projectID int32) error
+	Delete(ctx context.Context, id int32) error
 }
 
 func NewModuleService(queries *dbsqlc.Queries) ModuleService {
@@ -68,8 +68,8 @@ func (m *moduleServiceImpl) Get(ctx context.Context, projectID int32) (dbsqlc.Mo
 // Implement the Update to change field in table
 func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error) {
 	err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
-		ProjectID: request.ProjectID,
-		Name:      request.Name,
+		ID:   request.ID,
+		Name: request.Name,
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to update module %v", err)
@@ -80,11 +80,11 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 }
 
 // Implement the Delete to remove a module in the table
-func (m *moduleServiceImpl) Delete(ctx context.Context, projectID int32) error {
-	err := m.db.DeleteProjectModule(ctx, projectID)
+func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
+	err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to delete with ProjectID %d: %v", projectID, err)
+		m.logger.Error("services-modules", "failed to delete with ProjectID %d: %v", id, err)
 		return err
 	}
 

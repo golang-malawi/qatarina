@@ -87,21 +87,21 @@ func UpdateProjectModule(module services.ModuleService) fiber.Handler {
 }
 func DeleteProjectModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		projectIdParam := c.Params("projectID")
-		projectID, err := strconv.Atoi(projectIdParam)
+		moduleIdParam := c.Params("id")
+		moduleID, err := strconv.Atoi(moduleIdParam)
 		if err != nil {
 			logger.Error("v1-modules", "failed to parse module projectID data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
 		}
 
-		err = module.Delete(context.Background(), int32(projectID))
+		err = module.Delete(context.Background(), int32(moduleID))
 		if err != nil {
 			logger.Error("v1-modules", "failed delete module", "error", err)
 			return problemdetail.BadRequest(c, "failed to delete module")
 		}
 		return c.JSON(fiber.Map{
-			"message":   "Module deleted sucessfully",
-			"projectID": projectID,
+			"message":  "Module deleted sucessfully",
+			"moduleID": moduleID,
 		})
 	}
 }

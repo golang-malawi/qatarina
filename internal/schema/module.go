@@ -8,6 +8,6 @@ type CreateProjectModuleRequest struct {
 }
 
 type UpdateProjectModuleRequest struct {
-	ProjectID int32  `json:"projectID" validate:"required"`
-	Name      string `json:"name" validate:"required"`
+	ID   int32  `json:"id" validate:"required"`
+	Name string `json:"name" validate:"required"`
 }
