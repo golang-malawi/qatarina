@@ -47,6 +47,14 @@ function ViewProject() {
           Test Plans
         </Link>
         <Link
+          to={`/projects/$projectId/Features`}
+          params={{
+            projectId: projectId,
+          }}
+        >
+        Features/Modules
+        </Link>
+        <Link
           to={`/projects/$projectId/testers`}
           params={{
             projectId: projectId,
