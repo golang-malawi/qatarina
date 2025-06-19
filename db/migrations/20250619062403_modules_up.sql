@@ -6,6 +6,8 @@ CREATE TABLE modules (
     name text not null,
     code text not null,
     priority integer not null,
+    type text not null,
+    description text not null,
     created_at timestamp without time zone,
     updated_at timestamp without time zone,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -14,4 +16,4 @@ CREATE TABLE modules (
 
 
 -- +goose Down
-
+DROP TABLE modules;
