@@ -5,13 +5,13 @@ import createAuthHeaders from "@/hooks/useAuthHeaders";
 
 export interface Module {
   id: string;
-  name: string;
-  code: string;
-  type: string;
-  priority: number;
+  Name: string;
+  Code: string;
+  Type: string;
+  Priority: number;
   created_at: string;
   updated_at: string;
-  description: string;
+  Description: string;
   project_id: number;
 }
 
@@ -56,10 +56,13 @@ export default class ModuleService {
       createAuthHeaders()
     );
     if (res.status === 200) {
-      return res.data.module;
+      return res.data; 
+      
     }
+    console.log(res.data)
     throw new Error(res.data);
   }
+  
 
   async createModule(data: Partial<Module>) {
     const res = await axios.post(

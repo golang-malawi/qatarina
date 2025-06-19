@@ -4,20 +4,19 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import SelectFeatureModuleType from "@/components/SelectFeatureModuleType";
-import { Heading } from "@chakra-ui/react"
+import { Heading } from "@chakra-ui/react";
 
 export const Route = createFileRoute(
-    "/(project)/projects/$projectId/Features/EditFeatureModuleForm"
-  )({
-    component: EditFeatureModuleForm,
-    validateSearch: (search) => {
-      if (!search.moduleId) throw new Error("Missing moduleId");
-      return {
-        moduleId: String(search.moduleId),
-      };
-    },
-  });
-  
+  "/(project)/projects/$projectId/Features/EditFeatureModuleForm"
+)({
+  component: EditFeatureModuleForm,
+  validateSearch: (search) => {
+    if (!search.moduleId) throw new Error("Missing moduleId");
+    return {
+      moduleId: String(search.moduleId),
+    };
+  },
+});
 
 function EditFeatureModuleForm() {
   const { projectId } = Route.useParams();
@@ -45,12 +44,11 @@ function EditFeatureModuleForm() {
 
       try {
         const data = await moduleService.getModuleById(moduleId);
-        setName(data.name || "");
-        setType(data.type || "feature");
-        setDescription(data.description || "");
-        setCode(data.code || "");
-        setPriority(data.priority?.toString() || "");
-        
+        setName(data.Name || "");
+        setType(data.Type || "");
+        setDescription(data.Description || "");
+        setCode(data.Code || "");
+        setPriority(data.Priority?.toString() || "");        
       } catch (err) {
         console.error(err);
         toaster.create({
@@ -69,16 +67,15 @@ function EditFeatureModuleForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
- 
-const payload = {
-  ID: parseInt(moduleId), 
-  name,
-  type,
-  description,
-  code,
-  priority: parseInt(priority),
-  ProjectID: parseInt(projectId),
-};
+    const payload = {
+      ID: parseInt(moduleId),
+      name,
+      type,
+      description,
+      code,
+      priority: parseInt(priority),
+      ProjectID: parseInt(projectId),
+    };
 
     try {
       await moduleService.updateModule(moduleId, payload);
