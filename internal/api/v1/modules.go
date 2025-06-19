@@ -39,7 +39,7 @@ func Module(module services.ModuleService) fiber.Handler {
 	}
 }
 
-func GetProjectModule(module services.ModuleService) fiber.Handler {
+func GetOneProjectModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectIdParam := c.Params("projectID")
 		projectID, err := strconv.Atoi(projectIdParam)
@@ -48,7 +48,7 @@ func GetProjectModule(module services.ModuleService) fiber.Handler {
 			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
 		}
 
-		module, err := module.Get(context.Background(), int32(projectID))
+		module, err := module.GetOne(context.Background(), int32(projectID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				logger.Error("v1-modules", "module not found", "error", err)
@@ -61,6 +61,18 @@ func GetProjectModule(module services.ModuleService) fiber.Handler {
 		return c.JSON(module)
 	}
 
+}
+
+func GetAllProjectModules(moduleService services.ModuleService) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		modules, err := moduleService.GetAll(context.Background())
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
+		}
+		return ctx.JSON(fiber.Map{
+			"modules": modules,
+		})
+	}
 }
 
 func UpdateProjectModule(module services.ModuleService) fiber.Handler {

@@ -195,17 +195,19 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 
 const createProjectModules = `-- name: CreateProjectModules :one
 INSERT INTO modules(
-    project_id, name, code, priority, created_at, updated_at
-)VALUES($1, $2, $3, $4, now(), now()
+    project_id, name, code, priority, type, description, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, now(), now()
 )
-RETURNING id, project_id, name, code, priority, created_at, updated_at
+RETURNING id, project_id, name, code, priority, type, description, created_at, updated_at
 `
 
 type CreateProjectModulesParams struct {
-	ProjectID int32
-	Name      string
-	Code      string
-	Priority  int32
+	ProjectID   int32
+	Name        string
+	Code        string
+	Priority    int32
+	Type        string
+	Description string
 }
 
 func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectModulesParams) (Module, error) {
@@ -214,6 +216,8 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 		arg.Name,
 		arg.Code,
 		arg.Priority,
+		arg.Type,
+		arg.Description,
 	)
 	var i Module
 	err := row.Scan(
@@ -222,6 +226,8 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 		&i.Name,
 		&i.Code,
 		&i.Priority,
+		&i.Type,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -433,13 +439,16 @@ func (q *Queries) DeleteProject(ctx context.Context, id int32) (int64, error) {
 	return result.RowsAffected()
 }
 
-const deleteProjectModule = `-- name: DeleteProjectModule :exec
+const deleteProjectModule = `-- name: DeleteProjectModule :execrows
 DELETE FROM modules WHERE id = $1
 `
 
-func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteProjectModule, id)
-	return err
+func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProjectModule, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
@@ -491,6 +500,66 @@ func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindU
 	return i, err
 }
 
+const getAllModules = `-- name: GetAllModules :many
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAllModules(ctx context.Context) ([]Module, error) {
+	rows, err := q.db.QueryContext(ctx, getAllModules)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Module
+	for rows.Next() {
+		var i Module
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Code,
+			&i.Priority,
+			&i.Type,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOneModule = `-- name: GetOneModule :one
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
+WHERE project_id = $1
+`
+
+func (q *Queries) GetOneModule(ctx context.Context, projectID int32) (Module, error) {
+	row := q.db.QueryRowContext(ctx, getOneModule, projectID)
+	var i Module
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Code,
+		&i.Priority,
+		&i.Type,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects WHERE id = $1
 `
@@ -514,26 +583,6 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-	)
-	return i, err
-}
-
-const getProjectModules = `-- name: GetProjectModules :one
-SELECT id, project_id, name, code, priority, created_at, updated_at FROM modules
-WHERE project_id = $1
-`
-
-func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) (Module, error) {
-	row := q.db.QueryRowContext(ctx, getProjectModules, projectID)
-	var i Module
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
-		&i.Name,
-		&i.Code,
-		&i.Priority,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -725,46 +774,6 @@ func (q *Queries) IsTestCaseLinkedToProject(ctx context.Context, projectID sql.N
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
-}
-
-const listProjectModules = `-- name: ListProjectModules :many
-SELECT project_id, name, code, priority FROM modules
-ORDER BY id
-`
-
-type ListProjectModulesRow struct {
-	ProjectID int32
-	Name      string
-	Code      string
-	Priority  int32
-}
-
-func (q *Queries) ListProjectModules(ctx context.Context) ([]ListProjectModulesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProjectModules)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListProjectModulesRow
-	for rows.Next() {
-		var i ListProjectModulesRow
-		if err := rows.Scan(
-			&i.ProjectID,
-			&i.Name,
-			&i.Code,
-			&i.Priority,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many

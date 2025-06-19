@@ -180,22 +180,22 @@ WHERE project_id = $1;
 
 -- name: CreateProjectModules :one
 INSERT INTO modules(
-    project_id, name, code, priority, created_at, updated_at
-)VALUES($1, $2, $3, $4, now(), now()
+    project_id, name, code, priority, type, description, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, now(), now()
 )
 RETURNING *;
 
--- name: GetProjectModules :one
+-- name: GetOneModule :one
 SELECT * FROM modules
 WHERE project_id = $1;
 
--- name: ListProjectModules :many
-SELECT project_id, name, code, priority FROM modules
-ORDER BY id;
+-- name: GetAllModules :many
+SELECT * FROM modules
+ORDER BY created_at DESC;
 
 -- name: UpdateProjectModule :exec
 UPDATE modules SET name = $2
 WHERE id = $1;
 
--- name: DeleteProjectModule :exec
+-- name: DeleteProjectModule :execrows
 DELETE FROM modules WHERE id = $1;

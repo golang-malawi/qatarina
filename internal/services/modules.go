@@ -13,8 +13,10 @@ type ModuleService interface {
 	Create(
 		*schema.CreateProjectModuleRequest,
 	) (bool, error)
-	// Get retrieves all modules in the context
-	Get(ctx context.Context, projectID int32) (dbsqlc.Module, error)
+	// GetOne retrieves one module in the context
+	GetOne(ctx context.Context, projectID int32) (dbsqlc.Module, error)
+	// GetAll retrieves all modules in the context
+	GetAll(ctx context.Context) ([]dbsqlc.Module, error)
 	// Update used to edit module records
 	Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error)
 	// Delete used to delete a module from table
@@ -54,8 +56,8 @@ func (m *moduleServiceImpl) Create(
 }
 
 // Implement the Get method to retrive modules from the table
-func (m *moduleServiceImpl) Get(ctx context.Context, projectID int32) (dbsqlc.Module, error) {
-	module, err := m.db.GetProjectModules(ctx, projectID)
+func (m *moduleServiceImpl) GetOne(ctx context.Context, projectID int32) (dbsqlc.Module, error) {
+	module, err := m.db.GetOneModule(ctx, projectID)
 
 	if err != nil {
 		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
@@ -63,6 +65,15 @@ func (m *moduleServiceImpl) Get(ctx context.Context, projectID int32) (dbsqlc.Mo
 	}
 
 	return module, nil
+}
+
+func (m *moduleServiceImpl) GetAll(ctx context.Context) ([]dbsqlc.Module, error) {
+	if modules, err := m.db.GetAllModules(context.Background()); err != nil {
+		m.logger.Error("failed to fetch modules", "error", err)
+		return nil, err
+	} else {
+		return modules, nil
+	}
 }
 
 // Implement the Update to change field in table
@@ -81,7 +92,7 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 
 // Implement the Delete to remove a module in the table
 func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
-	err := m.db.DeleteProjectModule(ctx, id)
+	_, err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
 		m.logger.Error("services-modules", "failed to delete with ProjectID %d: %v", id, err)
