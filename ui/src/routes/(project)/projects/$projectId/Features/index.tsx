@@ -99,22 +99,23 @@ function RouteComponent() {
                   <Table.Cell>
                     <Flex gap={2}>
                       <IconButton
-                        icon={<LuBrush />}
                         as={Link}
                         to={`/projects/${projectId}/Features/EditFeatureModuleForm?moduleId=${item.id}`}
                         params={{ projectId }}
-                       
                         colorScheme="blue"
                         size="sm"
-                      />
+                      >
+                        <LuBrush />
+                      </IconButton>
 
                       <IconButton
                         aria-label="Delete module"
-                        icon={<LuTrash />}
                         onClick={() => handleDelete(item.id)}
                         colorScheme="red"
                         size="sm"
-                      />
+                      >
+                        <LuTrash />
+                      </IconButton>
                     </Flex>
                   </Table.Cell>
                 </Table.Row>
