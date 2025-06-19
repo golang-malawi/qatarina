@@ -1317,17 +1317,28 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const updateProjectModule = `-- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
 WHERE id = $1
 `
 
 type UpdateProjectModuleParams struct {
-	ID   int32
-	Name string
+	ID          int32
+	Name        string
+	Code        string
+	Priority    int32
+	Type        string
+	Description string
 }
 
 func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateProjectModule, arg.ID, arg.Name)
+	_, err := q.db.ExecContext(ctx, updateProjectModule,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.Priority,
+		arg.Type,
+		arg.Description,
+	)
 	return err
 }
 

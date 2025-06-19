@@ -79,8 +79,12 @@ func (m *moduleServiceImpl) GetAll(ctx context.Context) ([]dbsqlc.Module, error)
 // Implement the Update to change field in table
 func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error) {
 	err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
-		ID:   request.ID,
-		Name: request.Name,
+		ID:          request.ID,
+		Name:        request.Name,
+		Code:        request.Code,
+		Priority:    request.Priority,
+		Type:        request.Type,
+		Description: request.Description,
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to update module %v", err)

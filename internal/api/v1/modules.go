@@ -41,14 +41,12 @@ func Module(module services.ModuleService) fiber.Handler {
 
 func GetOneProjectModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		projectIdParam := c.Params("projectID")
-		projectID, err := strconv.Atoi(projectIdParam)
+		moduleID, err := c.ParamsInt("id", 0)
 		if err != nil {
-			logger.Error("v1-modules", "failed to parse module project ID data", "error", err)
-			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
 		}
 
-		module, err := module.GetOne(context.Background(), int32(projectID))
+		module, err := module.GetOne(context.Background(), int32(moduleID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				logger.Error("v1-modules", "module not found", "error", err)
