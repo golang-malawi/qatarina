@@ -540,11 +540,11 @@ func (q *Queries) GetAllModules(ctx context.Context) ([]Module, error) {
 
 const getOneModule = `-- name: GetOneModule :one
 SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
-WHERE project_id = $1
+WHERE id = $1
 `
 
-func (q *Queries) GetOneModule(ctx context.Context, projectID int32) (Module, error) {
-	row := q.db.QueryRowContext(ctx, getOneModule, projectID)
+func (q *Queries) GetOneModule(ctx context.Context, id int32) (Module, error) {
+	row := q.db.QueryRowContext(ctx, getOneModule, id)
 	var i Module
 	err := row.Scan(
 		&i.ID,

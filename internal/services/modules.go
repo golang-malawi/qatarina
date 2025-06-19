@@ -14,7 +14,7 @@ type ModuleService interface {
 		*schema.CreateProjectModuleRequest,
 	) (bool, error)
 	// GetOne retrieves one module in the context
-	GetOne(ctx context.Context, projectID int32) (dbsqlc.Module, error)
+	GetOne(ctx context.Context, id int32) (dbsqlc.Module, error)
 	// GetAll retrieves all modules in the context
 	GetAll(ctx context.Context) ([]dbsqlc.Module, error)
 	// Update used to edit module records
@@ -41,10 +41,10 @@ func (m *moduleServiceImpl) Create(
 		return false, fmt.Errorf("empty field(s) found")
 	}
 	_, err := m.db.CreateProjectModules(context.Background(), dbsqlc.CreateProjectModulesParams{
-		ProjectID: request.ProjectID,
-		Name:      request.Name,
-		Code:      request.Code,
-		Priority:  request.Priority,
+		ProjectID:   request.ProjectID,
+		Name:        request.Name,
+		Code:        request.Code,
+		Priority:    request.Priority,
 		Type:        request.Type,
 		Description: request.Description,
 	})
@@ -58,11 +58,11 @@ func (m *moduleServiceImpl) Create(
 }
 
 // Implement the Get method to retrive modules from the table
-func (m *moduleServiceImpl) GetOne(ctx context.Context, projectID int32) (dbsqlc.Module, error) {
-	module, err := m.db.GetOneModule(ctx, projectID)
+func (m *moduleServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.Module, error) {
+	module, err := m.db.GetOneModule(ctx, id)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
+		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", id, err)
 		return dbsqlc.Module{}, err
 	}
 

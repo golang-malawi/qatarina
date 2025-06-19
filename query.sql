@@ -187,7 +187,7 @@ RETURNING *;
 
 -- name: GetOneModule :one
 SELECT * FROM modules
-WHERE project_id = $1;
+WHERE id = $1;
 
 -- name: GetAllModules :many
 SELECT * FROM modules
