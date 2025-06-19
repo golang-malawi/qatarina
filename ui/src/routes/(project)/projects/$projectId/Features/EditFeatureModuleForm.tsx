@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import SelectFeatureModuleType from "@/components/SelectFeatureModuleType";
+import { Heading } from "@chakra-ui/react"
 
 export const Route = createFileRoute(
     "/(project)/projects/$projectId/Features/EditFeatureModuleForm"
@@ -109,7 +110,7 @@ function EditFeatureModuleForm() {
 
   return (
     <div>
-      <h2>Edit Feature / Component / Module</h2>
+      <Heading>Edit Feature / Component / Module</Heading>
       <form onSubmit={handleSubmit}>
         <Stack gap={4} maxW="700px" mt={4}>
           <Field.Root>

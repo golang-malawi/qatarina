@@ -3,6 +3,7 @@ import {
   Input,
   Button,
   Stack,
+  Heading,
 } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -63,7 +64,7 @@ function RouteComponent() {
   
   return (
     <div>
-      <h2>Create Feature / Component / Module</h2>
+      <Heading>Create Feature / Component / Module</Heading>
       <form onSubmit={handleSubmit}>
         <Stack gap={4} maxW="700px" mt={4}>
           <Field.Root>
