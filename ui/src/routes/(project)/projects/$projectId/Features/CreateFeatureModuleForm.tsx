@@ -50,7 +50,7 @@ function RouteComponent() {
         duration: 3000,
       });
   
-      // navigate({ to: `/projects/${params.projectId}` });
+      navigate({ to: `/projects/${params.projectId}` });
     } catch (err) {
       console.error(err);
       toaster.create({

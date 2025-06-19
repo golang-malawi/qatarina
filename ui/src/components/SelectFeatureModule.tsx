@@ -1,23 +1,42 @@
-import { createListCollection, Portal, Select } from "@chakra-ui/react";
+import {
+  createListCollection,
+  ListCollection,
+  Portal,
+  Select,
+} from "@chakra-ui/react";
+import { useEffect, useState } from "react";
+import ModuleService, { Module } from "@/services/ModuleService";
 
 export type SelectFeatureModuleProps = {
+  projectId: string;
   onChange: (value: string) => void;
 };
-
-const featureModules = createListCollection({
-  items: [
-    { label: "Login Feature", value: "login_feature" },
-    { label: "User Profile Component", value: "user_profile_component" },
-    { label: "Reporting Module", value: "reporting_module" },
-    { label: "Payment Gateway Module", value: "payment_gateway_module" },
-    { label: "Notification Feature", value: "notification_feature" },
-    { label: "Dashboard Component", value: "dashboard_component" },
-  ],
-});
 
 export default function SelectFeatureModule({
   onChange,
 }: SelectFeatureModuleProps) {
+  const [featureModules, setFeatureModules] = useState<
+    ListCollection<{ label: string; value: string }>
+  >(createListCollection<{ label: string; value: string }>({ items: [] }));
+
+  useEffect(() => {
+    const fetchModules = async () => {
+      try {
+        const moduleService = new ModuleService();
+        const modules: Module[] = await moduleService.getAllModules();
+        const items = modules.map((module) => ({
+          label: module.name,
+          value: module.id,
+        }));
+        setFeatureModules(createListCollection({ items }));
+      } catch (error) {
+        console.error("Failed to fetch modules:", error);
+      }
+    };
+
+    fetchModules();
+  }, []);
+
   return (
     <Select.Root
       collection={featureModules}
