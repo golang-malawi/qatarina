@@ -45,6 +45,8 @@ func (m *moduleServiceImpl) Create(
 		Name:      request.Name,
 		Code:      request.Code,
 		Priority:  request.Priority,
+		Type:        request.Type,
+		Description: request.Description,
 	})
 
 	if err != nil {
