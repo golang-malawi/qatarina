@@ -69,14 +69,16 @@ function EditFeatureModuleForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    const payload = {
-      name,
-      type,
-      description,
-      code,
-      priority: parseInt(priority),
-      ProjectID: parseInt(projectId),
-    };
+ 
+const payload = {
+  ID: parseInt(moduleId), 
+  name,
+  type,
+  description,
+  code,
+  priority: parseInt(priority),
+  ProjectID: parseInt(projectId),
+};
 
     try {
       await moduleService.updateModule(moduleId, payload);
