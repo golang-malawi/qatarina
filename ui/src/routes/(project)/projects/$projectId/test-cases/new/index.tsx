@@ -2,6 +2,7 @@ import { Button, Checkbox, Field, Input } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
+import SelectFeatureModule from "@/components/SelectFeatureModule";
 import { createFileRoute } from "@tanstack/react-router";
 import { createTestCase } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
@@ -77,11 +78,7 @@ function NewTestCases() {
 
         <Field.Root>
           <Field.Label>Feature, Component or Module</Field.Label>
-          <Input
-            type="text"
-            name="code"
-            onChange={(e) => setFeature_or_module(e.target.value)}
-          />
+          <SelectFeatureModule onChange={setFeature_or_module} />
           <Field.HelperText>Test Case Feature or Module.</Field.HelperText>
         </Field.Root>
 
@@ -125,4 +122,3 @@ function NewTestCases() {
     </div>
   );
 }
-

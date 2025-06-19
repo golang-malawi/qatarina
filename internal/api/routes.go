@@ -19,6 +19,12 @@ func (api *API) routes() {
 
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))
+	router.Post("/modules", apiv1.Module(api.ModuleService))
+	router.Get("/modules/:id", apiv1.GetProjectModule(api.ModuleService))
+	router.Post("/modules/:id", apiv1.UpdateProjectModule(api.ModuleService))
+	router.Delete("/modules/:id", apiv1.DeleteProjectModule(api.ModuleService))
+
+	router.Post("/v1/pages", apiv1.Page(api.PageService))
 
 	if api.Config.Auth.SignupEnabled {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
