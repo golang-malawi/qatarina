@@ -19,11 +19,6 @@ func (api *API) routes() {
 
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))
-	router.Post("/modules", apiv1.Module(api.ModuleService))
-	router.Get("/modules/:id", apiv1.GetOneProjectModule(api.ModuleService))
-	router.Get("/modules", apiv1.GetAllProjectModules(api.ModuleService))
-	router.Post("/modules/:id", apiv1.UpdateProjectModule(api.ModuleService))
-	router.Delete("/modules/:id", apiv1.DeleteProjectModule(api.ModuleService))
 
 	if api.Config.Auth.SignupEnabled {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
@@ -55,6 +50,15 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService))
+	}
+
+	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
+	{
+		modulesV1.Post("/modules", apiv1.Module(api.ModuleService))
+		modulesV1.Get("/modules/:id", apiv1.GetOneProjectModule(api.ModuleService))
+		modulesV1.Get("/modules", apiv1.GetAllProjectModules(api.ModuleService))
+		modulesV1.Post("/modules/:id", apiv1.UpdateProjectModule(api.ModuleService))
+		modulesV1.Delete("/modules/:id", apiv1.DeleteProjectModule(api.ModuleService))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
