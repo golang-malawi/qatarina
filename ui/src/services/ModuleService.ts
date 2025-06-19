@@ -24,7 +24,7 @@ export default class ModuleService {
 
   async getAllModules(): Promise<Module[]> {
     const res = await axios.get(
-      `${this.apiEndpoint}/modules`,
+      `${this.apiEndpoint}/v1/modules/modules`,
       createAuthHeaders()
     );
   
@@ -52,7 +52,7 @@ export default class ModuleService {
   async getModuleById(id: string): Promise<Module> {
     console.log("API request to:", `${this.apiEndpoint}/modules/${id}`);
     const res = await axios.get(
-      `${this.apiEndpoint}/modules/${id}`,
+      `${this.apiEndpoint}/v1/modules/modules/${id}`,
       createAuthHeaders()
     );
     if (res.status === 200) {
@@ -63,7 +63,7 @@ export default class ModuleService {
 
   async createModule(data: Partial<Module>) {
     const res = await axios.post(
-      `${this.apiEndpoint}/modules`,
+    `${this.apiEndpoint}/v1/modules/modules`,
       data,
       createAuthHeaders()
     );
@@ -75,7 +75,7 @@ export default class ModuleService {
 
   async updateModule(id: string, data: Partial<Module>) {
     const res = await axios.post(
-      `${this.apiEndpoint}/modules/${id}`,
+      `${this.apiEndpoint}/v1/modules/modules/${id}`,
       data,
       createAuthHeaders()
     );
@@ -87,7 +87,7 @@ export default class ModuleService {
 
   async deleteModule(id: string) {
     const res = await axios.delete(
-      `${this.apiEndpoint}/modules/${id}`,
+      `${this.apiEndpoint}/v1/modules/modules/${id}`,
       createAuthHeaders()
     );
     if (res.status === 200) {
