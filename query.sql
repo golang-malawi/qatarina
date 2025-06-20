@@ -177,3 +177,29 @@ FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
+
+-- name: CreateProjectModules :one
+INSERT INTO modules(
+    project_id, name, code, priority, type, description, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, now(), now()
+)
+RETURNING *;
+
+-- name: GetOneModule :one
+SELECT * FROM modules
+WHERE id = $1;
+
+-- name: GetAllModules :many
+SELECT * FROM modules
+ORDER BY created_at DESC;
+
+-- name: UpdateProjectModule :exec
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+WHERE id = $1;
+
+-- name: DeleteProjectModule :execrows
+DELETE FROM modules WHERE id = $1;
+
+-- name: GetProjectModules :many
+SELECT * FROM modules
+WHERE project_id = $1;
