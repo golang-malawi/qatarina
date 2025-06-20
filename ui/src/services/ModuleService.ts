@@ -98,4 +98,29 @@ export default class ModuleService {
     }
     throw new Error(res.data);
   }
+
+  async getModulesByProjectId(projectId: string): Promise<Module[]> {
+    const res = await axios.get(
+      `${this.apiEndpoint}/v1/projects/${projectId}/modules`,
+      createAuthHeaders()
+    );
+    if (res.status === 200) {
+      const apiModules = res.data;
+      const modules: Module[] = apiModules.map((mod: any) => ({
+        id: String(mod.ID),
+        name: mod.Name,
+        code: mod.Code,
+        type: mod.Type,
+        priority: mod.Priority,
+        description: mod.Description,
+        project_id: mod.ProjectID,
+        created_at: mod.CreatedAt?.Time || "",
+        updated_at: mod.UpdatedAt?.Time || "",
+      }));
+      return modules;
+    }
+    throw new Error(res.data);
+  }
+  
+  
 }

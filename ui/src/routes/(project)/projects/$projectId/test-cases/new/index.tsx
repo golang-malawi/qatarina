@@ -78,7 +78,7 @@ function NewTestCases() {
 
         <Field.Root>
           <Field.Label>Feature, Component or Module</Field.Label>
-          <SelectFeatureModule onChange={setFeature_or_module} />
+          <SelectFeatureModule projectId={project_id} onChange={setFeature_or_module} />
           <Field.HelperText>Test Case Feature or Module.</Field.HelperText>
         </Field.Root>
 

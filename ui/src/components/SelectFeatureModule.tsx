@@ -8,11 +8,12 @@ import { useEffect, useState } from "react";
 import ModuleService, { Module } from "@/services/ModuleService";
 
 export type SelectFeatureModuleProps = {
-  // projectId: string;
+  projectId: string;
   onChange: (value: string) => void;
 };
 
 export default function SelectFeatureModule({
+  projectId,
   onChange,
 }: SelectFeatureModuleProps) {
   const [featureModules, setFeatureModules] = useState<
@@ -23,19 +24,21 @@ export default function SelectFeatureModule({
     const fetchModules = async () => {
       try {
         const moduleService = new ModuleService();
-        const modules: Module[] = await moduleService.getAllModules();
+        const modules: Module[] = await moduleService.getModulesByProjectId(projectId);
         const items = modules.map((module) => ({
           label: module.name,
           value: module.id,
         }));
         setFeatureModules(createListCollection({ items }));
       } catch (error) {
-        console.error("Failed to fetch modules:", error);
+        console.error("Failed to fetch project modules:", error);
       }
     };
 
-    fetchModules();
-  }, []);
+    if (projectId) {
+      fetchModules();
+    }
+  }, [projectId]);
 
   return (
     <Select.Root
