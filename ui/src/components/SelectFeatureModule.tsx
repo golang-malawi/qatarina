@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import ModuleService, { Module } from "@/services/ModuleService";
 
 export type SelectFeatureModuleProps = {
-  projectId: string;
+  // projectId: string;
   onChange: (value: string) => void;
 };
 
