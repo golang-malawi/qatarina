@@ -117,7 +117,7 @@ function NewTestCases() {
           Is Draft
         </Checkbox.Root>
 
-        <Button type="submit">Create Test Case</Button>
+        <Button marginTop={10} width={"100%"} type="submit">Create Test Case</Button>
       </form>
     </div>
   );
