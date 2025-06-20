@@ -21,6 +21,8 @@ type ModuleService interface {
 	Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error)
 	// Delete used to delete a module from table
 	Delete(ctx context.Context, id int32) error
+	// GetProjectModules retrieves all modules in database which belong to one project
+	GetProjectModules(ctx context.Context, projectID int32) ([]dbsqlc.Module, error)
 }
 
 func NewModuleService(queries *dbsqlc.Queries) ModuleService {
@@ -62,7 +64,7 @@ func (m *moduleServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.Module
 	module, err := m.db.GetOneModule(ctx, id)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", id, err)
+		m.logger.Error("services-modules", "failed to fetch with module id %d: %v", id, err)
 		return dbsqlc.Module{}, err
 	}
 
@@ -101,9 +103,21 @@ func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
 	_, err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to delete with ProjectID %d: %v", id, err)
+		m.logger.Error("services-modules", "failed to delete with module id %d: %v", id, err)
 		return err
 	}
 
 	return nil
+}
+
+func (m *moduleServiceImpl) GetProjectModules(ctx context.Context, projectID int32) ([]dbsqlc.Module, error) {
+	modules, err := m.db.GetProjectModules(ctx, projectID)
+
+	if err != nil {
+		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
+		return nil, err
+	}
+
+	return modules, nil
+
 }

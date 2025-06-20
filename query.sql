@@ -199,3 +199,7 @@ WHERE id = $1;
 
 -- name: DeleteProjectModule :execrows
 DELETE FROM modules WHERE id = $1;
+
+-- name: GetProjectModules :many
+SELECT * FROM modules
+WHERE project_id = $1;

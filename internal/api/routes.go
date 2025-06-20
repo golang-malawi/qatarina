@@ -54,11 +54,12 @@ func (api *API) routes() {
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
 	{
-		modulesV1.Post("/modules", apiv1.Module(api.ModuleService))
-		modulesV1.Get("/modules/:id", apiv1.GetOneProjectModule(api.ModuleService))
-		modulesV1.Get("/modules", apiv1.GetAllProjectModules(api.ModuleService))
-		modulesV1.Post("/modules/:id", apiv1.UpdateProjectModule(api.ModuleService))
-		modulesV1.Delete("/modules/:id", apiv1.DeleteProjectModule(api.ModuleService))
+		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService))
+		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService))
+		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService))
+		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService))
+		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService))
+		modulesV1.Get("/modules/:projectID", apiv1.GetProjectModules(api.ModuleService))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)

@@ -16,7 +16,7 @@ import (
 
 var logger logging.Logger
 
-func Module(module services.ModuleService) fiber.Handler {
+func CreateModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -39,7 +39,7 @@ func Module(module services.ModuleService) fiber.Handler {
 	}
 }
 
-func GetOneProjectModule(module services.ModuleService) fiber.Handler {
+func GetOneModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleID, err := c.ParamsInt("id", 0)
 		if err != nil {
@@ -61,7 +61,7 @@ func GetOneProjectModule(module services.ModuleService) fiber.Handler {
 
 }
 
-func GetAllProjectModules(moduleService services.ModuleService) fiber.Handler {
+func GetAllModules(moduleService services.ModuleService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		modules, err := moduleService.GetAll(context.Background())
 		if err != nil {
@@ -73,7 +73,7 @@ func GetAllProjectModules(moduleService services.ModuleService) fiber.Handler {
 	}
 }
 
-func UpdateProjectModule(module services.ModuleService) fiber.Handler {
+func UpdateModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -95,7 +95,7 @@ func UpdateProjectModule(module services.ModuleService) fiber.Handler {
 		})
 	}
 }
-func DeleteProjectModule(module services.ModuleService) fiber.Handler {
+func DeleteModule(module services.ModuleService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleIdParam := c.Params("id")
 		moduleID, err := strconv.Atoi(moduleIdParam)
@@ -114,4 +114,26 @@ func DeleteProjectModule(module services.ModuleService) fiber.Handler {
 			"moduleID": moduleID,
 		})
 	}
+}
+
+func GetProjectModules(modules services.ModuleService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
+		}
+
+		modules, err := modules.GetProjectModules(context.Background(), int32(projectID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("v1-modules", "modules not found", "error", err)
+				return problemdetail.BadRequest(c, "failed to find modules in request")
+			}
+
+			logger.Error("v1-modules", "failed retrieve request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to retrive modules")
+		}
+		return c.JSON(modules)
+	}
+
 }
