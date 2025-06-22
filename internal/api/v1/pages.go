@@ -3,11 +3,13 @@ package v1
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
-	"gorm.io/gorm/logger"
 )
+
+var logger logging.Logger
 
 func CreatePage(page services.PageService) fiber.Handler {
 	return func(c *fiber.Ctx) error {

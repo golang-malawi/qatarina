@@ -52,6 +52,11 @@ func (api *API) routes() {
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService))
 	}
 
+	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)
+	{
+		pagesV1.Post("/pages", apiv1.CreatePage(api.PageService))
+	}
+
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
