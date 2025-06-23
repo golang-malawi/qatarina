@@ -11,6 +11,16 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
+// @Summary User login
+// @Description Authenticates a user and returns access tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body schema.LoginRequest true "Login credentials"
+// @Success 200 {object} schema.LoginResponse
+// @Failure 400 {object} problemdetail.ProblemDetail "Invalid credentials or request body"
+// @Failure 500 {object} problemdetail.ProblemDetail "Server error"
+// @Router /v1/auth/login [post]
 func AuthLogin(authService services.AuthService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		var request schema.LoginRequest
@@ -31,12 +41,32 @@ func AuthLogin(authService services.AuthService) fiber.Handler {
 	}
 }
 
+// @Summary Refresh access token
+// @Description Refreshes an expired access token using a valid refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body schema.RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} schema.RefreshTokenResponse
+// @Failure 400 {object} problemdetail.ProblemDetail "Invalid token"
+// @Failure 500 {object} problemdetail.ProblemDetail "Server error"
+// @Router /v1/auth/refresh-token [post]
 func AuthRefreshToken(authService services.AuthService) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		return problemdetail.NotImplemented(ctx, "not implemented yet")
 	}
 }
 
+// @Summary User signup
+// @Description Registers a new user account
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body schema.SignUpRequest true "User registration details"
+// @Success 200 {object} map[string]interface{} "Returns success message and token"
+// @Failure 400 {object} problemdetail.ProblemDetail "User already exists or invalid request"
+// @Failure 500 {object} problemdetail.ProblemDetail "Server error"
+// @Router /v1/auth/signup [post]
 func Signup(authService services.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.SignUpRequest)
