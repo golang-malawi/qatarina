@@ -10,6 +10,141 @@ components:
         type:
           type: string
       type: object
+    schema.BulkAssignTesters:
+      properties:
+        project_id:
+          type: integer
+        testers:
+          items:
+            properties:
+              role:
+                type: string
+              user_id:
+                type: integer
+            type: object
+          type: array
+          uniqueItems: false
+      type: object
+    schema.BulkCreateTestCases:
+      properties:
+        project_id:
+          type: integer
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.CreateTestCaseRequest'
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - project_id
+      - test_cases
+      type: object
+    schema.CreateTestCaseRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        feature_or_module:
+          type: string
+        is_draft:
+          type: boolean
+        kind:
+          type: string
+        project_id:
+          type: integer
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      required:
+      - code
+      - description
+      - feature_or_module
+      - kind
+      - tags
+      - title
+      type: object
+    schema.HealthStatus:
+      properties:
+        message:
+          type: string
+        status:
+          type: string
+        uptime:
+          type: integer
+      type: object
+    schema.ImportFromGithubRequest:
+      properties:
+        github_token:
+          type: string
+        owner:
+          type: string
+        project_id:
+          type: integer
+        repository:
+          type: string
+      type: object
+    schema.ImportProjectRequest:
+      type: object
+    schema.LoginRequest:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+      - email
+      - password
+      type: object
+    schema.LoginResponse:
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+        expires_at:
+          type: integer
+        token:
+          type: string
+        user_id:
+          type: integer
+      type: object
+    schema.Metrics:
+      properties:
+        errorsTotal:
+          type: integer
+        requestsTotal:
+          type: integer
+        uptimeSeconds:
+          type: integer
+      type: object
+    schema.NewProjectRequest:
+      properties:
+        description:
+          type: string
+        github_url:
+          type: string
+        name:
+          type: string
+        parent_project_id:
+          type: integer
+        project_owner_id:
+          type: integer
+        version:
+          type: string
+        website_url:
+          type: string
+      required:
+      - description
+      - name
+      - version
+      - website_url
+      type: object
     schema.ProjectListResponse:
       properties:
         projects:
@@ -49,6 +184,226 @@ components:
         website_url:
           type: string
       type: object
+    schema.RefreshTokenRequest:
+      type: object
+    schema.RefreshTokenResponse:
+      type: object
+    schema.SignUpRequest:
+      properties:
+        display_name:
+          type: string
+        email:
+          type: string
+        firstname:
+          type: string
+        lastname:
+          type: string
+        password:
+          type: string
+      required:
+      - display_name
+      - email
+      - firstname
+      - lastname
+      - password
+      type: object
+    schema.SystemInfo:
+      properties:
+        buildDate:
+          type: string
+        developedBy:
+          type: string
+        projectUrl:
+          type: string
+        sha:
+          type: string
+        title:
+          type: string
+        version:
+          type: string
+      type: object
+    schema.TestCaseListResponse:
+      properties:
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestCaseResponse:
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        created_by:
+          type: integer
+        description:
+          type: string
+        feature_or_module:
+          type: string
+        id:
+          type: string
+        is_draft:
+          type: boolean
+        kind:
+          type: string
+        project_id:
+          type: integer
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      type: object
+    schema.TestPlanListResponse:
+      properties:
+        test_plans:
+          items:
+            $ref: '#/components/schemas/schema.TestPlanResponseItem'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestPlanResponseItem:
+      properties:
+        assigned_to_id:
+          type: integer
+        closed_at:
+          type: string
+        created_at:
+          type: string
+        created_by_id:
+          type: integer
+        description:
+          type: string
+        has_report:
+          type: boolean
+        id:
+          type: integer
+        is_complete:
+          type: boolean
+        is_locked:
+          type: boolean
+        kind:
+          type: string
+        num_failures:
+          type: integer
+        num_test_cases:
+          type: integer
+        project_id:
+          type: integer
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+        updated_at:
+          type: string
+        updated_by_id:
+          type: integer
+      type: object
+    schema.TestRunListResponse:
+      properties:
+        test_runs:
+          items:
+            $ref: '#/components/schemas/schema.TestRunResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestRunResponse:
+      properties:
+        id:
+          type: string
+        project_id:
+          type: integer
+        test_plan_id:
+          type: integer
+      type: object
+    schema.Tester:
+      properties:
+        created_at:
+          type: string
+        last_login_at:
+          type: string
+        name:
+          type: string
+        project:
+          type: string
+        project_id:
+          type: integer
+        role:
+          type: string
+        updated_at:
+          type: string
+        user_id:
+          type: integer
+      type: object
+    schema.TesterListResponse:
+      properties:
+        testers:
+          items:
+            $ref: '#/components/schemas/schema.Tester'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.UpdateProjectRequest:
+      properties:
+        description:
+          type: string
+        github_url:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        parent_project_id:
+          type: integer
+        project_owner_id:
+          type: integer
+        version:
+          type: string
+        website_url:
+          type: string
+      required:
+      - description
+      - id
+      - name
+      - project_owner_id
+      - version
+      - website_url
+      type: object
+    schema.UpdateTestCaseRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        feature_or_module:
+          type: string
+        id:
+          type: string
+        is_draft:
+          type: string
+        kind:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      required:
+      - code
+      - description
+      - feature_or_module
+      - id
+      - is_draft
+      - kind
+      - tags
+      - title
+      type: object
 externalDocs:
   description: ""
   url: ""
@@ -57,6 +412,143 @@ info:
   version: ""
 openapi: 3.1.0
 paths:
+  /healthz:
+    get:
+      description: Returns the health status of the system
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.HealthStatus'
+          description: OK
+      summary: Health check endpoint
+      tags:
+      - system
+  /metrics:
+    get:
+      description: Returns system metrics for monitoring
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.Metrics'
+          description: OK
+      summary: System metrics endpoint
+      tags:
+      - system
+  /system/info:
+    get:
+      description: Returns general information about the system including version
+        and build details
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.SystemInfo'
+          description: OK
+      summary: System information
+      tags:
+      - system
+  /v1/auth/login:
+    post:
+      description: Authenticates a user and returns access tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.LoginRequest'
+        description: Login credentials
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.LoginResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid credentials or request body
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: User login
+      tags:
+      - auth
+  /v1/auth/refresh-token:
+    post:
+      description: Refreshes an expired access token using a valid refresh token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.RefreshTokenRequest'
+        description: Refresh token
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.RefreshTokenResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: Refresh access token
+      tags:
+      - auth
+  /v1/auth/signup:
+    post:
+      description: Registers a new user account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.SignUpRequest'
+        description: User registration details
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Returns success message and token
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: User already exists or invalid request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: User signup
+      tags:
+      - auth
   /v1/projects:
     get:
       description: List Projects available on the platform
@@ -95,7 +587,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.NewProjectRequest'
         description: Project Creation data
         required: true
       responses:
@@ -103,7 +595,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
         "400":
           content:
@@ -141,8 +633,10 @@ paths:
           content:
             application/json:
               schema:
+                additionalProperties:
+                  type: string
                 type: object
-          description: OK
+          description: Success message
         "400":
           content:
             application/json:
@@ -178,7 +672,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
         "400":
           content:
@@ -209,7 +703,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.UpdateProjectRequest'
         description: Project Update data
         required: true
       responses:
@@ -217,7 +711,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
         "400":
           content:
@@ -235,6 +729,44 @@ paths:
       tags:
       - projects
   /v1/projects/{projectID}/test-cases:
+    get:
+      description: Get a single Project's test cases
+      operationId: GetProjectTestCases
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get a single Project's test cases
+      tags:
+      - projects
+  /v1/projects/{projectID}/test-plans:
     get:
       description: Get a single Project's test plans
       operationId: GetProjectTestPlans
@@ -255,7 +787,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestPlanListResponse'
           description: OK
         "400":
           content:
@@ -293,7 +825,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestRunListResponse'
           description: OK
         "400":
           content:
@@ -331,7 +863,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TesterListResponse'
           description: OK
         "400":
           content:
@@ -348,6 +880,48 @@ paths:
       summary: Get all Testers for a specific Project
       tags:
       - projects
+  /v1/projects/{projectID}/testers/assign:
+    post:
+      description: Assign multiple testers to a project
+      operationId: AssignTesters
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.BulkAssignTesters'
+        description: Bulk assign testers request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: Success message
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: Assign testers to a project
+      tags:
+      - projects
   /v1/projects/import:
     post:
       description: Import Projects from some source
@@ -356,7 +930,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.ImportProjectRequest'
         description: Import Specification
         required: true
       responses:
@@ -364,7 +938,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
         "400":
           content:
@@ -395,7 +969,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
         "400":
           content:
@@ -412,6 +986,75 @@ paths:
       summary: Search for a Project
       tags:
       - projects
+  /v1/settings:
+    get:
+      description: Retrieves all system settings
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      summary: Get system settings
+      tags:
+      - settings
+    put:
+      description: Updates a specific system setting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: {}
+              type: object
+        description: Setting key and value
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      summary: Update system setting
+      tags:
+      - settings
   /v1/test-cases:
     get:
       description: List Test Cases
@@ -426,7 +1069,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
         "400":
           content:
@@ -450,7 +1093,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.CreateTestCaseRequest'
         description: Create Test Case data
         required: true
       responses:
@@ -458,7 +1101,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
         "400":
           content:
@@ -496,8 +1139,10 @@ paths:
           content:
             application/json:
               schema:
+                additionalProperties:
+                  type: string
                 type: object
-          description: OK
+          description: Success message
         "400":
           content:
             application/json:
@@ -533,7 +1178,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
         "400":
           content:
@@ -564,7 +1209,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.UpdateTestCaseRequest'
         description: Test Case update data
         required: true
       responses:
@@ -572,7 +1217,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
         "400":
           content:
@@ -597,7 +1242,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.BulkCreateTestCases'
         description: Bulk Create Test Case data
         required: true
       responses:
@@ -605,7 +1250,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
         "400":
           content:
@@ -622,6 +1267,40 @@ paths:
       summary: Create multiple Test Cases at once
       tags:
       - test-cases
+  /v1/test-cases/import/github:
+    post:
+      description: Imports open issues from a GitHub repository as test cases for
+        a project
+      operationId: ImportIssuesFromGitHubAsTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ImportFromGithubRequest'
+        description: GitHub import request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: List of imported test cases
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: Import GitHub issues as test cases
+      tags:
+      - test-cases
   /v1/test-cases/query:
     get:
       description: Search for Test Cases
@@ -636,7 +1315,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
         "400":
           content:

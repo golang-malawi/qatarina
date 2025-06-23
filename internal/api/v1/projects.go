@@ -48,7 +48,7 @@ func ListProjects(projectService services.ProjectService) fiber.Handler {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
+//	@Success		200	{object}	schema.ProjectListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/query [get]
@@ -67,7 +67,7 @@ func SearchProjects(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.ProjectResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [get]
@@ -98,7 +98,7 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.TestCaseListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID}/test-cases [get]
@@ -129,10 +129,10 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.TestPlanListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/projects/{projectID}/test-cases [get]
+//	@Router			/v1/projects/{projectID}/test-plans [get]
 func GetProjectTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
@@ -160,7 +160,7 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.TestRunListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID}/test-runs [get]
@@ -190,8 +190,8 @@ func GetProjectTestRuns(testRunService services.TestRunService, logger logging.L
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Project Creation data"
-//	@Success		200		{object}	interface{}
+//	@Param			request	body		schema.NewProjectRequest	true	"Project Creation data"
+//	@Success		200		{object}	schema.ProjectResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects [post]
@@ -246,8 +246,8 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string		true	"Project ID"
-//	@Param			request		body		interface{}	true	"Project Update data"
-//	@Success		200			{object}	interface{}
+//	@Param			request		body		schema.UpdateProjectRequest	true	"Project Update data"
+//	@Success		200			{object}	schema.ProjectResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [post]
@@ -265,8 +265,8 @@ func UpdateProject(projectService services.ProjectService) fiber.Handler {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Import Specification"
-//	@Success		200		{object}	interface{}
+//	@Param			request	body		schema.ImportProjectRequest	true	"Import Specification"
+//	@Success		200		{object}	schema.ProjectListResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/import [post]
@@ -285,7 +285,7 @@ func ImportProject(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	map[string]string	"Success message"
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [delete]
@@ -304,7 +304,7 @@ func DeleteProject(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		int	true	"The project ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.TesterListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID}/testers [get]
@@ -325,6 +325,20 @@ func GetProjectTesters(projectService services.ProjectService, testerService ser
 	}
 }
 
+// AssignTesters godoc
+//
+// @ID AssignTesters
+// @Summary Assign testers to a project
+// @Description Assign multiple testers to a project
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param projectID path int true "Project ID"
+// @Param request body schema.BulkAssignTesters true "Bulk assign testers request"
+// @Success 200 {object} map[string]string "Success message"
+// @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
+// @Failure 500 {object} problemdetail.ProblemDetail "Server error"
+// @Router /v1/projects/{projectID}/testers/assign [post]
 func AssignTesters(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
