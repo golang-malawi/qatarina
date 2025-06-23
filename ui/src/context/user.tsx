@@ -44,29 +44,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginMutation = $api.useMutation("post", "/v1/auth/login");
 
-  const login = React.useCallback(async (data: LoginFormValues) => {
-    const { mutateAsync } = loginMutation;
-    const res = await mutateAsync({
-      body: {
-        email: data.email,
-        password: data.password,
-      },
-    });
-    if (!res) {
-      throw new Error("Something happened while logging in..");
-    }
-    const loginData = res as components["schemas"]["schema.LoginResponse"];
-    if (!loginData.user_id || !loginData.token || !loginData.displayName || !loginData.email || !loginData.expires_at) {
-      throw new Error("Login response missing required fields");
-    }
-    localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-    localStorage.setItem("auth.displayName", loginData.displayName);
-    localStorage.setItem("auth.email", loginData.email);
-    localStorage.setItem("auth.token", loginData.token);
-    localStorage.setItem("auth.expires_at", loginData.expires_at.toString());
-    setStoredUser(loginData.displayName);
-    setUser(loginData.displayName);
-  }, [loginMutation]);
+  const login = React.useCallback(
+    async (data: LoginFormValues) => {
+      const { mutateAsync } = loginMutation;
+      const res = await mutateAsync({
+        body: {
+          email: data.email,
+          password: data.password,
+        },
+      });
+      if (!res) {
+        throw new Error("Something happened while logging in..");
+      }
+      const loginData = res as components["schemas"]["schema.LoginResponse"];
+      if (!loginData.user_id || !loginData.token) {
+        throw new Error("Login response missing required fields");
+      }
+      localStorage.setItem("auth.user_id", `${loginData.user_id}`);
+      localStorage.setItem("auth.displayName", loginData.displayName ?? "");
+      localStorage.setItem("auth.email", loginData.email ?? "");
+      localStorage.setItem("auth.token", loginData.token);
+      localStorage.setItem(
+        "auth.expires_at",
+        loginData.expires_at?.toString() ?? ""
+      );
+      setStoredUser(loginData.displayName ?? "");
+      setUser(loginData.displayName ?? "");
+    },
+    [loginMutation]
+  );
 
   React.useEffect(() => {
     setUser(getStoredUser());
