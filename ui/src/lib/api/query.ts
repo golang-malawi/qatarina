@@ -15,11 +15,11 @@ const middleware: Middleware = {
   },
 };
 
-const fetchClient = createFetchClient<paths>({
+export const apiClient = createFetchClient<paths>({
   baseUrl: getApiEndpoint(),
 });
-fetchClient.use(middleware);
-const $api = createClient(fetchClient);
+apiClient.use(middleware);
+const $api = createClient(apiClient);
 
 export default $api;
 
