@@ -29,7 +29,3 @@ export async function getTestCaseById(testCaseID: string) {
 export async function createTestCase(data: components["schemas"]["schema.CreateTestCaseRequest"]) {
   return apiClient.request("post", "/v1/test-cases", { body: data });
 }
-
-export async function getTestCasesByProjectId(projectID: string) {
-  return apiClient.request("get", "/v1/projects/{projectID}/test-cases", { params: { path: { projectID } } });
-}

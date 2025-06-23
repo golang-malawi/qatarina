@@ -84,7 +84,7 @@ func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Create Test plan data"
+//	@Param			request	body		schema.CreateTestPlan	true	"Create Test plan data"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail

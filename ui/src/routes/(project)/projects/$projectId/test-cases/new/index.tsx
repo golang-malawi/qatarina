@@ -1,9 +1,9 @@
-import { Button, Checkbox, Field, Input } from "@chakra-ui/react";
+import { Button, Checkbox, Field, Input, Spinner } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
 import { createFileRoute } from "@tanstack/react-router";
-import { createTestCase } from "@/services/TestCaseService";
+import { useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
@@ -23,21 +23,24 @@ function NewTestCases() {
   const [description, setDescription] = useState("");
   const [is_draft, setIs_draft] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const createTestCaseMutation = useCreateTestCaseMutation();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const res = await createTestCase({
-      project_id: parseInt(`${project_id}`),
-      kind,
-      code,
-      feature_or_module,
-      title,
-      description,
-      is_draft,
-      tags: tags,
+    const res = await createTestCaseMutation.mutateAsync({
+      body: {
+        project_id: parseInt(`${project_id}`),
+        kind,
+        code,
+        feature_or_module,
+        title,
+        description,
+        is_draft,
+        tags: tags,
+      },
     });
 
-    if (res.status == 200) {
+    if (res) {
       toaster.create({
         title: "Test Case created.",
         description: "We've created your Test Case.",
@@ -120,9 +123,15 @@ function NewTestCases() {
           Is Draft
         </Checkbox.Root>
 
-        <Button type="submit">Create Test Case</Button>
+        <Button type="submit" disabled={createTestCaseMutation.isPending}>
+          {createTestCaseMutation.isPending ? (
+            <Spinner size="sm" mr={2} />
+          ) : null}
+          {createTestCaseMutation.isPending
+            ? "Creating..."
+            : "Create Test Case"}
+        </Button>
       </form>
     </div>
   );
 }
-

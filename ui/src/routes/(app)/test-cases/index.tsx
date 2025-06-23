@@ -35,7 +35,7 @@ function TestCasePage() {
     return <div className="error">Error: error fetching</div>;
   }
 
-  const testCaseRows = testCases.map((tc, idx) => (
+  const testCaseRows = (testCases?.data?.test_cases ?? []).map((tc: any, idx: number) => (
     <Table.Row key={idx}>
       <Table.Cell>{tc.code}</Table.Cell>
       <Table.Cell>{tc.description}</Table.Cell>

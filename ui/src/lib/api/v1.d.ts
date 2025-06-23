@@ -1051,6 +1051,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description State is the result of the test run */
+        "dbsqlc.TestRunState": string;
         "problemdetail.ProblemDetail": {
             context?: unknown;
             detail?: string;
@@ -1068,6 +1070,15 @@ export interface components {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
         };
+        "schema.CommitTestRunResult": {
+            actual_result: string;
+            expected_result?: string;
+            is_closed?: boolean;
+            notes: string;
+            result_state: components["schemas"]["dbsqlc.TestRunState"];
+            test_run_id: string;
+            tested_on: string;
+        };
         "schema.CreateTestCaseRequest": {
             code: string;
             description: string;
@@ -1077,6 +1088,18 @@ export interface components {
             project_id?: number;
             tags: string[];
             title: string;
+        };
+        "schema.CreateTestPlan": {
+            assigned_to_id?: number;
+            closed_at?: string;
+            created_by_id?: number;
+            description: string;
+            kind: string;
+            planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
+            project_id: number;
+            scheduled_end_at?: string;
+            start_at: string;
+            updated_by_id?: number;
         };
         "schema.HealthStatus": {
             message?: string;
@@ -1115,6 +1138,14 @@ export interface components {
             version: string;
             website_url: string;
         };
+        "schema.NewUserRequest": {
+            display_name: string;
+            email: string;
+            first_name: string;
+            last_name: string;
+            organization_id?: number;
+            password: string;
+        };
         "schema.ProjectListResponse": {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
@@ -1150,6 +1181,10 @@ export interface components {
             sha?: string;
             title?: string;
             version?: string;
+        };
+        "schema.TestCaseAssignment": {
+            test_case_id?: string;
+            user_ids?: number[];
         };
         "schema.TestCaseListResponse": {
             test_cases?: components["schemas"]["schema.TestCaseResponse"][];
@@ -2178,7 +2213,7 @@ export interface operations {
         /** @description Create Test plan data */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.CreateTestPlan"];
             };
         };
         responses: {
@@ -2581,7 +2616,7 @@ export interface operations {
         /** @description Test Run update data */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.CommitTestRunResult"];
             };
         };
         responses: {
@@ -2675,7 +2710,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TesterListResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2883,7 +2918,7 @@ export interface operations {
         /** @description User data */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.NewUserRequest"];
             };
         };
         responses: {

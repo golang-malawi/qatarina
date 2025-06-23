@@ -1,27 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button, Container, Flex, Heading } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
-import TestPlanService from "@/services/TestPlanService";
+import { useProjectTestPlansQuery } from "@/services/TestPlanService";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
-import { TestPlan } from "@/common/models";
 
-export const Route = createFileRoute("/(project)/projects/$projectId/test-plans/")({
+export const Route = createFileRoute(
+  "/(project)/projects/$projectId/test-plans/"
+)({
   component: ListProjectTestPlans,
 });
 
 function ListProjectTestPlans() {
   const { projectId } = Route.useParams();
-  const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
-  const testPlanService = new TestPlanService();
-  // const projectService = new ProjectService();
-  useEffect(() => {
-    testPlanService
-      .findAllByProject(projectId!)
-      .then((data) => setTestPlans(data));
-  }, [projectId]);
+  const {
+    data: testPlans,
+    isLoading,
+    error,
+  } = useProjectTestPlansQuery(projectId!);
 
-  const testPlanList = testPlans.map((entry) => (
-    <Flex alignItems={"start"} gap="3" p="5">
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading test plans</div>;
+
+  const testPlanList = (testPlans?.test_plans ?? []).map((entry) => (
+    <Flex alignItems={"start"} gap="3" p="5" key={entry?.id}>
       <Link
         to={`/projects/$projectId/test-plans/$testPlanID/execute`}
         params={{

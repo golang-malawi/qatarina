@@ -145,7 +145,7 @@ func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			testRunID	path		string		true	"Test Run ID"
-//	@Param			request		body		interface{}	true	"Test Run update data"
+//	@Param			request		body		schema.CommitTestRunResult	true	"Test Run update data"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail

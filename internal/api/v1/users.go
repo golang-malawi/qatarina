@@ -75,7 +75,7 @@ func GetOneUser(services.UserService) fiber.Handler {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"User data"
+//	@Param			request	body		schema.NewUserRequest	true	"User data"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail

@@ -6,7 +6,7 @@ import {
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import UserService from "@/services/UserService";
+import { useCreateUserMutation } from "@/services/UserService";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute("/(app)/users/new/")({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/(app)/users/new/")({
 });
 
 function CreateNewUser() {
-  const userService = new UserService();
+  const createUserMutation = useCreateUserMutation();
   const redirect = useNavigate();
 
   async function handleSubmit(e: {
@@ -24,15 +24,17 @@ function CreateNewUser() {
     password: string;
     email: string;
   }) {
-    const res = await userService.create({
-      display_name: `${e.first_name} ${e.last_name}`,
-      first_name: e.first_name,
-      last_name: e.last_name,
-      password: e.password,
-      email: e.email,
+    const res = await createUserMutation.mutateAsync({
+      body: {
+        display_name: `${e.first_name} ${e.last_name}`,
+        first_name: e.first_name,
+        last_name: e.last_name,
+        password: e.password,
+        email: e.email,
+      },
     });
 
-    if (res.status == 200) {
+    if (res) {
       toaster.create({
         title: "User created.",
         description: "We've created your new Team mate.",

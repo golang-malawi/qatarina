@@ -1,5 +1,12 @@
 components:
   schemas:
+    dbsqlc.TestRunState:
+      description: State is the result of the test run
+      type: string
+      x-enum-varnames:
+      - TestRunStatePending
+      - TestRunStatePassed
+      - TestRunStateFailed
     problemdetail.ProblemDetail:
       properties:
         context: {}
@@ -40,6 +47,29 @@ components:
       - project_id
       - test_cases
       type: object
+    schema.CommitTestRunResult:
+      properties:
+        actual_result:
+          type: string
+        expected_result:
+          type: string
+        is_closed:
+          type: boolean
+        notes:
+          type: string
+        result_state:
+          $ref: '#/components/schemas/dbsqlc.TestRunState'
+        test_run_id:
+          type: string
+        tested_on:
+          type: string
+      required:
+      - actual_result
+      - notes
+      - result_state
+      - test_run_id
+      - tested_on
+      type: object
     schema.CreateTestCaseRequest:
       properties:
         code:
@@ -68,6 +98,37 @@ components:
       - kind
       - tags
       - title
+      type: object
+    schema.CreateTestPlan:
+      properties:
+        assigned_to_id:
+          type: integer
+        closed_at:
+          type: string
+        created_by_id:
+          type: integer
+        description:
+          type: string
+        kind:
+          type: string
+        planned_tests:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseAssignment'
+          type: array
+          uniqueItems: false
+        project_id:
+          type: integer
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+        updated_by_id:
+          type: integer
+      required:
+      - description
+      - kind
+      - project_id
+      - start_at
       type: object
     schema.HealthStatus:
       properties:
@@ -145,6 +206,27 @@ components:
       - version
       - website_url
       type: object
+    schema.NewUserRequest:
+      properties:
+        display_name:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        organization_id:
+          type: integer
+        password:
+          type: string
+      required:
+      - display_name
+      - email
+      - first_name
+      - last_name
+      - password
+      type: object
     schema.ProjectListResponse:
       properties:
         projects:
@@ -221,6 +303,16 @@ components:
           type: string
         version:
           type: string
+      type: object
+    schema.TestCaseAssignment:
+      properties:
+        test_case_id:
+          type: string
+        user_ids:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
       type: object
     schema.TestCaseListResponse:
       properties:
@@ -1370,7 +1462,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.CreateTestPlan'
         description: Create Test plan data
         required: true
       responses:
@@ -1701,7 +1793,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.CommitTestRunResult'
         description: Test Run update data
         required: true
       responses:
@@ -1771,7 +1863,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TesterListResponse'
           description: OK
         "400":
           content:
@@ -1935,7 +2027,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.NewUserRequest'
         description: User data
         required: true
       responses:

@@ -27,14 +27,6 @@ function setStoredUser(user: string | null) {
   }
 }
 
-interface LoginData {
-  user_id: number;
-  token: string;
-  email: string;
-  displayName: string;
-  expires_at: number;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<string | null>(getStoredUser());
   const isAuthenticated = !!user;
