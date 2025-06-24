@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -22,6 +23,9 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
+		request.LastEditedBy = int32(authutil.GetAuthUserID(c))
+		request.CreatedBy = int32(authutil.GetAuthUserID(c))
+
 		_, err := page.Create(context.Background(), request)
 		if err != nil {
 			logger.Error("api-pages", "failed to process request", "error", err)
@@ -29,7 +33,7 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 		}
 
 		return c.JSON(fiber.Map{
-			"message": "page created sucessfuly",
+			"message": "page created successfully",
 		})
 	}
 }
