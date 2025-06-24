@@ -1,23 +1,22 @@
+import $api from "@/lib/api/query";
 import {
-  findTestCaseAll,
-  findTestCaseById,
-  findTestCasesByProjectId,
+  getTestCases,
+  getTestCaseById,
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
 
 export const findTestCaseAllQueryOptions = queryOptions({
   queryKey: ["testCases"],
-  queryFn: () => findTestCaseAll(),
+  queryFn: () => getTestCases(),
 });
 
 export const findTestCaseByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projectTestCases", id],
-    queryFn: () => findTestCaseById(id),
+    queryFn: () => getTestCaseById(id),
   });
 
-export const testCasesByProjectIdQueryOptions = (projectId: string) =>
-  queryOptions({
-    queryKey: ["projectTestCasesByProject", projectId],
-    queryFn: () => findTestCasesByProjectId(projectId),
+export const testCasesByProjectIdQueryOptions = (projectID: string) =>
+  $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
+    params: { path: { projectID } },
   });

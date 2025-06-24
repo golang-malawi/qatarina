@@ -62,3 +62,13 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 
 	return testRuns, nil
 }
+
+type TestRunResponse struct {
+	ID          string `json:"id"`
+	ProjectID   int64  `json:"project_id"`
+	TestPlanID  int64  `json:"test_plan_id"`
+}
+
+type TestRunListResponse struct {
+	TestRuns []TestRunResponse `json:"test_runs"`
+}

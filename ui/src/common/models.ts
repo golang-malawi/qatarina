@@ -1,3 +1,5 @@
+import { components } from "@/lib/api/v1";
+
 export interface Project {
   id: number;
   title?: string;
@@ -32,3 +34,6 @@ export interface TesterRecord {
   name: string;
   last_login_at: string;
 }
+
+
+export type CreateTestPlan = components["schemas"]["schema.CreateTestPlan"]

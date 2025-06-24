@@ -1,23 +1,7 @@
-import axios from "axios";
-import { getApiEndpoint } from "../common/request";
+import { apiClient } from "@/lib/api/query";
 
-export class AuthService {
-    apiEndpoint: string;
-
-
-    constructor() {
-        this.apiEndpoint = getApiEndpoint()
-    }
-
-    async login(email: string, password: string) {
-        const res = await axios.post(`${this.apiEndpoint}/v1/auth/login`, {
-            email,
-            password
-        });
-
-        if (res.status === 200) {
-            return res;
-        }
-        throw new Error(res.data)
-    }
+export async function login(email: string, password: string) {
+  return apiClient.request("post", "/v1/auth/login", {
+    body: { email, password },
+  });
 }

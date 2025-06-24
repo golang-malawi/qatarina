@@ -46,3 +46,9 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" validate:"required"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 }
+
+type RefreshTokenRequest struct {
+}
+
+type RefreshTokenResponse struct {
+}

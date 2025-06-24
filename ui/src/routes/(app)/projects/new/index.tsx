@@ -7,7 +7,7 @@ import {
 import { useForm } from "@tanstack/react-form";
 
 import { useNavigate } from "@tanstack/react-router";
-import ProjectService from "@/services/ProjectService";
+import { useCreateProjectMutation } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute("/(app)/projects/new/")({
@@ -23,22 +23,24 @@ export const Route = createFileRoute("/(app)/projects/new/")({
 // }
 
 function CreateProject() {
-  const projectService = new ProjectService();
+  const createProjectMutation = useCreateProjectMutation();
   const redirect = useNavigate();
   async function handleSubmit(e: {
-    name: unknown;
-    description: unknown;
-    version: unknown;
-    website_url: unknown;
+    name: string;
+    description: string;
+    version: string;
+    website_url: string;
   }) {
-    const res = await projectService.create({
-      name: e.name,
-      description: e.description,
-      version: e.version,
-      website_url: e.website_url,
+    const res = await createProjectMutation.mutateAsync({
+      body: {
+        name: e.name,
+        description: e.description,
+        version: e.version,
+        website_url: e.website_url,
+      },
     });
 
-    if (res.status == 200) {
+    if (res) {
       toaster.create({
         title: "Project created.",
         description: "We've created your Project.",

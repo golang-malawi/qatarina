@@ -1,51 +1,24 @@
-import axios from "axios";
-import { getApiEndpoint } from "@/common/request";
-import createAuthHeaders from "@/hooks/useAuthHeaders";
+import { apiClient } from "@/lib/api/query";
+import $api from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
 
-export default class ProjectService {
-  apiEndpoint: string;
-
-  constructor() {
-    this.apiEndpoint = getApiEndpoint();
-  }
-
-  async findById(projectId: string) {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/projects/${projectId}`,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res.data.project;
-    }
-    throw new Error(res.data);
-  }
-
-  async create(data: unknown) {
-    const res = await axios.post(
-      `${this.apiEndpoint}/v1/projects`,
-      data,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res;
-    }
-    throw new Error(res.data);
-  }
+export function useProjectQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}", { params: { path: { projectID } } });
 }
 
-export interface Project {
-  id: string;
-  title: string;
-  project_url: string;
+export function useProjectsQuery() {
+  return $api.useQuery("get", "/v1/projects");
 }
 
-export async function findAllProjects(): Promise<Project[]> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/projects`,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    return res.data.projects;
-  }
-  throw new Error(res.data);
+export function useCreateProjectMutation() {
+  return $api.useMutation("post", "/v1/projects");
 }
+
+export async function getProjectById(projectID: string) {
+  return apiClient.request("get", "/v1/projects/{projectID}", { params: { path: { projectID } } });
+}
+
+export async function createProject(data: components["schemas"]["schema.NewProjectRequest"]) {
+  return apiClient.request("post", "/v1/projects", { body: data });
+}
+

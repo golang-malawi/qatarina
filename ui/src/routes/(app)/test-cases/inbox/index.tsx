@@ -33,7 +33,7 @@ function TestCasePageInbox() {
     return <div className="error">Error: error fetching</div>;
   }
 
-  const testCaseRows = testCases.map((tc, idx) => (
+  const testCaseRows = (testCases?.data?.test_cases ?? []).map((tc: any, idx: number) => (
     <Box padding={"6px"} borderBottom={"1px solid #efefef"} key={idx}>
       <Link
         to={`/test-cases/inbox/$testCaseId`}

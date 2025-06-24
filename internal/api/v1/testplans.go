@@ -24,7 +24,7 @@ import (
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [get]
+//	@Router			/v1/test-plans [get]
 func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -50,7 +50,7 @@ func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [get]
+//	@Router			/v1/test-plans [get]
 func SearchTestPlans(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestPlans")
@@ -69,7 +69,7 @@ func SearchTestPlans(services.TestPlanService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [get]
+//	@Router			/v1/test-plans/{testPlanID} [get]
 func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestPlan")
@@ -84,11 +84,11 @@ func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Create Test plan data"
+//	@Param			request	body		schema.CreateTestPlan	true	"Create Test plan data"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [post]
+//	@Router			/v1/test-plans [post]
 func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -132,7 +132,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [post]
+//	@Router			/v1/test-plans/{testPlanID} [post]
 func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestPlan")
@@ -151,7 +151,7 @@ func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [delete]
+//	@Router			/v1/test-plans/{testPlanID} [delete]
 func DeleteTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, _ := c.ParamsInt("testPlanID", 0)
