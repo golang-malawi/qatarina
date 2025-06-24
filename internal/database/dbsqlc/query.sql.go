@@ -513,6 +513,37 @@ func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindU
 	return i, err
 }
 
+const getPage = `-- name: GetPage :one
+SELECT id, parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at FROM pages WHERE id = $1
+`
+
+func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
+	row := q.db.QueryRowContext(ctx, getPage, id)
+	var i Page
+	err := row.Scan(
+		&i.ID,
+		&i.ParentPageID,
+		&i.PageVersion,
+		&i.OrgID,
+		&i.ProjectID,
+		&i.Code,
+		&i.Title,
+		&i.FilePath,
+		&i.Content,
+		&i.PageType,
+		&i.MimeType,
+		&i.HasEmbeddedMedia,
+		&i.ExternalContentUrl,
+		&i.NotionUrl,
+		&i.LastEditedBy,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects WHERE id = $1
 `

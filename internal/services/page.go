@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -10,7 +10,7 @@ import (
 )
 
 type PageService interface {
-	Create(p *schema.PageRequest) (bool, error)
+	Create(context.Context, *schema.PageRequest) (bool, error)
 }
 
 func NewPageService(queries *dbsqlc.Queries) PageService {
@@ -25,10 +25,10 @@ type pageServiceImp struct {
 }
 
 // Implement the Create method
-func (p *pageServiceImp) Create(request *schema.PageRequest) (bool, error) {
+func (p *pageServiceImp) Create(ctx context.Context, request *schema.PageRequest) (bool, error) {
 
-	_, err := p.db.CreatePage(context.Background(), dbsqlc.CreatePageParams{
-		ParentPageID:       sql.NullInt32{Int32: request.ParentPageID.Int32, Valid: true},
+	_, err := p.db.CreatePage(ctx, dbsqlc.CreatePageParams{
+		ParentPageID:       common.NewNullInt32(request.ParentPageID.Int32),
 		PageVersion:        request.PageVersion,
 		OrgID:              request.OrgID,
 		ProjectID:          request.ProjectID,
@@ -41,12 +41,13 @@ func (p *pageServiceImp) Create(request *schema.PageRequest) (bool, error) {
 		HasEmbeddedMedia:   request.HasEmbeddedMedia,
 		ExternalContentUrl: common.NullString(request.ExternalContentUrl.String),
 		NotionUrl:          common.NullString(request.NotionUrl.String),
-		LastEditedBy:       request.LastEditedBy,
 		CreatedBy:          request.CreatedBy,
+		LastEditedBy:       request.LastEditedBy,
 	})
 
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to create page %v", err)
 	}
+
 	return true, nil
 }

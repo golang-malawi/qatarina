@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
@@ -9,9 +11,7 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
-var logger logging.Logger
-
-func CreatePage(page services.PageService) fiber.Handler {
+func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.PageRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -22,10 +22,10 @@ func CreatePage(page services.PageService) fiber.Handler {
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		_, err := page.Create(request)
+		_, err := page.Create(context.Background(), request)
 		if err != nil {
-			logger.Error("api-modules", "failed to process request", "error", err)
-			return problemdetail.BadRequest(c, "failed to process equest")
+			logger.Error("api-pages", "failed to process request", "error", err)
+			return problemdetail.BadRequest(c, "failed to process request")
 		}
 
 		return c.JSON(fiber.Map{
