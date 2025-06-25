@@ -61,3 +61,16 @@ func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.H
 		return c.JSON(page)
 	}
 }
+
+func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		pages, err := pagesService.GetAllPages(ctx.Context())
+		if err != nil {
+			return problemdetail.ServerErrorProblem(ctx, "failled to process request")
+
+		}
+		return ctx.JSON(fiber.Map{
+			"pages": pages,
+		})
+	}
+}

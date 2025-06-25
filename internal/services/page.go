@@ -13,6 +13,7 @@ import (
 type PageService interface {
 	Create(context.Context, *schema.PageRequest) (bool, error)
 	GetOnePage(ctx context.Context, id int32) (dbsqlc.Page, error)
+	GetAllPages(ctx context.Context) ([]dbsqlc.Page, error)
 }
 
 func NewPageService(queries *dbsqlc.Queries) PageService {
@@ -63,4 +64,13 @@ func (p *pageServiceImp) GetOnePage(ctx context.Context, id int32) (dbsqlc.Page,
 	}
 
 	return page, nil
+}
+
+func (p *pageServiceImp) GetAllPages(ctx context.Context) ([]dbsqlc.Page, error) {
+	pages, err := p.db.GetAllPages(ctx)
+	if err != nil {
+		p.logger.Error("failed to fetxh pages", "error", err)
+		return nil, err
+	}
+	return pages, nil
 }
