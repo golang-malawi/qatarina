@@ -184,3 +184,14 @@ INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title,
 
 -- name: GetPage :one
 SELECT * FROM pages WHERE id = $1;
+
+-- name: GetAllPages :many
+SELECT * FROM pages
+ORDER BY created_at DESC;
+
+-- name: UpdatePage :exec
+UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
+WHERE id = $1;
+
+-- name: DeletePage :execrows
+DELETE FROM pages WHERE id = $1;

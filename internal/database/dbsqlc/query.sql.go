@@ -452,6 +452,18 @@ func (q *Queries) DeleteAllTestRunsInProject(ctx context.Context, projectID int3
 	return result.RowsAffected()
 }
 
+const deletePage = `-- name: DeletePage :execrows
+DELETE FROM pages WHERE id = $1
+`
+
+func (q *Queries) DeletePage(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deletePage, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteProject = `-- name: DeleteProject :execrows
 DELETE FROM projects WHERE id = $1
 `
@@ -511,6 +523,54 @@ func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindU
 		&i.LastLoginAt,
 	)
 	return i, err
+}
+
+const getAllPages = `-- name: GetAllPages :many
+SELECT id, parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at FROM pages
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
+	rows, err := q.db.QueryContext(ctx, getAllPages)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Page
+	for rows.Next() {
+		var i Page
+		if err := rows.Scan(
+			&i.ID,
+			&i.ParentPageID,
+			&i.PageVersion,
+			&i.OrgID,
+			&i.ProjectID,
+			&i.Code,
+			&i.Title,
+			&i.FilePath,
+			&i.Content,
+			&i.PageType,
+			&i.MimeType,
+			&i.HasEmbeddedMedia,
+			&i.ExternalContentUrl,
+			&i.NotionUrl,
+			&i.LastEditedBy,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPage = `-- name: GetPage :one
@@ -1298,6 +1358,52 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePage = `-- name: UpdatePage :exec
+UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
+WHERE id = $1
+`
+
+type UpdatePageParams struct {
+	ID                 int32
+	ParentPageID       sql.NullInt32
+	PageVersion        string
+	OrgID              int32
+	ProjectID          int32
+	Code               string
+	Title              string
+	FilePath           sql.NullString
+	Content            string
+	PageType           string
+	MimeType           string
+	HasEmbeddedMedia   bool
+	ExternalContentUrl sql.NullString
+	NotionUrl          sql.NullString
+	LastEditedBy       int32
+	CreatedBy          int32
+}
+
+func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
+	_, err := q.db.ExecContext(ctx, updatePage,
+		arg.ID,
+		arg.ParentPageID,
+		arg.PageVersion,
+		arg.OrgID,
+		arg.ProjectID,
+		arg.Code,
+		arg.Title,
+		arg.FilePath,
+		arg.Content,
+		arg.PageType,
+		arg.MimeType,
+		arg.HasEmbeddedMedia,
+		arg.ExternalContentUrl,
+		arg.NotionUrl,
+		arg.LastEditedBy,
+		arg.CreatedBy,
+	)
+	return err
 }
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows
