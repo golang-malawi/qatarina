@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -71,6 +72,52 @@ func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber
 		}
 		return ctx.JSON(fiber.Map{
 			"pages": pages,
+		})
+	}
+}
+
+func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		request := new(schema.UpdatePageRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(ctx, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(ctx, "invalid data in request", err)
+			}
+			logger.Error("api-pages", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(ctx, "failed to parse data in request")
+		}
+
+		request.LastEditedBy = int32(authutil.GetAuthUserID(ctx))
+		request.CreatedBy = int32(authutil.GetAuthUserID(ctx))
+		_, err := pageService.UpdatePage(ctx.Context(), *request)
+		if err != nil {
+			logger.Error("api-pages", "failed to process request", "error", err)
+			return problemdetail.BadRequest(ctx, "failed to process request")
+		}
+
+		return ctx.JSON(fiber.Map{
+			"message": "Page updated successfully",
+		})
+	}
+}
+
+func DeletePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		pageIDParam := ctx.Params("id")
+		pageID, err := strconv.Atoi(pageIDParam)
+		if err != nil {
+			logger.Error("v1-pages", "failed to parse page ID data", "error", err)
+			return problemdetail.BadRequest(ctx, "failed to parse pageID data in request")
+		}
+
+		err = pageService.DeletePage(ctx.Context(), int32(pageID))
+		if err != nil {
+			logger.Error("v1-pages", "failed to delete page", "error", err)
+			return problemdetail.BadRequest(ctx, "failed to delete page")
+		}
+		return ctx.JSON(fiber.Map{
+			"message": "Page deleted successfully",
+			"pageID":  pageID,
 		})
 	}
 }

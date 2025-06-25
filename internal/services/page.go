@@ -14,6 +14,8 @@ type PageService interface {
 	Create(context.Context, *schema.PageRequest) (bool, error)
 	GetOnePage(ctx context.Context, id int32) (dbsqlc.Page, error)
 	GetAllPages(ctx context.Context) ([]dbsqlc.Page, error)
+	UpdatePage(ctx context.Context, request schema.UpdatePageRequest) (bool, error)
+	DeletePage(ctx context.Context, id int32) error
 }
 
 func NewPageService(queries *dbsqlc.Queries) PageService {
@@ -73,4 +75,37 @@ func (p *pageServiceImp) GetAllPages(ctx context.Context) ([]dbsqlc.Page, error)
 		return nil, err
 	}
 	return pages, nil
+}
+
+func (p *pageServiceImp) UpdatePage(ctx context.Context, request schema.UpdatePageRequest) (bool, error) {
+	err := p.db.UpdatePage(ctx, dbsqlc.UpdatePageParams{
+		ID:                 request.ID,
+		ParentPageID:       common.NewNullInt32(request.ParentPageID.Int32),
+		PageVersion:        request.PageVersion,
+		OrgID:              request.OrgID,
+		ProjectID:          request.ProjectID,
+		Code:               request.Code,
+		Title:              request.Title,
+		FilePath:           common.NullString(request.FilePath.String),
+		Content:            request.Content,
+		PageType:           request.PageType,
+		MimeType:           request.MimeType,
+		HasEmbeddedMedia:   request.HasEmbeddedMedia,
+		ExternalContentUrl: common.NullString(request.ExternalContentUrl.String),
+		NotionUrl:          common.NullString(request.NotionUrl.String),
+		CreatedBy:          request.CreatedBy,
+		LastEditedBy:       request.LastEditedBy,
+	})
+	if err != nil {
+		return false, fmt.Errorf("failed to update page")
+	}
+	return true, nil
+}
+
+func (p *pageServiceImp) DeletePage(ctx context.Context, id int32) error {
+	_, err := p.db.DeletePage(ctx, id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
