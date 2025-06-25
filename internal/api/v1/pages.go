@@ -2,6 +2,9 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -35,5 +38,26 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 		return c.JSON(fiber.Map{
 			"message": "page created successfully",
 		})
+	}
+}
+
+func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		pageID, err := c.ParamsInt("id", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
+		}
+		fmt.Println("GetOnePage handler triggered with ID:", pageID)
+
+		page, err := pageService.GetOnePage(context.Background(), int32(pageID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("v1-pages", "page not found", "error", err)
+			}
+
+			logger.Error("v1-pages", "failed to retrieve request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to retrieve page")
+		}
+		return c.JSON(page)
 	}
 }

@@ -6,11 +6,13 @@ import (
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
 type PageService interface {
 	Create(context.Context, *schema.PageRequest) (bool, error)
+	GetOnePage(ctx context.Context, id int32) (dbsqlc.Page, error)
 }
 
 func NewPageService(queries *dbsqlc.Queries) PageService {
@@ -21,7 +23,8 @@ func NewPageService(queries *dbsqlc.Queries) PageService {
 
 // Implementation of the PageService
 type pageServiceImp struct {
-	db *dbsqlc.Queries
+	db     *dbsqlc.Queries
+	logger logging.Logger
 }
 
 // Implement the Create method
@@ -50,4 +53,14 @@ func (p *pageServiceImp) Create(ctx context.Context, request *schema.PageRequest
 	}
 
 	return true, nil
+}
+
+func (p *pageServiceImp) GetOnePage(ctx context.Context, id int32) (dbsqlc.Page, error) {
+	page, err := p.db.GetPage(ctx, id)
+	if err != nil {
+		p.logger.Error("services-pages", "failed to fetch with id %d: %v", id, err)
+		return dbsqlc.Page{}, err
+	}
+
+	return page, nil
 }

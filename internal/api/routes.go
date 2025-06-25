@@ -55,6 +55,7 @@ func (api *API) routes() {
 	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)
 	{
 		pagesV1.Post("/pages", apiv1.CreatePage(api.PageService, api.logger))
+		pagesV1.Get("/pages/:id", apiv1.GetOnePage(api.PageService, api.logger))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
