@@ -70,6 +70,16 @@ components:
       - test_run_id
       - tested_on
       type: object
+    schema.CompactUserListResponse:
+      properties:
+        total:
+          type: integer
+        users:
+          items:
+            $ref: '#/components/schemas/schema.UserCompact'
+          type: array
+          uniqueItems: false
+      type: object
     schema.CreateTestCaseRequest:
       properties:
         code:
@@ -495,6 +505,17 @@ components:
       - kind
       - tags
       - title
+      type: object
+    schema.UserCompact:
+      properties:
+        createdAt:
+          type: string
+        displayName:
+          type: string
+        id:
+          type: integer
+        username:
+          type: string
       type: object
 externalDocs:
   description: ""
@@ -2003,7 +2024,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CompactUserListResponse'
           description: OK
         "400":
           content:

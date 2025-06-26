@@ -28,7 +28,7 @@ func (api *API) routes() {
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
-		usersV1.Get("", apiv1.ListUsers(api.UserService))
+		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))
 		usersV1.Post("", apiv1.CreateUser(api.UserService, api.logger))
 		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
 		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService))

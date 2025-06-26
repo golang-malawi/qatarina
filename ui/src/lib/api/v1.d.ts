@@ -1079,6 +1079,10 @@ export interface components {
             test_run_id: string;
             tested_on: string;
         };
+        "schema.CompactUserListResponse": {
+            total?: number;
+            users?: components["schemas"]["schema.UserCompact"][];
+        };
         "schema.CreateTestCaseRequest": {
             code: string;
             description: string;
@@ -1264,6 +1268,12 @@ export interface components {
             kind: string;
             tags: string[];
             title: string;
+        };
+        "schema.UserCompact": {
+            createdAt?: string;
+            displayName?: string;
+            id?: number;
+            username?: string;
         };
     };
     responses: never;
@@ -2885,7 +2895,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.CompactUserListResponse"];
                 };
             };
             /** @description Bad Request */

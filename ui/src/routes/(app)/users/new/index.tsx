@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Box,
   Button,
   Field,
+  Flex,
+  Heading,
   Input,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useCreateUserMutation } from "@/services/UserService";
 import { toaster } from "@/components/ui/toaster";
+import { useState } from "react";
 
 export const Route = createFileRoute("/(app)/users/new/")({
   component: CreateNewUser,
@@ -16,6 +20,7 @@ export const Route = createFileRoute("/(app)/users/new/")({
 function CreateNewUser() {
   const createUserMutation = useCreateUserMutation();
   const redirect = useNavigate();
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: {
     display_name?: string;
@@ -44,6 +49,7 @@ function CreateNewUser() {
       redirect({ to: "/users" });
     }
 
+
     return false;
   }
 
@@ -56,10 +62,24 @@ function CreateNewUser() {
       email: "",
     },
     onSubmit: async ({ value }) => {
-      return handleSubmit(value);
+      setSubmitting(true)
+      try {
+        return handleSubmit(value);
+      } catch(err) {
+        toaster.create({
+          title: "Failed to create user account.",
+          description: "Failed to create new user account",
+          type: "error",
+          duration: 3000,
+        });
+      } finally {
+        setSubmitting(false)
+      }
     },
   });
   return (
+    <Box>
+      <Heading size="3xl">Add New User</Heading>
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -67,6 +87,7 @@ function CreateNewUser() {
         form.handleSubmit();
       }}
     >
+      <Flex gap="4">
       <form.Field
         name="first_name"
         children={(field) => (
@@ -97,6 +118,7 @@ function CreateNewUser() {
           </Field.Root>
         )}
       />
+      </Flex>
       <form.Field
         name="email"
         children={(field) => (
@@ -128,7 +150,8 @@ function CreateNewUser() {
         )}
       />
 
-      <Button type="submit">Create New</Button>
+      <Button type="submit" variant="outline" loading={submitting}>Submit</Button>
     </form>
+    </Box>
   );
 }
