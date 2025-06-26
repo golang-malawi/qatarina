@@ -7,6 +7,12 @@ type UserCompact struct {
 	CreatedAt   string `json:"createdAt"`
 }
 
+// CompactUserListResponse list of users but compact form
+type CompactUserListResponse struct {
+	Total int           `json:"total"`
+	Users []UserCompact `json:"users"`
+}
+
 type SignUpRequest struct {
 	FirstName   string `json:"firstname" validate:"required"`
 	LastName    string `json:"lastname" validate:"required"`
