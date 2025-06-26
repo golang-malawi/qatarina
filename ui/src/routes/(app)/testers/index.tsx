@@ -8,10 +8,10 @@ export const Route = createFileRoute("/(app)/testers/")({
 function ListTesters() {
   return (
     <Box>
-      <Heading>Testers</Heading>
+      <Heading size="3xl">Testers</Heading>
 
       <Button>Add New Tester</Button>
-      <Button>Invite a Tester</Button>
+      {/* TODO(zikani03): <Button>Invite a Tester</Button> */}
     </Box>
   );
 }
