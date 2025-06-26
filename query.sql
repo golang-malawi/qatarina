@@ -177,3 +177,21 @@ FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
+
+-- name: CreatePage :one
+INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
+) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;
+
+-- name: GetPage :one
+SELECT * FROM pages WHERE id = $1;
+
+-- name: GetAllPages :many
+SELECT * FROM pages
+ORDER BY created_at DESC;
+
+-- name: UpdatePage :exec
+UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
+WHERE id = $1;
+
+-- name: DeletePage :execrows
+DELETE FROM pages WHERE id = $1;

@@ -9,3 +9,7 @@ func NullString(value string) sql.NullString {
 func TrueNullBool() sql.NullBool {
 	return sql.NullBool{Bool: true, Valid: true}
 }
+
+func NewNullInt32(i int32) sql.NullInt32 {
+	return sql.NullInt32{Int32: i, Valid: true}
+}
