@@ -2,6 +2,13 @@
 SELECT * FROM users
 ORDER BY created_at DESC;
 
+-- name: SearchUsers :many
+SELECT * FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%';
+
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 

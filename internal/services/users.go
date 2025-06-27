@@ -25,6 +25,8 @@ type UserService interface {
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
 	// GetOne retrives one user from system
 	GetOne(ctx context.Context, id int32) (dbsqlc.User, error)
+	// SearchUser searches the user in the system based on typed keywords
+	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
 }
 
 type OrganizationUserService interface {
@@ -110,4 +112,16 @@ func (u *userServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.User, er
 		return dbsqlc.User{}, err
 	}
 	return user, nil
+}
+
+func (u *userServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.User, error) {
+	users, err := u.queries.SearchUsers(ctx, common.NullString(keyword))
+	if err != nil {
+		u.logger.Error("failed to search users with keyword %q: %w", keyword, err)
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, fmt.Errorf("no users found matching %q", keyword)
+	}
+	return users, nil
 }
