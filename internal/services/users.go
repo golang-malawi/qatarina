@@ -23,6 +23,8 @@ type UserService interface {
 	// Create creates a new user in the system with the given information
 	// provided that the user's email is not already in use and that the information is valid
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
+	// GetOne retrives one user from system
+	GetOne(ctx context.Context, id int32) (dbsqlc.User, error)
 }
 
 type OrganizationUserService interface {
@@ -99,4 +101,13 @@ func (s *userServiceImpl) Create(ctx context.Context, request *schema.NewUserReq
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (u *userServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.User, error) {
+	user, err := u.queries.GetUser(ctx, id)
+	if err != nil {
+		u.logger.Error("failed to find the user", "error", err)
+		return dbsqlc.User{}, err
+	}
+	return user, nil
 }

@@ -3,6 +3,7 @@ package v1
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
@@ -68,9 +69,22 @@ func SearchUsers(services.UserService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [get]
-func GetOneUser(services.UserService) fiber.Handler {
+func GetOneUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one user")
+		userID, err := c.ParamsInt("userID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
+		}
+
+		user, err := userService.GetOne(c.Context(), int32(userID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("v1-users", "user not found", "error", err)
+			}
+			logger.Error("v1-users", "failed to retrieve request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to retrieve user")
+		}
+		return c.JSON(user)
 	}
 }
 
