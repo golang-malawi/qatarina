@@ -27,6 +27,8 @@ type UserService interface {
 	GetOne(ctx context.Context, id int32) (dbsqlc.User, error)
 	// SearchUser searches the user in the system based on typed keywords
 	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
+	//Update updates the user
+	Update(context.Context, schema.UpdateUserRequest) (bool, error)
 }
 
 type OrganizationUserService interface {
@@ -124,4 +126,25 @@ func (u *userServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.
 		return nil, fmt.Errorf("no users found matching %q", keyword)
 	}
 	return users, nil
+}
+
+func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserRequest) (bool, error) {
+	err := u.queries.UpdateUser(ctx, dbsqlc.UpdateUserParams{
+		ID:          request.ID,
+		FirstName:   request.FirstName,
+		LastName:    request.LastName,
+		DisplayName: common.NullString(request.DisplayName),
+		Email:       request.Email,
+		Password:    request.Password,
+		Phone:       request.Phone,
+		OrgID:       common.NewNullInt32(request.OrgID),
+		CountryIso:  request.CountryIso,
+		City:        common.NullString(request.City),
+		Address:     request.Address,
+	})
+	if err != nil {
+		u.logger.Error("failed to update user", "error", err)
+		return false, fmt.Errorf("failed to update user")
+	}
+	return true, nil
 }

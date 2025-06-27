@@ -21,6 +21,20 @@ SELECT id, display_name, email, password, last_login_at FROM users WHERE email =
 -- name: UpdateUserLastLogin :execrows
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL;
 
+-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, 
+    email = CASE 
+    WHEN NOT EXISTS(
+        SELECT 1 FROM users AS u WHERE u.email = $5 AND u.id != $1
+    )THEN $5
+    ELSE email -- Keep current email if the new one is already taken
+    END, password = $6, phone = $7,
+    org_id = $8, country_iso = $9, city = $10, address = $11,
+    is_activated = $12, is_reviewed = $13, is_super_admin = $14, is_verified = $15,
+    last_login_at = $16, email_confirmed_at = $17, created_at = $18, updated_at = $19, deleted_at = $20
+WHERE id = $1;
+
 -- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,

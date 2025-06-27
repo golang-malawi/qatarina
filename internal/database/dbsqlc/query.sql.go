@@ -1255,6 +1255,70 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 	return items, nil
 }
 
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, 
+    email = CASE 
+    WHEN NOT EXISTS(
+        SELECT 1 FROM users AS u WHERE u.email = $5 AND u.id != $1
+    )THEN $5
+    ELSE email -- Keep current email if the new one is already taken
+    END, password = $6, phone = $7,
+    org_id = $8, country_iso = $9, city = $10, address = $11,
+    is_activated = $12, is_reviewed = $13, is_super_admin = $14, is_verified = $15,
+    last_login_at = $16, email_confirmed_at = $17, created_at = $18, updated_at = $19, deleted_at = $20
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID               int32
+	FirstName        string
+	LastName         string
+	DisplayName      sql.NullString
+	Email            string
+	Password         string
+	Phone            string
+	OrgID            sql.NullInt32
+	CountryIso       string
+	City             sql.NullString
+	Address          string
+	IsActivated      sql.NullBool
+	IsReviewed       sql.NullBool
+	IsSuperAdmin     sql.NullBool
+	IsVerified       sql.NullBool
+	LastLoginAt      sql.NullTime
+	EmailConfirmedAt sql.NullTime
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	DeletedAt        sql.NullTime
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.ID,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.Email,
+		arg.Password,
+		arg.Phone,
+		arg.OrgID,
+		arg.CountryIso,
+		arg.City,
+		arg.Address,
+		arg.IsActivated,
+		arg.IsReviewed,
+		arg.IsSuperAdmin,
+		arg.IsVerified,
+		arg.LastLoginAt,
+		arg.EmailConfirmedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.DeletedAt,
+	)
+	return err
+}
+
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL
 `

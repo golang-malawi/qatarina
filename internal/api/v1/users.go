@@ -152,9 +152,25 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [post]
-func UpdateUser(services.UserService) fiber.Handler {
+func UpdateUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to update user")
+		request := new(schema.UpdateUserRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("api-users", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := userService.Update(c.Context(), *request)
+		if err != nil {
+			logger.Error("api-users", "failed to process request", "error", err)
+			return problemdetail.BadRequest(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"message": "User updated successfully",
+		})
 	}
 }
 
