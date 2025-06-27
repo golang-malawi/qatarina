@@ -77,3 +77,7 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan) []TestPlanResponseItem {
 
 	return res
 }
+
+type TestPlanListResponse struct {
+	TestPlans []TestPlanResponseItem `json:"test_plans"`
+}

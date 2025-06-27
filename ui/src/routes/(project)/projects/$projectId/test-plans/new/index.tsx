@@ -15,12 +15,12 @@ import {
   Portal,
 } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SelectAssignedTestCase, TesterRecord } from "@/common/models";
-import TestPlanService from "@/services/TestPlanService";
-import TesterService from "@/services/TesterService";
+import { SelectAssignedTestCase, CreateTestPlan } from "@/common/models";
+import { useCreateTestPlanMutation } from "@/services/TestPlanService";
+import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { toaster } from "@/components/ui/toaster";
 
@@ -32,9 +32,11 @@ export const Route = createFileRoute(
   component: CreateNewTestPlan,
 });
 
+type CreateTestPlanForm = Omit<CreateTestPlan, "project_id">;
+
 function CreateNewTestPlan() {
-  const testPlanService = new TestPlanService();
-  const testerService = new TesterService();
+  const createTestPlanMutation = useCreateTestPlanMutation();
+  const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
   const [open, setOpen] = useState(false);
@@ -59,31 +61,23 @@ function CreateNewTestPlan() {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data: testers } = useQuery<TesterRecord[]>({
-    queryFn: () => testerService.findAll().then((data) => data),
-    queryKey: ["testers"],
-  });
+  const testers = testersQuery.data?.testers ?? [];
 
-  async function handleSubmit(data: {
-    kind: unknown;
-    description: unknown;
-    start_at: unknown;
-    closed_at: unknown;
-    scheduled_end_at: unknown;
-    assigned_to_id?: unknown;
-  }) {
-    const res = await testPlanService.create({
-      project_id: parseInt(projectId!),
-      assigned_to_id: data.assigned_to_id,
-      kind: data.kind,
-      description: data.description,
-      start_at: data.start_at,
-      closed_at: data.closed_at,
-      scheduled_end_at: data.scheduled_end_at,
-      planned_tests: [],
+  async function handleSubmit(data: CreateTestPlanForm) {
+    const res = await createTestPlanMutation.mutateAsync({
+      body: {
+        project_id: parseInt(projectId!),
+        assigned_to_id: data.assigned_to_id,
+        kind: data.kind,
+        description: data.description,
+        start_at: data.start_at,
+        closed_at: data.closed_at,
+        scheduled_end_at: data.scheduled_end_at,
+        planned_tests: [],
+      },
     });
 
-    if (res.status == 200) {
+    if (res) {
       toaster.create({
         title: "Test Plan created.",
         description:
@@ -101,7 +95,7 @@ function CreateNewTestPlan() {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm({
+  const form = useForm<CreateTestPlanForm>({
     defaultValues: {
       kind: "",
       description: "",
@@ -192,7 +186,7 @@ function CreateNewTestPlan() {
           <Button type="submit">Create Plan</Button>
         </form>
         <Heading>Select & Assign Test Cases</Heading>
-        {testCases.map((testCase) => {
+        {testCases.test_cases?.map((testCase) => {
           return (
             <Box key={testCase.id}>
               <Flex>
@@ -203,7 +197,7 @@ function CreateNewTestPlan() {
                       const checked = e.checked;
                       if (checked) {
                         const newSelected = {
-                          test_case_id: testCase.id,
+                          test_case_id: testCase.id!,
                           user_ids: [],
                         };
                         setSelectedTestCases([
@@ -247,7 +241,7 @@ function CreateNewTestPlan() {
                         {(value) => (
                           <Checkbox.Root
                             key={value.user_id}
-                            value={value.user_id.toString()}
+                            value={value.user_id?.toString()}
                           >
                             <Checkbox.HiddenInput />
                             <Checkbox.Control />
@@ -272,4 +266,3 @@ function CreateNewTestPlan() {
     </div>
   );
 }
-

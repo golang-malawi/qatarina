@@ -73,3 +73,6 @@ func NewProjectResponseList(projects []dbsqlc.Project) []ProjectResponse {
 	}
 	return res
 }
+
+type ImportProjectRequest struct {
+}

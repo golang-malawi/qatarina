@@ -24,7 +24,7 @@ function ListTestPlans() {
   if (error) {
     return <div className="error">Error: error fetching</div>;
   }
-  const testPlanList = testPlans.map((t, i) => <p key={i}>{t.description}</p>);
+  const testPlanList = (testPlans?.data?.test_plans ?? []).map((t: any, i: number) => <p key={i}>{t.description}</p>);
   return (
     <Box>
       <Heading>List Test Plans</Heading>

@@ -37,7 +37,7 @@ export default function ListProjectTestCases() {
     testCasesByProjectIdQueryOptions(projectId)
   );
 
-  const testCaseRows = testCases.map((tc, idx) => (
+  const testCaseRows = (testCases?.test_cases ?? []).map((tc: any, idx: number) => (
     <Table.Row key={idx}>
       <Table.Cell>{tc.code}</Table.Cell>
       <Table.Cell>{tc.description}</Table.Cell>
@@ -55,8 +55,7 @@ export default function ListProjectTestCases() {
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button>
-              <IconChevronDown />
-              Actions
+              <IconChevronDown /> Actions
             </Button>
           </Menu.Trigger>
           <Menu.Content>

@@ -38,6 +38,7 @@ import { Route as projectProjectsProjectIdTestCasesIndexImport } from './routes/
 import { Route as projectProjectsProjectIdSettingsIndexImport } from './routes/(project)/projects/$projectId/settings/index'
 import { Route as projectProjectsProjectIdReportsIndexImport } from './routes/(project)/projects/$projectId/reports/index'
 import { Route as projectProjectsProjectIdInsightsIndexImport } from './routes/(project)/projects/$projectId/insights/index'
+import { Route as appTestersViewTesterIdIndexImport } from './routes/(app)/testers/view/$testerId/index'
 import { Route as appTestCasesInboxTestCaseIdIndexImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
 import { Route as projectProjectsProjectIdTestPlansNewIndexImport } from './routes/(project)/projects/$projectId/test-plans/new/index'
 import { Route as projectProjectsProjectIdTestCasesNewIndexImport } from './routes/(project)/projects/$projectId/test-cases/new/index'
@@ -213,6 +214,13 @@ const projectProjectsProjectIdInsightsIndexRoute =
     id: '/insights/',
     path: '/insights/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
+
+const appTestersViewTesterIdIndexRoute =
+  appTestersViewTesterIdIndexImport.update({
+    id: '/testers/view/$testerId/',
+    path: '/testers/view/$testerId/',
+    getParentRoute: () => appRouteRoute,
   } as any)
 
 const appTestCasesInboxTestCaseIdIndexRoute =
@@ -408,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexImport
       parentRoute: typeof appRouteImport
     }
+    '/(app)/testers/view/$testerId/': {
+      id: '/(app)/testers/view/$testerId/'
+      path: '/testers/view/$testerId'
+      fullPath: '/testers/view/$testerId'
+      preLoaderRoute: typeof appTestersViewTesterIdIndexImport
+      parentRoute: typeof appRouteImport
+    }
     '/(project)/projects/$projectId/insights/': {
       id: '/(project)/projects/$projectId/insights/'
       path: '/insights'
@@ -501,6 +516,7 @@ interface appRouteRouteChildren {
   appTestCasesNewIndexRoute: typeof appTestCasesNewIndexRoute
   appUsersNewIndexRoute: typeof appUsersNewIndexRoute
   appTestCasesInboxTestCaseIdIndexRoute: typeof appTestCasesInboxTestCaseIdIndexRoute
+  appTestersViewTesterIdIndexRoute: typeof appTestersViewTesterIdIndexRoute
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
@@ -521,6 +537,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appTestCasesNewIndexRoute: appTestCasesNewIndexRoute,
   appUsersNewIndexRoute: appUsersNewIndexRoute,
   appTestCasesInboxTestCaseIdIndexRoute: appTestCasesInboxTestCaseIdIndexRoute,
+  appTestersViewTesterIdIndexRoute: appTestersViewTesterIdIndexRoute,
 }
 
 const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
@@ -593,6 +610,7 @@ export interface FileRoutesByFullPath {
   '/users/new': typeof appUsersNewIndexRoute
   '/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -626,6 +644,7 @@ export interface FileRoutesByTo {
   '/users/new': typeof appUsersNewIndexRoute
   '/projects/$projectId': typeof projectProjectsProjectIdIndexRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -662,6 +681,7 @@ export interface FileRoutesById {
   '/(app)/users/new/': typeof appUsersNewIndexRoute
   '/(project)/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
   '/(project)/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
   '/(project)/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -698,6 +718,7 @@ export interface FileRouteTypes {
     | '/users/new'
     | '/projects/$projectId/'
     | '/test-cases/inbox/$testCaseId'
+    | '/testers/view/$testerId'
     | '/projects/$projectId/insights'
     | '/projects/$projectId/reports'
     | '/projects/$projectId/settings'
@@ -730,6 +751,7 @@ export interface FileRouteTypes {
     | '/users/new'
     | '/projects/$projectId'
     | '/test-cases/inbox/$testCaseId'
+    | '/testers/view/$testerId'
     | '/projects/$projectId/insights'
     | '/projects/$projectId/reports'
     | '/projects/$projectId/settings'
@@ -764,6 +786,7 @@ export interface FileRouteTypes {
     | '/(app)/users/new/'
     | '/(project)/projects/$projectId/'
     | '/(app)/test-cases/inbox/$testCaseId/'
+    | '/(app)/testers/view/$testerId/'
     | '/(project)/projects/$projectId/insights/'
     | '/(project)/projects/$projectId/reports/'
     | '/(project)/projects/$projectId/settings/'
@@ -827,7 +850,8 @@ export const routeTree = rootRoute
         "/(app)/test-cases/inbox/",
         "/(app)/test-cases/new/",
         "/(app)/users/new/",
-        "/(app)/test-cases/inbox/$testCaseId/"
+        "/(app)/test-cases/inbox/$testCaseId/",
+        "/(app)/testers/view/$testerId/"
       ]
     },
     "/(app)/": {
@@ -922,6 +946,10 @@ export const routeTree = rootRoute
     },
     "/(app)/test-cases/inbox/$testCaseId/": {
       "filePath": "(app)/test-cases/inbox/$testCaseId/index.tsx",
+      "parent": "/(app)"
+    },
+    "/(app)/testers/view/$testerId/": {
+      "filePath": "(app)/testers/view/$testerId/index.tsx",
       "parent": "/(app)"
     },
     "/(project)/projects/$projectId/insights/": {

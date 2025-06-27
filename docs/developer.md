@@ -55,3 +55,18 @@ $ cd ui
 
 $ npm run build
 ```
+
+## Changed the API structure?
+
+If you change the API structure, these changes need to be reflected in the frontend client. We auto-generate the API client for the frontend from the OpenAPI documentation. Follow these steps to regenerate the API client:
+
+1. Generate the OpenAPI documentation:
+```bash
+swag init --v3.1
+```
+
+2. Generate the API client for the frontend:
+```bash
+cd ui && npm run gen:api
+```
+

@@ -7,6 +7,12 @@ type UserCompact struct {
 	CreatedAt   string `json:"createdAt"`
 }
 
+// CompactUserListResponse list of users but compact form
+type CompactUserListResponse struct {
+	Total int           `json:"total"`
+	Users []UserCompact `json:"users"`
+}
+
 type SignUpRequest struct {
 	FirstName   string `json:"firstname" validate:"required"`
 	LastName    string `json:"lastname" validate:"required"`
@@ -45,4 +51,10 @@ type ChangePasswordRequest struct {
 	OldPassword     string `json:"old_password" validate:"required"`
 	NewPassword     string `json:"new_password" validate:"required"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
+}
+
+type RefreshTokenRequest struct {
+}
+
+type RefreshTokenResponse struct {
 }

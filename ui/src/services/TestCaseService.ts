@@ -1,54 +1,31 @@
-import axios from "axios";
-import { getApiEndpoint } from "@/common/request";
-import createAuthHeaders from "@/hooks/useAuthHeaders";
-import { TestCase } from "@/common/models";
+import { apiClient } from "@/lib/api/query";
+import $api from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
 
-
-export async function findTestCaseAll(): Promise<TestCase[]> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/test-cases`,
-    createAuthHeaders()
-  );
-  if (res.status == 200) {
-    return res.data.test_cases || [];
-  }
-  throw new Error(res.data);
+export function useTestCasesQuery() {
+  return $api.useQuery("get", "/v1/test-cases");
 }
 
-export async function findTestCaseById(id: string): Promise<TestCase> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/test-cases/${id}`,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    return res.data.test_case;
-  }
-  throw new Error(res.data);
+export function useTestCaseQuery(testCaseID: string) {
+  return $api.useQuery("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
 }
 
-export async function createTestCase(data: unknown) {
-  const res = await axios.post(
-    `${getApiEndpoint()}/v1/test-cases`,
-    data,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    // TODO: return a specific shape of the response, not the whole response
-    // return res.data.test_case;
-    return res;
-  }
-  throw new Error(res.data);
+export function useCreateTestCaseMutation() {
+  return $api.useMutation("post", "/v1/test-cases");
 }
 
-export async function findTestCasesByProjectId(
-  projectID: string
-): Promise<TestCase[]> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/projects/${projectID}/test-cases`,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    return res.data.test_cases || [];
-  }
-  throw new Error(res.data);
+export function useProjectTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases", { params: { path: { projectID } } });
+}
+
+export async function getTestCases() {
+  return apiClient.request("get", "/v1/test-cases");
+}
+
+export async function getTestCaseById(testCaseID: string) {
+  return apiClient.request("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
+}
+
+export async function createTestCase(data: components["schemas"]["schema.CreateTestCaseRequest"]) {
+  return apiClient.request("post", "/v1/test-cases", { body: data });
 }
