@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -29,7 +30,7 @@ func ListUsers(userService services.UserService, logger logging.Logger) fiber.Ha
 	return func(c *fiber.Ctx) error {
 		users, err := userService.FindAll(context.Background())
 		if err != nil {
-			logger.Error("apiv1:users", "failed to load users", "error", err)
+			logger.Error(loggedmodule.ApiUsers, "failed to load users", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to load users")
 		}
 
@@ -94,7 +95,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-users", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiUsers, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -103,7 +104,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if errors.Is(err, services.ErrEmailAlreadyInUse) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
-			logger.Error("api-users", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiUsers, "failed to create user account", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
@@ -19,14 +20,14 @@ type ProjectService interface {
 }
 
 type projectServiceImpl struct {
-	name   string
+	name   loggedmodule.Name
 	db     *dbsqlc.Queries
 	logger logging.Logger
 }
 
 func NewProjectService(db *dbsqlc.Queries, logger logging.Logger) ProjectService {
 	return &projectServiceImpl{
-		name:   "project-service",
+		name:   "projects-service",
 		db:     db,
 		logger: logger,
 	}
