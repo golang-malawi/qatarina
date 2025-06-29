@@ -23,6 +23,12 @@ type UserService interface {
 	// Create creates a new user in the system with the given information
 	// provided that the user's email is not already in use and that the information is valid
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
+	// GetOne retrives one user from system
+	GetOne(ctx context.Context, id int32) (dbsqlc.User, error)
+	// SearchUser searches the user in the system based on typed keywords
+	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
+	//Update updates the user
+	Update(context.Context, schema.UpdateUserRequest) (bool, error)
 }
 
 type OrganizationUserService interface {
@@ -99,4 +105,46 @@ func (s *userServiceImpl) Create(ctx context.Context, request *schema.NewUserReq
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (u *userServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.User, error) {
+	user, err := u.queries.GetUser(ctx, id)
+	if err != nil {
+		u.logger.Error("failed to find the user", "error", err)
+		return dbsqlc.User{}, err
+	}
+	return user, nil
+}
+
+func (u *userServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.User, error) {
+	users, err := u.queries.SearchUsers(ctx, common.NullString(keyword))
+	if err != nil {
+		u.logger.Error("failed to search users with keyword %q: %w", keyword, err)
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, fmt.Errorf("no users found matching %q", keyword)
+	}
+	return users, nil
+}
+
+func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserRequest) (bool, error) {
+	err := u.queries.UpdateUser(ctx, dbsqlc.UpdateUserParams{
+		ID:          request.ID,
+		FirstName:   request.FirstName,
+		LastName:    request.LastName,
+		DisplayName: common.NullString(request.DisplayName),
+		Email:       request.Email,
+		Password:    request.Password,
+		Phone:       request.Phone,
+		OrgID:       common.NewNullInt32(request.OrgID),
+		CountryIso:  request.CountryIso,
+		City:        common.NullString(request.City),
+		Address:     request.Address,
+	})
+	if err != nil {
+		u.logger.Error("failed to update user", "error", err)
+		return false, fmt.Errorf("failed to update user")
+	}
+	return true, nil
 }
