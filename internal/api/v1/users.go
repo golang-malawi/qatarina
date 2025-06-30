@@ -94,7 +94,8 @@ func GetOneUser(userService services.UserService, logger logging.Logger) fiber.H
 		user, err := userService.GetOne(c.Context(), int32(userID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				logger.Error("apiv1:users", "user not found", "error", err)
+				logger.Info("apiv1:users", "user not found", "error", err)
+				return problemdetail.BadRequest(c, "no user found")
 			}
 			logger.Error("apiv1:users", "failed to retrieve request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to retrieve user")
