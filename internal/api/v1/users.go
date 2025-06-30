@@ -94,9 +94,9 @@ func GetOneUser(userService services.UserService, logger logging.Logger) fiber.H
 		user, err := userService.GetOne(c.Context(), int32(userID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				logger.Error("v1-users", "user not found", "error", err)
+				logger.Error("apiv1:users", "user not found", "error", err)
 			}
-			logger.Error("v1-users", "failed to retrieve request data", "error", err)
+			logger.Error("apiv1:users", "failed to retrieve request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to retrieve user")
 		}
 		return c.JSON(user)
@@ -123,7 +123,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-users", "failed to parse request data", "error", err)
+			logger.Error("apiv1:users", "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -132,7 +132,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if errors.Is(err, services.ErrEmailAlreadyInUse) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
-			logger.Error("api-users", "failed to process request", "error", err)
+			logger.Error("apiv1:users", "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -163,13 +163,13 @@ func UpdateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-users", "failed to parse request data", "error", err)
+			logger.Error("apiv1:users", "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := userService.Update(c.Context(), *request)
 		if err != nil {
-			logger.Error("api-users", "failed to process request", "error", err)
+			logger.Error("apiv1:users", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process request")
 		}
 		return c.JSON(fiber.Map{
