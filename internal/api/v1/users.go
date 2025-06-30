@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -59,8 +60,11 @@ func SearchUsers(userService services.UserService, logger logging.Logger) fiber.
 
 		users, err := userService.Search(q.Context(), keyword)
 		if err != nil {
-			logger.Error("error", "search error:", err)
-			return problemdetail.ServerErrorProblem(q, "No users found")
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("error", "search error:", err)
+				return q.JSON([]dbsqlc.User{})
+			}
+
 		}
 
 		return q.JSON(users)
