@@ -3,10 +3,12 @@ package v1
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -49,9 +51,23 @@ func ListUsers(userService services.UserService, logger logging.Logger) fiber.Ha
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/query [get]
-func SearchUsers(services.UserService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search users")
+func SearchUsers(userService services.UserService, logger logging.Logger) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		keyword := q.Query("keyword", "")
+		if keyword == "" {
+			return problemdetail.BadRequest(q, "missing keyword parameter")
+		}
+
+		users, err := userService.Search(q.Context(), keyword)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("error", "search error:", err)
+				return q.JSON([]dbsqlc.User{})
+			}
+
+		}
+
+		return q.JSON(users)
 	}
 }
 
@@ -68,9 +84,23 @@ func SearchUsers(services.UserService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [get]
-func GetOneUser(services.UserService) fiber.Handler {
+func GetOneUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one user")
+		userID, err := c.ParamsInt("userID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
+		}
+
+		user, err := userService.GetOne(c.Context(), int32(userID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info("apiv1:users", "user not found", "error", err)
+				return problemdetail.BadRequest(c, "no user found")
+			}
+			logger.Error("apiv1:users", "failed to retrieve request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to retrieve user")
+		}
+		return c.JSON(user)
 	}
 }
 
@@ -94,7 +124,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-users", "failed to parse request data", "error", err)
+			logger.Error("apiv1:users", "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -103,7 +133,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 			if errors.Is(err, services.ErrEmailAlreadyInUse) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
-			logger.Error("api-users", "failed to process request", "error", err)
+			logger.Error("apiv1:users", "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -127,9 +157,29 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [post]
-func UpdateUser(services.UserService) fiber.Handler {
+func UpdateUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to update user")
+		request := new(schema.UpdateUserRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error("apiv1:users", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+		userID, err := c.ParamsInt("userID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to pass id data in request")
+		}
+		request.ID = int32(userID)
+		_, err = userService.Update(c.Context(), *request)
+		if err != nil {
+			logger.Error("apiv1:users", "failed to process request", "error", err)
+			return problemdetail.BadRequest(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"message": "User updated successfully",
+		})
 	}
 }
 
