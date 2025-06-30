@@ -51,19 +51,19 @@ func ListUsers(userService services.UserService, logger logging.Logger) fiber.Ha
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/query [get]
 func SearchUsers(userService services.UserService, logger logging.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		keyword := c.Query("keyword", "")
+	return func(q *fiber.Ctx) error {
+		keyword := q.Query("keyword", "")
 		if keyword == "" {
-			return problemdetail.BadRequest(c, "missing keyword parameter")
+			return problemdetail.BadRequest(q, "missing keyword parameter")
 		}
 
-		users, err := userService.Search(c.Context(), keyword)
+		users, err := userService.Search(q.Context(), keyword)
 		if err != nil {
 			logger.Error("error", "search error:", err)
-			return problemdetail.ServerErrorProblem(c, "failed to retrieve users")
+			return problemdetail.ServerErrorProblem(q, "No users found")
 		}
 
-		return c.JSON(users)
+		return q.JSON(users)
 	}
 }
 
