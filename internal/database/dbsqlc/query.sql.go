@@ -1257,16 +1257,10 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users SET 
-    first_name = $2, last_name = $3, display_name = $4, 
-    email = CASE 
-    WHEN NOT EXISTS(
-        SELECT 1 FROM users AS u WHERE u.email = $5 AND u.id != $1
-    )THEN $5
-    ELSE email -- Keep current email if the new one is already taken
-    END, password = $6, phone = $7,
-    org_id = $8, country_iso = $9, city = $10, address = $11,
-    is_activated = $12, is_reviewed = $13, is_super_admin = $14, is_verified = $15,
-    last_login_at = $16, email_confirmed_at = $17, created_at = $18, updated_at = $19, deleted_at = $20
+    first_name = $2, last_name = $3, display_name = $4, phone = $5,
+    org_id = $6, country_iso = $7, city = $8, address = $9,
+    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
+    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
 WHERE id = $1
 `
 
@@ -1275,8 +1269,6 @@ type UpdateUserParams struct {
 	FirstName        string
 	LastName         string
 	DisplayName      sql.NullString
-	Email            string
-	Password         string
 	Phone            string
 	OrgID            sql.NullInt32
 	CountryIso       string
@@ -1299,8 +1291,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.FirstName,
 		arg.LastName,
 		arg.DisplayName,
-		arg.Email,
-		arg.Password,
 		arg.Phone,
 		arg.OrgID,
 		arg.CountryIso,

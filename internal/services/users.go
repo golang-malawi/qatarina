@@ -134,8 +134,6 @@ func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserR
 		FirstName:   request.FirstName,
 		LastName:    request.LastName,
 		DisplayName: common.NullString(request.DisplayName),
-		Email:       request.Email,
-		Password:    request.Password,
 		Phone:       request.Phone,
 		OrgID:       common.NewNullInt32(request.OrgID),
 		CountryIso:  request.CountryIso,
