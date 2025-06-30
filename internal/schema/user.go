@@ -54,7 +54,7 @@ type ChangePasswordRequest struct {
 }
 
 type UpdateUserRequest struct {
-	ID          int32  `json:"id" validate:"required"`
+	ID          int32  `json:"id" validate:"-"`
 	FirstName   string `json:"first_name" validate:"required"`
 	LastName    string `json:"last_name" validate:"required"`
 	DisplayName string `json:"display_name" validate:"required"`

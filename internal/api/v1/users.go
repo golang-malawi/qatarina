@@ -167,8 +167,12 @@ func UpdateUser(userService services.UserService, logger logging.Logger) fiber.H
 			logger.Error("apiv1:users", "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
-
-		_, err := userService.Update(c.Context(), *request)
+		userID, err := c.ParamsInt("userID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to pass id data in request")
+		}
+		request.ID = int32(userID)
+		_, err = userService.Update(c.Context(), *request)
 		if err != nil {
 			logger.Error("apiv1:users", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process request")
