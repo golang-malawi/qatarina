@@ -3,6 +3,8 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,9 +55,22 @@ func ListProjects(projectService services.ProjectService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/query [get]
-func SearchProjects(projectService services.ProjectService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search Projects")
+func SearchProjects(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		keyword := q.Query("keyword", "")
+		if keyword == "" {
+			return problemdetail.BadRequest(q, "missing keyword parameter")
+		}
+
+		projects, err := projectService.Search(q.Context(), keyword)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("error", "search error:", err)
+				return q.JSON([]dbsqlc.Project{})
+			}
+		}
+
+		return q.JSON(projects)
 	}
 }
 

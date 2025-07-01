@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -17,6 +18,7 @@ type ProjectService interface {
 	FindByID(context.Context, int64) (*dbsqlc.Project, error)
 	Update(context.Context, *schema.UpdateProjectRequest) (*dbsqlc.Project, error)
 	DeleteProject(context.Context, int64) error
+	Search(context.Context, string) ([]dbsqlc.Project, error)
 }
 
 type projectServiceImpl struct {
@@ -93,4 +95,16 @@ func (s *projectServiceImpl) DeleteProject(ctx context.Context, projectID int64)
 		return err
 	}
 	return nil
+}
+
+func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.Project, error) {
+	projects, err := p.db.SearchProject(ctx, common.NullString(keyword))
+	if err != nil {
+		p.logger.Error("failed to search projects with keyword %q", keyword, err)
+		return nil, err
+	}
+	if len(projects) == 0 {
+		return nil, fmt.Errorf("no users found matching %q", keyword)
+	}
+	return projects, nil
 }

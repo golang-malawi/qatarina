@@ -32,6 +32,10 @@ RETURNING id;
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;
 
+-- name: SearchProject :many
+SELECT * FROM projects
+WHERE title ILIKE '%' || $1 || '%';
+
 -- name: GetProject :one
 SELECT * FROM projects WHERE id = $1;
 
