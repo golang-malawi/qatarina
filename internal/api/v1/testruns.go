@@ -8,6 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -160,12 +161,14 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		testRunID := ctx.Params("testRunID", "")
 		if request.TestRunID != testRunID {
+			logger.Debug(loggedmodule.ApiTestRuns, "cannot to commit test-run with mismatching ids", "param", testRunID, "requestBodyID", request.TestRunID)
 			return problemdetail.BadRequest(ctx, "'test_run_id' in request body and parameter does not match")
 		}
 		request.UserID = authutil.GetAuthUserID(ctx)
 
 		testRun, err := testRunService.Commit(context.Background(), request)
 		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to commit test-run results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{
@@ -184,6 +187,7 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		request.UserID = authutil.GetAuthUserID(ctx)
 		_, err = testRunService.CommitBulk(context.Background(), request)
 		if err != nil {
+			logger.Debug(loggedmodule.ApiTestRuns, "failed to commit bulk test results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{

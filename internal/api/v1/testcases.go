@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -101,13 +102,13 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.Create(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -137,13 +138,13 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.BulkCreate(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -174,13 +175,13 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.Update(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
