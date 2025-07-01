@@ -422,6 +422,18 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 	return result.RowsAffected()
 }
 
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `

@@ -29,6 +29,8 @@ type UserService interface {
 	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
 	//Update updates the user
 	Update(context.Context, schema.UpdateUserRequest) (bool, error)
+	//Delete used to delete user from the system
+	Delete(ctx context.Context, id int32) error
 }
 
 type OrganizationUserService interface {
@@ -145,4 +147,13 @@ func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserR
 		return false, fmt.Errorf("failed to update user")
 	}
 	return true, nil
+}
+
+func (u *userServiceImpl) Delete(ctx context.Context, id int32) error {
+	_, err := u.queries.DeleteUser(ctx, id)
+	if err != nil {
+		u.logger.Error("failed to delete user", "error", err)
+		return err
+	}
+	return nil
 }

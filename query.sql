@@ -44,6 +44,9 @@ VALUES(
 )
 RETURNING id;
 
+-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1;
+
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;
 

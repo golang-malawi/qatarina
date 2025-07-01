@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -216,8 +217,24 @@ func InviteUser(services.UserService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [delete]
-func DeleteUser(services.UserService) fiber.Handler {
+func DeleteUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to delete user")
+		userIDParam := c.Params("userID")
+		userID, err := strconv.Atoi(userIDParam)
+		if err != nil {
+			logger.Error("Failed to retrieve user id", "error", err)
+			problemdetail.BadRequest(c, "failed to process request id")
+		}
+
+		err = userService.Delete(c.Context(), int32(userID))
+		if err != nil {
+			logger.Error("apiv1:users", "failed to delete user", "error", err)
+			return problemdetail.BadRequest(c, "failed to delete user")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "User deleted successfully",
+			"userID":  userID,
+		})
 	}
 }
