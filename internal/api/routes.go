@@ -49,7 +49,7 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID/testers", apiv1.AssignTesters(api.TesterService, api.logger))
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
-		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService))
+		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
 	}
 
 	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)

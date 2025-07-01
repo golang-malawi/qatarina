@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -322,9 +323,24 @@ func ImportProject(projectService services.ProjectService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [delete]
-func DeleteProject(projectService services.ProjectService) fiber.Handler {
+func DeleteProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to delete Project")
+		projectIDParam := c.Params("projectID")
+		projectID, err := strconv.Atoi(projectIDParam)
+		if err != nil {
+			logger.Error("projectsv1", "failed to parse projectID data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
+		}
+
+		err = projectService.DeleteProject(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error("projectsv1", "failed to delete project", "error", err)
+			return problemdetail.BadRequest(c, "failed to delete project")
+		}
+		return c.JSON(fiber.Map{
+			"message":   "Project deleted successfully",
+			"projectID": projectID,
+		})
 	}
 }
 
