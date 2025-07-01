@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,9 +14,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var (
+	ErrEmailAlreadyInUse = errors.New("email or username already in use")
+)
+
 type UserService interface {
 	// FindAll finds all users in the system
-	FindAll(context.Context) ([]dbsqlc.User, error)
+	FindAll(context.Context) (*schema.CompactUserListResponse, error)
 	// Create creates a new user in the system with the given information
 	// provided that the user's email is not already in use and that the information is valid
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
@@ -40,11 +45,39 @@ func NewUserService(conn *dbsqlc.Queries, logger logging.Logger) UserService {
 	}
 }
 
-func (s *userServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.User, error) {
-	return nil, fmt.Errorf("not implemented")
+func (s *userServiceImpl) FindAll(ctx context.Context) (*schema.CompactUserListResponse, error) {
+	response := &schema.CompactUserListResponse{}
+	users, err := s.queries.ListUsers(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return response, nil
+		}
+		return nil, fmt.Errorf("could not fetch users: %v", err)
+	}
+	response.Users = make([]schema.UserCompact, 0)
+	for _, user := range users {
+		response.Users = append(response.Users, schema.UserCompact{
+			ID:          int64(user.ID),
+			DisplayName: user.DisplayName.String,
+			Email:       user.Email,
+			CreatedAt:   user.CreatedAt.Time.Format(time.DateTime),
+		})
+	}
+	return response, nil
 }
 
 func (s *userServiceImpl) Create(ctx context.Context, request *schema.NewUserRequest) (*dbsqlc.User, error) {
+
+	existing, err := s.queries.FindUserLoginByEmail(ctx, request.Email)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("failed to run pre-check for existing account: %v", err)
+		}
+	}
+	if existing.Email == request.Email && err == nil {
+		return nil, ErrEmailAlreadyInUse
+	}
+
 	userParams := dbsqlc.CreateUserParams{
 		FirstName:    request.FirstName,
 		LastName:     request.LastName,

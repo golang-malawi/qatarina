@@ -12,17 +12,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import ModuleService, { Module } from "@/services/ModuleService";
 import { IconButton } from "@chakra-ui/react";
-import { LuBrush, LuTrash } from "react-icons/lu";
+import { LuTrash } from "react-icons/lu";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/Features/"
+  "/(project)/projects/$projectId/Features/",
 )({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const params = Route.useParams();
-  const projectId = params.projectId;
+  const { projectId } = Route.useParams();
 
   const [features, setFeatures] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -34,7 +33,7 @@ function RouteComponent() {
         const service = new ModuleService();
         const data = await service.getAllModules();
         setFeatures(
-          data.filter((item) => item.project_id == Number(projectId))
+          data.filter((item) => item.project_id == Number(projectId)),
         );
       } catch (err: any) {
         console.error(err);
@@ -63,14 +62,12 @@ function RouteComponent() {
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">Features / Modules / Components</Heading>
-        <Button
-          as={Link}
+        <Link
           to="/projects/$projectId/Features/CreateFeatureModuleForm"
           params={{ projectId }}
-          colorScheme="teal"
         >
-          + Create New
-        </Button>
+          <Button colorScheme="teal">+ Create New</Button>
+        </Link>
       </Flex>
 
       {loading ? (
@@ -81,7 +78,7 @@ function RouteComponent() {
         <Text color="red.500">{error}</Text>
       ) : (
         <Stack gap="6">
-          <Table.Root size="md" variant="striped">
+          <Table.Root size="md">
             <Table.Header>
               <Table.Row>
                 <Table.ColumnHeader>Name</Table.ColumnHeader>
@@ -98,15 +95,18 @@ function RouteComponent() {
                   <Table.Cell>{item.description}</Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
-                      <IconButton
-                        as={Link}
-                        to={`/projects/${projectId}/Features/EditFeatureModuleForm?moduleId=${item.id}`}
-                        params={{ projectId }}
-                        colorScheme="blue"
-                        size="sm"
+                      {/* TODO: fix this link
+                        <Link
+                        to={`/projects/$projectId/Features/EditFeatureModuleForm?moduleId=$moduleId`}
+                        params={{
+                          projectId,
+                          moduleId: `${item.id}`,
+                        }}
                       >
-                        <LuBrush />
-                      </IconButton>
+                        <Button colorScheme="blue" size="sm">
+                          <LuBrush />
+                        </Button>
+                      </Link> */}
 
                       <IconButton
                         aria-label="Delete module"

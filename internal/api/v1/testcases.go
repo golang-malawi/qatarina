@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -20,10 +21,10 @@ import (
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
+//	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases [get]
+//	@Router			/v1/test-cases [get]
 func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCases, err := testCasesService.FindAll(context.Background())
@@ -45,10 +46,10 @@ func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
+//	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/query [get]
+//	@Router			/v1/test-cases/query [get]
 func SearchTestCases(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestCases")
@@ -64,10 +65,10 @@ func SearchTestCases(services.TestCaseService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			testCaseID	path		string	true	"Test Case ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.TestCaseResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [get]
+//	@Router			/v1/test-cases/{testCaseID} [get]
 func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCaseID := c.Params("testCaseId", "")
@@ -89,11 +90,11 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Create Test Case data"
-//	@Success		200		{object}	interface{}
+//	@Param			request	body		schema.CreateTestCaseRequest	true	"Create Test Case data"
+//	@Success		200		{object}	schema.TestCaseResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases [post]
+//	@Router			/v1/test-cases [post]
 func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
@@ -101,13 +102,13 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.Create(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -125,11 +126,11 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Bulk Create Test Case data"
-//	@Success		200		{object}	interface{}
+//	@Param			request	body		schema.BulkCreateTestCases	true	"Bulk Create Test Case data"
+//	@Success		200		{object}	schema.TestCaseListResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/bulk [post]
+//	@Router			/v1/test-cases/bulk [post]
 func BulkCreateTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.BulkCreateTestCases)
@@ -137,13 +138,13 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.BulkCreate(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -162,11 +163,11 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 //	@Accept			json
 //	@Produce		json
 //	@Param			testCaseID	path		string		true	"Test Case ID"
-//	@Param			request		body		interface{}	true	"Test Case update data"
-//	@Success		200			{object}	interface{}
+//	@Param			request		body		schema.UpdateTestCaseRequest	true	"Test Case update data"
+//	@Success		200			{object}	schema.TestCaseResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [post]
+//	@Router			/v1/test-cases/{testCaseID} [post]
 func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateTestCaseRequest)
@@ -174,13 +175,13 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
 		_, err := testCaseService.Update(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -199,10 +200,10 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Accept			json
 //	@Produce		json
 //	@Param			testCaseID	path		string	true	"Test Case ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	map[string]string	"Success message"
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-cases/{testCaseID} [delete]
+//	@Router			/v1/test-cases/{testCaseID} [delete]
 func DeleteTestCase(services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to delete TestCase")

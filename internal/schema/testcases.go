@@ -77,3 +77,7 @@ type ImportFromGithubRequest struct {
 	GitHubToken string `json:"github_token"`
 	ProjectID   int64  `json:"project_id"`
 }
+
+type TestCaseListResponse struct {
+	TestCases []TestCaseResponse `json:"test_cases"`
+}

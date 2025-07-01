@@ -33,7 +33,7 @@ The initial tech stack is as follows, we may eventually swap out parts of this s
 You will need to have the following developer tools installed:
 
 - [SQLC](https://sqlc.dev)
-- [Swag](https://github.com/swaggo/swag)
+- [Swag](https://github.com/swaggo/swag) Note: use the v2 branch, because the current latest does not support Openapi v3
 - [Taskfile](https://taskfile.dev)
 
 

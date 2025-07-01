@@ -8,6 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -24,7 +25,7 @@ import (
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [get]
+//	@Router			/v1/test-plans [get]
 func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -50,7 +51,7 @@ func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [get]
+//	@Router			/v1/test-plans [get]
 func SearchTestPlans(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestPlans")
@@ -69,7 +70,7 @@ func SearchTestPlans(services.TestPlanService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [get]
+//	@Router			/v1/test-plans/{testPlanID} [get]
 func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestPlan")
@@ -84,11 +85,11 @@ func GetOneTestPlan(services.TestPlanService) fiber.Handler {
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Create Test plan data"
+//	@Param			request	body		schema.CreateTestPlan	true	"Create Test plan data"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans [post]
+//	@Router			/v1/test-plans [post]
 func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
@@ -97,7 +98,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestPlans, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -109,7 +110,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 
 		_, err := testPlanService.Create(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -132,7 +133,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [post]
+//	@Router			/v1/test-plans/{testPlanID} [post]
 func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestPlan")
@@ -151,7 +152,7 @@ func UpdateTestPlan(services.TestPlanService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-plans/{testPlanID} [delete]
+//	@Router			/v1/test-plans/{testPlanID} [delete]
 func DeleteTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, _ := c.ParamsInt("testPlanID", 0)
@@ -171,7 +172,7 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-test-cases", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiTestPlans, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -182,7 +183,7 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 
 		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request)
 		if err != nil {
-			logger.Error("api-test-cases", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 

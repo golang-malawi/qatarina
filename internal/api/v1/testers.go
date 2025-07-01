@@ -17,10 +17,10 @@ import (
 //	@Tags			testers
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
+//	@Success		200	{object}	schema.TesterListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/testers [get]
+//	@Router			/v1/testers [get]
 func ListTesters(testerService services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testers, err := testerService.FindAll(context.Background())
@@ -44,7 +44,7 @@ func ListTesters(testerService services.TesterService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/testers.query [get]
+//	@Router			/v1/testers.query [get]
 func SearchTesters(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search Testers")
@@ -63,7 +63,7 @@ func SearchTesters(services.TesterService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/testers/{testerID} [get]
+//	@Router			/v1/testers/{testerID} [get]
 func GetOneTester(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one Tester")
@@ -83,7 +83,7 @@ func GetOneTester(services.TesterService) fiber.Handler {
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/testers/invite/{email} [post]
+//	@Router			/v1/testers/invite/{email} [post]
 func InviteTester(services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to invite Tester")

@@ -1,35 +1,22 @@
-import axios from "axios";
-import { getApiEndpoint } from "@/common/request";
-import createAuthHeaders from "@/hooks/useAuthHeaders";
+import { apiClient } from "@/lib/api/query";
+import $api from "@/lib/api/query";
 
-export default class TesterService {
-    apiEndpoint: string;
+export function useTestersQuery() {
+  return $api.useQuery("get", "/v1/testers");
+}
 
-    constructor() {
-        this.apiEndpoint = getApiEndpoint();
-    }
+export function useTesterQuery(testerID: string) {
+  return $api.useQuery("get", "/v1/testers/{testerID}", {
+    params: { path: { testerID } },
+  });
+}
 
-    async findAll() {
-        const res = await axios.get(`${this.apiEndpoint}/v1/testers`, createAuthHeaders());
-        if (res.status === 200) {
-            return res.data.testers;
-        }
-        throw new Error(res.data);
-    }
+export async function getTesters() {
+  return apiClient.request("get", "/v1/testers");
+}
 
-    async findById(id: string) {
-        const res = await axios.get(`${this.apiEndpoint}/v1/testers/${id}`, createAuthHeaders());
-        if (res.status === 200) {
-            return res.data.tester;
-        }
-        throw new Error(res.data);
-    }
-
-    async deleteTester(id: string) {
-        const res = await axios.delete(`${this.apiEndpoint}/v1/testers/${id}`, createAuthHeaders());
-        if (res.status === 200) {
-            return res.data.testers;
-        }
-        throw new Error(res.data);
-    }
+export async function getTesterById(testerID: string) {
+  return apiClient.request("get", "/v1/testers/{testerID}", {
+    params: { path: { testerID } },
+  });
 }

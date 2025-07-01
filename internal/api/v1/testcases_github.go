@@ -12,6 +12,19 @@ import (
 	"github.com/google/go-github/v62/github"
 )
 
+// ImportIssuesFromGitHubAsTestCases godoc
+//
+// @ID ImportIssuesFromGitHubAsTestCases
+// @Summary Import GitHub issues as test cases
+// @Description Imports open issues from a GitHub repository as test cases for a project
+// @Tags test-cases
+// @Accept json
+// @Produce json
+// @Param request body schema.ImportFromGithubRequest true "GitHub import request"
+// @Success 200 {object} schema.TestCaseListResponse "List of imported test cases"
+// @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
+// @Failure 500 {object} problemdetail.ProblemDetail "Server error"
+// @Router /v1/test-cases/import/github [post]
 func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ImportFromGithubRequest)

@@ -8,6 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -24,7 +25,7 @@ import (
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs [get]
+//	@Router			/v1/test-runs [get]
 func ListTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to list TestRuns")
@@ -42,7 +43,7 @@ func ListTestRuns(services.TestRunService) fiber.Handler {
 //	@Success		200	{object}	interface{}
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/query [get]
+//	@Router			/v1/test-runs/query [get]
 func SearchTestRuns(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to search TestRuns")
@@ -61,7 +62,7 @@ func SearchTestRuns(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [get]
+//	@Router			/v1/test-runs/{testRunID} [get]
 func GetOneTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to get one TestRun")
@@ -80,7 +81,7 @@ func GetOneTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs [post]
+//	@Router			/v1/test-runs [post]
 func CreateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to create TestRun")
@@ -100,7 +101,7 @@ func CreateTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [post]
+//	@Router			/v1/test-runs/{testRunID} [post]
 func UpdateTestRun(services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestRun")
@@ -119,7 +120,7 @@ func UpdateTestRun(services.TestRunService) fiber.Handler {
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID} [delete]
+//	@Router			/v1/test-runs/{testRunID} [delete]
 func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testRunID := c.Params("testRunID", "")
@@ -145,11 +146,11 @@ func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			testRunID	path		string		true	"Test Run ID"
-//	@Param			request		body		interface{}	true	"Test Run update data"
+//	@Param			request		body		schema.CommitTestRunResult	true	"Test Run update data"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/api/v1/test-runs/{testRunID}/commit [post]
+//	@Router			/v1/test-runs/{testRunID}/commit [post]
 func CommitTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.CommitTestRunResult)
@@ -160,12 +161,14 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		testRunID := ctx.Params("testRunID", "")
 		if request.TestRunID != testRunID {
+			logger.Debug(loggedmodule.ApiTestRuns, "cannot to commit test-run with mismatching ids", "param", testRunID, "requestBodyID", request.TestRunID)
 			return problemdetail.BadRequest(ctx, "'test_run_id' in request body and parameter does not match")
 		}
 		request.UserID = authutil.GetAuthUserID(ctx)
 
 		testRun, err := testRunService.Commit(context.Background(), request)
 		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to commit test-run results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{
@@ -184,6 +187,7 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		request.UserID = authutil.GetAuthUserID(ctx)
 		_, err = testRunService.CommitBulk(context.Background(), request)
 		if err != nil {
+			logger.Debug(loggedmodule.ApiTestRuns, "failed to commit bulk test results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
 		return ctx.JSON(fiber.Map{

@@ -28,7 +28,7 @@ func (api *API) routes() {
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
-		usersV1.Get("", apiv1.ListUsers(api.UserService))
+		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))
 		usersV1.Post("", apiv1.CreateUser(api.UserService, api.logger))
 		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
 		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService))
@@ -61,6 +61,15 @@ func (api *API) routes() {
 		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService))
 		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService))
 
+	}
+
+	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)
+	{
+		pagesV1.Post("/pages", apiv1.CreatePage(api.PageService, api.logger))
+		pagesV1.Get("/pages/:id", apiv1.GetOnePage(api.PageService, api.logger))
+		pagesV1.Get("/pages", apiv1.GetAllPages(api.PageService, api.logger))
+		pagesV1.Post("/pages/:id", apiv1.UpdatePage(api.PageService, api.logger))
+		pagesV1.Delete("/pages/:id", apiv1.DeletePage(api.PageService, api.logger))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)

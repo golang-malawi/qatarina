@@ -7,7 +7,7 @@ import SelectFeatureModuleType from "@/components/SelectFeatureModuleType";
 import { Heading } from "@chakra-ui/react";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/Features/EditFeatureModuleForm"
+  "/(project)/projects/$projectId/Features/EditFeatureModuleForm",
 )({
   component: EditFeatureModuleForm,
   validateSearch: (search) => {
@@ -44,11 +44,11 @@ function EditFeatureModuleForm() {
 
       try {
         const data = await moduleService.getModuleById(moduleId);
-        setName(data.Name || "");
-        setType(data.Type || "");
-        setDescription(data.Description || "");
-        setCode(data.Code || "");
-        setPriority(data.Priority?.toString() || "");        
+        setName(data.name || "");
+        setType(data.type || "");
+        setDescription(data.description || "");
+        setCode(data.code || "");
+        setPriority(data.priority?.toString() || "");
       } catch (err) {
         console.error(err);
         toaster.create({

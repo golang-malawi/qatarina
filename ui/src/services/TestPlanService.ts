@@ -1,68 +1,52 @@
-import axios from "axios";
-import { getApiEndpoint } from "@/common/request";
-import createAuthHeaders from "@/hooks/useAuthHeaders";
-import { TestPlan } from "@/common/models";
+import { apiClient } from "@/lib/api/query";
+import $api from "@/lib/api/query";
 
-export default class TestPlanService {
-  apiEndpoint: string;
-
-  constructor() {
-    this.apiEndpoint = getApiEndpoint();
-  }
-
-  async findAllByProject(projectId: string) {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/projects/${projectId}/test-plans`,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res.data.test_plans;
-    }
-    throw new Error(res.data);
-  }
-
-  async findById(id: string) {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/test-plans/${id}`,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res.data.test_plan;
-    }
-    throw new Error(res.data);
-  }
-
-  async create(data: unknown) {
-    const res = await axios.post(
-      `${this.apiEndpoint}/v1/test-plans`,
-      data,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res;
-    }
-    throw new Error(res.data);
-  }
-
-  async deleteTester(id: string) {
-    const res = await axios.delete(
-      `${this.apiEndpoint}/v1/test-plans/${id}`,
-      createAuthHeaders()
-    );
-    if (res.status === 200) {
-      return res.data.test_plan;
-    }
-    throw new Error(res.data);
-  }
+export function useProjectTestPlansQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-plans", {
+    params: { path: { projectID } },
+  });
 }
 
-export async function findAllTestPlans(): Promise<TestPlan[]> {
-  const res = await axios.get(
-    `${getApiEndpoint()}/v1/test-plans`,
-    createAuthHeaders()
-  );
-  if (res.status === 200) {
-    return res.data.test_plans;
-  }
-  throw new Error(res.data);
+export function useTestPlanQuery(testPlanID: string) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export function useCreateTestPlanMutation() {
+  return $api.useMutation("post", "/v1/test-plans");
+}
+
+export function useDeleteTestPlanMutation() {
+  return $api.useMutation("delete", "/v1/test-plans/{testPlanID}");
+}
+
+export function useTestPlansQuery() {
+  return $api.useQuery("get", "/v1/test-plans");
+}
+
+export async function getProjectTestPlans(projectID: string) {
+  return apiClient.request("get", "/v1/projects/{projectID}/test-plans", {
+    params: { path: { projectID } },
+  });
+}
+
+export async function getTestPlanById(testPlanID: string) {
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export async function createTestPlan(data: any) {
+  return apiClient.request("post", "/v1/test-plans", { body: data });
+}
+
+export async function deleteTestPlan(testPlanID: string) {
+  return apiClient.request("delete", "/v1/test-plans/{testPlanID}", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export async function getTestPlans() {
+  return apiClient.request("get", "/v1/test-plans");
 }
