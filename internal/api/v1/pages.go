@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -23,7 +23,7 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
-			logger.Error("api-pages", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
@@ -32,7 +32,7 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 
 		_, err := page.Create(context.Background(), request)
 		if err != nil {
-			logger.Error("api-pages", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process request")
 		}
 
@@ -48,15 +48,15 @@ func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.H
 		if err != nil {
 			return problemdetail.BadRequest(c, "failed to parse id data in request")
 		}
-		fmt.Println("GetOnePage handler triggered with ID:", pageID)
 
 		page, err := pageService.GetOnePage(context.Background(), int32(pageID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				logger.Error("v1-pages", "page not found", "error", err)
+				logger.Info(loggedmodule.ApiPages, "page not found", "error", err)
+				return problemdetail.NotFound(c, "page not found")
 			}
 
-			logger.Error("v1-pages", "failed to retrieve request data", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to retrieve request data", "error", err)
 			return problemdetail.BadRequest(c, "failed to retrieve page")
 		}
 		return c.JSON(page)
@@ -67,8 +67,8 @@ func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber
 	return func(ctx *fiber.Ctx) error {
 		pages, err := pagesService.GetAllPages(ctx.Context())
 		if err != nil {
+			logger.Error(loggedmodule.ApiPages, "failed to get all pages", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failled to process request")
-
 		}
 		return ctx.JSON(fiber.Map{
 			"pages": pages,
@@ -83,7 +83,7 @@ func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.H
 			if validationErrors {
 				return problemdetail.ValidationErrors(ctx, "invalid data in request", err)
 			}
-			logger.Error("api-pages", "failed to parse request data", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to parse request data", "error", err)
 			return problemdetail.BadRequest(ctx, "failed to parse data in request")
 		}
 
@@ -91,7 +91,7 @@ func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.H
 		request.CreatedBy = int32(authutil.GetAuthUserID(ctx))
 		_, err := pageService.UpdatePage(ctx.Context(), *request)
 		if err != nil {
-			logger.Error("api-pages", "failed to process request", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to process request", "error", err)
 			return problemdetail.BadRequest(ctx, "failed to process request")
 		}
 
@@ -106,13 +106,12 @@ func DeletePage(pageService services.PageService, logger logging.Logger) fiber.H
 		pageIDParam := ctx.Params("id")
 		pageID, err := strconv.Atoi(pageIDParam)
 		if err != nil {
-			logger.Error("v1-pages", "failed to parse page ID data", "error", err)
 			return problemdetail.BadRequest(ctx, "failed to parse pageID data in request")
 		}
 
 		err = pageService.DeletePage(ctx.Context(), int32(pageID))
 		if err != nil {
-			logger.Error("v1-pages", "failed to delete page", "error", err)
+			logger.Error(loggedmodule.ApiPages, "failed to delete page", "error", err)
 			return problemdetail.BadRequest(ctx, "failed to delete page")
 		}
 		return ctx.JSON(fiber.Map{
