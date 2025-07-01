@@ -7,7 +7,7 @@ import { IconUser } from "@tabler/icons-react";
 export const Route = createFileRoute("/(app)/users/")({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData($api.queryOptions("get", "/v1/users")),
-  component: RouteComponent
+  component: RouteComponent,
 });
 
 function RouteComponent() {
@@ -28,23 +28,24 @@ function RouteComponent() {
     <Box>
       <Heading size="3xl">Users</Heading>
       <Link to={`/users/new`}>
-        <Button>
-          Add New User
-        </Button>
+        <Button>Add New User</Button>
       </Link>
       <Flex direction="column" gap="2" p="4" borderTop={"1px black solid"}>
-        {users.map((user) => 
-        <Box key={user.username}>
-          <IconUser />
-          <Link 
-            to={`/users/view/$userID`}
-            params={{ userID: user.id }} >
-              <strong>{user.displayName}</strong>
-          </Link>
-          <p>
-            <small>Registered At: {user.createdAt}</small>
-          </p>
-        </Box>)}
+        {users &&
+          users.map((user) => (
+            <Box key={user.username}>
+              <IconUser />
+              <Link
+                to={`/users/view/$userID`}
+                params={{ userID: `${user.id}` }}
+              >
+                <strong>{user.displayName}</strong>
+              </Link>
+              <p>
+                <small>Registered At: {user.createdAt}</small>
+              </p>
+            </Box>
+          ))}
       </Flex>
     </Box>
   );

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Box, Button, Flex, Heading, VStack } from "@chakra-ui/react";
+import { Alert, Box, Button, Flex, Heading, VStack } from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -75,7 +75,10 @@ function ProjectsPage() {
   return (
     <Box>
       <Box paddingBottom={"2"} borderBottom={"1px solid #efefef"}>
-        <Heading>Projects</Heading>
+        <Heading size="3xl">Projects</Heading>
+        <Alert.Root m="2" variant="outline">
+          <Alert.Content>Manage Projects on QATARINA here.</Alert.Content>
+        </Alert.Root>
         <Link to="/projects/new">
           <Button>
             <IconPlus /> Create Project
@@ -86,4 +89,3 @@ function ProjectsPage() {
     </Box>
   );
 }
-

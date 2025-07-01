@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 )
 
 type Logger interface {
-	Debug(component, msg string, args ...any)
-	Info(component, msg string, args ...any)
-	Error(component, msg string, args ...any)
+	Debug(component loggedmodule.Name, msg string, args ...any)
+	Info(component loggedmodule.Name, msg string, args ...any)
+	Error(component loggedmodule.Name, msg string, args ...any)
 }
 
 type slogLogger struct {
@@ -22,7 +23,7 @@ type slogLogger struct {
 }
 
 // Debug implements Logger.
-func (l *slogLogger) Debug(component, msg string, args ...any) {
+func (l *slogLogger) Debug(component loggedmodule.Name, msg string, args ...any) {
 	if args == nil {
 		l.logger.Debug(msg, "component", component)
 		return
@@ -32,7 +33,7 @@ func (l *slogLogger) Debug(component, msg string, args ...any) {
 }
 
 // Error implements Logger.
-func (l *slogLogger) Error(component, msg string, args ...any) {
+func (l *slogLogger) Error(component loggedmodule.Name, msg string, args ...any) {
 	if args == nil {
 		l.logger.Error(msg, "component", component)
 		return
@@ -42,7 +43,7 @@ func (l *slogLogger) Error(component, msg string, args ...any) {
 }
 
 // Info implements Logger.
-func (l *slogLogger) Info(component, msg string, args ...any) {
+func (l *slogLogger) Info(component loggedmodule.Name, msg string, args ...any) {
 	if args == nil {
 		l.logger.Info(msg, "component", component)
 		return

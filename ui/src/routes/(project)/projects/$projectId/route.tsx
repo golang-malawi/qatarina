@@ -1,5 +1,14 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Box, Container, Flex } from "@chakra-ui/react";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  Alert,
+  Box,
+  Container,
+  Flex,
+  Heading,
+  Spinner,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -10,13 +19,15 @@ import { ColorModeButton } from "@/components/ui/color-mode";
 import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
+  FiChevronLeft,
   FiClipboard,
   FiHome,
   FiInbox,
   FiSettings,
   FiUsers,
 } from "react-icons/fi";
-import { MdInsights } from "react-icons/md";
+import { MdChevronLeft, MdInsights } from "react-icons/md";
+import { useProjectQuery } from "@/services/ProjectService";
 
 export const Route = createFileRoute("/(project)/projects/$projectId")({
   component: RouteComponent,
@@ -24,7 +35,7 @@ export const Route = createFileRoute("/(project)/projects/$projectId")({
 
 const createProjectNavItems = (projectId: string): NavItem[] => {
   return [
-    { path: `/projects/${projectId}`, name: "Project", icon: FiHome },
+    { path: `/projects/${projectId}`, name: "Overview", icon: FiHome },
     {
       path: `/projects/${projectId}/test-plans`,
       name: "Test Plans",
@@ -60,12 +71,33 @@ const createProjectNavItems = (projectId: string): NavItem[] => {
 
 function RouteComponent() {
   const { projectId } = Route.useParams();
+  const { data, isLoading, error } = useProjectQuery(projectId!);
+
+  if (isLoading) return <Spinner />;
+  if (error) {
+    return (
+      <Box>
+        <Alert.Root>
+          <Alert.Content>Failed to load Project information</Alert.Content>
+        </Alert.Root>
+      </Box>
+    );
+  }
 
   return (
     <SidebarProvider>
       <AppSidebar
         items={createProjectNavItems(projectId)}
-        header={<Box p={2}>Project header</Box>}
+        header={
+          <Flex direction="column">
+            <Link to={`/projects`} className="flex flex-row">
+              &lt; View All Projects
+            </Link>
+            <Text fontWeight="bold" textTransform="uppercase">
+              {data?.project?.title}
+            </Text>
+          </Flex>
+        }
       />
       <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
         <Flex width={"100%"} padding={4} justifyContent="space-between">
@@ -73,10 +105,13 @@ function RouteComponent() {
           <ColorModeButton />
         </Flex>
         <Container>
+          <VStack borderBottom="1px gray.500 solid">
+            <Heading size="3xl">{data?.project?.title}</Heading>
+            <Text p={"2"}>{data?.project?.description}</Text>
+          </VStack>
           <Outlet />
         </Container>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-

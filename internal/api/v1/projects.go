@@ -11,6 +11,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -85,7 +86,6 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 		return c.JSON(fiber.Map{
 			"project": schema.NewProjectResponse(project, nil),
 		})
-		return problemdetail.NotImplemented(c, "failed to get one Project")
 	}
 }
 
@@ -110,7 +110,7 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 		}
 		testCases, err := testCaseService.FindAllByProjectID(context.Background(), projectID)
 		if err != nil {
-			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -141,7 +141,7 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 		}
 		testPlans, err := testPlanService.FindAllByProjectID(context.Background(), projectID)
 		if err != nil {
-			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -172,7 +172,7 @@ func GetProjectTestRuns(testRunService services.TestRunService, logger logging.L
 		}
 		testPlans, err := testRunService.FindAllByProjectID(context.Background(), projectID)
 		if err != nil {
-			logger.Error("api:projects", "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -227,7 +227,7 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 
 			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan)
 			if err != nil {
-				logger.Error("projectsv1", "failed to create a default test plan for project", "projectID", project.ID, "error", err)
+				logger.Error(loggedmodule.ApiProjects, "failed to create a default test plan for project", "projectID", project.ID, "error", err)
 			}
 		}
 
@@ -316,7 +316,7 @@ func GetProjectTesters(projectService services.ProjectService, testerService ser
 		}
 		testers, err := testerService.FindByProjectID(context.Background(), int64(projectID))
 		if err != nil {
-			logger.Error("api:projects", "failed to fetch testers for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch testers for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch testers")
 		}
 		return c.JSON(fiber.Map{
@@ -353,7 +353,7 @@ func AssignTesters(testerService services.TesterService, logger logging.Logger) 
 		}
 
 		if err := testerService.AssignBulk(context.Background(), projectID, &request); err != nil {
-			logger.Error("api:projects", "failed to assign testers to project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to assign testers to project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to assign testers")
 		}
 

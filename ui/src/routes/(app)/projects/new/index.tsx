@@ -1,9 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Button,
-  Field,
-  Input,
-} from "@chakra-ui/react";
+import { Box, Button, Field, Heading, Input } from "@chakra-ui/react";
 import { useForm } from "@tanstack/react-form";
 
 import { useNavigate } from "@tanstack/react-router";
@@ -66,78 +62,81 @@ function CreateProject() {
   });
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        form.handleSubmit();
-      }}
-    >
-      <form.Field
-        name="name"
-        children={(field) => (
-          <Field.Root>
-            <Field.Label>Name</Field.Label>
-            <Input
-              type="text"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            <Field.HelperText>Project title</Field.HelperText>
-          </Field.Root>
-        )}
-      />
+    <Box>
+      <Heading size="3xl">Create a New Project</Heading>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <form.Field
+          name="name"
+          children={(field) => (
+            <Field.Root>
+              <Field.Label>Name</Field.Label>
+              <Input
+                type="text"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              <Field.HelperText>Project title</Field.HelperText>
+            </Field.Root>
+          )}
+        />
 
-      <form.Field
-        name="description"
-        children={(field) => (
-          <Field.Root>
-            <Field.Label>Description</Field.Label>
-            <Input
-              type="text"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            <Field.HelperText>Description</Field.HelperText>
-          </Field.Root>
-        )}
-      />
+        <form.Field
+          name="description"
+          children={(field) => (
+            <Field.Root>
+              <Field.Label>Description</Field.Label>
+              <Input
+                type="text"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              <Field.HelperText>Description</Field.HelperText>
+            </Field.Root>
+          )}
+        />
 
-      <form.Field
-        name="version"
-        children={(field) => (
-          <Field.Root>
-            <Field.Label>Project Version</Field.Label>
-            <Input
-              type="text"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            <Field.HelperText>Project Version</Field.HelperText>
-          </Field.Root>
-        )}
-      />
+        <form.Field
+          name="version"
+          children={(field) => (
+            <Field.Root>
+              <Field.Label>Project Version</Field.Label>
+              <Input
+                type="text"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              <Field.HelperText>Project Version</Field.HelperText>
+            </Field.Root>
+          )}
+        />
 
-      <form.Field
-        name="website_url"
-        children={(field) => (
-          <Field.Root>
-            <Field.Label>Website URL</Field.Label>
-            <Input
-              type="text"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
-            <Field.HelperText>Website URL</Field.HelperText>
-          </Field.Root>
-        )}
-      />
+        <form.Field
+          name="website_url"
+          children={(field) => (
+            <Field.Root>
+              <Field.Label>Website URL</Field.Label>
+              <Input
+                type="text"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              <Field.HelperText>Website URL</Field.HelperText>
+            </Field.Root>
+          )}
+        />
 
-      <Button type="submit">Submit</Button>
-    </form>
+        <Button type="submit">Submit</Button>
+      </form>
+    </Box>
   );
 }
