@@ -266,9 +266,27 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [post]
-func UpdateProject(projectService services.ProjectService) fiber.Handler {
+func UpdateProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to update Project")
+		request := new(schema.UpdateProjectRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid datat in request", err)
+			}
+			logger.Error("projectsv1", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := projectService.Update(c.Context(), *request)
+		if err != nil {
+			logger.Error("projectsv1", "failed to process request", "error", err)
+			return problemdetail.BadRequest(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Project updated successfully",
+		})
+
 	}
 }
 

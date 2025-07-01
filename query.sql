@@ -39,6 +39,13 @@ WHERE title ILIKE '%' || $1 || '%';
 -- name: GetProject :one
 SELECT * FROM projects WHERE id = $1;
 
+-- name: UpdateProject :execrows
+UPDATE projects SET 
+title = $2, description = $3, website_url = $4,
+version = $5, github_url = $6, 
+owner_user_id = $7
+WHERE id = $1;  
+
 -- name: DeleteProject :execrows
 DELETE FROM projects WHERE id = $1;
 

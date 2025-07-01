@@ -1450,6 +1450,40 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 	return err
 }
 
+const updateProject = `-- name: UpdateProject :execrows
+UPDATE projects SET 
+title = $2, description = $3, website_url = $4,
+version = $5, github_url = $6, 
+owner_user_id = $7
+WHERE id = $1
+`
+
+type UpdateProjectParams struct {
+	ID          int32
+	Title       string
+	Description string
+	WebsiteUrl  sql.NullString
+	Version     sql.NullString
+	GithubUrl   sql.NullString
+	OwnerUserID int32
+}
+
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProject,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.WebsiteUrl,
+		arg.Version,
+		arg.GithubUrl,
+		arg.OwnerUserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL
 `
