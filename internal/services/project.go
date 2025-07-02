@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -15,8 +18,9 @@ type ProjectService interface {
 	Create(context.Context, *schema.NewProjectRequest) (*dbsqlc.Project, error)
 	FindAll(context.Context) ([]dbsqlc.Project, error)
 	FindByID(context.Context, int64) (*dbsqlc.Project, error)
-	Update(context.Context, *schema.UpdateProjectRequest) (*dbsqlc.Project, error)
+	Update(context.Context, schema.UpdateProjectRequest) (bool, error)
 	DeleteProject(context.Context, int64) error
+	Search(context.Context, string) ([]dbsqlc.Project, error)
 }
 
 type projectServiceImpl struct {
@@ -76,14 +80,23 @@ func (s *projectServiceImpl) FindByID(ctx context.Context, projectID int64) (*db
 }
 
 // FindByID implements ProjectService.
-func (s *projectServiceImpl) Update(ctx context.Context, request *schema.UpdateProjectRequest) (*dbsqlc.Project, error) {
-	projectID := request.ID
-	if project, err := s.db.GetProject(context.Background(), int32(projectID)); err != nil {
-		s.logger.Error(s.name, "failed to fetch project", "projectID", projectID, "error", err)
-		return nil, err
-	} else {
-		return &project, nil
+func (s *projectServiceImpl) Update(ctx context.Context, request schema.UpdateProjectRequest) (bool, error) {
+	_, err := s.db.UpdateProject(ctx, dbsqlc.UpdateProjectParams{
+		ID:          int32(request.ID),
+		Title:       request.Name,
+		Description: request.Description,
+		WebsiteUrl:  common.NullString(request.WebsiteURL),
+		Version:     common.NullString(request.Version),
+		GithubUrl:   common.NullString(request.GitHubURL),
+		OwnerUserID: int32(request.ProjectOwnerID),
+	})
+
+	if err != nil {
+		s.logger.Error("failed to update project", "error", err)
+		return false, fmt.Errorf("failed to update project %v", err)
 	}
+
+	return true, nil
 }
 
 // DeleteProject implements ProjectService.
@@ -93,4 +106,17 @@ func (s *projectServiceImpl) DeleteProject(ctx context.Context, projectID int64)
 		return err
 	}
 	return nil
+}
+
+func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.Project, error) {
+	projects, err := p.db.SearchProject(ctx, common.NullString(keyword))
+	if err != nil {
+		p.logger.Error("failed to search projects with keyword %q", keyword, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+
+	}
+
+	return projects, nil
 }
