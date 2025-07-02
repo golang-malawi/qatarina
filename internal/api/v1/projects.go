@@ -66,7 +66,6 @@ func SearchProjects(projectService services.ProjectService, logger logging.Logge
 		projects, err := projectService.Search(q.Context(), keyword)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				logger.Error("error", "search error:", err)
 				return q.JSON([]dbsqlc.Project{})
 			}
 		}
@@ -328,7 +327,6 @@ func DeleteProject(projectService services.ProjectService, logger logging.Logger
 		projectIDParam := c.Params("projectID")
 		projectID, err := strconv.Atoi(projectIDParam)
 		if err != nil {
-			logger.Error("projectsv1", "failed to parse projectID data", "error", err)
 			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
 		}
 
