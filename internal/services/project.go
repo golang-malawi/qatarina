@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -110,10 +112,11 @@ func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsq
 	projects, err := p.db.SearchProject(ctx, common.NullString(keyword))
 	if err != nil {
 		p.logger.Error("failed to search projects with keyword %q", keyword, err)
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+
 	}
-	if len(projects) == 0 {
-		return nil, fmt.Errorf("no users found matching %q", keyword)
-	}
+
 	return projects, nil
 }
