@@ -2,12 +2,13 @@ import { Button, Checkbox, Field, Input, Spinner } from "@chakra-ui/react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import SelectTestKind from "@/components/SelectTestKind";
+import SelectFeatureModule from "@/components/SelectFeatureModule";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-cases/new/"
+  "/(project)/projects/$projectId/test-cases/new/",
 )({
   component: NewTestCases,
 });
@@ -80,10 +81,9 @@ function NewTestCases() {
 
         <Field.Root>
           <Field.Label>Feature, Component or Module</Field.Label>
-          <Input
-            type="text"
-            name="code"
-            onChange={(e) => setFeature_or_module(e.target.value)}
+          <SelectFeatureModule
+            projectId={project_id}
+            onChange={setFeature_or_module}
           />
           <Field.HelperText>Test Case Feature or Module.</Field.HelperText>
         </Field.Root>
