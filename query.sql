@@ -189,6 +189,31 @@ INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
 
+-- name: CreateProjectModules :one
+INSERT INTO modules(
+    project_id, name, code, priority, type, description, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, now(), now()
+)
+RETURNING *;
+
+-- name: GetOneModule :one
+SELECT * FROM modules
+WHERE id = $1;
+
+-- name: GetAllModules :many
+SELECT * FROM modules
+ORDER BY created_at DESC;
+
+-- name: UpdateProjectModule :exec
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+WHERE id = $1;
+
+-- name: DeleteProjectModule :execrows
+DELETE FROM modules WHERE id = $1;
+
+-- name: GetProjectModules :many
+SELECT * FROM modules
+WHERE project_id = $1;
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;

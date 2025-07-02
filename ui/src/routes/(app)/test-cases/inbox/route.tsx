@@ -1,14 +1,12 @@
 import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
 import {
   Box,
-  Button,
   Flex,
   Input,
   Container,
   Heading,
   Stack,
   Badge,
-  Select,
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
