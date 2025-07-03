@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -45,6 +47,9 @@ type TestCaseService interface {
 
 	// BulkDelete deletes multiple test-cases by ID
 	BulkDelete(context.Context, []string) error
+
+	//Search is used to search a test case based on the title or code
+	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -164,4 +169,17 @@ func (t *testCaseServiceImpl) FindAllCreatedBy(ctx context.Context, createdByID 
 // Update implements TestCaseService.
 func (t *testCaseServiceImpl) Update(context.Context, *schema.UpdateTestCaseRequest) (*dbsqlc.TestCase, error) {
 	panic("unimplemented")
+}
+
+func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.TestCase, error) {
+	testCases, err := t.queries.SearchTestCases(ctx, common.NullString(keyword))
+	if err != nil {
+		t.logger.Error("failed to search test cases with keyword %q", keyword, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+	}
+
+	return testCases, nil
+
 }

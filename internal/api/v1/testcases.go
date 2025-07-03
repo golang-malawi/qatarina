@@ -3,9 +3,12 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -50,9 +53,20 @@ func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/query [get]
-func SearchTestCases(services.TestCaseService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search TestCases")
+func SearchTestCases(testCaseService services.TestCaseService) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		keyword := q.Query("keyword", "")
+		if keyword == "" {
+			return problemdetail.BadRequest(q, "missing keyword parameter")
+		}
+
+		testCases, err := testCaseService.Search(q.Context(), keyword)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return q.JSON([]dbsqlc.TestCase{})
+			}
+		}
+		return q.JSON(testCases)
 	}
 }
 
