@@ -72,6 +72,9 @@ SELECT * FROM test_cases
 WHERE title ILIKE '%' || $1 || '%'
 OR code ILIKE '%' || $1 || '%';
 
+-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1;
+
 -- name: CountTestCasesNotLinkedToProject :one
 SELECT COUNT(*) FROM test_cases
 RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id

@@ -218,8 +218,18 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/{testCaseID} [delete]
-func DeleteTestCase(services.TestCaseService) fiber.Handler {
+func DeleteTestCase(testCaseService services.TestCaseService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to delete TestCase")
+		testCaseIDParam := c.Params("testCaseID")
+
+		err := testCaseService.DeleteByID(c.Context(), testCaseIDParam)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to delete page")
+		}
+
+		return c.JSON(fiber.Map{
+			"message":    "Test case deleted successfully",
+			"testCaseID": testCaseIDParam,
+		})
 	}
 }

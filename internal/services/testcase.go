@@ -131,8 +131,16 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 
 // DeleteByID implements TestCaseService.
 func (t *testCaseServiceImpl) DeleteByID(ctx context.Context, id string) error {
+	uuidID, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+	_, err = t.queries.DeleteTestCase(ctx, uuidID)
+	if err != nil {
+		return err
+	}
 
-	panic("unimplemented")
+	return nil
 }
 
 // DeleteByProjectID implements TestCaseService.
