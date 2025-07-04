@@ -529,6 +529,18 @@ func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, err
 	return result.RowsAffected()
 }
 
+const deleteProjectTester = `-- name: DeleteProjectTester :execrows
+DELETE FROM project_testers WHERE id = $1
+`
+
+func (q *Queries) DeleteProjectTester(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProjectTester, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -780,6 +792,25 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 		return nil, err
 	}
 	return items, nil
+}
+
+const getProjectTester = `-- name: GetProjectTester :one
+SELECT id, project_id, user_id, role, is_active, created_at, updated_at FROM project_testers WHERE id = $1
+`
+
+func (q *Queries) GetProjectTester(ctx context.Context, id int32) (ProjectTester, error) {
+	row := q.db.QueryRowContext(ctx, getProjectTester, id)
+	var i ProjectTester
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getTestCase = `-- name: GetTestCase :one
@@ -1497,6 +1528,42 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchProjectTesters = `-- name: SearchProjectTesters :many
+SELECT id, project_id, user_id, role, is_active, created_at, updated_at FROM project_testers
+WHERE role ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]ProjectTester, error) {
+	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectTester
+	for rows.Next() {
+		var i ProjectTester
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UserID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

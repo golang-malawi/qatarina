@@ -167,6 +167,16 @@ INSERT INTO project_testers (
     $1, $2, $3, $4, now(), now()
 );
 
+-- name: GetProjectTester :one
+SELECT * FROM project_testers WHERE id = $1;
+
+-- name: SearchProjectTesters :many
+SELECT * FROM project_testers
+WHERE role ILIKE '%' || $1 || '%';
+
+-- name: DeleteProjectTester :execrows
+DELETE FROM project_testers WHERE id = $1;
+
 -- name: GetTestersByProject :many
 SELECT
 project_testers.*,
