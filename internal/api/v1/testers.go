@@ -3,8 +3,12 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
@@ -45,9 +49,20 @@ func ListTesters(testerService services.TesterService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers.query [get]
-func SearchTesters(services.TesterService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search Testers")
+func SearchTesters(testerService services.TesterService) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		projectIDParam := q.Query("project_id", "")
+		projectID, err := strconv.Atoi(projectIDParam)
+		if err != nil {
+			return problemdetail.BadRequest(q, "failed to process request project id")
+		}
+		testers, err := testerService.FindByProjectID(q.Context(), int64(projectID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return q.JSON([]schema.Tester{})
+			}
+		}
+		return q.JSON(testers)
 	}
 }
 
@@ -64,9 +79,21 @@ func SearchTesters(services.TesterService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers/{testerID} [get]
-func GetOneTester(services.TesterService) fiber.Handler {
+func GetOneTester(testerService services.TesterService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one Tester")
+		testerID, err := c.ParamsInt("testerID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse tester id data in request")
+		}
+
+		tester, err := testerService.GetOne(c.Context(), int32(testerID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.BadRequest(c, "no project tester found")
+			}
+			return problemdetail.BadRequest(c, "failed to retrieve project tester")
+		}
+		return c.JSON(tester)
 	}
 }
 

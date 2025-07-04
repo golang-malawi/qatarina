@@ -18,6 +18,7 @@ type TesterService interface {
 	FindAll(context.Context) ([]schema.Tester, error)
 	FindByProjectID(context.Context, int64) ([]schema.Tester, error)
 	Invite(context.Context, any) (any, error)
+	GetOne(context.Context, int32) (dbsqlc.ProjectTester, error)
 }
 
 type testerServiceImpl struct {
@@ -97,4 +98,13 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 		})
 	}
 	return testers, nil
+}
+
+func (t *testerServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.ProjectTester, error) {
+	tester, err := t.queries.GetProjectTester(ctx, id)
+	if err != nil {
+		t.logger.Error("failed to find the project tester", "error", err)
+		return dbsqlc.ProjectTester{}, err
+	}
+	return tester, nil
 }
