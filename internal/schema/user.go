@@ -65,6 +65,9 @@ type UpdateUserRequest struct {
 	Address     string `json:"address" validate:"-"`
 }
 
+type InviteUserRequest struct {
+}
+
 type RefreshTokenRequest struct {
 }
 

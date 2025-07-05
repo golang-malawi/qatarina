@@ -18,3 +18,10 @@ func GetAuthUsername(ctx *fiber.Ctx) string {
 	username := claims["Name"].(string)
 	return string(username)
 }
+
+func GetAuthUserEmail(ctx *fiber.Ctx) string {
+	token := ctx.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	email := claims["Email"].(string)
+	return string(email)
+}

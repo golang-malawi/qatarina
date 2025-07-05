@@ -31,6 +31,8 @@ type UserService interface {
 	Update(context.Context, schema.UpdateUserRequest) (bool, error)
 	//Delete used to delete user from the system
 	Delete(ctx context.Context, id int32) error
+	// Invite used to invite a user
+	Invite(context.Context, string, string) error
 }
 
 type OrganizationUserService interface {
@@ -155,5 +157,9 @@ func (u *userServiceImpl) Delete(ctx context.Context, id int32) error {
 		u.logger.Error("failed to delete user", "error", err)
 		return err
 	}
+	return nil
+}
+
+func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail string) error {
 	return nil
 }
