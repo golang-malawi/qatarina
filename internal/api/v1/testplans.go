@@ -161,9 +161,33 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [post]
-func UpdateTestPlan(services.TestPlanService) fiber.Handler {
+func UpdateTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to update TestPlan")
+		request := new(schema.UpdateTestPlan)
+		if validationErros, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErros {
+				return problemdetail.ValidationErrors(c, "invalid datea in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+		// testPlanID, err := c.ParamsInt("testPlanID", 0)
+		// if err != nil{
+		// 	return problemdetail.BadRequest(c, "failed to pass test plan id data in request")
+		// }
+		userID := authutil.GetAuthUserID(c)
+
+		request.CreatedByID = userID
+		request.AssignedToID = userID
+		request.UpdatedByID = userID
+
+		_, err := testPlanService.Update(c.Context(), *request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test plan updated successfully",
+		})
 	}
 }
 

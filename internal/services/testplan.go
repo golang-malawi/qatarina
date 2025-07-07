@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -19,7 +20,7 @@ type TestPlanService interface {
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
 	DeleteByID(context.Context, int64) error
-	//Search(context.Context, string)([]dbsqlc.TestPlan, error)
+	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -166,4 +167,20 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*dbsqlc
 		return nil, fmt.Errorf("failed to get test plan %d: %w", id, err)
 	}
 	return &testPlan, nil
+}
+
+func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestPlan) (bool, error) {
+	err := t.queries.UpdateTestPlan(ctx, dbsqlc.UpdateTestPlanParams{
+		ProjectID:      int32(request.ProjectID),
+		Kind:           dbsqlc.TestKind(request.Kind),
+		Description:    common.NullString(request.Description),
+		StartAt:        common.NullTime(request.StartAt),
+		ClosedAt:       common.NullTime(request.ClosedAt),
+		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
+	})
+	if err != nil {
+		t.logger.Error("failed to update test plan", "error", err)
+		return false, err
+	}
+	return true, nil
 }
