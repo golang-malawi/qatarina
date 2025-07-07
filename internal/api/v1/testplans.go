@@ -3,10 +3,14 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -52,9 +56,22 @@ func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans [get]
-func SearchTestPlans(services.TestPlanService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search TestPlans")
+func SearchTestPlans(testPlanService services.TestPlanService) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		projectID, err := strconv.Atoi(q.Query("projectID"))
+		if err != nil {
+			return problemdetail.BadRequest(q, "invalid or missing projectID parameter in query")
+		}
+		testPlans, err := testPlanService.FindAllByProjectID(q.Context(), int64(projectID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return q.JSON([]dbsqlc.TestPlan{})
+			}
+			return problemdetail.ServerErrorProblem(q, "failed to find a test plan")
+		}
+
+		return q.JSON(testPlans)
+
 	}
 }
 
@@ -71,10 +88,20 @@ func SearchTestPlans(services.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [get]
-func GetOneTestPlan(services.TestPlanService) fiber.Handler {
+func GetOneTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one TestPlan")
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id from path")
+		}
+		testPlan, err := testPlanService.GetOneTestPlan(c.Context(), int64(testPlanID))
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(testPlan)
 	}
+
 }
 
 // CreateTestPlan godoc

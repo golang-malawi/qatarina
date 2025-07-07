@@ -15,9 +15,11 @@ import (
 type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
+	GetOneTestPlan(context.Context, int64) (*dbsqlc.TestPlan, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
 	DeleteByID(context.Context, int64) error
+	//Search(context.Context, string)([]dbsqlc.TestPlan, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -150,6 +152,18 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	return &testPlan, nil
 }
 
-func (t *testPlanService) DeleteByID(context.Context, int64) error {
-	panic("unimplemented")
+func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
+	_, err := t.queries.DeleteTestPlan(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete test plan %d:%w", id, err)
+	}
+	return nil
+}
+
+func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*dbsqlc.TestPlan, error) {
+	testPlan, err := t.queries.GetTestPlan(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get test plan %d: %w", id, err)
+	}
+	return &testPlan, nil
 }
