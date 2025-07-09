@@ -19,14 +19,13 @@ import { ColorModeButton } from "@/components/ui/color-mode";
 import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
-  FiChevronLeft,
   FiClipboard,
   FiHome,
   FiInbox,
   FiSettings,
   FiUsers,
 } from "react-icons/fi";
-import { MdChevronLeft, MdInsights } from "react-icons/md";
+import { MdInsights } from "react-icons/md";
 import { useProjectQuery } from "@/services/ProjectService";
 
 export const Route = createFileRoute("/(project)/projects/$projectId")({
@@ -71,7 +70,7 @@ const createProjectNavItems = (projectId: string): NavItem[] => {
 
 function RouteComponent() {
   const { projectId } = Route.useParams();
-  const { data, isLoading, error } = useProjectQuery(projectId!);
+  const { data: project, isLoading, error } = useProjectQuery(projectId!);
 
   if (isLoading) return <Spinner />;
   if (error) {
@@ -94,7 +93,7 @@ function RouteComponent() {
               &lt; View All Projects
             </Link>
             <Text fontWeight="bold" textTransform="uppercase">
-              {data?.project?.title}
+              {project?.title}
             </Text>
           </Flex>
         }
@@ -106,8 +105,8 @@ function RouteComponent() {
         </Flex>
         <Container>
           <VStack borderBottom="1px gray.500 solid">
-            <Heading size="3xl">{data?.project?.title}</Heading>
-            <Text p={"2"}>{data?.project?.description}</Text>
+            <Heading size="3xl">{project?.title}</Heading>
+            <Text p={"2"}>{project?.description}</Text>
           </VStack>
           <Outlet />
         </Container>
