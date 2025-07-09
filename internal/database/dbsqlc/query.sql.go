@@ -553,6 +553,18 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 	return result.RowsAffected()
 }
 
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `
@@ -1511,74 +1523,108 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const updatePage = `-- name: UpdatePage :exec
-UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.DisplayName,
+			&i.Email,
+			&i.Password,
+			&i.Phone,
+			&i.OrgID,
+			&i.CountryIso,
+			&i.City,
+			&i.Address,
+			&i.IsActivated,
+			&i.IsReviewed,
+			&i.IsSuperAdmin,
+			&i.IsVerified,
+			&i.LastLoginAt,
+			&i.EmailConfirmedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, phone = $5,
+    org_id = $6, country_iso = $7, city = $8, address = $9,
+    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
+    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
 WHERE id = $1
 `
 
-type UpdatePageParams struct {
-	ID                 int32
-	ParentPageID       sql.NullInt32
-	PageVersion        string
-	OrgID              int32
-	ProjectID          int32
-	Code               string
-	Title              string
-	FilePath           sql.NullString
-	Content            string
-	PageType           string
-	MimeType           string
-	HasEmbeddedMedia   bool
-	ExternalContentUrl sql.NullString
-	NotionUrl          sql.NullString
-	LastEditedBy       int32
-	CreatedBy          int32
+type UpdateUserParams struct {
+	ID               int32
+	FirstName        string
+	LastName         string
+	DisplayName      sql.NullString
+	Phone            string
+	OrgID            sql.NullInt32
+	CountryIso       string
+	City             sql.NullString
+	Address          string
+	IsActivated      sql.NullBool
+	IsReviewed       sql.NullBool
+	IsSuperAdmin     sql.NullBool
+	IsVerified       sql.NullBool
+	LastLoginAt      sql.NullTime
+	EmailConfirmedAt sql.NullTime
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	DeletedAt        sql.NullTime
 }
 
-func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
-	_, err := q.db.ExecContext(ctx, updatePage,
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
 		arg.ID,
-		arg.ParentPageID,
-		arg.PageVersion,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.Phone,
 		arg.OrgID,
-		arg.ProjectID,
-		arg.Code,
-		arg.Title,
-		arg.FilePath,
-		arg.Content,
-		arg.PageType,
-		arg.MimeType,
-		arg.HasEmbeddedMedia,
-		arg.ExternalContentUrl,
-		arg.NotionUrl,
-		arg.LastEditedBy,
-		arg.CreatedBy,
-	)
-	return err
-}
-
-const updateProjectModule = `-- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
-WHERE id = $1
-`
-
-type UpdateProjectModuleParams struct {
-	ID          int32
-	Name        string
-	Code        string
-	Priority    int32
-	Type        string
-	Description string
-}
-
-func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateProjectModule,
-		arg.ID,
-		arg.Name,
-		arg.Code,
-		arg.Priority,
-		arg.Type,
-		arg.Description,
+		arg.CountryIso,
+		arg.City,
+		arg.Address,
+		arg.IsActivated,
+		arg.IsReviewed,
+		arg.IsSuperAdmin,
+		arg.IsVerified,
+		arg.LastLoginAt,
+		arg.EmailConfirmedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.DeletedAt,
 	)
 	return err
 }
