@@ -67,6 +67,16 @@ SELECT EXISTS(
     SELECT * FROM test_cases WHERE project_id = $1
 );
 
+-- name: IsTestCaseUsedInTestPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM test_plans WHERE test_case_id = $1
+);
+
+-- name: IsTestCaseUsedInTestRun :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+);
+
 -- name: SearchTestCases :many
 SELECT * FROM test_cases
 WHERE title ILIKE '%' || $1 || '%'
