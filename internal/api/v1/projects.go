@@ -66,8 +66,11 @@ func SearchProjects(projectService services.ProjectService, logger logging.Logge
 		projects, err := projectService.Search(q.Context(), keyword)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return q.JSON([]dbsqlc.Project{})
+				logger.Error("project not found", "error", err)
+				return problemdetail.ServerErrorProblem(q, "no project found")
 			}
+			logger.Error("error searching a project", "error", err)
+			return problemdetail.ServerErrorProblem(q, "failed to search project")
 		}
 
 		return q.JSON(projects)
@@ -280,7 +283,7 @@ func UpdateProject(projectService services.ProjectService, logger logging.Logger
 		_, err := projectService.Update(c.Context(), *request)
 		if err != nil {
 			logger.Error("projectsv1", "failed to process request", "error", err)
-			return problemdetail.BadRequest(c, "failed to process request")
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
 		return c.JSON(fiber.Map{
@@ -333,7 +336,7 @@ func DeleteProject(projectService services.ProjectService, logger logging.Logger
 		err = projectService.DeleteProject(c.Context(), int64(projectID))
 		if err != nil {
 			logger.Error("projectsv1", "failed to delete project", "error", err)
-			return problemdetail.BadRequest(c, "failed to delete project")
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 		return c.JSON(fiber.Map{
 			"message":   "Project deleted successfully",
