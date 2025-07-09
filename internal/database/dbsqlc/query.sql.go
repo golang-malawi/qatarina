@@ -794,25 +794,6 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 	return items, nil
 }
 
-const getProjectTester = `-- name: GetProjectTester :one
-SELECT id, project_id, user_id, role, is_active, created_at, updated_at FROM project_testers WHERE id = $1
-`
-
-func (q *Queries) GetProjectTester(ctx context.Context, id int32) (ProjectTester, error) {
-	row := q.db.QueryRowContext(ctx, getProjectTester, id)
-	var i ProjectTester
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
-		&i.UserID,
-		&i.Role,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getTestCase = `-- name: GetTestCase :one
 SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE id = $1
 `
@@ -894,6 +875,49 @@ func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error)
 		&i.TestedOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTestersByID = `-- name: GetTestersByID :one
+SELECT
+project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1
+`
+
+type GetTestersByIDRow struct {
+	ID                int32
+	ProjectID         int32
+	UserID            int32
+	Role              string
+	IsActive          bool
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	Project           string
+	TesterName        sql.NullString
+	TesterLastLoginAt sql.NullTime
+}
+
+func (q *Queries) GetTestersByID(ctx context.Context, projectID int32) (GetTestersByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTestersByID, projectID)
+	var i GetTestersByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Project,
+		&i.TesterName,
+		&i.TesterLastLoginAt,
 	)
 	return i, err
 }

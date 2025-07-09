@@ -18,7 +18,7 @@ type TesterService interface {
 	FindAll(context.Context) ([]schema.Tester, error)
 	FindByProjectID(context.Context, int64) ([]schema.Tester, error)
 	Invite(context.Context, any) (any, error)
-	GetOne(context.Context, int32) (dbsqlc.ProjectTester, error)
+	FindByID(context.Context, int32) (*schema.Tester, error)
 }
 
 type testerServiceImpl struct {
@@ -100,11 +100,22 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 	return testers, nil
 }
 
-func (t *testerServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.ProjectTester, error) {
-	tester, err := t.queries.GetProjectTester(ctx, id)
+func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tester, error) {
+	dbTester, err := t.queries.GetTestersByID(ctx, id)
 	if err != nil {
 		t.logger.Error("failed to find the project tester", "error", err)
-		return dbsqlc.ProjectTester{}, err
+		return nil, err
+	}
+
+	tester := &schema.Tester{
+		UserID:      int64(dbTester.ID),
+		ProjectID:   int64(dbTester.ProjectID),
+		Name:        dbTester.TesterName.String,
+		Project:     dbTester.Project,
+		Role:        dbTester.Role,
+		LastLoginAt: dbTester.TesterLastLoginAt.Time.String(),
+		CreatedAt:   dbTester.CreatedAt.Time.String(),
+		UpdatedAt:   dbTester.UpdatedAt.Time.String(),
 	}
 	return tester, nil
 }
