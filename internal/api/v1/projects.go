@@ -3,6 +3,9 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,9 +56,24 @@ func ListProjects(projectService services.ProjectService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/query [get]
-func SearchProjects(projectService services.ProjectService) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search Projects")
+func SearchProjects(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(q *fiber.Ctx) error {
+		keyword := q.Query("keyword", "")
+		if keyword == "" {
+			return problemdetail.BadRequest(q, "missing keyword parameter")
+		}
+
+		projects, err := projectService.Search(q.Context(), keyword)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Error("project not found", "error", err)
+				return problemdetail.ServerErrorProblem(q, "no project found")
+			}
+			logger.Error("error searching a project", "error", err)
+			return problemdetail.ServerErrorProblem(q, "failed to search project")
+		}
+
+		return q.JSON(projects)
 	}
 }
 
@@ -251,9 +269,27 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [post]
-func UpdateProject(projectService services.ProjectService) fiber.Handler {
+func UpdateProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to update Project")
+		request := new(schema.UpdateProjectRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid datat in request", err)
+			}
+			logger.Error("projectsv1", "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		_, err := projectService.Update(c.Context(), *request)
+		if err != nil {
+			logger.Error("projectsv1", "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Project updated successfully",
+		})
+
 	}
 }
 
@@ -289,9 +325,23 @@ func ImportProject(projectService services.ProjectService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [delete]
-func DeleteProject(projectService services.ProjectService) fiber.Handler {
+func DeleteProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to delete Project")
+		projectIDParam := c.Params("projectID")
+		projectID, err := strconv.Atoi(projectIDParam)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse projectID data in request")
+		}
+
+		err = projectService.DeleteProject(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error("projectsv1", "failed to delete project", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"message":   "Project deleted successfully",
+			"projectID": projectID,
+		})
 	}
 }
 
