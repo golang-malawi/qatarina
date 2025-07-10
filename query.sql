@@ -29,6 +29,10 @@ UPDATE users SET
     last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
 WHERE id = $1;
 
+-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4);
+
 -- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,

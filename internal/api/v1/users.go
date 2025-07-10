@@ -217,7 +217,6 @@ func InviteUser(userSevice services.UserService) fiber.Handler {
 		}
 		return c.JSON(fiber.Map{
 			"message": "Invite sent",
-			"email":   receiverEmail,
 		})
 
 	}

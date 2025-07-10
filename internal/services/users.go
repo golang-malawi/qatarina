@@ -1,16 +1,21 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"html/template"
+	"net/smtp"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -44,12 +49,14 @@ type OrganizationUserService interface {
 type userServiceImpl struct {
 	queries *dbsqlc.Queries
 	logger  logging.Logger
+	smtpCfg config.SMTPConfiguration
 }
 
-func NewUserService(conn *dbsqlc.Queries, logger logging.Logger) UserService {
+func NewUserService(conn *dbsqlc.Queries, logger logging.Logger, smtpCfg config.SMTPConfiguration) UserService {
 	return &userServiceImpl{
 		queries: conn,
 		logger:  logger,
+		smtpCfg: smtpCfg,
 	}
 }
 
@@ -162,5 +169,57 @@ func (u *userServiceImpl) Delete(ctx context.Context, id int32) error {
 }
 
 func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail string) error {
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	err := u.queries.CreateInvite(ctx, dbsqlc.CreateInviteParams{
+		SenderEmail:   senderEmail,
+		ReceiverEmail: receiverEmail,
+		Token:         token,
+		ExpiresAt:     common.NewNullTime(expiresAt),
+	})
+	if err != nil {
+		return err
+	}
+
+	subject := "Qatarina invitation"
+
+	// Load the invite email template from html file
+	t, err := template.ParseFiles("internal/templates/invite_email.html")
+	if err != nil {
+		u.logger.Error("failed to load email template from file", "error", err)
+		return fmt.Errorf("failed to load email template: %v", err)
+	}
+
+	// Data to inject into template
+	data := struct {
+		Token     string
+		ExpiresAt string
+	}{
+		Token:     token,
+		ExpiresAt: expiresAt.Format("Jan 2, 2006 15:04 MST"),
+	}
+
+	var body bytes.Buffer
+	if err := t.Execute(&body, data); err != nil {
+		u.logger.Error("failed to excecute email template", "error", err)
+		return fmt.Errorf("failed to excecute email template: %v", err)
+	}
+	msg := []byte(fmt.Sprintf(
+		"To: %s\r\n"+
+			"MIME-Version: 1.0\r\n"+
+			"Content-Type: text/html; charset=\"UTF-8\"\r\n"+
+			"Subject: %s\r\n\r\n"+
+			"%s", receiverEmail, subject, body.String()))
+
+	addr := fmt.Sprintf("%s:%d", u.smtpCfg.Host, u.smtpCfg.Port)
+
+	auth := smtp.PlainAuth("", u.smtpCfg.Username, u.smtpCfg.Password, u.smtpCfg.Host)
+
+	err = smtp.SendMail(addr, auth, u.smtpCfg.From, []string{receiverEmail}, msg)
+	if err != nil {
+		u.logger.Error("SMTP send failed", "error", err)
+		return fmt.Errorf("failed to send the invite email: %w", err)
+	}
 	return nil
 }

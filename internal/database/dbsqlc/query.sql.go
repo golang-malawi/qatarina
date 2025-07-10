@@ -98,6 +98,28 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
+const createInvite = `-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateInviteParams struct {
+	SenderEmail   string
+	ReceiverEmail string
+	Token         string
+	ExpiresAt     sql.NullTime
+}
+
+func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) error {
+	_, err := q.db.ExecContext(ctx, createInvite,
+		arg.SenderEmail,
+		arg.ReceiverEmail,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const createNewTestRun = `-- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
@@ -1573,6 +1595,78 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePage = `-- name: UpdatePage :exec
+UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
+WHERE id = $1
+`
+
+type UpdatePageParams struct {
+	ID                 int32
+	ParentPageID       sql.NullInt32
+	PageVersion        string
+	OrgID              int32
+	ProjectID          int32
+	Code               string
+	Title              string
+	FilePath           sql.NullString
+	Content            string
+	PageType           string
+	MimeType           string
+	HasEmbeddedMedia   bool
+	ExternalContentUrl sql.NullString
+	NotionUrl          sql.NullString
+	LastEditedBy       int32
+	CreatedBy          int32
+}
+
+func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
+	_, err := q.db.ExecContext(ctx, updatePage,
+		arg.ID,
+		arg.ParentPageID,
+		arg.PageVersion,
+		arg.OrgID,
+		arg.ProjectID,
+		arg.Code,
+		arg.Title,
+		arg.FilePath,
+		arg.Content,
+		arg.PageType,
+		arg.MimeType,
+		arg.HasEmbeddedMedia,
+		arg.ExternalContentUrl,
+		arg.NotionUrl,
+		arg.LastEditedBy,
+		arg.CreatedBy,
+	)
+	return err
+}
+
+const updateProjectModule = `-- name: UpdateProjectModule :exec
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+WHERE id = $1
+`
+
+type UpdateProjectModuleParams struct {
+	ID          int32
+	Name        string
+	Code        string
+	Priority    int32
+	Type        string
+	Description string
+}
+
+func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
+	_, err := q.db.ExecContext(ctx, updateProjectModule,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.Priority,
+		arg.Type,
+		arg.Description,
+	)
+	return err
 }
 
 const updateUser = `-- name: UpdateUser :exec
