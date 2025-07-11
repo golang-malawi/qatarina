@@ -101,9 +101,7 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 			// TODO: logging
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
-		return c.JSON(fiber.Map{
-			"project": schema.NewProjectResponse(project, nil),
-		})
+		return c.JSON(schema.NewProjectResponse(project, nil))
 	}
 }
 
