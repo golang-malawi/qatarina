@@ -1601,7 +1601,6 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 	return err
 }
 
-
 const updateProject = `-- name: UpdateProject :execrows
 UPDATE projects SET 
 title = $2, description = $3, website_url = $4,
@@ -1634,6 +1633,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (i
 		return 0, err
 	}
 	return result.RowsAffected()
+}
 
 const updateProjectModule = `-- name: UpdateProjectModule :exec
 UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
@@ -1659,7 +1659,6 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Description,
 	)
 	return err
-
 }
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :execrows

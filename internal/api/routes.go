@@ -50,17 +50,16 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
-		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService))
+		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
 	{
-		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService))
-		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService))
-		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService))
-		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService))
-		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService))
-
+		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService, api.logger))
+		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService, api.logger))
+		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService, api.logger))
+		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService, api.logger))
+		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService, api.logger))
 
 	}
 

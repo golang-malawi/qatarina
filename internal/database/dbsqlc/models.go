@@ -248,12 +248,6 @@ type TestCase struct {
 	ProjectID sql.NullInt32
 }
 
-type TestCaseSequence struct {
-	ProjectID       int32
-	CurrentVal      int32
-	LastGeneratedAt sql.NullTime
-}
-
 type TestPlan struct {
 	ID int64
 	// Project which this test plan is under

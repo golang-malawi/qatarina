@@ -44,6 +44,16 @@ function ListProjectTestPlans() {
   return (
     <Container>
       <Heading>Test Plans</Heading>
+              <Link
+                to={`/projects/$projectId/test-plans/new`}
+                params={{
+                  projectId: `${projectId}`,
+                }}
+              >
+                <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+                  New Test Plan
+                </Button>
+              </Link>
       {testPlanList}
     </Container>
   );
