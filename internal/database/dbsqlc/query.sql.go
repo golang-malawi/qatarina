@@ -1545,6 +1545,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+
 const searchUsers = `-- name: SearchUsers :many
 SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
 WHERE first_name ILIKE '%' || $1 || '%'
@@ -1555,10 +1556,20 @@ OR email ILIKE '%' || $1 || '%'
 
 func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+
+const searchProject = `-- name: SearchProject :many
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
+WHERE title ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([]Project, error) {
+	rows, err := q.db.QueryContext(ctx, searchProject, dollar_1)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var items []User
 	for rows.Next() {
 		var i User
@@ -1580,6 +1591,24 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 			&i.IsVerified,
 			&i.LastLoginAt,
 			&i.EmailConfirmedAt,
+
+	var items []Project
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Version,
+			&i.IsActive,
+			&i.IsPublic,
+			&i.WebsiteUrl,
+			&i.GithubUrl,
+			&i.TrelloUrl,
+			&i.JiraUrl,
+			&i.MondayUrl,
+			&i.OwnerUserID,
+
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1641,6 +1670,40 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 		arg.CreatedBy,
 	)
 	return err
+}
+
+const updateProject = `-- name: UpdateProject :execrows
+UPDATE projects SET 
+title = $2, description = $3, website_url = $4,
+version = $5, github_url = $6, 
+owner_user_id = $7
+WHERE id = $1
+`
+
+type UpdateProjectParams struct {
+	ID          int32
+	Title       string
+	Description string
+	WebsiteUrl  sql.NullString
+	Version     sql.NullString
+	GithubUrl   sql.NullString
+	OwnerUserID int32
+}
+
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProject,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.WebsiteUrl,
+		arg.Version,
+		arg.GithubUrl,
+		arg.OwnerUserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateProjectModule = `-- name: UpdateProjectModule :exec

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
-	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 )
 
@@ -32,8 +31,7 @@ func NewModuleService(queries *dbsqlc.Queries) ModuleService {
 }
 
 type moduleServiceImpl struct {
-	db     *dbsqlc.Queries
-	logger logging.Logger
+	db *dbsqlc.Queries
 }
 
 func (m *moduleServiceImpl) Create(
@@ -62,9 +60,7 @@ func (m *moduleServiceImpl) Create(
 // Implement the Get method to retrive modules from the table
 func (m *moduleServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.Module, error) {
 	module, err := m.db.GetOneModule(ctx, id)
-
 	if err != nil {
-		m.logger.Error("services-modules", "failed to fetch with module id %d: %v", id, err)
 		return dbsqlc.Module{}, err
 	}
 
@@ -73,7 +69,6 @@ func (m *moduleServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.Module
 
 func (m *moduleServiceImpl) GetAll(ctx context.Context) ([]dbsqlc.Module, error) {
 	if modules, err := m.db.GetAllModules(context.Background()); err != nil {
-		m.logger.Error("failed to fetch modules", "error", err)
 		return nil, err
 	} else {
 		return modules, nil
@@ -103,7 +98,6 @@ func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
 	_, err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to delete with module id %d: %v", id, err)
 		return err
 	}
 
@@ -114,7 +108,6 @@ func (m *moduleServiceImpl) GetProjectModules(ctx context.Context, projectID int
 	modules, err := m.db.GetProjectModules(ctx, projectID)
 
 	if err != nil {
-		m.logger.Error("services-modules", "failed to fetch with ProjectID %d: %v", projectID, err)
 		return nil, err
 	}
 
