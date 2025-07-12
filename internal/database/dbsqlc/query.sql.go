@@ -529,6 +529,18 @@ func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, err
 	return result.RowsAffected()
 }
 
+const deleteTestCase = `-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1
+`
+
+func (q *Queries) DeleteTestCase(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCase, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -1511,6 +1523,16 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+
+const searchTestCases = `-- name: SearchTestCases :many
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, searchTestCases, dollar_1)
+
 const searchProject = `-- name: SearchProject :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
 WHERE title ILIKE '%' || $1 || '%'
@@ -1518,10 +1540,30 @@ WHERE title ILIKE '%' || $1 || '%'
 
 func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([]Project, error) {
 	rows, err := q.db.QueryContext(ctx, searchProject, dollar_1)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+
 	var items []Project
 	for rows.Next() {
 		var i Project
@@ -1541,6 +1583,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+
 		); err != nil {
 			return nil, err
 		}
