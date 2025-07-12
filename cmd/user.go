@@ -47,7 +47,7 @@ var newUserCmd = &cobra.Command{
 			return fmt.Errorf("failed to create user got %v", validationErrors)
 		}
 
-		service := services.NewUserService(dbsqlc.New(qatarinaConfig.OpenDB()), logging.NewFromConfig(&qatarinaConfig.Logging))
+		service := services.NewUserService(dbsqlc.New(qatarinaConfig.OpenDB()), logging.NewFromConfig(&qatarinaConfig.Logging), qatarinaConfig.SMTP)
 		_, err := service.Create(context.Background(), user)
 		if err != nil {
 			return fmt.Errorf("failed to create user got %v", err)
