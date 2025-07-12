@@ -95,7 +95,7 @@ function CreateNewTestPlan() {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm<CreateTestPlanForm>({
+  const form = useForm({
     defaultValues: {
       kind: "",
       description: "",

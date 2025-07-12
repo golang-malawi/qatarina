@@ -1,5 +1,5 @@
-import { Column, ReactGrid, Row } from "@silevis/reactgrid";
-import "@silevis/reactgrid/styles.css";
+import { ReactGrid, Cell, Row, Column } from "@silevis/reactgrid";
+import { TextCell } from "@silevis/reactgrid";
 import { useState } from "react";
 
 export default function TestCaseGrid() {
@@ -18,49 +18,111 @@ export default function TestCaseGrid() {
 
   const getPeople = (): TestCaseTest[] => [];
 
-  const getColumns = (): Column[] => [
-    { columnId: "code" },
-    { columnId: "title" },
-    { columnId: "description" },
-    { columnId: "tags" },
-    { columnId: "testers" },
-    { columnId: "created_at" },
-  ];
-
-  const headerRow: Row = {
-    rowId: "header",
-    cells: [
-      { type: "header", text: "Name" },
-      { type: "header", text: "Surname" },
-      { type: "header", text: "code" },
-      { type: "header", text: "title" },
-      { type: "header", text: "description" },
-      { type: "header", text: "tags" },
-      { type: "header", text: "testers" },
-      { type: "header", text: "created_at" },
-    ],
-  };
-
-  const getRows = (people: TestCaseTest[]): Row[] => [
-    headerRow,
-    ...people.map<Row>((_, idx) => ({
-      rowId: idx,
-      cells: [
-        { type: "text", text: "Name" },
-        { type: "text", text: "Surname" },
-        { type: "text", text: "code" },
-        { type: "text", text: "title" },
-        { type: "text", text: "description" },
-        { type: "text", text: "tags" },
-        { type: "text", text: "testers" },
-        { type: "text", text: "created_at" },
-      ],
-    })),
-  ];
   const [people] = useState<TestCaseTest[]>(getPeople());
 
-  const rows = getRows(people);
-  const columns = getColumns();
+  // Define rows
+  const rows: Row[] = [
+    { rowIndex: 0, height: 50 }, // Header row
+    ...people.map((_, index) => ({ rowIndex: index + 1, height: 50 })),
+  ];
 
-  return <ReactGrid rows={rows} columns={columns} />;
+  // Define columns
+  const columns: Column[] = [
+    { colIndex: 0, width: 100 },
+    { colIndex: 1, width: 200 },
+    { colIndex: 2, width: 300 },
+    { colIndex: 3, width: 150 },
+    { colIndex: 4, width: 150 },
+    { colIndex: 5, width: 150 },
+  ];
+
+  // Define cells
+  const cells: Cell[] = [
+    // Header cells
+    {
+      rowIndex: 0,
+      colIndex: 0,
+      Template: TextCell,
+      props: { text: "Code", onTextChanged: () => {} },
+    },
+    {
+      rowIndex: 0,
+      colIndex: 1,
+      Template: TextCell,
+      props: { text: "Title", onTextChanged: () => {} },
+    },
+    {
+      rowIndex: 0,
+      colIndex: 2,
+      Template: TextCell,
+      props: { text: "Description", onTextChanged: () => {} },
+    },
+    {
+      rowIndex: 0,
+      colIndex: 3,
+      Template: TextCell,
+      props: { text: "Tags", onTextChanged: () => {} },
+    },
+    {
+      rowIndex: 0,
+      colIndex: 4,
+      Template: TextCell,
+      props: { text: "Testers", onTextChanged: () => {} },
+    },
+    {
+      rowIndex: 0,
+      colIndex: 5,
+      Template: TextCell,
+      props: { text: "Created At", onTextChanged: () => {} },
+    },
+    // Data cells
+    ...people.flatMap((person, rowIndex) => [
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 0,
+        Template: TextCell,
+        props: { text: person.code || "", onTextChanged: () => {} },
+      },
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 1,
+        Template: TextCell,
+        props: { text: person.title || "", onTextChanged: () => {} },
+      },
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 2,
+        Template: TextCell,
+        props: { text: person.description || "", onTextChanged: () => {} },
+      },
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 3,
+        Template: TextCell,
+        props: { text: person.tags?.join(", ") || "", onTextChanged: () => {} },
+      },
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 4,
+        Template: TextCell,
+        props: { text: "", onTextChanged: () => {} },
+      },
+      {
+        rowIndex: rowIndex + 1,
+        colIndex: 5,
+        Template: TextCell,
+        props: { text: "", onTextChanged: () => {} },
+      },
+    ]),
+  ];
+
+  return (
+    <ReactGrid
+      rows={rows}
+      columns={columns}
+      cells={cells}
+      stickyTopRows={1}
+      stickyLeftColumns={1}
+    />
+  );
 }
