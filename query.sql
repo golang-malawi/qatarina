@@ -177,6 +177,27 @@ INSERT INTO project_testers (
 ) VALUES (
     $1, $2, $3, $4, now(), now()
 );
+-- name: SearchProjectTesters :many
+SELECT 
+project_testers.*,
+u.display_name AS tester_name
+FROM project_testers
+INNER JOIN users u On u.id = project_testers.user_id
+WHERE project_testers.role ILIKE '%' || $1 || '%';
+
+-- name: DeleteProjectTester :execrows
+DELETE FROM project_testers WHERE id = $1;
+
+-- name: GetTestersByID :one
+SELECT
+project_testers.*,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1;
 
 -- name: GetTestersByProject :many
 SELECT
