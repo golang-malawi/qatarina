@@ -50,16 +50,16 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService))
-		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService))
+		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
 	{
-		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService))
-		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService))
-		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService))
-		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService))
-		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService))
+		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService, api.logger))
+		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService, api.logger))
+		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService, api.logger))
+		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService, api.logger))
+		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService, api.logger))
 
 	}
 
@@ -86,13 +86,13 @@ func (api *API) routes() {
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
 	{
-		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService))
+		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService, api.logger))
 		testPlansV1.Post("", apiv1.CreateTestPlan(api.TestPlansService, api.logger))
-		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService))
-		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService))
-		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService))
+		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
-		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService))
+		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)

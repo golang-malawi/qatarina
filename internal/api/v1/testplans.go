@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
-	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -30,12 +29,12 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans [get]
-func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
+func ListTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		testPlans, err := testPlanService.FindAll(context.Background())
 		if err != nil {
-			// TODO: logger
+			logger.Error(loggedmodule.ApiTestPlans, "failed to fetch test plans", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test plans")
 		}
 		return c.JSON(fiber.Map{
@@ -56,21 +55,24 @@ func ListTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans [get]
-func SearchTestPlans(testPlanService services.TestPlanService) fiber.Handler {
-	return func(q *fiber.Ctx) error {
-		projectID, err := strconv.Atoi(q.Query("projectID"))
+func SearchTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := strconv.Atoi(c.Query("q"))
 		if err != nil {
-			return problemdetail.BadRequest(q, "invalid or missing projectID parameter in query")
+			logger.Error(loggedmodule.ApiTestPlans, "invalid parameter query", "error", err)
+			return problemdetail.BadRequest(c, "invalid or missing projectID parameter in query")
 		}
-		testPlans, err := testPlanService.FindAllByProjectID(q.Context(), int64(projectID))
+		testPlans, err := testPlanService.FindAllByProjectID(c.Context(), int64(projectID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return q.JSON([]dbsqlc.TestPlan{})
+				logger.Info(loggedmodule.ApiTestPlans, "test plan not found", "error", err)
+				return c.JSON(schema.TestPlanListResponse{})
 			}
-			return problemdetail.ServerErrorProblem(q, "failed to find a test plan")
+			logger.Error(loggedmodule.ApiTestPlans, "failed to find test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to find a test plan")
 		}
 
-		return q.JSON(testPlans)
+		return c.JSON(testPlans)
 
 	}
 }
@@ -88,7 +90,7 @@ func SearchTestPlans(testPlanService services.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [get]
-func GetOneTestPlan(testPlanService services.TestPlanService) fiber.Handler {
+func GetOneTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, err := c.ParamsInt("testPlanID", 0)
 		if err != nil {
@@ -96,6 +98,7 @@ func GetOneTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 		}
 		testPlan, err := testPlanService.GetOneTestPlan(c.Context(), int64(testPlanID))
 		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
@@ -161,7 +164,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [post]
-func UpdateTestPlan(testPlanService services.TestPlanService) fiber.Handler {
+func UpdateTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateTestPlan)
 		if validationErros, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -182,7 +185,8 @@ func UpdateTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 
 		_, err := testPlanService.Update(c.Context(), *request)
 		if err != nil {
-			return problemdetail.BadRequest(c, "failed to process request")
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
 		return c.JSON(fiber.Map{
@@ -204,15 +208,18 @@ func UpdateTestPlan(testPlanService services.TestPlanService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [delete]
-func DeleteTestPlan(testPlanService services.TestPlanService) fiber.Handler {
+func DeleteTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, _ := c.ParamsInt("testPlanID", 0)
 		err := testPlanService.DeleteByID(context.Background(), int64(testPlanID))
 		if err != nil {
-
+			logger.Error(loggedmodule.ApiTestPlans, "failed to delete test plan", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
-		return problemdetail.NotImplemented(c, "failed to delete TestPlan")
+		return c.JSON(fiber.Map{
+			"message":    "test plan deleted",
+			"testPlanID": testPlanID,
+		})
 	}
 }
 

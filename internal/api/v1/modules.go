@@ -14,9 +14,7 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
-var logger logging.Logger
-
-func CreateModule(module services.ModuleService) fiber.Handler {
+func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -39,7 +37,7 @@ func CreateModule(module services.ModuleService) fiber.Handler {
 	}
 }
 
-func GetOneModule(module services.ModuleService) fiber.Handler {
+func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleID, err := c.ParamsInt("id", 0)
 		if err != nil {
@@ -61,7 +59,7 @@ func GetOneModule(module services.ModuleService) fiber.Handler {
 
 }
 
-func GetAllModules(moduleService services.ModuleService) fiber.Handler {
+func GetAllModules(moduleService services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		modules, err := moduleService.GetAll(context.Background())
 		if err != nil {
@@ -73,7 +71,7 @@ func GetAllModules(moduleService services.ModuleService) fiber.Handler {
 	}
 }
 
-func UpdateModule(module services.ModuleService) fiber.Handler {
+func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -95,7 +93,7 @@ func UpdateModule(module services.ModuleService) fiber.Handler {
 		})
 	}
 }
-func DeleteModule(module services.ModuleService) fiber.Handler {
+func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleIdParam := c.Params("id")
 		moduleID, err := strconv.Atoi(moduleIdParam)
@@ -116,7 +114,7 @@ func DeleteModule(module services.ModuleService) fiber.Handler {
 	}
 }
 
-func GetProjectModules(modules services.ModuleService) fiber.Handler {
+func GetProjectModules(modules services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
 		if err != nil {
