@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
@@ -148,9 +149,26 @@ func UpdateUser(services.UserService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/invite/{email} [post]
-func InviteUser(services.UserService) fiber.Handler {
+func InviteUser(userService services.UserService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to invite user")
+		receiverEmail := c.Params("email")
+		if receiverEmail == "" {
+			return problemdetail.BadRequest(c, "no email address in request")
+		}
+		senderEmail := authutil.GetAuthUserEmail(c)
+		if senderEmail == "" {
+			return problemdetail.NotAuthorizedProblem(c, "sender not auntheticated")
+		}
+
+		err := userService.Invite(c.Context(), senderEmail, receiverEmail)
+		if err != nil {
+			logger.Error("failed to send invite", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to send invite")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Invite sent",
+		})
 	}
 }
 

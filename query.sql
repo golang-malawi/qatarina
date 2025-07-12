@@ -14,6 +14,10 @@ SELECT id, display_name, email, password, last_login_at FROM users WHERE email =
 -- name: UpdateUserLastLogin :execrows
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL;
 
+-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4);
+
 -- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,
