@@ -14,4 +14,5 @@ const (
 	ApiProjects  Name = "apiv1:projects"
 	ApiSettings  Name = "apiv1:settings"
 	ApiPages     Name = "apiv1:pages"
+	ApiModules   Name = "apiv1:modules"
 )
