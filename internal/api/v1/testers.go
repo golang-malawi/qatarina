@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -25,10 +27,11 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers [get]
-func ListTesters(testerService services.TesterService) fiber.Handler {
+func ListTesters(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testers, err := testerService.FindAll(context.Background())
 		if err != nil {
+			logger.Error(loggedmodule.ApiTesters, "failed to fetch testers", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch testers")
 		}
 		return c.JSON(fiber.Map{
@@ -49,20 +52,23 @@ func ListTesters(testerService services.TesterService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers.query [get]
-func SearchTesters(testerService services.TesterService) fiber.Handler {
-	return func(q *fiber.Ctx) error {
-		projectIDParam := q.Query("project_id", "")
+func SearchTesters(testerService services.TesterService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectIDParam := c.Query("q", "")
 		projectID, err := strconv.Atoi(projectIDParam)
 		if err != nil {
-			return problemdetail.BadRequest(q, "failed to process request project id")
+			return problemdetail.BadRequest(c, "failed to process request project id")
 		}
-		testers, err := testerService.FindByProjectID(q.Context(), int64(projectID))
+		testers, err := testerService.FindByProjectID(c.Context(), int64(projectID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return q.JSON([]schema.Tester{})
+				logger.Info(loggedmodule.ApiTesters, "no testers found", "error", err)
+				return c.JSON([]schema.Tester{})
 			}
+			logger.Error(loggedmodule.ApiTesters, "failed to find testers", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to find testers")
 		}
-		return q.JSON(testers)
+		return c.JSON(testers)
 	}
 }
 
@@ -79,19 +85,21 @@ func SearchTesters(testerService services.TesterService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers/{testerID} [get]
-func GetOneTester(testerService services.TesterService) fiber.Handler {
+func GetOneTester(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testerID, err := c.ParamsInt("testerID", 0)
 		if err != nil {
 			return problemdetail.BadRequest(c, "failed to parse tester id data in request")
 		}
 
-		tester, err := testerService.GetOne(c.Context(), int32(testerID))
+		tester, err := testerService.FindByID(c.Context(), int32(testerID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return problemdetail.BadRequest(c, "no project tester found")
+				logger.Info(loggedmodule.ApiTesters, "no project tester found", "error", err)
+				return problemdetail.NotFound(c, "no project tester found")
 			}
-			return problemdetail.BadRequest(c, "failed to retrieve project tester")
+			logger.Error(loggedmodule.ApiTesters, "failed to retrieve project tester", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to retrieve project tester")
 		}
 		return c.JSON(tester)
 	}
@@ -111,7 +119,7 @@ func GetOneTester(testerService services.TesterService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/testers/invite/{email} [post]
-func InviteTester(services.TesterService) fiber.Handler {
+func InviteTester(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to invite Tester")
 	}

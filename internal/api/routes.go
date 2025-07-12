@@ -109,10 +109,10 @@ func (api *API) routes() {
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
 	{
-		testersV1.Get("", apiv1.ListTesters(api.TesterService))
-		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService))
-		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService))
-		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService))
+		testersV1.Get("", apiv1.ListTesters(api.TesterService, api.logger))
+		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService, api.logger))
+		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService, api.logger))
+		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
 	}
 
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)

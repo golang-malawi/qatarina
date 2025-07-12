@@ -1567,19 +1567,34 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const searchProjectTesters = `-- name: SearchProjectTesters :many
-SELECT id, project_id, user_id, role, is_active, created_at, updated_at FROM project_testers
-WHERE role ILIKE '%' || $1 || '%'
+SELECT 
+project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
+u.display_name AS tester_name
+FROM project_testers
+INNER JOIN users u On u.id = project_testers.user_id
+WHERE project_testers.role ILIKE '%' || $1 || '%'
 `
 
-func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]ProjectTester, error) {
+type SearchProjectTestersRow struct {
+	ID         int32
+	ProjectID  int32
+	UserID     int32
+	Role       string
+	IsActive   bool
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+	TesterName sql.NullString
+}
+
+func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProjectTester
+	var items []SearchProjectTestersRow
 	for rows.Next() {
-		var i ProjectTester
+		var i SearchProjectTestersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProjectID,
@@ -1588,6 +1603,7 @@ func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullStr
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TesterName,
 		); err != nil {
 			return nil, err
 		}

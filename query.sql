@@ -167,8 +167,12 @@ INSERT INTO project_testers (
     $1, $2, $3, $4, now(), now()
 );
 -- name: SearchProjectTesters :many
-SELECT * FROM project_testers
-WHERE role ILIKE '%' || $1 || '%';
+SELECT 
+project_testers.*,
+u.display_name AS tester_name
+FROM project_testers
+INNER JOIN users u On u.id = project_testers.user_id
+WHERE project_testers.role ILIKE '%' || $1 || '%';
 
 -- name: DeleteProjectTester :execrows
 DELETE FROM project_testers WHERE id = $1;
