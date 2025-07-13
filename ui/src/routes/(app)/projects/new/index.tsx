@@ -27,7 +27,7 @@ function CreateProject() {
     name: string;
     description: string;
     version: string;
-    website_url: string;
+    website_url?: string;
   }) => {
     try {
       const res = await createProjectMutation.mutateAsync({
@@ -35,7 +35,7 @@ function CreateProject() {
           name: values.name,
           description: values.description,
           version: values.version,
-          website_url: values.website_url,
+          website_url: values.website_url || "",
         },
       });
 

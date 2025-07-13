@@ -5,7 +5,7 @@ import { useCreateUserMutation } from "@/services/UserService";
 import { toaster } from "@/components/ui/toaster";
 import { useState } from "react";
 import { DynamicForm } from "@/components/DynamicForm";
-import { userCreationSchema, userCreationFields } from "@/data/forms/user-schemas";
+import { userCreationSchema } from "@/data/forms/user-schemas";
 import { userCreationFields as userFields } from "@/data/forms/user-field-configs";
 
 export const Route = createFileRoute("/(app)/users/new/")({
