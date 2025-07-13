@@ -6,15 +6,12 @@ import {
   CheckboxGroup,
   CloseButton,
   Dialog,
-  Field,
   Fieldset,
   Flex,
   For,
   Heading,
-  Input,
   Portal,
 } from "@chakra-ui/react";
-import { useForm } from "@tanstack/react-form";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -23,6 +20,9 @@ import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { toaster } from "@/components/ui/toaster";
+import { DynamicForm } from "@/components/DynamicForm";
+import { testPlanCreationSchema } from "@/data/forms/test-plan-schemas";
+import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
@@ -94,97 +94,18 @@ function CreateNewTestPlan() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm({
-    defaultValues: {
-      kind: "",
-      description: "",
-      start_at: "",
-      closed_at: "",
-      scheduled_end_at: "",
-    },
-    onSubmit: async ({ value }) => {
-      return handleSubmit(value);
-    },
-  });
-
   return (
     <div>
       <Box>
         <Heading>Create a Test Plan</Heading>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <form.Field
-            name="description"
-            children={(field) => (
-              <Field.Root>
-                <Field.Label>Description</Field.Label>
-                <Input
-                  type="text"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <Field.HelperText>Description</Field.HelperText>
-              </Field.Root>
-            )}
-          />
-
-          <form.Field
-            name="start_at"
-            children={(field) => (
-              <Field.Root>
-                <Field.Label>Start At</Field.Label>
-                <Input
-                  type="text"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <Field.HelperText>Start At</Field.HelperText>
-              </Field.Root>
-            )}
-          />
-
-          <form.Field
-            name="scheduled_end_at"
-            children={(field) => (
-              <Field.Root>
-                <Field.Label>Scheduled to End On</Field.Label>
-                <Input
-                  type="text"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <Field.HelperText>Scheduled to End On</Field.HelperText>
-              </Field.Root>
-            )}
-          />
-
-          <form.Field
-            name="kind"
-            children={(field) => (
-              <Field.Root>
-                <Field.Label>Test Plan Kind</Field.Label>
-                <Input
-                  type="text"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <Field.HelperText>Test Plan Kind</Field.HelperText>
-              </Field.Root>
-            )}
-          />
-
-          <Button type="submit">Create Plan</Button>
-        </form>
+        <DynamicForm
+          schema={testPlanCreationSchema}
+          fields={testPlanCreationFields}
+          onSubmit={handleSubmit}
+          submitText="Create Plan"
+          layout="vertical"
+          spacing={4}
+        />
         <Heading>Select & Assign Test Cases</Heading>
         {testCases.test_cases?.map((testCase) => {
           return (

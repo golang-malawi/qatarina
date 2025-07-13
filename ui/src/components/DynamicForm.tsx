@@ -1,5 +1,5 @@
-import { useForm } from '@tanstack/react-form';
-import { z } from 'zod';
+import { useForm } from "@tanstack/react-form";
+import { z } from "zod";
 import {
   Box,
   Button,
@@ -9,19 +9,19 @@ import {
   Checkbox,
   VStack,
   HStack,
-} from '@chakra-ui/react';
+} from "@chakra-ui/react";
 
 // Field type definitions
-export type FieldType = 
-  | 'text'
-  | 'email'
-  | 'password'
-  | 'number'
-  | 'textarea'
-  | 'select'
-  | 'checkbox'
-  | 'url'
-  | 'tel';
+export type FieldType =
+  | "text"
+  | "email"
+  | "password"
+  | "number"
+  | "textarea"
+  | "select"
+  | "checkbox"
+  | "url"
+  | "tel";
 
 // Field configuration interface
 export interface FieldConfig {
@@ -33,7 +33,7 @@ export interface FieldConfig {
   required?: boolean;
   options?: { value: string; label: string }[]; // For select fields
   validation?: z.ZodTypeAny; // Custom validation for this field
-  defaultValue?: any;
+  defaultValue?: unknown;
 }
 
 // Form configuration interface
@@ -44,7 +44,7 @@ export interface FormConfig<T extends z.ZodTypeAny> {
   onSubmit: (values: z.infer<T>) => Promise<void> | void;
   submitText?: string;
   submitLoading?: boolean;
-  layout?: 'vertical' | 'horizontal';
+  layout?: "vertical" | "horizontal";
   spacing?: number;
 }
 
@@ -54,9 +54,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   fields,
   defaultValues,
   onSubmit,
-  submitText = 'Submit',
+  submitText = "Submit",
   submitLoading = false,
-  layout = 'vertical',
+  layout = "vertical",
   spacing = 4,
 }: FormConfig<T>) {
   const form = useForm({
@@ -74,30 +74,33 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     const { name, label, type, placeholder, helperText, options } = fieldConfig;
 
     return (
-      <form.Field
-        key={name}
-        name={name}
-        children={(field) => (
+      <form.Field key={name} name={name}>
+        {(field) => (
           <Field.Root invalid={!!field.state.meta.errors}>
             <Field.Label>{label}</Field.Label>
-            
-            {type === 'textarea' && (
+
+            {type === "textarea" && (
               <Textarea
-                value={(field.state.value as string) || ''}
+                value={(field.state.value as string) || ""}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder={placeholder}
               />
             )}
 
-            {type === 'select' && (
+            {type === "select" && (
               <select
-                value={(field.state.value as string) || ''}
+                value={(field.state.value as string) || ""}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                }}
               >
-                <option value="">{placeholder || 'Select an option'}</option>
+                <option value="">{placeholder || "Select an option"}</option>
                 {options?.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -106,7 +109,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               </select>
             )}
 
-            {type === 'checkbox' && (
+            {type === "checkbox" && (
               <Checkbox.Root
                 checked={(field.state.value as boolean) || false}
                 onCheckedChange={({ checked }) => field.handleChange(checked)}
@@ -117,10 +120,12 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               </Checkbox.Root>
             )}
 
-            {['text', 'email', 'password', 'number', 'url', 'tel'].includes(type) && (
+            {["text", "email", "password", "number", "url", "tel"].includes(
+              type
+            ) && (
               <Input
                 type={type}
-                value={(field.state.value as string) || ''}
+                value={(field.state.value as string) || ""}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder={placeholder}
@@ -130,17 +135,17 @@ export function DynamicForm<T extends z.ZodTypeAny>({
             {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
             {field.state.meta.errors && (
               <Field.ErrorText>
-                {field.state.meta.errors.join(', ')}
+                {field.state.meta.errors.join(", ")}
               </Field.ErrorText>
             )}
           </Field.Root>
         )}
-      />
+      </form.Field>
     );
   };
 
   const renderFields = () => {
-    if (layout === 'horizontal') {
+    if (layout === "horizontal") {
       // Render fields in a grid layout for horizontal
       const chunks = [];
       for (let i = 0; i < fields.length; i += 2) {
@@ -172,7 +177,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     >
       <VStack gap={spacing} align="stretch">
         {renderFields()}
-        
+
         <Button
           type="submit"
           variant="outline"
@@ -206,4 +211,4 @@ export function createSelectOptions(
   options: Array<{ value: string; label: string }>
 ) {
   return options;
-} 
+}
