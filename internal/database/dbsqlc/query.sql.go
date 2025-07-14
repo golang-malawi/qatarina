@@ -526,6 +526,14 @@ func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, err
 	return result.RowsAffected()
 }
 
+
+const deleteTestCase = `-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1
+`
+
+func (q *Queries) DeleteTestCase(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCase, id)
+
 const deleteProjectTester = `-- name: DeleteProjectTester :execrows
 DELETE FROM project_testers WHERE id = $1
 `
@@ -1563,6 +1571,16 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 
+
+const searchTestCases = `-- name: SearchTestCases :many
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, searchTestCases, dollar_1)
+
 const searchProjectTesters = `-- name: SearchProjectTesters :many
 SELECT 
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
@@ -1586,6 +1604,7 @@ type SearchProjectTestersRow struct {
 func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
 
+
 const searchProject = `-- name: SearchProject :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
 WHERE title ILIKE '%' || $1 || '%'
@@ -1599,6 +1618,25 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 	}
 	defer rows.Close()
 
+
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+
 	var items []SearchProjectTestersRow
 	for rows.Next() {
 		var i SearchProjectTestersRow
@@ -1611,6 +1649,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TesterName,
+
 
 	var items []Project
 	for rows.Next() {
