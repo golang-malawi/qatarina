@@ -62,8 +62,5 @@ production.yml
 /logs/
 
 *.exe
-<<<<<<< HEAD
 *.log
-=======
-*.log
->>>>>>> main
+

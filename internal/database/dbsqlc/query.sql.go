@@ -98,6 +98,28 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
+const createInvite = `-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateInviteParams struct {
+	SenderEmail   string
+	ReceiverEmail string
+	Token         string
+	ExpiresAt     sql.NullTime
+}
+
+func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) error {
+	_, err := q.db.ExecContext(ctx, createInvite,
+		arg.SenderEmail,
+		arg.ReceiverEmail,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const createNewTestRun = `-- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
@@ -556,6 +578,18 @@ DELETE FROM test_runs WHERE id = $1
 
 func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteTestRun, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, id)
 	if err != nil {
 		return 0, err
 	}
@@ -1563,6 +1597,18 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+
 const searchProjectTesters = `-- name: SearchProjectTesters :many
 SELECT 
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
@@ -1586,6 +1632,7 @@ type SearchProjectTestersRow struct {
 func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
 
+
 const searchProject = `-- name: SearchProject :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
 WHERE title ILIKE '%' || $1 || '%'
@@ -1599,6 +1646,29 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 	}
 	defer rows.Close()
 
+
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.DisplayName,
+			&i.Email,
+			&i.Password,
+			&i.Phone,
+			&i.OrgID,
+			&i.CountryIso,
+			&i.City,
+			&i.Address,
+			&i.IsActivated,
+			&i.IsReviewed,
+			&i.IsSuperAdmin,
+			&i.IsVerified,
+			&i.LastLoginAt,
+			&i.EmailConfirmedAt,
+
 	var items []SearchProjectTestersRow
 	for rows.Next() {
 		var i SearchProjectTestersRow
@@ -1611,6 +1681,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TesterName,
+
 
 	var items []Project
 	for rows.Next() {
@@ -1628,6 +1699,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.JiraUrl,
 			&i.MondayUrl,
 			&i.OwnerUserID,
+
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -1748,6 +1820,60 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Priority,
 		arg.Type,
 		arg.Description,
+	)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, phone = $5,
+    org_id = $6, country_iso = $7, city = $8, address = $9,
+    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
+    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID               int32
+	FirstName        string
+	LastName         string
+	DisplayName      sql.NullString
+	Phone            string
+	OrgID            sql.NullInt32
+	CountryIso       string
+	City             sql.NullString
+	Address          string
+	IsActivated      sql.NullBool
+	IsReviewed       sql.NullBool
+	IsSuperAdmin     sql.NullBool
+	IsVerified       sql.NullBool
+	LastLoginAt      sql.NullTime
+	EmailConfirmedAt sql.NullTime
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	DeletedAt        sql.NullTime
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.ID,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.Phone,
+		arg.OrgID,
+		arg.CountryIso,
+		arg.City,
+		arg.Address,
+		arg.IsActivated,
+		arg.IsReviewed,
+		arg.IsSuperAdmin,
+		arg.IsVerified,
+		arg.LastLoginAt,
+		arg.EmailConfirmedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.DeletedAt,
 	)
 	return err
 }

@@ -53,6 +53,21 @@ type ChangePasswordRequest struct {
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 }
 
+type UpdateUserRequest struct {
+	ID          int32  `json:"id" validate:"-"`
+	FirstName   string `json:"first_name" validate:"required"`
+	LastName    string `json:"last_name" validate:"required"`
+	DisplayName string `json:"display_name" validate:"required"`
+	Phone       string `json:"phone" validate:"e164"`
+	OrgID       int32  `json:"org_id" validate:"required"`
+	CountryIso  string `json:"country_iso" validate:"iso3166_1_alpha2"`
+	City        string `json:"city" validate:"required"`
+	Address     string `json:"address" validate:"-"`
+}
+
+type InviteUserRequest struct {
+}
+
 type RefreshTokenRequest struct {
 }
 

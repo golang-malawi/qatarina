@@ -106,6 +106,14 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 	return string(ns.TestRunState), nil
 }
 
+type Invite struct {
+	ID            int32
+	SenderEmail   string
+	ReceiverEmail string
+	Token         string
+	ExpiresAt     sql.NullTime
+}
+
 type Module struct {
 	ID          int32
 	ProjectID   int32
