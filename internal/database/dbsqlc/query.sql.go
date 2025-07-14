@@ -98,6 +98,28 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
+const createInvite = `-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateInviteParams struct {
+	SenderEmail   string
+	ReceiverEmail string
+	Token         string
+	ExpiresAt     sql.NullTime
+}
+
+func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) error {
+	_, err := q.db.ExecContext(ctx, createInvite,
+		arg.SenderEmail,
+		arg.ReceiverEmail,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const createNewTestRun = `-- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
