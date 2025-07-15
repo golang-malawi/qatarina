@@ -1,5 +1,5 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { Box, Flex } from "@chakra-ui/react";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import { Box, Flex, Button } from "@chakra-ui/react";
 
 export const Route = createFileRoute("/(project)/projects/$projectId/")({
   component: ViewProject,
@@ -7,59 +7,52 @@ export const Route = createFileRoute("/(project)/projects/$projectId/")({
 
 function ViewProject() {
   const { projectId } = Route.useParams();
+  const matchRoute = useMatchRoute();
+
+  const navItems = [
+    { label: "Summary", path: `/projects/$projectId` },
+    { label: "Test Cases", path: `/projects/$projectId/test-cases` },
+    { label: "Test Plans", path: `/projects/$projectId/test-plans` },
+    { label: "Features/Modules", path: `/projects/$projectId/Features` },
+    { label: "Testers", path: `/projects/$projectId/testers` },
+    { label: "Reports", path: `/projects/$projectId/reports` },
+    { label: "Insights", path: `/projects/$projectId/insights` },
+    { label: "Settings", path: `/projects/$projectId/settings` },
+  ];
 
   return (
     <Box>
-      <Flex gap="2">
-        <Link to={`/projects/$projectId`} params={{ projectId: projectId }}>
-          Summary
-        </Link>
-        <Link
-          to={`/projects/$projectId/test-cases`}
-          params={{ projectId: projectId }}
-        >
-          Test-Cases
-        </Link>
-        <Link
-          to={`/projects/$projectId/test-plans`}
-          params={{ projectId: projectId }}
-        >
-          Test Plans
-        </Link>
-        <Link
-          to={`/projects/$projectId/Features`}
-          params={{
-            projectId: projectId,
-          }}
-        >
-        Features/Modules
-        </Link>
-        <Link
-          to={`/projects/$projectId/testers`}
-          params={{ projectId: projectId }}
-        >
-          Testers
-        </Link>
-        <Link
-          to={`/projects/$projectId/reports`}
-          params={{ projectId: projectId }}
-        >
-          Reports
-        </Link>
-        <Link
-          to={`/projects/$projectId/insights`}
-          params={{ projectId: projectId }}
-        >
-          Insights
-        </Link>
-        <Link
-          to={`/projects/$projectId/settings`}
-          params={{ projectId: projectId }}
-        >
-          Settings
-        </Link>
+      <Flex
+        gap="2"
+        p={4}
+        borderBottom="1px solid"
+        borderColor="gray.200"
+        bg="gray.50"
+        overflowX="auto"
+      >
+        {navItems.map((item) => {
+          const isActive = matchRoute(item.path.replace("$projectId", projectId));
+          return (
+            <Link
+              key={item.label}
+              to={item.path}
+              params={{ projectId }}
+            >
+              <Button
+                variant={isActive ? "solid" : "ghost"}
+                colorScheme="teal"
+                size="sm"
+              >
+                {item.label}
+              </Button>
+            </Link>
+          );
+        })}
       </Flex>
-      <Outlet />
+
+      <Box p={4}>
+        <Outlet />
+      </Box>
     </Box>
   );
 }
