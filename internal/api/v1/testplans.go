@@ -223,6 +223,20 @@ func DeleteTestPlan(testPlanService services.TestPlanService, logger logging.Log
 	}
 }
 
+// AssignTestsToPlan godoc
+//
+//	@ID				AssignTestsToPlan
+//	@Summary		Assign a test to a plan
+//	@Description	Assign a test to a plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		string	true	"testPlanID"
+//	@Param			request	body	schema.AssignTestsToPlanRequest		true	"testPlanID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans [post]
 func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.AssignTestsToPlanRequest)

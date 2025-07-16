@@ -15,6 +15,19 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
+//	 CreateModule godoc
+//
+//		@ID	CreateModule
+//		@Summary	Create a Module
+//		@Description	Create a Module
+//		@Tags	modules
+//		@Accept			json
+//		@Produce		json
+//		@Param			request	body		schema.CreateProjectModuleRequest	true	"Module data"
+//		@Success		200			{object}	interface{}
+//		@Failure		400			{object}	problemdetail.ProblemDetail
+//		@Failure		500			{object}	problemdetail.ProblemDetail
+//		@Router			/v1/modules [post]
 func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateProjectModuleRequest)
@@ -38,6 +51,19 @@ func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 	}
 }
 
+// GetOneModule godoc
+//
+//	@ID				GetOneModule
+//	@Summary		Get one Module
+//	@Description	Get one Module
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			moduleID	path		string	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules [get]
 func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleID, err := c.ParamsInt("id", 0)
@@ -60,6 +86,18 @@ func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 }
 
+// GetAllModules godoc
+//
+//	@ID				GetAllModules
+//	@Summary		Get all Modules
+//	@Description	Get all Modules
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules [get]
 func GetAllModules(moduleService services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		modules, err := moduleService.GetAll(context.Background())
@@ -76,6 +114,20 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 	}
 }
 
+// UpdateModule godoc
+//
+//	@ID				UpdateModule
+//	@Summary		Update a Module
+//	@Description	Update a Module
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			moduleID	path		string	true	"id"
+//	@Param			request	body		schema.UpdateProjectModuleRequest	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules [post]
 func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateProjectModuleRequest)
@@ -98,6 +150,20 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 		})
 	}
 }
+
+// DeleteModule godoc
+//
+//	@ID				DeleteModule
+//	@Summary		Delete a Module
+//	@Description	Delete a Module
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			moduleID	path		string	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules [delete]
 func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleIdParam := c.Params("id")
@@ -119,6 +185,19 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 	}
 }
 
+// GetProjectModule godoc
+//
+//	@ID				GetProjectModule
+//	@Summary		Get a Modules by project
+//	@Description	Get a Modules by project
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules [get]
 func GetProjectModules(modules services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)

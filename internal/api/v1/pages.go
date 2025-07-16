@@ -16,6 +16,19 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
+// CreatePage godoc
+//
+//	@ID				CreatePage
+//	@Summary		Create a page
+//	@Description	Create a page
+//	@Tags			pages
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	schema.PageRequest			true	"Page data"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/pages [post]
 func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.PageRequest)
@@ -42,6 +55,19 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 	}
 }
 
+// GetOnePage godoc
+//
+//	@ID				GetOnePage
+//	@Summary		Get one page
+//	@Description	Get one page
+//	@Tags			pages
+//	@Accept			json
+//	@Produce		json
+//	@Param			PageID	path		string	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/pages [get]
 func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		pageID, err := c.ParamsInt("id", 0)
@@ -63,6 +89,18 @@ func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.H
 	}
 }
 
+// GetAllPages godoc
+//
+//	@ID				GetAllPages
+//	@Summary		Get all pages
+//	@Description	Get all pages
+//	@Tags			pages
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/pages [get]
 func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		pages, err := pagesService.GetAllPages(ctx.Context())
@@ -76,6 +114,20 @@ func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber
 	}
 }
 
+// UpdatePage godoc
+//
+//	@ID				UpdatePage
+//	@Summary		Update a page
+//	@Description	Update a page
+//	@Tags			pages
+//	@Accept			json
+//	@Produce		json
+//	@Param			pageID	path		string	true	"id"
+//	@Param			request	body		schema.UpdatePageRequest	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/pages [post]
 func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.UpdatePageRequest)
@@ -101,6 +153,19 @@ func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.H
 	}
 }
 
+// DeletePage godoc
+//
+//	@ID				DeletePage
+//	@Summary		Delete a page
+//	@Description	Delete a page
+//	@Tags			pages
+//	@Accept			json
+//	@Produce		json
+//	@Param			pageID	path		string	true	"id"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/pages [delete]
 func DeletePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		pageIDParam := ctx.Params("id")
