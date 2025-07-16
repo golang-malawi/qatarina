@@ -27,7 +27,7 @@ import (
 //		@Success		200			{object}	interface{}
 //		@Failure		400			{object}	problemdetail.ProblemDetail
 //		@Failure		500			{object}	problemdetail.ProblemDetail
-//		@Router			/v1/modules [post]
+//		@Router			/v1/modules/modules [post]
 func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateProjectModuleRequest)
@@ -63,7 +63,7 @@ func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules [get]
+//	@Router			/v1/modules/modules/{id} [get]
 func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleID, err := c.ParamsInt("id", 0)
@@ -97,7 +97,7 @@ func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules [get]
+//	@Router			/v1/modules/modules [get]
 func GetAllModules(moduleService services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		modules, err := moduleService.GetAll(context.Background())
@@ -127,7 +127,7 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules [post]
+//	@Router			/v1/modules/modules/{id} [post]
 func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateProjectModuleRequest)
@@ -163,7 +163,7 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules [delete]
+//	@Router			/v1/modules/modules/{id} [delete]
 func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleIdParam := c.Params("id")
@@ -197,7 +197,7 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules [get]
+//	@Router			/v1/modules/{id} [get]
 func GetProjectModules(modules services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
