@@ -28,7 +28,7 @@ import (
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages/pages [post]
+//	@Router			/v1/pages [post]
 func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.PageRequest)
@@ -100,7 +100,7 @@ func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.H
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages/pages [get]
+//	@Router			/v1/pages [get]
 func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		pages, err := pagesService.GetAllPages(ctx.Context())
@@ -122,12 +122,12 @@ func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber
 //	@Tags			pages
 //	@Accept			json
 //	@Produce		json
-//	@Param			pageID	path		string	true	"id"
+//	@Param			pageID	path		string	true	"pageID"
 //	@Param			request	body		schema.UpdatePageRequest	true	"id"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages/pages/{id} [post]
+//	@Router			/v1/pages/{pageID} [post]
 func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.UpdatePageRequest)

@@ -46,15 +46,16 @@ func ListTestPlans(testPlanService services.TestPlanService, logger logging.Logg
 // SearchTestPlans godoc
 //
 //	@ID				SearchTestPlans
-//	@Summary		Search all Test Plans
-//	@Description	Search all Test Plans
+//	@Summary		Search test plans
+//	@Description	Search test plans
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	interface{}
-//	@Failure		400	{object}	problemdetail.ProblemDetail
-//	@Failure		500	{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-plans [get]
+//	@Param			query	path		string	true	"query"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/query [get]
 func SearchTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := strconv.Atoi(c.Query("q"))

@@ -27,7 +27,7 @@ import (
 //		@Success		200			{object}	interface{}
 //		@Failure		400			{object}	problemdetail.ProblemDetail
 //		@Failure		500			{object}	problemdetail.ProblemDetail
-//		@Router			/v1/modules/modules [post]
+//		@Router			/v1/modules [post]
 func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateProjectModuleRequest)
@@ -59,14 +59,14 @@ func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Tags			modules
 //	@Accept			json
 //	@Produce		json
-//	@Param			moduleID	path		string	true	"id"
+//	@Param			moduleID	path		string	true	"moduleID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/modules/{id} [get]
+//	@Router			/v1/modules/{moduleID} [get]
 func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		moduleID, err := c.ParamsInt("id", 0)
+		moduleID, err := c.ParamsInt("moduleID", 0)
 		if err != nil {
 			return problemdetail.BadRequest(c, "failed to parse id data in request")
 		}
@@ -97,7 +97,7 @@ func GetOneModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/modules [get]
+//	@Router			/v1/modules [get]
 func GetAllModules(moduleService services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		modules, err := moduleService.GetAll(context.Background())
@@ -122,12 +122,12 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 //	@Tags			modules
 //	@Accept			json
 //	@Produce		json
-//	@Param			moduleID	path		string	true	"id"
+//	@Param			moduleID	path		string	true	"moduleID"
 //	@Param			request	body		schema.UpdateProjectModuleRequest	true	"id"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/modules/{id} [post]
+//	@Router			/v1/modules/{moduleID} [post]
 func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateProjectModuleRequest)
@@ -159,14 +159,14 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Tags			modules
 //	@Accept			json
 //	@Produce		json
-//	@Param			moduleID	path		string	true	"id"
+//	@Param			moduleID	path		string	true	"moduleID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/modules/modules/{id} [delete]
 func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		moduleIdParam := c.Params("id")
+		moduleIdParam := c.Params("moduleID")
 		moduleID, err := strconv.Atoi(moduleIdParam)
 		if err != nil {
 			logger.Error(loggedmodule.ApiModules, "failed to parse module projectID data", "error", err)
@@ -193,11 +193,11 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Tags			modules
 //	@Accept			json
 //	@Produce		json
-//	@Param			projectID	path		string	true	"id"
+//	@Param			projectID	path		string	true	"projectID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/{id} [get]
+//	@Router			/v1/modules/{projectID} [get]
 func GetProjectModules(modules services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
