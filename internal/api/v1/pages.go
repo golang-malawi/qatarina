@@ -28,7 +28,7 @@ import (
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages [post]
+//	@Router			/v1/pages/pages [post]
 func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.PageRequest)
@@ -63,14 +63,14 @@ func CreatePage(page services.PageService, logger logging.Logger) fiber.Handler 
 //	@Tags			pages
 //	@Accept			json
 //	@Produce		json
-//	@Param			PageID	path		string	true	"id"
+//	@Param			pageID	path		string	true	"pageID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages [get]
+//	@Router			/v1/pages/{pageID} [get]
 func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pageID, err := c.ParamsInt("id", 0)
+		pageID, err := c.ParamsInt("pageID", 0)
 		if err != nil {
 			return problemdetail.BadRequest(c, "failed to parse id data in request")
 		}
@@ -100,7 +100,7 @@ func GetOnePage(pageService services.PageService, logger logging.Logger) fiber.H
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages [get]
+//	@Router			/v1/pages/pages [get]
 func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		pages, err := pagesService.GetAllPages(ctx.Context())
@@ -127,7 +127,7 @@ func GetAllPages(pagesService services.PageService, logger logging.Logger) fiber
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages [post]
+//	@Router			/v1/pages/pages/{id} [post]
 func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.UpdatePageRequest)
@@ -161,14 +161,14 @@ func UpdatePage(pageService services.PageService, logger logging.Logger) fiber.H
 //	@Tags			pages
 //	@Accept			json
 //	@Produce		json
-//	@Param			pageID	path		string	true	"id"
+//	@Param			pageID	path		string	true	"pageID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/pages [delete]
+//	@Router			/v1/pages/{pageID} [delete]
 func DeletePage(pageService services.PageService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		pageIDParam := ctx.Params("id")
+		pageIDParam := ctx.Params("pageID")
 		pageID, err := strconv.Atoi(pageIDParam)
 		if err != nil {
 			return problemdetail.BadRequest(ctx, "failed to parse pageID data in request")
