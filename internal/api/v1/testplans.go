@@ -236,7 +236,7 @@ func DeleteTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-plans [post]
+//	@Router			/v1/test-plans/{testPlanID}/test-cases [post]
 func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.AssignTestsToPlanRequest)
