@@ -163,7 +163,7 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/modules/{id} [delete]
+//	@Router			/v1/modules/{moduleID} [delete]
 func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		moduleIdParam := c.Params("moduleID")
