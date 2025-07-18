@@ -55,21 +55,21 @@ func (api *API) routes() {
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
 	{
-		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService, api.logger))
-		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService, api.logger))
-		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService, api.logger))
-		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService, api.logger))
-		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService, api.logger))
+		modulesV1.Post("", apiv1.CreateModule(api.ModuleService, api.logger))
+		modulesV1.Get("/:moduleID", apiv1.GetOneModule(api.ModuleService, api.logger))
+		modulesV1.Get("", apiv1.GetAllModules(api.ModuleService, api.logger))
+		modulesV1.Post("/:moduleID", apiv1.UpdateModule(api.ModuleService, api.logger))
+		modulesV1.Delete("/:moduleID", apiv1.DeleteModule(api.ModuleService, api.logger))
 
 	}
 
 	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)
 	{
-		pagesV1.Post("/pages", apiv1.CreatePage(api.PageService, api.logger))
-		pagesV1.Get("/pages/:id", apiv1.GetOnePage(api.PageService, api.logger))
-		pagesV1.Get("/pages", apiv1.GetAllPages(api.PageService, api.logger))
-		pagesV1.Post("/pages/:id", apiv1.UpdatePage(api.PageService, api.logger))
-		pagesV1.Delete("/pages/:id", apiv1.DeletePage(api.PageService, api.logger))
+		pagesV1.Post("", apiv1.CreatePage(api.PageService, api.logger))
+		pagesV1.Get("/:pageID", apiv1.GetOnePage(api.PageService, api.logger))
+		pagesV1.Get("", apiv1.GetAllPages(api.PageService, api.logger))
+		pagesV1.Post("/:pageID", apiv1.UpdatePage(api.PageService, api.logger))
+		pagesV1.Delete("/:pageID", apiv1.DeletePage(api.PageService, api.logger))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
