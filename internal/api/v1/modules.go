@@ -197,7 +197,7 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/modules/{projectID} [get]
+//	@Router			/v1/projects/{projectID}/modules [get]
 func GetProjectModules(modules services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
