@@ -115,6 +115,11 @@ func (api *API) routes() {
 		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
 	}
 
+	uploadV1 := router.Group("v1/upload", authenticationMiddleware)
+	{
+		uploadV1.Post("/document", apiv1.UploadDocument(api.UploadService, api.logger))
+	}
+
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
 	{
 		settingsApi.Get("", apiv1.GetSettings(api.Config))

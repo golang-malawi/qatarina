@@ -60,6 +60,10 @@ production.yml
 /notes/
 **/system.log
 /logs/
+/uploads/
 
 *.exe
 *.log
+uploads/*.pdf
+uploads/*.doc
+uploads/*.docx

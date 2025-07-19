@@ -404,6 +404,31 @@ func (q *Queries) CreateTestPlan(ctx context.Context, arg CreateTestPlanParams) 
 	return id, err
 }
 
+const createUpload = `-- name: CreateUpload :one
+INSERT INTO uploads(user_id, project_id, name, created_at
+)VALUES($1, $2, $3, now()) RETURNING id, user_id, project_id, name, created_at, deleted_at
+`
+
+type CreateUploadParams struct {
+	UserID    int32
+	ProjectID int32
+	Name      string
+}
+
+func (q *Queries) CreateUpload(ctx context.Context, arg CreateUploadParams) (Upload, error) {
+	row := q.db.QueryRowContext(ctx, createUpload, arg.UserID, arg.ProjectID, arg.Name)
+	var i Upload
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProjectID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,

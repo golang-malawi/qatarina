@@ -10,12 +10,14 @@ import (
 )
 
 type Config struct {
-	Server   HTTPServerConfiguration `mapstructure:"server"`
-	Auth     AuthConfiguration       `mapstructure:"auth"`
-	Database DatabaseConfiguration   `mapstructure:"db"`
-	SMTP     SMTPConfiguration       `mapstructure:"smtp"`
-	Logging  LoggingConfiguration    `mapstructure:"logging"`
-	Platform PlatformConfiguration   `mapstructure:"platform"`
+	Server    HTTPServerConfiguration `mapstructure:"server"`
+	Auth      AuthConfiguration       `mapstructure:"auth"`
+	Database  DatabaseConfiguration   `mapstructure:"db"`
+	SMTP      SMTPConfiguration       `mapstructure:"smtp"`
+	Logging   LoggingConfiguration    `mapstructure:"logging"`
+	Platform  PlatformConfiguration   `mapstructure:"platform"`
+	Ai        AIConfiguration         `mapstructure:"ai"`
+	Gotenberg GotenbergConfiguration  `mapstructure:"gotenberg"`
 }
 
 type DatabaseConfiguration struct {
@@ -68,6 +70,14 @@ type AdminConfiguration struct {
 type PlatformConfiguration struct {
 	AnonymousTestCase     bool `mapstructure:"" envconfig:"QATARINA_ANONYMOUS_TEST_CASE"`
 	CreateDefaultTestPlan bool `mapstructure:"create_default_test_plan" envconfig:"QATARINA_ENABLE_DEFAULT_TEST_PLAN"`
+}
+
+type AIConfiguration struct {
+	GeminiApiKey string `mapstructure:"gemini_api_key" envconfig:"QATARINA_GEMINI_API_KEY"`
+}
+
+type GotenbergConfiguration struct {
+	LibreOffice string `mapstructure:"libreoffice_url" envconfig:"QATARINA_GOTENBERG_API_KEY"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -130,5 +140,11 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	Ai: AIConfiguration{
+		GeminiApiKey: "",
+	},
+	Gotenberg: GotenbergConfiguration{
+		LibreOffice: "",
 	},
 }

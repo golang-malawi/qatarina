@@ -24,6 +24,7 @@ type API struct {
 	TesterService    services.TesterService
 	ModuleService    services.ModuleService
 	PageService      services.PageService
+	UploadService    services.UploadService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -44,6 +45,7 @@ func NewAPI(config *config.Config) *API {
 		TesterService:    services.NewTesterService(dbConn, logger),
 		ModuleService:    services.NewModuleService(dbConn),
 		PageService:      services.NewPageService(dbConn),
+		UploadService:    services.NewUploadService(dbConn, logger, config),
 	}
 }
 

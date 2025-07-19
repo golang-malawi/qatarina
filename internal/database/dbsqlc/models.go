@@ -312,6 +312,18 @@ type TestRunsComment struct {
 	MediaUrls pqtype.NullRawMessage
 }
 
+type Upload struct {
+	ID int32
+	// User who uploaded the document
+	UserID int32
+	// Project which this document is under
+	ProjectID int32
+	// Name of the uploaded document
+	Name      string
+	CreatedAt time.Time
+	DeletedAt sql.NullTime
+}
+
 type User struct {
 	ID int32
 	// Firstname of the user

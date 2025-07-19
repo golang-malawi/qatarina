@@ -260,3 +260,7 @@ WHERE id = $1;
 
 -- name: DeletePage :execrows
 DELETE FROM pages WHERE id = $1;
+
+-- name: CreateUpload :one
+INSERT INTO uploads(user_id, project_id, name, created_at
+)VALUES($1, $2, $3, now()) RETURNING *;
