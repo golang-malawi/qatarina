@@ -38,15 +38,6 @@ function InnerApp() {
   return <RouterProvider router={router} context={{ auth }} />;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-function App() {
-  return (
-    <AuthProvider>
-      <InnerApp />
-    </AuthProvider>
-  );
-}
-
 const rootElement = document.getElementById("root")!;
 
 if (!rootElement.innerHTML) {
@@ -55,10 +46,11 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <Provider>
-          <App />
+          <AuthProvider>
+            <InnerApp />
+          </AuthProvider>
         </Provider>
       </QueryClientProvider>
     </StrictMode>
   );
 }
-
