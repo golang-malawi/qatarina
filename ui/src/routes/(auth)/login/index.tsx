@@ -26,6 +26,7 @@ import { LoginFormValues, loginSchema } from "@/data/forms/login";
 import { Logo } from "@/components/logo";
 import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
+import React, { useState } from "react";
 
 const fallback = "/dashboard" as const;
 
@@ -47,6 +48,8 @@ function LoginPage() {
   const router = useRouter();
   const search = Route.useSearch();
 
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -61,9 +64,9 @@ function LoginPage() {
     },
   });
 
-  // Mock login mutation with react-query
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
+      setLoginError(null);
       await auth.login(data);
       await router.invalidate();
 
@@ -75,19 +78,26 @@ function LoginPage() {
     },
     onSuccess: (data) => {
       console.log("Login successful", data);
-      // Handle successful login (e.g., redirect or set auth state)
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error("Login failed", error);
-      // Handle login error
+      let message =
+        "Login failed. Please check your email and password and try again.";
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string"
+      ) {
+        message = (error as { message: string }).message;
+      }
+      setLoginError(message);
     },
   });
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data);
   };
-
-  // Color scheme
 
   return (
     <Flex minH="100vh" align="center" justify="center" p={4}>
@@ -112,6 +122,11 @@ function LoginPage() {
             </Card.Description>
           </Card.Header>
           <Card.Body>
+            {loginError && (
+              <Text color="red.500" mb={2} textAlign="center">
+                {loginError}
+              </Text>
+            )}
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack>
                 <Field.Root invalid={!!errors.email}>
@@ -185,4 +200,3 @@ function LoginPage() {
     </Flex>
   );
 }
-
