@@ -51,7 +51,7 @@ function ViewUserProfile() {
         View Profile: {user.name}
       </Heading>
 
-      {/* Profile Card */}
+    
       <Flex
         direction="column"
         align="center"
