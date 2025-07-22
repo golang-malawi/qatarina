@@ -115,9 +115,9 @@ func (api *API) routes() {
 		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
 	}
 
-	uploadV1 := router.Group("v1/upload", authenticationMiddleware)
+	suggestTestCasesV1 := router.Group("v1/suggest-test-cases", authenticationMiddleware)
 	{
-		uploadV1.Post("/document", apiv1.UploadDocument(api.UploadService, api.logger))
+		suggestTestCasesV1.Post("/document", apiv1.UploadDocument(api.SuggestedTestCaseService, api.logger))
 	}
 
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)

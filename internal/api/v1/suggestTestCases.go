@@ -8,7 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
-func UploadDocument(uploadService services.UploadService, logger logging.Logger) fiber.Handler {
+func UploadDocument(suggestTestCaseService services.SuggestTestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// uploadRequest := new(schema.UploadDocumentRequest)
 		// if validationErrors, err := common.ParseBodyThenValidate(c, uploadRequest); err != nil {
@@ -24,14 +24,14 @@ func UploadDocument(uploadService services.UploadService, logger logging.Logger)
 			return problemdetail.BadRequest(c, "invalid upload request")
 		}
 
-		err = uploadService.CreateUpload(c.Context(), file)
+		reponse, err := suggestTestCaseService.CreateSuggestions(c.Context(), file)
 		if err != nil {
 			logger.Error(loggedmodule.ApiUploads, "failed to create upload", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to create upload")
 		}
 
 		return c.JSON(fiber.Map{
-			"message": "File uploaded successfully",
+			"Suggested test cases": reponse,
 		})
 
 	}
