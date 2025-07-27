@@ -4,8 +4,10 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -26,6 +28,7 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
+	CloseTestPlan(context.Context, int32) error
 }
 
 type testRunService struct {
@@ -104,4 +107,26 @@ func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error
 // CreateFromFoundIssues implements TestRunService.
 func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
 	panic("unimplemented")
+}
+
+// CloseTestPlan implements TestRunService
+func (t *testRunService) CloseTestPlan(ctx context.Context, testPlanID int32) error {
+	testRuns, err := t.queries.ListTestRunsByPlan(ctx, testPlanID)
+	if err != nil {
+		t.logger.Error("error listing test runs", "error", err)
+		return err
+	}
+
+	for _, testRun := range testRuns {
+		if testRun.ResultState == "pending" || !testRun.IsClosed.Bool {
+			t.logger.Error("failed to close test plan", "error", err)
+			return fmt.Errorf("cannot close: some test run %v is still pending", testRun.ID)
+		}
+	}
+
+	_, err = t.queries.CloseTestPlan(ctx, dbsqlc.CloseTestPlanParams{
+		ID:       int64(testPlanID),
+		ClosedAt: common.NullTime(time.Now()),
+	})
+	return err
 }
