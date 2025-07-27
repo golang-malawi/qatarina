@@ -197,6 +197,16 @@ num_failures = $12, is_complete = $13, is_locked = $14,
 has_report = $15, created_at = $16, updated_at = $17
 WHERE id = $1;
 
+-- name: CloseTestPlan :execrows
+UPDATE test_plans
+SET is_complete = TRUE,
+closed_at = $2,
+updated_at = $2
+WHERE id = $1;
+
+-- name: GetTestRunStatesForPlan :many
+SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
+
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
