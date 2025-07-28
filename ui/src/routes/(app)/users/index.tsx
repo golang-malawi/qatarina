@@ -7,55 +7,36 @@ import {
   Stack,
   Text,
   Icon,
+  Spinner,
+  Alert,
 } from "@chakra-ui/react";
 import { IconUser } from "@tabler/icons-react";
-// import { useSuspenseQuery } from "@tanstack/react-query";
-// import $api from "@/lib/api/query";
+import { useUsersQuery } from "@/services/UserService";
 
 export const Route = createFileRoute("/(app)/users/")({
-  // Commented out the API loader for now
-  // loader: ({ context: { queryClient } }) =>
-  //   queryClient.ensureQueryData($api.queryOptions("get", "/v1/users")),
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  // Dummy users data
-  const users = [
-    {
-      id: "1",
-      username: "alice123",
-      displayName: "Alice Johnson",
-      createdAt: "2025-07-15",
-    },
-    {
-      id: "2",
-      username: "bob456",
-      displayName: "Bob Smith",
-      createdAt: "2025-07-14",
-    },
-    {
-      id: "3",
-      username: "charlie789",
-      displayName: "Charlie Brown",
-      createdAt: "2025-07-13",
-    },
-  ];
+  const { data, isPending, isError, error } = useUsersQuery();
 
-  // Commented out API call for now
-  // const {
-  //   data: { users },
-  //   isPending,
-  //   error,
-  // } = useSuspenseQuery($api.queryOptions("get", "/v1/users"));
+  if (isPending) {
+    return (
+      <Flex justify="center" align="center" h="full" p={10}>
+        <Spinner size="xl" color="teal.500" />
+      </Flex>
+    );
+  }
 
-  // if (isPending) {
-  //   return "Loading users...";
-  // }
+  if (isError) {
+    return (
+      <Alert status="error">
+        Failed to load users: {(error as Error).message}
+      </Alert>
+    );
+  }
 
-  // if (error) {
-  //   return <div className="error">Error: error fetching users</div>;
-  // }
+  const users = data?.users || [];
 
   return (
     <Box p={6}>
@@ -66,8 +47,8 @@ function RouteComponent() {
         </Link>
       </Flex>
 
-      <Stack spacing={4}>
-        {users.map((user) => (
+      <Stack gap={4}>
+        {users.map((user: any) => (
           <Box
             key={user.id}
             p={4}
@@ -80,10 +61,7 @@ function RouteComponent() {
             <Flex align="center" gap={3}>
               <Icon as={IconUser} boxSize={6} color="teal.500" />
               <Box>
-                <Link
-                  to={`/users/view/$userID`}
-                  params={{ userID: user.id }}
-                >
+                <Link to={`/users/view/$userID`} params={{ userID: user.id }}>
                   <Heading size="md">{user.displayName}</Heading>
                 </Link>
                 <Text fontSize="sm" color="gray.600">

@@ -6,53 +6,30 @@ import {
   Button,
   Flex,
   Spinner,
-  Text,
+
   IconButton,
+  Alert,
+
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useTestersQuery } from "@/services/TesterService";
 import { LuTrash, LuPencil } from "react-icons/lu";
 
 export const Route = createFileRoute("/(app)/testers/")({
   component: ListTesters,
 });
 
-type Tester = {
-  id: string;
-  name: string;
-  email: string;
-};
-
 function ListTesters() {
-  const [testers, setTesters] = useState<Tester[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isPending, isError, error } = useTestersQuery();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setTesters([
-          { id: "1", name: "Alice Johnson", email: "alice@example.com" },
-          { id: "2", name: "Bob Smith", email: "bob@example.com" },
-          { id: "3", name: "Charlie Brown", email: "charlie@example.com" },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load testers.");
-        setLoading(false);
-      }
-    }, 1000);
+  const testers = data?.testers ?? [];
 
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number) => {
     if (!window.confirm("Are you sure you want to delete this tester?")) return;
-    setTesters((prev) => prev.filter((t) => t.id !== id));
+    console.log("Delete tester", id);
   };
 
-  const handleEdit = (id: string) => {
+  const handleEdit = (id: number) => {
     console.log("Edit tester", id);
   };
 
@@ -65,45 +42,53 @@ function ListTesters() {
         </Link>
       </Flex>
 
-      {loading ? (
+      {isPending ? (
         <Flex justify="center" py={10}>
           <Spinner size="lg" />
         </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
+      ) : isError ? (
+        <Alert status="error" my={4}>
+          Failed to load testers: {(error as Error).message}
+        </Alert>
       ) : (
         <Stack gap="6">
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>ID</Table.ColumnHeader>
+                <Table.ColumnHeader>User ID</Table.ColumnHeader>
                 <Table.ColumnHeader>Name</Table.ColumnHeader>
-                <Table.ColumnHeader>Email</Table.ColumnHeader>
+                <Table.ColumnHeader>Project</Table.ColumnHeader>
+                <Table.ColumnHeader>Role</Table.ColumnHeader>
                 <Table.ColumnHeader>Actions</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {testers.map((tester) => (
-                <Table.Row key={tester.id}>
-                  <Table.Cell>{tester.id}</Table.Cell>
-                  <Table.Cell>{tester.name}</Table.Cell>
-                  <Table.Cell>{tester.email}</Table.Cell>
+                <Table.Row key={tester.user_id}>
+                  <Table.Cell>{tester.user_id}</Table.Cell>
+                  <Table.Cell>{tester.name || "N/A"}</Table.Cell>
+                  <Table.Cell>{tester.project || "N/A"}</Table.Cell>
+                  <Table.Cell>{tester.role || "N/A"}</Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
-                      <IconButton
-                        aria-label="Edit tester"
-                        onClick={() => handleEdit(tester.id)}
-                        colorScheme="blue"
-                        size="sm"
-                        icon={<LuPencil />}
-                      />
-                      <IconButton
-                        aria-label="Delete tester"
-                        onClick={() => handleDelete(tester.id)}
+                      <Button>
+                        <Link to={`/testers/view/${tester.user_id}`}>
+                          View
+                        </Link>
+                      </Button>
+                      <Button>
+                        <Link to={`/testers/edit/${tester.user_id}`}>
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button
                         colorScheme="red"
+                        onClick={() => handleDelete(tester.user_id)}
                         size="sm"
-                        icon={<LuTrash />}
-                      />
+                      >
+                        Delete
+                      </Button>
+  
                     </Flex>
                   </Table.Cell>
                 </Table.Row>

@@ -1644,18 +1644,6 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 	return items, nil
 }
 
-
-const searchUsers = `-- name: SearchUsers :many
-SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%'
-`
-
-func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
-	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
-
 const searchProjectTesters = `-- name: SearchProjectTesters :many
 SELECT 
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
@@ -1678,22 +1666,50 @@ type SearchProjectTestersRow struct {
 
 func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
-
-
-const searchProject = `-- name: SearchProject :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
-WHERE title ILIKE '%' || $1 || '%'
-`
-
-func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([]Project, error) {
-	rows, err := q.db.QueryContext(ctx, searchProject, dollar_1)
-
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	var items []SearchProjectTestersRow
+	for rows.Next() {
+		var i SearchProjectTestersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UserID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TesterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%'
+`
 
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	var items []User
 	for rows.Next() {
 		var i User
@@ -1715,42 +1731,9 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.IsVerified,
 			&i.LastLoginAt,
 			&i.EmailConfirmedAt,
-
-	var items []SearchProjectTestersRow
-	for rows.Next() {
-		var i SearchProjectTestersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProjectID,
-			&i.UserID,
-			&i.Role,
-			&i.IsActive,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.TesterName,
-
-
-	var items []Project
-	for rows.Next() {
-		var i Project
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Description,
-			&i.Version,
-			&i.IsActive,
-			&i.IsPublic,
-			&i.WebsiteUrl,
-			&i.GithubUrl,
-			&i.TrelloUrl,
-			&i.JiraUrl,
-			&i.MondayUrl,
-			&i.OwnerUserID,
-
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-
 		); err != nil {
 			return nil, err
 		}
@@ -1867,6 +1850,58 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Priority,
 		arg.Type,
 		arg.Description,
+	)
+	return err
+}
+
+const updateTestPlan = `-- name: UpdateTestPlan :exec
+UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
+updated_by_id = $5, kind = $6, description = $7, start_at = $8,
+closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
+num_failures = $12, is_complete = $13, is_locked = $14,
+has_report = $15, created_at = $16, updated_at = $17
+WHERE id = $1
+`
+
+type UpdateTestPlanParams struct {
+	ID             int64
+	ProjectID      int32
+	AssignedToID   int32
+	CreatedByID    int32
+	UpdatedByID    int32
+	Kind           TestKind
+	Description    sql.NullString
+	StartAt        sql.NullTime
+	ClosedAt       sql.NullTime
+	ScheduledEndAt sql.NullTime
+	NumTestCases   int32
+	NumFailures    int32
+	IsComplete     sql.NullBool
+	IsLocked       sql.NullBool
+	HasReport      sql.NullBool
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
+	_, err := q.db.ExecContext(ctx, updateTestPlan,
+		arg.ID,
+		arg.ProjectID,
+		arg.AssignedToID,
+		arg.CreatedByID,
+		arg.UpdatedByID,
+		arg.Kind,
+		arg.Description,
+		arg.StartAt,
+		arg.ClosedAt,
+		arg.ScheduledEndAt,
+		arg.NumTestCases,
+		arg.NumFailures,
+		arg.IsComplete,
+		arg.IsLocked,
+		arg.HasReport,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 	)
 	return err
 }
