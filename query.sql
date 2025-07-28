@@ -2,6 +2,13 @@
 SELECT * FROM users
 ORDER BY created_at DESC;
 
+-- name: SearchUsers :many
+SELECT * FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%';
+
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 
@@ -13,6 +20,18 @@ SELECT id, display_name, email, password, last_login_at FROM users WHERE email =
 
 -- name: UpdateUserLastLogin :execrows
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL;
+
+-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, phone = $5,
+    org_id = $6, country_iso = $7, city = $8, address = $9,
+    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
+    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
+WHERE id = $1;
+
+-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4);
 
 -- name: CreateUser :one
 INSERT INTO users (
@@ -28,6 +47,9 @@ VALUES(
     $15, $16, $17, $18, $19
 )
 RETURNING id;
+
+-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1;
 
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;

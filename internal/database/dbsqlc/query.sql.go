@@ -98,6 +98,28 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
+const createInvite = `-- name: CreateInvite :exec
+INSERT INTO invites (sender_email, receiver_email, token, expires_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type CreateInviteParams struct {
+	SenderEmail   string
+	ReceiverEmail string
+	Token         string
+	ExpiresAt     sql.NullTime
+}
+
+func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) error {
+	_, err := q.db.ExecContext(ctx, createInvite,
+		arg.SenderEmail,
+		arg.ReceiverEmail,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const createNewTestRun = `-- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
@@ -559,6 +581,18 @@ DELETE FROM test_runs WHERE id = $1
 
 func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteTestRun, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM users WHERE id=$1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, id)
 	if err != nil {
 		return 0, err
 	}
@@ -1610,6 +1644,18 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 	return items, nil
 }
 
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
+WHERE first_name ILIKE '%' || $1 || '%'
+OR last_name ILIKE '%' || $1 || '%'
+OR display_name ILIKE '%' || $1 || '%'
+OR email ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsers, dollar_1)
+
 const searchProjectTesters = `-- name: SearchProjectTesters :many
 SELECT 
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
@@ -1632,10 +1678,44 @@ type SearchProjectTestersRow struct {
 
 func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
+
+
+const searchProject = `-- name: SearchProject :many
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
+WHERE title ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([]Project, error) {
+	rows, err := q.db.QueryContext(ctx, searchProject, dollar_1)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
+
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.DisplayName,
+			&i.Email,
+			&i.Password,
+			&i.Phone,
+			&i.OrgID,
+			&i.CountryIso,
+			&i.City,
+			&i.Address,
+			&i.IsActivated,
+			&i.IsReviewed,
+			&i.IsSuperAdmin,
+			&i.IsVerified,
+			&i.LastLoginAt,
+			&i.EmailConfirmedAt,
+
 	var items []SearchProjectTestersRow
 	for rows.Next() {
 		var i SearchProjectTestersRow
@@ -1648,6 +1728,29 @@ func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullStr
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TesterName,
+
+
+	var items []Project
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Version,
+			&i.IsActive,
+			&i.IsPublic,
+			&i.WebsiteUrl,
+			&i.GithubUrl,
+			&i.TrelloUrl,
+			&i.JiraUrl,
+			&i.MondayUrl,
+			&i.OwnerUserID,
+
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+
 		); err != nil {
 			return nil, err
 		}
@@ -1768,54 +1871,56 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 	return err
 }
 
-const updateTestPlan = `-- name: UpdateTestPlan :exec
-UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
-updated_by_id = $5, kind = $6, description = $7, start_at = $8,
-closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
-num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET 
+    first_name = $2, last_name = $3, display_name = $4, phone = $5,
+    org_id = $6, country_iso = $7, city = $8, address = $9,
+    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
+    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
 WHERE id = $1
 `
 
-type UpdateTestPlanParams struct {
-	ID             int64
-	ProjectID      int32
-	AssignedToID   int32
-	CreatedByID    int32
-	UpdatedByID    int32
-	Kind           TestKind
-	Description    sql.NullString
-	StartAt        sql.NullTime
-	ClosedAt       sql.NullTime
-	ScheduledEndAt sql.NullTime
-	NumTestCases   int32
-	NumFailures    int32
-	IsComplete     sql.NullBool
-	IsLocked       sql.NullBool
-	HasReport      sql.NullBool
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
+type UpdateUserParams struct {
+	ID               int32
+	FirstName        string
+	LastName         string
+	DisplayName      sql.NullString
+	Phone            string
+	OrgID            sql.NullInt32
+	CountryIso       string
+	City             sql.NullString
+	Address          string
+	IsActivated      sql.NullBool
+	IsReviewed       sql.NullBool
+	IsSuperAdmin     sql.NullBool
+	IsVerified       sql.NullBool
+	LastLoginAt      sql.NullTime
+	EmailConfirmedAt sql.NullTime
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	DeletedAt        sql.NullTime
 }
 
-func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
-	_, err := q.db.ExecContext(ctx, updateTestPlan,
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
 		arg.ID,
-		arg.ProjectID,
-		arg.AssignedToID,
-		arg.CreatedByID,
-		arg.UpdatedByID,
-		arg.Kind,
-		arg.Description,
-		arg.StartAt,
-		arg.ClosedAt,
-		arg.ScheduledEndAt,
-		arg.NumTestCases,
-		arg.NumFailures,
-		arg.IsComplete,
-		arg.IsLocked,
-		arg.HasReport,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.Phone,
+		arg.OrgID,
+		arg.CountryIso,
+		arg.City,
+		arg.Address,
+		arg.IsActivated,
+		arg.IsReviewed,
+		arg.IsSuperAdmin,
+		arg.IsVerified,
+		arg.LastLoginAt,
+		arg.EmailConfirmedAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.DeletedAt,
 	)
 	return err
 }
