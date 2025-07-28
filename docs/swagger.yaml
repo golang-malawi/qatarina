@@ -17,6 +17,24 @@ components:
         type:
           type: string
       type: object
+    schema.AssignTestsToPlanRequest:
+      properties:
+        planned_tests:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseAssignment'
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+        project_id:
+          type: integer
+        test_plan_id:
+          type: integer
+      required:
+      - planned_tests
+      - project_id
+      - test_plan_id
+      type: object
     schema.BulkAssignTesters:
       properties:
         project_id:
@@ -79,6 +97,28 @@ components:
             $ref: '#/components/schemas/schema.UserCompact'
           type: array
           uniqueItems: false
+      type: object
+    schema.CreateProjectModuleRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+        priority:
+          type: integer
+        projectID:
+          type: integer
+        type:
+          type: string
+      required:
+      - code
+      - description
+      - name
+      - priority
+      - projectID
+      - type
       type: object
     schema.CreateTestCaseRequest:
       properties:
@@ -236,6 +276,8 @@ components:
       - first_name
       - last_name
       - password
+      type: object
+    schema.PageRequest:
       type: object
     schema.ProjectListResponse:
       properties:
@@ -448,6 +490,29 @@ components:
             $ref: '#/components/schemas/schema.Tester'
           type: array
           uniqueItems: false
+      type: object
+    schema.UpdatePageRequest:
+      type: object
+    schema.UpdateProjectModuleRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        priority:
+          type: integer
+        type:
+          type: string
+      required:
+      - code
+      - id
+      - name
+      - priority
+      - type
       type: object
     schema.UpdateProjectRequest:
       properties:
@@ -662,6 +727,360 @@ paths:
       summary: User signup
       tags:
       - auth
+  /v1/modules:
+    get:
+      description: Get all Modules
+      operationId: GetAllModules
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get all Modules
+      tags:
+      - modules
+    post:
+      description: Create a Module
+      operationId: CreateModule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateProjectModuleRequest'
+        description: Module data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Create a Module
+      tags:
+      - modules
+  /v1/modules/{moduleID}:
+    delete:
+      description: Delete a Module
+      operationId: DeleteModule
+      parameters:
+      - description: moduleID
+        in: path
+        name: moduleID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a Module
+      tags:
+      - modules
+    get:
+      description: Get one Module
+      operationId: GetOneModule
+      parameters:
+      - description: moduleID
+        in: path
+        name: moduleID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get one Module
+      tags:
+      - modules
+    post:
+      description: Update a Module
+      operationId: UpdateModule
+      parameters:
+      - description: moduleID
+        in: path
+        name: moduleID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateProjectModuleRequest'
+        description: id
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update a Module
+      tags:
+      - modules
+  /v1/pages:
+    get:
+      description: Get all pages
+      operationId: GetAllPages
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get all pages
+      tags:
+      - pages
+    post:
+      description: Create a page
+      operationId: CreatePage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.PageRequest'
+        description: Page data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Create a page
+      tags:
+      - pages
+  /v1/pages/{pageID}:
+    delete:
+      description: Delete a page
+      operationId: DeletePage
+      parameters:
+      - description: pageID
+        in: path
+        name: pageID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a page
+      tags:
+      - pages
+    get:
+      description: Get one page
+      operationId: GetOnePage
+      parameters:
+      - description: pageID
+        in: path
+        name: pageID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get one page
+      tags:
+      - pages
+    post:
+      description: Update a page
+      operationId: UpdatePage
+      parameters:
+      - description: pageID
+        in: path
+        name: pageID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdatePageRequest'
+        description: id
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update a page
+      tags:
+      - pages
   /v1/projects:
     get:
       description: List Projects available on the platform
@@ -841,6 +1260,44 @@ paths:
       summary: Update a Project
       tags:
       - projects
+  /v1/projects/{projectID}/modules:
+    get:
+      description: Get a Modules by project
+      operationId: GetProjectModule
+      parameters:
+      - description: projectID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get a Modules by project
+      tags:
+      - modules
   /v1/projects/{projectID}/test-cases:
     get:
       description: Get a single Project's test cases
@@ -1447,8 +1904,8 @@ paths:
       - test-cases
   /v1/test-plans:
     get:
-      description: Search all Test Plans
-      operationId: SearchTestPlans
+      description: List all Test Plans
+      operationId: ListTestPlans
       requestBody:
         content:
           application/json:
@@ -1473,7 +1930,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: Search all Test Plans
+      summary: List all Test Plans
       tags:
       - test-plans
     post:
@@ -1620,6 +2077,84 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Update a Test Plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/test-cases:
+    post:
+      description: Assign a test to a plan
+      operationId: AssignTestsToPlan
+      parameters:
+      - description: testPlanID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.AssignTestsToPlanRequest'
+        description: testPlanID
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Assign a test to a plan
+      tags:
+      - test-plans
+  /v1/test-plans/query:
+    get:
+      description: Search test plans
+      operationId: SearchTestPlans
+      parameters:
+      - description: query
+        in: path
+        name: query
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Search test plans
       tags:
       - test-plans
   /v1/test-runs:
