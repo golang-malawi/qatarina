@@ -8,6 +8,18 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 )
 
+type TestRunRequest struct {
+	ProjectID    int32  `json:"project_id" validate:"required"`
+	TestPlanID   int32  `json:"test_plan_id" validate:"required"`
+	TestCaseID   string `json:"test_case_id" validate:"required"`
+	OwnerID      int32  `json:"owner_id" validate:"required"`
+	TestedByID   int32  `json:"tested_by_id" validate:"required"`
+	AssignedToID int32  `json:"assigned_to_id" validate:"-"`
+	Code         string `json:"code"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+}
+
 type BulkCommitTestResults struct {
 	UserID      int64                 `json:"-"`
 	TestResults []CommitTestRunResult `json:"test_results" validate:"required,min=1,max=100"`
@@ -64,9 +76,9 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 }
 
 type TestRunResponse struct {
-	ID          string `json:"id"`
-	ProjectID   int64  `json:"project_id"`
-	TestPlanID  int64  `json:"test_plan_id"`
+	ID         string `json:"id"`
+	ProjectID  int64  `json:"project_id"`
+	TestPlanID int64  `json:"test_plan_id"`
 }
 
 type TestRunListResponse struct {

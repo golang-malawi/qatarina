@@ -3,6 +3,9 @@ package v1
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -26,9 +29,16 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs [get]
-func ListTestRuns(services.TestRunService) fiber.Handler {
+func ListTestRuns(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to list TestRuns")
+		testRuns, err := testRunService.FindAll(context.Background())
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to list test runs")
+			return problemdetail.ServerErrorProblem(c, "failed to fetch test runs")
+		}
+		return c.JSON(fiber.Map{
+			"test_runs": testRuns,
+		})
 	}
 }
 
@@ -44,9 +54,25 @@ func ListTestRuns(services.TestRunService) fiber.Handler {
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs/query [get]
-func SearchTestRuns(services.TestRunService) fiber.Handler {
+func SearchTestRuns(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to search TestRuns")
+		projectID, err := strconv.Atoi(c.Query("q"))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "invalid parameter query", "error", err)
+			return problemdetail.BadRequest(c, "invalid or missing projectID parameter in query")
+		}
+
+		testRun, err := testRunService.FindAllByProjectID(c.Context(), int64(projectID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info(loggedmodule.ApiTestRuns, "test run not found", "error", err)
+				return c.JSON(schema.TestPlanListResponse{})
+			}
+			logger.Error(loggedmodule.ApiTestRuns, "failed to find test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to find a test run")
+		}
+
+		return c.JSON(testRun)
 	}
 }
 
@@ -63,9 +89,16 @@ func SearchTestRuns(services.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs/{testRunID} [get]
-func GetOneTestRun(services.TestRunService) fiber.Handler {
+func GetOneTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to get one TestRun")
+		testRunID := c.Params("testRunID")
+		testRun, err := testRunService.GetOneTestRun(c.Context(), testRunID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to get a test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(testRun)
 	}
 }
 
@@ -82,9 +115,27 @@ func GetOneTestRun(services.TestRunService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs [post]
-func CreateTestRun(services.TestRunService) fiber.Handler {
+func CreateTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to create TestRun")
+		request := new(schema.TestRunRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error(loggedmodule.ApiTestRuns, "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+
+		}
+
+		_, err := testRunService.Create(c.Context(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test run created",
+		})
 	}
 }
 
@@ -102,7 +153,7 @@ func CreateTestRun(services.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs/{testRunID} [post]
-func UpdateTestRun(services.TestRunService) fiber.Handler {
+func UpdateTestRun(testRunservice services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		return problemdetail.NotImplemented(c, "failed to update TestRun")
 	}
@@ -121,7 +172,7 @@ func UpdateTestRun(services.TestRunService) fiber.Handler {
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs/{testRunID} [delete]
-func DeleteTestRun(testRunService services.TestRunService) fiber.Handler {
+func DeleteTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testRunID := c.Params("testRunID", "")
 		if testRunID == "" {

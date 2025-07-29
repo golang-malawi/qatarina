@@ -16,6 +16,7 @@ import (
 type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
+	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.TestRun, error)
 	GetOneTestPlan(context.Context, int64) (*dbsqlc.TestPlan, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
@@ -110,6 +111,11 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]dbsqlc.TestPlan, error
 }
 func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestPlan, error) {
 	return t.queries.ListTestPlansByProject(ctx, int32(projectID))
+}
+
+// FindAllByTestPlanID implements TestPlanService
+func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID int32) ([]dbsqlc.TestRun, error) {
+	return t.queries.ListTestRunsByPlan(ctx, testPlanID)
 }
 
 // AddTestCaseToPlan implements TestPlanService.
