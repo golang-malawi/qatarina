@@ -31,10 +31,23 @@ function ListProjectTestPlans() {
       >
         {entry?.description}
       </Link>
+
+      <Link
+        to={`/projects/$projectId/test-plans/$testPlanID`}
+        
+        params={{
+          projectId,
+          testPlanID: entry?.id?.toString() ?? "",
+        }}
+      >
+        <Button variant={"outline"} size={"sm"}>View Test Plan</Button>
+      </Link>
+
       <Button variant={"outline"} colorScheme="orange" size="sm">
         <IconRefreshDot color="black" />
         &nbsp;Start a Test Session
       </Button>
+
       <Button variant={"outline"} colorScheme="black" size="sm">
         <IconTrash color="red" />
         &nbsp;Delete
@@ -44,16 +57,16 @@ function ListProjectTestPlans() {
   return (
     <Container>
       <Heading>Test Plans</Heading>
-              <Link
-                to={`/projects/$projectId/test-plans/new`}
-                params={{
-                  projectId: `${projectId}`,
-                }}
-              >
-                <Button variant={"outline"} colorScheme="blue" size={"sm"}>
-                  New Test Plan
-                </Button>
-              </Link>
+      <Link
+        to={`/projects/$projectId/test-plans/new`}
+        params={{
+          projectId: `${projectId}`,
+        }}
+      >
+        <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          New Test Plan
+        </Button>
+      </Link>
       {testPlanList}
     </Container>
   );
