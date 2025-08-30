@@ -21,14 +21,14 @@ function ViewUserProfile() {
   const navigate = useNavigate();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
-  const deleteUserMutation = useDeleteUserMutation(userID);
+  const deleteUserMutation = useDeleteUserMutation();
 
   const handleDeactivate = async () => {
     const confirm = window.confirm("Are you sure you want to deactivate this user?");
     if (!confirm) return;
 
     try {
-      await deleteUserMutation.mutateAsync();
+      await deleteUserMutation.mutateAsync({ params: { path: { userID }}});
       await navigate({ to: "/users" });
     } catch (err) {
       console.log("Failed to deactivate user:", err);
@@ -51,13 +51,13 @@ function ViewUserProfile() {
     );
   }
 
-  const displayName = user.DisplayName?.Valid ? user.DisplayName.String : "N/A";
+  const displayName = user.DisplayName ?? "N/A";
   const email = user.Email ?? "N/A";
-  const role = user.IsSuperAdmin?.Valid && user.IsSuperAdmin.Bool
+  const role = user.IsSuperAdmin && user.IsSuperAdmin
     ? "Super Admin"
     : "User";
-  const joinedAt = user.CreatedAt?.Valid
-    ? new Date(user.CreatedAt.Time).toLocaleDateString()
+  const joinedAt = user.CreatedAt
+    ? new Date(user.CreatedAt).toLocaleDateString()
     : "Unknown";
   const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
 
@@ -107,7 +107,7 @@ function ViewUserProfile() {
             colorScheme="red"
             variant="outline"
             onClick={handleDeactivate}
-            isLoading={deleteUserMutation.isPending}
+            loading={deleteUserMutation.isPending}
           >
             Deactivate User
           </Button>

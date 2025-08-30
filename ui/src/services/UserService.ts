@@ -18,17 +18,17 @@ export function useSearchUsersQuery(params: Record<string, any>) {
 }
 
 export function useGetUserQuery(userID: string) {
-  return $api.useQuery("get", `/v1/users/${userID}`);
+  return $api.useQuery("get", `/v1/users/{userID}`, { params: { path: { userID } } });
 }
 
-export function useUpdateUserMutation(userID: string) {
-  return $api.useMutation("post", `/v1/users/${userID}`);
+export function useUpdateUserMutation() {
+  return $api.useMutation("post", `/v1/users/{userID}`);
 }
 
-export function useInviteUserMutation(email: string) {
-  return $api.useMutation("post", `/v1/users/invite/${email}`);
+export function useInviteUserMutation() {
+  return $api.useMutation("post", `/v1/users/invite/{email}`);
 }
 
-export function useDeleteUserMutation(userID: string) {
-  return $api.useMutation("delete", `/v1/users/${userID}`);
+export function useDeleteUserMutation() {
+  return $api.useMutation("delete", `/v1/users/{userID}`);
 }
