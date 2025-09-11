@@ -82,6 +82,24 @@ SELECT EXISTS(
     SELECT * FROM test_cases WHERE project_id = $1
 );
 
+-- name: IsTestCaseUsedInTestPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+);
+
+-- name: IsTestCaseUsedInTestRun :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+);
+
+-- name: SearchTestCases :many
+SELECT * FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%';
+
+-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1;
+
 -- name: CountTestCasesNotLinkedToProject :one
 SELECT COUNT(*) FROM test_cases
 RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id
@@ -112,6 +130,14 @@ DELETE FROM test_plans WHERE id = $1;
 
 -- name: DeleteAllTestPlansInProject :execrows
 DELETE FROM test_plans WHERE project_id = $1;
+
+-- name: UpdateTestPlan :exec
+UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
+updated_by_id = $5, kind = $6, description = $7, start_at = $8,
+closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
+num_failures = $12, is_complete = $13, is_locked = $14,
+has_report = $15, created_at = $16, updated_at = $17
+WHERE id = $1;
 
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
@@ -181,6 +207,27 @@ INSERT INTO project_testers (
 ) VALUES (
     $1, $2, $3, $4, now(), now()
 );
+-- name: SearchProjectTesters :many
+SELECT 
+project_testers.*,
+u.display_name AS tester_name
+FROM project_testers
+INNER JOIN users u On u.id = project_testers.user_id
+WHERE project_testers.role ILIKE '%' || $1 || '%';
+
+-- name: DeleteProjectTester :execrows
+DELETE FROM project_testers WHERE id = $1;
+
+-- name: GetTestersByID :one
+SELECT
+project_testers.*,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1;
 
 -- name: GetTestersByProject :many
 SELECT

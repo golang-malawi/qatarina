@@ -551,6 +551,30 @@ func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, err
 	return result.RowsAffected()
 }
 
+const deleteProjectTester = `-- name: DeleteProjectTester :execrows
+DELETE FROM project_testers WHERE id = $1
+`
+
+func (q *Queries) DeleteProjectTester(ctx context.Context, id int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProjectTester, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteTestCase = `-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1
+`
+
+func (q *Queries) DeleteTestCase(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCase, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -889,6 +913,49 @@ func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error)
 	return i, err
 }
 
+const getTestersByID = `-- name: GetTestersByID :one
+SELECT
+project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers
+INNER JOIN users u ON u.id = project_testers.user_id
+INNER JOIN projects p ON p.id = project_testers.project_id
+WHERE project_id = $1
+`
+
+type GetTestersByIDRow struct {
+	ID                int32
+	ProjectID         int32
+	UserID            int32
+	Role              string
+	IsActive          bool
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	Project           string
+	TesterName        sql.NullString
+	TesterLastLoginAt sql.NullTime
+}
+
+func (q *Queries) GetTestersByID(ctx context.Context, projectID int32) (GetTestersByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTestersByID, projectID)
+	var i GetTestersByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Project,
+		&i.TesterName,
+		&i.TesterLastLoginAt,
+	)
+	return i, err
+}
+
 const getTestersByProject = `-- name: GetTestersByProject :many
 SELECT
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
@@ -988,6 +1055,32 @@ SELECT EXISTS(
 
 func (q *Queries) IsTestCaseLinkedToProject(ctx context.Context, projectID sql.NullInt32) (bool, error) {
 	row := q.db.QueryRowContext(ctx, isTestCaseLinkedToProject, projectID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isTestCaseUsedInTestPlan = `-- name: IsTestCaseUsedInTestPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+)
+`
+
+func (q *Queries) IsTestCaseUsedInTestPlan(ctx context.Context, testCaseID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseUsedInTestPlan, testCaseID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isTestCaseUsedInTestRun = `-- name: IsTestCaseUsedInTestRun :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+)
+`
+
+func (q *Queries) IsTestCaseUsedInTestRun(ctx context.Context, testCaseID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseUsedInTestRun, testCaseID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -1577,6 +1670,101 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 	return items, nil
 }
 
+const searchProjectTesters = `-- name: SearchProjectTesters :many
+SELECT 
+project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
+u.display_name AS tester_name
+FROM project_testers
+INNER JOIN users u On u.id = project_testers.user_id
+WHERE project_testers.role ILIKE '%' || $1 || '%'
+`
+
+type SearchProjectTestersRow struct {
+	ID         int32
+	ProjectID  int32
+	UserID     int32
+	Role       string
+	IsActive   bool
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+	TesterName sql.NullString
+}
+
+func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullString) ([]SearchProjectTestersRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchProjectTesters, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchProjectTestersRow
+	for rows.Next() {
+		var i SearchProjectTestersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UserID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TesterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchTestCases = `-- name: SearchTestCases :many
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, searchTestCases, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updatePage = `-- name: UpdatePage :exec
 UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
 WHERE id = $1
@@ -1679,6 +1867,58 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Priority,
 		arg.Type,
 		arg.Description,
+	)
+	return err
+}
+
+const updateTestPlan = `-- name: UpdateTestPlan :exec
+UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
+updated_by_id = $5, kind = $6, description = $7, start_at = $8,
+closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
+num_failures = $12, is_complete = $13, is_locked = $14,
+has_report = $15, created_at = $16, updated_at = $17
+WHERE id = $1
+`
+
+type UpdateTestPlanParams struct {
+	ID             int64
+	ProjectID      int32
+	AssignedToID   int32
+	CreatedByID    int32
+	UpdatedByID    int32
+	Kind           TestKind
+	Description    sql.NullString
+	StartAt        sql.NullTime
+	ClosedAt       sql.NullTime
+	ScheduledEndAt sql.NullTime
+	NumTestCases   int32
+	NumFailures    int32
+	IsComplete     sql.NullBool
+	IsLocked       sql.NullBool
+	HasReport      sql.NullBool
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
+	_, err := q.db.ExecContext(ctx, updateTestPlan,
+		arg.ID,
+		arg.ProjectID,
+		arg.AssignedToID,
+		arg.CreatedByID,
+		arg.UpdatedByID,
+		arg.Kind,
+		arg.Description,
+		arg.StartAt,
+		arg.ClosedAt,
+		arg.ScheduledEndAt,
+		arg.NumTestCases,
+		arg.NumFailures,
+		arg.IsComplete,
+		arg.IsLocked,
+		arg.HasReport,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 	)
 	return err
 }

@@ -55,21 +55,21 @@ func (api *API) routes() {
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
 	{
-		modulesV1.Post("/modules", apiv1.CreateModule(api.ModuleService, api.logger))
-		modulesV1.Get("/modules/:id", apiv1.GetOneModule(api.ModuleService, api.logger))
-		modulesV1.Get("/modules", apiv1.GetAllModules(api.ModuleService, api.logger))
-		modulesV1.Post("/modules/:id", apiv1.UpdateModule(api.ModuleService, api.logger))
-		modulesV1.Delete("/modules/:id", apiv1.DeleteModule(api.ModuleService, api.logger))
+		modulesV1.Post("", apiv1.CreateModule(api.ModuleService, api.logger))
+		modulesV1.Get("/:moduleID", apiv1.GetOneModule(api.ModuleService, api.logger))
+		modulesV1.Get("", apiv1.GetAllModules(api.ModuleService, api.logger))
+		modulesV1.Post("/:moduleID", apiv1.UpdateModule(api.ModuleService, api.logger))
+		modulesV1.Delete("/:moduleID", apiv1.DeleteModule(api.ModuleService, api.logger))
 
 	}
 
 	pagesV1 := router.Group("/v1/pages", authenticationMiddleware)
 	{
-		pagesV1.Post("/pages", apiv1.CreatePage(api.PageService, api.logger))
-		pagesV1.Get("/pages/:id", apiv1.GetOnePage(api.PageService, api.logger))
-		pagesV1.Get("/pages", apiv1.GetAllPages(api.PageService, api.logger))
-		pagesV1.Post("/pages/:id", apiv1.UpdatePage(api.PageService, api.logger))
-		pagesV1.Delete("/pages/:id", apiv1.DeletePage(api.PageService, api.logger))
+		pagesV1.Post("", apiv1.CreatePage(api.PageService, api.logger))
+		pagesV1.Get("/:pageID", apiv1.GetOnePage(api.PageService, api.logger))
+		pagesV1.Get("", apiv1.GetAllPages(api.PageService, api.logger))
+		pagesV1.Post("/:pageID", apiv1.UpdatePage(api.PageService, api.logger))
+		pagesV1.Delete("/:pageID", apiv1.DeletePage(api.PageService, api.logger))
 	}
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
@@ -81,38 +81,39 @@ func (api *API) routes() {
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
-		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService))
+		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
 	{
-		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService))
+		testPlansV1.Get("", apiv1.ListTestPlans(api.TestPlansService, api.logger))
 		testPlansV1.Post("", apiv1.CreateTestPlan(api.TestPlansService, api.logger))
-		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService))
-		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService))
-		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService))
+		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
-		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService))
+		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
+		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
 	{
-		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
-		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
-		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService))
+		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService, api.logger))
+		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService, api.logger))
 		testRunsV1.Post("/bulk/commit", apiv1.CommitBulkTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService))
-		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService))
+		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService))
+		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
 	{
-		testersV1.Get("", apiv1.ListTesters(api.TesterService))
-		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService))
-		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService))
-		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService))
+		testersV1.Get("", apiv1.ListTesters(api.TesterService, api.logger))
+		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService, api.logger))
+		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService, api.logger))
+		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
 	}
 
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)

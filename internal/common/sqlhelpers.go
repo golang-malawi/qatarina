@@ -20,3 +20,10 @@ func NewNullInt32(i int32) sql.NullInt32 {
 func NewNullTime(t time.Time) sql.NullTime {
 	return sql.NullTime{Time: t, Valid: true}
 }
+
+func NullTime(t time.Time) sql.NullTime {
+	return sql.NullTime{
+		Time:  t,
+		Valid: !t.IsZero(),
+	}
+}
