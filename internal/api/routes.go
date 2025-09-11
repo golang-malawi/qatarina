@@ -33,7 +33,7 @@ func (api *API) routes() {
 		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
 		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService))
 		usersV1.Post("/:userID", apiv1.UpdateUser(api.UserService))
-		usersV1.Post("/invite/:email", apiv1.InviteUser(api.UserService))
+		usersV1.Post("/invite/:email", apiv1.InviteUser(api.UserService, api.logger))
 		usersV1.Delete("/:userID", apiv1.DeleteUser(api.UserService))
 	}
 
