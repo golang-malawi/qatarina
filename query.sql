@@ -80,7 +80,7 @@ SELECT EXISTS(
 
 -- name: IsTestCaseUsedInTestPlan :one
 SELECT EXISTS(
-    SELECT 1 FROM test_plans WHERE test_case_id = $1
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
 );
 
 -- name: IsTestCaseUsedInTestRun :one
@@ -126,6 +126,14 @@ DELETE FROM test_plans WHERE id = $1;
 
 -- name: DeleteAllTestPlansInProject :execrows
 DELETE FROM test_plans WHERE project_id = $1;
+
+-- name: UpdateTestPlan :exec
+UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
+updated_by_id = $5, kind = $6, description = $7, start_at = $8,
+closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
+num_failures = $12, is_complete = $13, is_locked = $14,
+has_report = $15, created_at = $16, updated_at = $17
+WHERE id = $1;
 
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
