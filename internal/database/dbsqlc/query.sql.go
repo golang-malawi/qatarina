@@ -541,6 +541,18 @@ func (q *Queries) DeleteProjectTester(ctx context.Context, id int32) (int64, err
 	return result.RowsAffected()
 }
 
+const deleteTestCase = `-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1
+`
+
+func (q *Queries) DeleteTestCase(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCase, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -1021,6 +1033,32 @@ SELECT EXISTS(
 
 func (q *Queries) IsTestCaseLinkedToProject(ctx context.Context, projectID sql.NullInt32) (bool, error) {
 	row := q.db.QueryRowContext(ctx, isTestCaseLinkedToProject, projectID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isTestCaseUsedInTestPlan = `-- name: IsTestCaseUsedInTestPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+)
+`
+
+func (q *Queries) IsTestCaseUsedInTestPlan(ctx context.Context, testCaseID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseUsedInTestPlan, testCaseID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const isTestCaseUsedInTestRun = `-- name: IsTestCaseUsedInTestRun :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+)
+`
+
+func (q *Queries) IsTestCaseUsedInTestRun(ctx context.Context, testCaseID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseUsedInTestRun, testCaseID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -1648,6 +1686,49 @@ func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullStr
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TesterName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchTestCases = `-- name: SearchTestCases :many
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, searchTestCases, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
