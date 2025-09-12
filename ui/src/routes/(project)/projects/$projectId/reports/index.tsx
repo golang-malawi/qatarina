@@ -171,21 +171,21 @@ function ReportsPage() {
                         onClick={() => handleView(report.id)}
                         colorScheme="blue"
                         size="sm"
-                        icon={<LuEye />}
+                        children={<LuEye />}
                       />
                       <IconButton
                         aria-label="Download report"
                         onClick={() => handleDownload(report.id)}
                         colorScheme="green"
                         size="sm"
-                        icon={<LuDownload />}
+                        children={<LuDownload />}
                       />
                       <IconButton
                         aria-label="Delete report"
                         onClick={() => handleDelete(report.id)}
                         colorScheme="red"
                         size="sm"
-                        icon={<LuTrash />}
+                        children={<LuTrash />}
                       />
                     </Flex>
                   </Table.Cell>

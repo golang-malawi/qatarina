@@ -60,7 +60,7 @@ function CreateNewTestPlan() {
     return <div className="error">Error: error fetching test cases</div>;
   }
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+   
   const testers = testersQuery.data?.testers ?? [];
 
   async function handleSubmit(data: CreateTestPlanForm) {
@@ -95,7 +95,7 @@ function CreateNewTestPlan() {
   }
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const form = useForm<CreateTestPlanForm>({
+  const form = useForm({
     defaultValues: {
       kind: "",
       description: "",

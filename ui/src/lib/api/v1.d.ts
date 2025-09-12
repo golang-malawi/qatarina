@@ -1476,6 +1476,17 @@ export interface components {
             tags: string[];
             title: string;
         };
+        "schema.UpdateUserRequest": {
+            address?: string;
+            city: string;
+            country_iso?: string;
+            display_name: string;
+            first_name: string;
+            id?: number;
+            last_name: string;
+            org_id: number;
+            phone?: string;
+        };
         "schema.UserCompact": {
             createdAt?: string;
             displayName?: string;
@@ -3849,7 +3860,7 @@ export interface operations {
         /** @description User ID */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.UpdateUserRequest"];
             };
         };
         responses: {

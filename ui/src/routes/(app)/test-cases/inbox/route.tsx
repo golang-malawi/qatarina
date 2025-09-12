@@ -1,14 +1,14 @@
 import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
+import { components } from "@/lib/api/v1";
 import {
   Box,
   Flex,
   Input,
-  Container,
-  Heading,
   Stack,
   Badge,
   Text,
   Spinner,
+  Heading,
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
@@ -43,7 +43,7 @@ function TestCasePageInbox() {
   }
 
   const testCaseRows = (testCases?.data?.test_cases ?? []).map(
-    (tc: unknown, idx: number) => (
+    (tc: components["schemas"]["schema.TestCaseResponse"], idx: number) => (
       <Box
         key={idx}
         p={4}
@@ -57,18 +57,18 @@ function TestCasePageInbox() {
       >
         <Link
           to={`/test-cases/inbox/$testCaseId`}
-          params={{ testCaseId: tc.id }}
+          params={{ testCaseId: `${tc.id}` }}
           title={tc.description}
         >
           <Text fontWeight="semibold" mb={1}>
             {tc.code}
           </Text>
-          <Text fontSize="sm" color="gray.600" noOfLines={1}>
+          <Text fontSize="sm" color="gray.600" maxLines={1}>
             {tc.description}
           </Text>
           <Stack direction="row" mt={2} gap={2}>
             <Badge color="blue.700">
-              {tc.usage_count ?? 0} tests performed
+              {/*tc.usageCount*/ 0} tests performed
             </Badge>
             <Badge color="green">Success: 0</Badge>
             <Badge color="red">Failed: 0</Badge>
@@ -95,7 +95,7 @@ function TestCasePageInbox() {
             placeholder="Search for Test Cases..."
             mt={4}
             variant="outline"
-            focusBorderColor="teal.400"
+            focusRingColor="teal.400"
           />
         </Box>
 

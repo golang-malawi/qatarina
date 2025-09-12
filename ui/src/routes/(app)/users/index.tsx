@@ -8,17 +8,17 @@ import {
   Text,
   Icon,
   Spinner,
-  Alert,
 } from "@chakra-ui/react";
 import { IconUser } from "@tabler/icons-react";
 import { useUsersQuery } from "@/services/UserService";
+import ErrorAlert from "@/components/ui/error-alert";
 
 export const Route = createFileRoute("/(app)/users/")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { data, isPending, isError, error } = useUsersQuery();
+  const { data, isPending, isError } = useUsersQuery();
 
   if (isPending) {
     return (
@@ -30,9 +30,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <Alert status="error">
-        Failed to load users: {(error as Error).message}
-      </Alert>
+      <ErrorAlert message={`Failed to load users: {(error as Error).message}`} />
     );
   }
 

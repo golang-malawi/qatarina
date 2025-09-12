@@ -155,7 +155,7 @@ func CreateUser(userService services.UserService, logger logging.Logger) fiber.H
 //	@Accept			json
 //	@Produce		json
 //	@Param			userID	path		string		true	"User ID"
-//	@Param			request	body		interface{}	true	"User ID"
+//	@Param			request	body		schema.UpdateUserRequest	true	"User ID"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail

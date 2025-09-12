@@ -84,7 +84,7 @@ function Home() {
                 Create a Project
               </Button>
             </Link>
-            <Link to="/projects/import">
+            <Link to="/"> {/* TODO: fix link */}
               <Button colorScheme="purple" variant="outline" w="full">
                 Import from GitHub
               </Button>
@@ -110,12 +110,12 @@ function Home() {
             </Heading>
           </Flex>
           <Stack gap={3}>
-            <Link to="/integrations/asana">
+            <Link to="/">
               <Button colorScheme="pink" variant="solid" w="full">
                 Asana Integration
               </Button>
             </Link>
-            <Link to="/integrations/trello">
+            <Link to="/">
               <Button colorScheme="pink" variant="outline" w="full">
                 Trello Integration
               </Button>
