@@ -6,14 +6,10 @@ import {
   Button,
   Flex,
   Spinner,
-
-  IconButton,
-  Alert,
-
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTestersQuery } from "@/services/TesterService";
-import { LuTrash, LuPencil } from "react-icons/lu";
+import ErrorAlert from "@/components/ui/error-alert";
 
 export const Route = createFileRoute("/(app)/testers/")({
   component: ListTesters,
@@ -29,15 +25,11 @@ function ListTesters() {
     console.log("Delete tester", id);
   };
 
-  const handleEdit = (id: number) => {
-    console.log("Edit tester", id);
-  };
-
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">Testers</Heading>
-        <Link to="/testers/CreateTesterForm">
+        <Link to="/testers/invite">
           <Button colorScheme="teal">+ Add New Tester</Button>
         </Link>
       </Flex>
@@ -47,9 +39,7 @@ function ListTesters() {
           <Spinner size="lg" />
         </Flex>
       ) : isError ? (
-        <Alert status="error" my={4}>
-          Failed to load testers: {(error as Error).message}
-        </Alert>
+        <ErrorAlert message={`Failed to load testers: ${(error as Error).message}`} />
       ) : (
         <Stack gap="6">
           <Table.Root size="md">
@@ -72,23 +62,18 @@ function ListTesters() {
                   <Table.Cell>
                     <Flex gap={2}>
                       <Button>
-                        <Link to={`/testers/view/${tester.user_id}`}>
+                        <Link to={`/testers/view/$testerId`} params={{  testerId: `${tester.user_id!}` }}>
                           View
-                        </Link>
-                      </Button>
-                      <Button>
-                        <Link to={`/testers/edit/${tester.user_id}`}>
-                          Edit
                         </Link>
                       </Button>
                       <Button
                         colorScheme="red"
-                        onClick={() => handleDelete(tester.user_id)}
+                        onClick={() => handleDelete(tester.user_id!)}
                         size="sm"
                       >
                         Delete
                       </Button>
-  
+
                     </Flex>
                   </Table.Cell>
                 </Table.Row>

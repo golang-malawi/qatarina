@@ -6,11 +6,10 @@ import {
   Button,
   Stack,
   Spinner,
-  Alert,
-
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useGetUserQuery, useDeleteUserMutation  } from "@/services/UserService";
+import { useGetUserQuery, deleteUserByID  } from "@/services/UserService";
+import ErrorAlert from "@/components/ui/error-alert";
 
 export const Route = createFileRoute("/(app)/users/view/$userID")({
   component: ViewUserProfile,
@@ -21,14 +20,13 @@ function ViewUserProfile() {
   const navigate = useNavigate();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
-  const deleteUserMutation = useDeleteUserMutation(userID);
 
   const handleDeactivate = async () => {
     const confirm = window.confirm("Are you sure you want to deactivate this user?");
     if (!confirm) return;
 
     try {
-      await deleteUserMutation.mutateAsync();
+      await deleteUserByID(userID);
       await navigate({ to: "/users" });
     } catch (err) {
       console.log("Failed to deactivate user:", err);
@@ -45,19 +43,17 @@ function ViewUserProfile() {
 
   if (isError || !user) {
     return (
-      <Alert status="error" my={4}>
-        Failed to fetch user details: {(error as Error)?.message || "Unknown error"}
-      </Alert>
+      <ErrorAlert message={`Failed to fetch user details: ${(error as Error)?.message || "Unknown error"}`} />
     );
   }
 
-  const displayName = user.DisplayName?.Valid ? user.DisplayName.String : "N/A";
+  const displayName = user.DisplayName ? user.DisplayName : "N/A";
   const email = user.Email ?? "N/A";
-  const role = user.IsSuperAdmin?.Valid && user.IsSuperAdmin.Bool
+  const role = user.IsSuperAdmin && user.IsSuperAdmin
     ? "Super Admin"
     : "User";
-  const joinedAt = user.CreatedAt?.Valid
-    ? new Date(user.CreatedAt.Time).toLocaleDateString()
+  const joinedAt = user.CreatedAt
+    ? new Date(user.CreatedAt).toLocaleDateString()
     : "Unknown";
   const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
 
@@ -107,7 +103,6 @@ function ViewUserProfile() {
             colorScheme="red"
             variant="outline"
             onClick={handleDeactivate}
-            isLoading={deleteUserMutation.isPending}
           >
             Deactivate User
           </Button>
