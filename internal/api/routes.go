@@ -92,19 +92,20 @@ func (api *API) routes() {
 		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
 	{
-		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
-		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
-		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService))
+		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService, api.logger))
+		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService, api.logger))
 		testRunsV1.Post("/bulk/commit", apiv1.CommitBulkTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService))
-		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService))
+		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService))
+		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)

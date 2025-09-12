@@ -100,6 +100,24 @@ SELECT EXISTS(
     SELECT * FROM test_cases WHERE project_id = $1
 );
 
+-- name: IsTestCaseUsedInTestPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+);
+
+-- name: IsTestCaseUsedInTestRun :one
+SELECT EXISTS(
+    SELECT 1 FROM test_runs WHERE test_case_id = $1
+);
+
+-- name: SearchTestCases :many
+SELECT * FROM test_cases
+WHERE title ILIKE '%' || $1 || '%'
+OR code ILIKE '%' || $1 || '%';
+
+-- name: DeleteTestCase :execrows
+DELETE FROM test_cases WHERE id = $1;
+
 -- name: CountTestCasesNotLinkedToProject :one
 SELECT COUNT(*) FROM test_cases
 RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id

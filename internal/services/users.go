@@ -38,6 +38,8 @@ type UserService interface {
 	//Delete used to delete user from the system
 	Delete(ctx context.Context, id int32) error
 	// Invite used to invite a user
+	// SignIn allows user to access the system with given credentials
+	// Invite used to invite user by email
 	Invite(context.Context, string, string) error
 }
 
@@ -179,7 +181,8 @@ func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail
 		ExpiresAt:     common.NewNullTime(expiresAt),
 	})
 	if err != nil {
-		return err
+		u.logger.Error("failed to create invite", "error", err)
+		return fmt.Errorf("failed to create invite: %v", err)
 	}
 
 	subject := "Qatarina invitation"
@@ -193,9 +196,11 @@ func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail
 
 	// Data to inject into template
 	data := struct {
+		BaseURL   string
 		Token     string
 		ExpiresAt string
 	}{
+		BaseURL:   "https://qatarina.dev", // TODO: get this from configuration
 		Token:     token,
 		ExpiresAt: expiresAt.Format("Jan 2, 2006 15:04 MST"),
 	}
@@ -205,6 +210,7 @@ func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail
 		u.logger.Error("failed to excecute email template", "error", err)
 		return fmt.Errorf("failed to excecute email template: %v", err)
 	}
+
 	msg := []byte(fmt.Sprintf(
 		"To: %s\r\n"+
 			"MIME-Version: 1.0\r\n"+
@@ -219,7 +225,7 @@ func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail
 	err = smtp.SendMail(addr, auth, u.smtpCfg.From, []string{receiverEmail}, msg)
 	if err != nil {
 		u.logger.Error("SMTP send failed", "error", err)
-		return fmt.Errorf("failed to send the invite email: %w", err)
+		return fmt.Errorf("failed to send the invite to email: %w", err)
 	}
 	return nil
 }
