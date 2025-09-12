@@ -5,6 +5,7 @@ tasks:
     cmds:
       - go install github.com/swaggo/swag/v2/cmd/swag@v2.0.0-rc4
       - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - go install github.com/mitchellh/gox@latest
 
   install:
     cmds:
@@ -30,3 +31,10 @@ tasks:
       - cd ui && npm run build
       - go run main.go server
 
+  dist:
+    deps: [generate]
+    cmds:
+      - mkdir -p build
+      - cd ui && npm run build
+      - gox -ldflags="-X 'github.com/golang-malawi/qatarina/internal/version/version.Version=$(git describe  --tags --candidates 1)'" -osarch="linux/amd64" -output ./build/qatarina_linux_amd64
+      - gox -ldflags="-X 'github.com/golang-malawi/qatarina/internal/version/version.Version=$(git describe  --tags --candidates 1)'" -osarch="linux/arm64" -output ./build/qatarina_linux_arm64
