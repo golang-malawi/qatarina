@@ -2119,6 +2119,44 @@ paths:
       summary: Assign a test to a plan
       tags:
       - test-plans
+  /v1/test-plans/{testPlanID}/test-runs:
+    get:
+      description: List all test cases of a test plan
+      operationId: GetTestPlanTestRuns
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testplanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all test cases of a test plan
+      tags:
+      - test-plans
   /v1/test-plans/query:
     get:
       description: Search test plans
