@@ -31,9 +31,9 @@ function RouteComponent() {
     const fetchModules = async () => {
       try {
         const service = new ModuleService();
-        const data = await service.getAllModules();
+        const data = await service.getModulesByProjectId(projectId);
         setFeatures(
-          data.filter((item) => item.project_id == Number(projectId)),
+          data
         );
       } catch (err: any) {
         console.error(err);

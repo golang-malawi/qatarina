@@ -20,6 +20,7 @@ import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
   FiClipboard,
+  FiGitBranch,
   FiHome,
   FiInbox,
   FiSettings,
@@ -35,6 +36,11 @@ export const Route = createFileRoute("/(project)/projects/$projectId")({
 const createProjectNavItems = (projectId: string): NavItem[] => {
   return [
     { path: `/projects/${projectId}`, name: "Overview", icon: FiHome },
+    {
+      path: `/projects/${projectId}/Features`,
+      name: "Features and Modules",
+      icon: FiGitBranch,
+    },
     {
       path: `/projects/${projectId}/test-plans`,
       name: "Test Plans",

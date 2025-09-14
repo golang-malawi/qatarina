@@ -62,7 +62,7 @@ export default class ModuleService {
 
   async createModule(data: Partial<Module>) {
     const res = await axios.post(
-      `${this.apiEndpoint}/v1/modules/modules`,
+      `${this.apiEndpoint}/v1/modules`,
       data,
       createAuthHeaders(),
     );

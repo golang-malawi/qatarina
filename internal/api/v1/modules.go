@@ -130,6 +130,11 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 //	@Router			/v1/modules/{moduleID} [post]
 func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		moduleID, err := c.ParamsInt("moduleID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
+		}
+
 		request := new(schema.UpdateProjectModuleRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 			if validationErrors {
