@@ -62,7 +62,7 @@ function EditFeatureModuleForm() {
     };
 
     fetchModule();
-  }, [moduleId]);
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
