@@ -136,6 +136,7 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 		}
 
 		request := new(schema.UpdateProjectModuleRequest)
+		request.ID = int32(moduleID)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
@@ -144,7 +145,7 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		_, err := module.Update(context.Background(), *request)
+		_, err = module.Update(context.Background(), *request)
 		if err != nil {
 			logger.Error("api-modules", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process equest")
