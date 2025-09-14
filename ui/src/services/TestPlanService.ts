@@ -53,6 +53,6 @@ export async function getTestPlans() {
 
 export async function getTestRuns(testPlanID: string) {
   return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-runs", {
-    params: { path: { testPlanID } },
+    params: { path: { testplanID: testPlanID } },
   });
 }

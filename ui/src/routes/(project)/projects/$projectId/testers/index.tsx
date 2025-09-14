@@ -120,14 +120,14 @@ function ProjectTestersPage() {
                         onClick={() => handleEdit(tester.id)}
                         colorScheme="blue"
                         size="sm"
-                        icon={<LuPencil />}
+                        children={<LuPencil />}
                       />
                       <IconButton
                         aria-label="Delete tester"
                         onClick={() => handleDelete(tester.id)}
                         colorScheme="red"
                         size="sm"
-                        icon={<LuTrash />}
+                        children={<LuTrash />}
                       />
                     </Flex>
                   </Table.Cell>

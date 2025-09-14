@@ -571,6 +571,33 @@ components:
       - tags
       - title
       type: object
+    schema.UpdateUserRequest:
+      properties:
+        address:
+          type: string
+        city:
+          type: string
+        country_iso:
+          type: string
+        display_name:
+          type: string
+        first_name:
+          type: string
+        id:
+          type: integer
+        last_name:
+          type: string
+        org_id:
+          type: integer
+        phone:
+          type: string
+      required:
+      - city
+      - display_name
+      - first_name
+      - last_name
+      - org_id
+      type: object
     schema.UserCompact:
       properties:
         createdAt:
@@ -2735,7 +2762,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.UpdateUserRequest'
         description: User ID
         required: true
       responses:

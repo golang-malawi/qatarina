@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
+
 
 export function useCreateUserMutation() {
   return $api.useMutation("post", "/v1/users");
@@ -18,17 +20,17 @@ export function useSearchUsersQuery(params: Record<string, any>) {
 }
 
 export function useGetUserQuery(userID: string) {
-  return $api.useQuery("get", `/v1/users/${userID}`);
+  return $api.useQuery("get", `/v1/users/{userID}`, { params: { path: { userID } } });
 }
 
-export function useUpdateUserMutation(userID: string) {
-  return $api.useMutation("post", `/v1/users/${userID}`);
+export function useUpdateUserMutation(userID: string, userData: components["schemas"]["schema.UpdateUserRequest"]) {
+  return apiClient.request("post", `/v1/users/{userID}`,  { params: { path:  { userID } }, body: userData });
 }
 
 export function useInviteUserMutation(email: string) {
-  return $api.useMutation("post", `/v1/users/invite/${email}`);
+  return apiClient.request("post", `/v1/users/invite/{email}`, { params: { path: { email: email }}, body: {} });
 }
 
-export function useDeleteUserMutation(userID: string) {
-  return $api.useMutation("delete", `/v1/users/${userID}`);
+export function deleteUserByID(userID: string) {
+  return apiClient.request("delete", `/v1/users/{userID}`,  { params: { path: { userID } } });
 }

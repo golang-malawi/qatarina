@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { Box, Flex, Button } from "@chakra-ui/react";
 
 export const Route = createFileRoute("/(project)/projects/$projectId/")({
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/(project)/projects/$projectId/")({
 
 function ViewProject() {
   const { projectId } = Route.useParams();
-  const matchRoute = useMatchRoute();
+  // const matchRoute = useMatchRoute();
 
   const navItems = [
     { label: "Summary", path: `/projects/$projectId` },
@@ -31,7 +31,8 @@ function ViewProject() {
         overflowX="auto"
       >
         {navItems.map((item) => {
-          const isActive = matchRoute(item.path.replace("$projectId", projectId));
+          const isActive = false;
+          // TODO: const isActive = matchRoute({item.path.replace("$projectId", projectId));
           return (
             <Link
               key={item.label}
