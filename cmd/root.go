@@ -28,8 +28,18 @@ func init() {
 	newUserCmd.Flags().String("password", "", "Password of the user")
 	userCmd.AddCommand(newUserCmd)
 
+	createTestCaseCmd.Flags().String("title", "", "Title of the test case")
+	createTestCaseCmd.Flags().String("description", "", "Description of the test case")
+	createTestCaseCmd.Flags().String("kind", "", "Kind of the test case")
+	createTestCaseCmd.Flags().String("code", "", "Code identifier for the test case")
+	createTestCaseCmd.Flags().Int64("project", 0, "Project ID")
+	createTestCaseCmd.Flags().String("module", "", "Feature or module name")
+	createTestCaseCmd.Flags().Bool("draft", false, "Is this a draft")
+	createTestCaseCmd.Flags().StringSlice("tags", []string{}, "Comma-separated tags")
+
 	testCaseImporterCmd.Flags().String("repo", "", "Repository directory path")
 	testCaseCmd.AddCommand(testCaseImporterCmd)
+	testCaseCmd.AddCommand(createTestCaseCmd)
 
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(migrateCmd)
