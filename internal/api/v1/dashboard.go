@@ -8,19 +8,18 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
-//  DashboardSummary godoc
+//	 DashboardSummary godoc
 //
-//	@ID			DashboardSummary
-//	@Summary	Get dashboard summary
-//	@Description	Returns key metrics for dashboard
-//	@Tags			dashboard
-//	@Accept			json
-//	@Produce		json
-//	@Success		200			{object}	schema.DashboardSummaryResponse
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/dashboard/summary [get]
-
+//		@ID			DashboardSummary
+//		@Summary	Get dashboard summary
+//		@Description	Returns key metrics for dashboard
+//		@Tags			dashboard
+//		@Accept			json
+//		@Produce		json
+//		@Success		200			{object}	schema.DashboardSummaryResponse
+//		@Failure		400			{object}	problemdetail.ProblemDetail
+//		@Failure		500			{object}	problemdetail.ProblemDetail
+//		@Router			/v1/dashboard/summary [get]
 func DashboardSummary(dashboardService services.DashboardService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		summary, err := dashboardService.GetDashboardSummary(ctx.Context())

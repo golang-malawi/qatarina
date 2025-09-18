@@ -7,7 +7,7 @@ type DashboardSummaryResponse struct {
 	TesterCount       int64                    `json:"tester_count"`
 	TestCaseCount     int64                    `json:"test_case_count"`
 	TestPlanCount     int64                    `json:"test_plan_count"`
-	ClosedToOpenRatio float64                  `json:"closed_to_open_ration"`
+	ClosedToOpenRatio float64                  `json:"closed_to_open_ratio"`
 	RecentProjects    []DashboardProjectRecord `json:"recent_projects"`
 }
 
