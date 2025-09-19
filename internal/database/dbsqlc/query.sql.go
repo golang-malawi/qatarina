@@ -802,6 +802,17 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 	return i, err
 }
 
+const getProjectCount = `-- name: GetProjectCount :one
+SELECT COUNT(*) FROM projects
+`
+
+func (q *Queries) GetProjectCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getProjectCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getProjectModules = `-- name: GetProjectModules :many
 SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
 WHERE project_id = $1
@@ -840,6 +851,42 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 	return items, nil
 }
 
+const getRecentProjects = `-- name: GetRecentProjects :many
+SELECT id, title AS name, updated_at
+FROM projects
+ORDER BY updated_at DESC
+LIMIT 5
+`
+
+type GetRecentProjectsRow struct {
+	ID        int32
+	Name      string
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetRecentProjects(ctx context.Context) ([]GetRecentProjectsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentProjects)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecentProjectsRow
+	for rows.Next() {
+		var i GetRecentProjectsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTestCase = `-- name: GetTestCase :one
 SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE id = $1
 `
@@ -863,6 +910,17 @@ func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, erro
 		&i.ProjectID,
 	)
 	return i, err
+}
+
+const getTestCaseCount = `-- name: GetTestCaseCount :one
+SELECT COUNT(*) FROM test_cases
+`
+
+func (q *Queries) GetTestCaseCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTestCaseCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getTestPlan = `-- name: GetTestPlan :one
@@ -891,6 +949,36 @@ func (q *Queries) GetTestPlan(ctx context.Context, id int64) (TestPlan, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const getTestPlanCount = `-- name: GetTestPlanCount :one
+SELECT COUNT(*) FROM test_plans
+`
+
+func (q *Queries) GetTestPlanCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTestPlanCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTestPlanStatusRatio = `-- name: GetTestPlanStatusRatio :one
+SELECT
+COUNT(*) FILTER (WHERE is_complete = true) AS closed,
+COUNT(*) FILTER (WHERE is_complete = false) AS open
+FROM test_plans
+`
+
+type GetTestPlanStatusRatioRow struct {
+	Closed int64
+	Open   int64
+}
+
+func (q *Queries) GetTestPlanStatusRatio(ctx context.Context) (GetTestPlanStatusRatioRow, error) {
+	row := q.db.QueryRowContext(ctx, getTestPlanStatusRatio)
+	var i GetTestPlanStatusRatioRow
+	err := row.Scan(&i.Closed, &i.Open)
 	return i, err
 }
 
@@ -923,6 +1011,28 @@ func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error)
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTesterCount = `-- name: GetTesterCount :one
+SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE is_active = true
+`
+
+func (q *Queries) GetTesterCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTesterCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getTesterCountByProject = `-- name: GetTesterCountByProject :one
+SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is_active = true
+`
+
+func (q *Queries) GetTesterCountByProject(ctx context.Context, projectID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTesterCountByProject, projectID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getTestersByID = `-- name: GetTestersByID :one

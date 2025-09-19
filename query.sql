@@ -300,3 +300,30 @@ WHERE id = $1;
 
 -- name: DeletePage :execrows
 DELETE FROM pages WHERE id = $1;
+
+-- name: GetProjectCount :one
+SELECT COUNT(*) FROM projects;
+
+-- name: GetTesterCount :one
+SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE is_active = true;
+
+-- name: GetTesterCountByProject :one
+SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is_active = true;
+
+-- name: GetTestCaseCount :one
+SELECT COUNT(*) FROM test_cases;
+
+-- name: GetTestPlanCount :one
+SELECT COUNT(*) FROM test_plans;
+
+-- name: GetTestPlanStatusRatio :one
+SELECT
+COUNT(*) FILTER (WHERE is_complete = true) AS closed,
+COUNT(*) FILTER (WHERE is_complete = false) AS open
+FROM test_plans;
+
+-- name: GetRecentProjects :many
+SELECT id, title AS name, updated_at
+FROM projects
+ORDER BY updated_at DESC
+LIMIT 5;
