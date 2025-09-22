@@ -13,7 +13,7 @@ So in the next 6 months we will be working on this as an experiment and trying t
 
 The initial tech stack is as follows, we may eventually swap out parts of this stack as the project grows.
 
-- Go 1.22+
+- Go 1.25+
   - Fiber
   - pgx and sqlx
   - Riverqueue
