@@ -1,6 +1,15 @@
 version: "3"
 
 tasks:
+  build-pr:
+    - gh pr checkout {{.CLI_ARGS}}
+    - task build
+
+  build:
+    deps: [ generate ]
+    cmds:
+      - go build -o build/qatarina
+
   install-tools:
     cmds:
       - go install github.com/swaggo/swag/v2/cmd/swag@v2.0.0-rc4
