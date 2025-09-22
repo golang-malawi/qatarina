@@ -127,6 +127,11 @@ func (api *API) routes() {
 		panic(fmt.Errorf("failed to embed dist directory, cannot start Server. Got %v", err))
 	}
 
+	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
+	{
+		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
+	}
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),
