@@ -290,6 +290,13 @@ type TestPlan struct {
 	UpdatedAt sql.NullTime
 }
 
+type TestPlansCase struct {
+	TestPlanID uuid.UUID
+	TestCaseID uuid.UUID
+	AddedByID  sql.NullInt32
+	CreatedAt  sql.NullTime
+}
+
 type TestRun struct {
 	ID                    uuid.UUID
 	ProjectID             int32
