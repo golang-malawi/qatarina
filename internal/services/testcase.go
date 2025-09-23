@@ -24,6 +24,9 @@ type TestCaseService interface {
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
 
+	// FindAllByTestPlanID retrieves all test cases in the database by Test Plan ID
+	FindAllByTestPlanID(context.Context, uuid.UUID) ([]dbsqlc.TestCase, error)
+
 	// FindAllCreatedBy retrieves all test cases in the database created by a specific user
 	FindAllCreatedBy(context.Context, int64) ([]dbsqlc.TestCase, error)
 
@@ -167,6 +170,11 @@ func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.
 // FindAllByProjectID implements TestCaseService.
 func (t *testCaseServiceImpl) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error) {
 	return t.queries.ListTestCasesByProject(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
+}
+
+// FindAllByProjectID implements TestCaseService.
+func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID uuid.UUID) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListTestCasesByPlan(ctx, testPlanID)
 }
 
 // FindAllCreatedBy implements TestCaseService.

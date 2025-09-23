@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useTestPlanQuery, getTestRuns } from "@/services/TestPlanService";
-import { Box, Heading, Text, Stack, Badge } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useTestPlanQuery } from "@/services/TestPlanService";
+import { Box, Heading, Text, Stack, Badge, Button, Flex } from "@chakra-ui/react";
+import { Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID"
@@ -10,7 +10,7 @@ export const Route = createFileRoute(
 });
 
 function ViewTestPlan() {
-  const { testPlanID } = Route.useParams();
+  const { projectId, testPlanID } = Route.useParams();
 
   // Fetch test plan
   const {
@@ -37,24 +37,50 @@ function ViewTestPlan() {
     error: unknown;
   };
 
-  // Fetch test runs (v5 object form)
-  const {
-    data: testRuns,
-    isLoading: runsLoading,
-    error: runsError,
-  } = useQuery({
-    queryKey: ["testRuns", testPlanID],
-    queryFn: () => getTestRuns(testPlanID!),
-  });
+  const navItems = [
+    { label: "Test Cases", path: `/projects/$projectId/test-plans/$testPlanID/test-cases` },
+    { label: "Test Runs", path: `/projects/$projectId/test-plans/$testPlanID/test-runs` },
+    { label: "Testers", path: `/projects/$projectId/test-plans/$testPlanID/testers` },
+  ];
 
-  if (isLoading || runsLoading) return <div>Loading...</div>;
-  if (error || runsError)
+  if (isLoading) return <div>Loading...</div>;
+  if (error)
     return <div>Error loading test plan or test runs</div>;
 
   return (
     <Box p={6}>
       <Heading mb={4}>Test Plan Details</Heading>
-      <Stack gap={3}>
+      <Flex
+        gap="2"
+        borderBottom="1px solid"
+        borderColor="gray.200"
+        bg="gray.50"
+        overflowX="auto"
+      >
+        {navItems.map((item) => {
+          const isActive = false;
+          // TODO: const isActive = matchRoute({item.path.replace("$projectId", projectId));
+          return (
+            <Link
+              key={item.label}
+              to={item.path}
+              params={{ projectId, testPlanID }}
+            >
+              <Button
+                variant={isActive ? "solid" : "ghost"}
+                colorScheme="teal"
+                size="sm"
+              >
+                {item.label}
+              </Button>
+            </Link>
+          );
+        })}
+      </Flex>
+
+      
+      <Flex dir="column">
+      <Stack gap={3} flexGrow={2}>
         <Text>
           <strong>ID:</strong> {testPlan?.ID}
         </Text>
@@ -71,6 +97,8 @@ function ViewTestPlan() {
             {testPlan?.IsComplete?.Bool ? "Complete" : "In Progress"}
           </Badge>
         </Text>
+        </Stack>
+        <Stack gap={3}>
         <Text>
           <strong>Assigned To:</strong> {testPlan?.AssignedToID}
         </Text>
@@ -108,43 +136,9 @@ function ViewTestPlan() {
           {testPlan ? new Date(testPlan.UpdatedAt.Time).toLocaleString() : "—"}
         </Text>
       </Stack>
-
-      <Heading size="md" mt={6}>
-        Test Runs
-      </Heading>
-      {(Array.isArray(testRuns) ? testRuns : testRuns?.data || []).length ? (
-        <Stack gap={2} mt={3}>
-          {(Array.isArray(testRuns) ? testRuns : testRuns?.data || []).map(
-            (run: any) => (
-              <Box key={run.ID} p={3} borderWidth="1px" rounded="md">
-                <Text>
-                  <strong>Code:</strong> {run.Code}
-                </Text>
-                <Text>
-                  <strong>Status:</strong> {run.ResultState}
-                </Text>
-                <Text>
-                  <strong>Expected:</strong>{" "}
-                  {run.ExpectedResult?.Valid ? run.ExpectedResult.String : "—"}
-                </Text>
-                <Text>
-                  <strong>Actual:</strong>{" "}
-                  {run.ActualResult?.Valid ? run.ActualResult.String : "—"}
-                </Text>
-                <Text>
-                  <strong>Notes:</strong> {run.Notes || "—"}
-                </Text>
-                <Text>
-                  <strong>Tested On:</strong>{" "}
-                  {new Date(run.TestedOn).toLocaleString()}
-                </Text>
-              </Box>
-            )
-          )}
-        </Stack>
-      ) : (
-        <Text mt={2}>No test runs found.</Text>
-      )}
+      </Flex>
+      <hr />
+      <Outlet />
     </Box>
   );
 }

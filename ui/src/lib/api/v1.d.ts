@@ -309,6 +309,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get dashboard summary
+         * @description Returns key metrics for dashboard
+         */
+        get: operations["DashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/modules": {
         parameters: {
             query?: never;
@@ -914,7 +934,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List all tests of a test plan
+         * @description List all tests of a test plan
+         */
+        get: operations["GetTestPlanTestCases"];
         put?: never;
         /**
          * Assign a test to a plan
@@ -1302,6 +1326,19 @@ export interface components {
             start_at: string;
             updated_by_id?: number;
         };
+        "schema.DashboardProjectRecord": {
+            id?: number;
+            name?: string;
+            updated_at?: string;
+        };
+        "schema.DashboardSummaryResponse": {
+            closed_to_open_ratio?: number;
+            project_count?: number;
+            recent_projects?: components["schemas"]["schema.DashboardProjectRecord"][];
+            test_case_count?: number;
+            test_plan_count?: number;
+            tester_count?: number;
+        };
         "schema.HealthStatus": {
             message?: string;
             status?: string;
@@ -1502,6 +1539,48 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    DashboardSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.DashboardSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetAllModules: {
         parameters: {
             query?: never;
@@ -3059,6 +3138,51 @@ export interface operations {
             path: {
                 /** @description Test Plan ID */
                 testPlanID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetTestPlanTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testplanID: string;
             };
             cookie?: never;
         };

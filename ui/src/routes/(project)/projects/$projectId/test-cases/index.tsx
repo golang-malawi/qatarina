@@ -23,7 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Avatar } from "@/components/ui/avatar";
+import TestersAvatarGroup from "@/components/TestersAvatarGroup";
 
 export const Route = createFileRoute("/(project)/projects/$projectId/test-cases/")({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
@@ -44,11 +44,7 @@ export default function ListProjectTestCases() {
       <Table.Cell>{tc.usage_count}</Table.Cell>
       <Table.Cell>
         <AvatarGroup size="md">
-          <Avatar name="Ryan Florence" src="https://bit.ly/ryan-florence" />
-          <Avatar name="Segun Adebayo" src="https://bit.ly/sage-adebayo" />
-          <Avatar name="Kent Dodds" src="https://bit.ly/kent-c-dodds" />
-          <Avatar name="Prosper Otemuyiwa" src="https://bit.ly/prosper-baba" />
-          <Avatar name="Christian Nwamba" src="https://bit.ly/code-beast" />
+          <TestersAvatarGroup testers={[]} />
         </AvatarGroup>
       </Table.Cell>
       <Table.Cell>

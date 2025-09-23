@@ -1333,6 +1333,49 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 	return items, nil
 }
 
+const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id FROM test_cases tc 
+INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
+WHERE tp.test_plan_id = $1
+`
+
+func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID uuid.UUID) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestCasesByProject = `-- name: ListTestCasesByProject :many
 SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE project_id = $1
 `
