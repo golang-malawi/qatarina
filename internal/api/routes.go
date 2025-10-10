@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	_ "github.com/golang-malawi/qatarina/docs"
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
 )
 
@@ -16,6 +18,7 @@ func (api *API) routes() {
 	router.Get("/healthz", api.getSystemHealthz)
 	router.Get("/metrics", api.getSystemMetrics)
 	router.Get("/system/info", api.getSystemInfo)
+	router.Get("/swagger/*", swagger.New())
 
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))

@@ -21,6 +21,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/stretchr/testify v1.9.0
+	github.com/swaggo/files/v2 v2.0.2
 	github.com/swaggo/swag/v2 v2.0.0-rc4
 	golang.org/x/crypto v0.36.0
 )
