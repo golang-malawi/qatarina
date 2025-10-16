@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -74,11 +77,17 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 	createList := make([]uuid.UUID, 0)
 	for _, request := range bulkRequest.TestCases {
 		uuidVal, _ := uuid.NewV7()
+
+		code, err := GenerateNextCode(ctx, t.queries, request.FeatureOrModule)
+		if err != nil {
+			return nil, err
+		}
+
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
 			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
 			Kind:             dbsqlc.TestKind(request.Kind),
-			Code:             request.Code,
+			Code:             code,
 			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 			Title:            request.Title,
 			Description:      request.Description,
@@ -96,8 +105,17 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 		}
 		createList = append(createList, createdID)
 	}
+	// Fetch and return the created test cases
+	testCases := make([]dbsqlc.TestCase, 0)
+	for _, id := range createList {
+		tc, err := t.queries.GetTestCase(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		testCases = append(testCases, tc)
+	}
 
-	return []dbsqlc.TestCase{}, nil
+	return testCases, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -108,11 +126,16 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
 	uuidVal, _ := uuid.NewV7()
+
+	code, err := GenerateNextCode(ctx, t.queries, request.FeatureOrModule)
+	if err != nil {
+		return nil, err
+	}
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
 		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 		Kind:             dbsqlc.TestKind(request.Kind),
-		Code:             request.Code,
+		Code:             code,
 		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 		Title:            request.Title,
 		Description:      request.Description,
@@ -198,4 +221,27 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 	return testCases, nil
 
+}
+
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, module string) (string, error) {
+	prefix := strings.ToUpper(strings.TrimSpace(module))
+	if len(prefix) > 2 {
+		prefix = prefix[:2]
+	}
+
+	latest, err := db.GetLatestCodeByPrefix(ctx, common.NullString(prefix))
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	var nextNumber int
+	if latest != "" {
+		numStr := latest[len(prefix):]
+		num, _ := strconv.Atoi(numStr)
+		nextNumber = num + 1
+	} else {
+		nextNumber = 1
+	}
+
+	return fmt.Sprintf("%s%03d", prefix, nextNumber), nil
 }

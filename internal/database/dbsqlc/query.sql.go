@@ -722,6 +722,20 @@ func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
 	return items, nil
 }
 
+const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
+SELECT code FROM test_cases
+WHERE code LiKE $1 || '%'
+ORDER BY code DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestCodeByPrefix(ctx context.Context, dollar_1 sql.NullString) (string, error) {
+	row := q.db.QueryRowContext(ctx, getLatestCodeByPrefix, dollar_1)
+	var code string
+	err := row.Scan(&code)
+	return code, err
+}
+
 const getOneModule = `-- name: GetOneModule :one
 SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
 WHERE id = $1

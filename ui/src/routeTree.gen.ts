@@ -8,313 +8,525 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as appRouteRouteImport } from './routes/(app)/route'
+import { Route as appIndexRouteImport } from './routes/(app)/index'
+import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
+import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
+import { Route as appUsersIndexRouteImport } from './routes/(app)/users/index'
+import { Route as appTestersIndexRouteImport } from './routes/(app)/testers/index'
+import { Route as appTestPlansIndexRouteImport } from './routes/(app)/test-plans/index'
+import { Route as appTestCasesIndexRouteImport } from './routes/(app)/test-cases/index'
+import { Route as appSettingsIndexRouteImport } from './routes/(app)/settings/index'
+import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
+import { Route as appProjectsIndexRouteImport } from './routes/(app)/projects/index'
+import { Route as appIntegrationsIndexRouteImport } from './routes/(app)/integrations/index'
+import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
+import { Route as appTestersInviteRouteImport } from './routes/(app)/testers/invite'
+import { Route as projectProjectsProjectIdRouteRouteImport } from './routes/(project)/projects/$projectId/route'
+import { Route as appTestCasesInboxRouteRouteImport } from './routes/(app)/test-cases/inbox/route'
+import { Route as projectProjectsProjectIdIndexRouteImport } from './routes/(project)/projects/$projectId/index'
+import { Route as appUsersNewIndexRouteImport } from './routes/(app)/users/new/index'
+import { Route as appTestCasesNewIndexRouteImport } from './routes/(app)/test-cases/new/index'
+import { Route as appProjectsNewIndexRouteImport } from './routes/(app)/projects/new/index'
+import { Route as appUsersViewUserIDRouteImport } from './routes/(app)/users/view/$userID'
+import { Route as projectProjectsProjectIdTestersIndexRouteImport } from './routes/(project)/projects/$projectId/testers/index'
+import { Route as projectProjectsProjectIdTestPlansIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/index'
+import { Route as projectProjectsProjectIdTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/index'
+import { Route as projectProjectsProjectIdSettingsIndexRouteImport } from './routes/(project)/projects/$projectId/settings/index'
+import { Route as projectProjectsProjectIdReportsIndexRouteImport } from './routes/(project)/projects/$projectId/reports/index'
+import { Route as projectProjectsProjectIdInsightsIndexRouteImport } from './routes/(project)/projects/$projectId/insights/index'
+import { Route as projectProjectsProjectIdFeaturesIndexRouteImport } from './routes/(project)/projects/$projectId/Features/index'
+import { Route as appTestersViewTesterIdIndexRouteImport } from './routes/(app)/testers/view/$testerId/index'
+import { Route as appTestCasesInboxTestCaseIdIndexRouteImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID'
+import { Route as projectProjectsProjectIdFeaturesEditFeatureModuleFormRouteImport } from './routes/(project)/projects/$projectId/Features/EditFeatureModuleForm'
+import { Route as projectProjectsProjectIdFeaturesCreateFeatureModuleFormRouteImport } from './routes/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
+import { Route as projectProjectsProjectIdTestPlansNewIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/new/index'
+import { Route as projectProjectsProjectIdTestCasesNewIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/new/index'
+import { Route as projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/$testCaseId/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/testers/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/execute/index'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as appRouteImport } from './routes/(app)/route'
-import { Route as appIndexImport } from './routes/(app)/index'
-import { Route as authLogoutIndexImport } from './routes/(auth)/logout/index'
-import { Route as authLoginIndexImport } from './routes/(auth)/login/index'
-import { Route as appUsersIndexImport } from './routes/(app)/users/index'
-import { Route as appTestersIndexImport } from './routes/(app)/testers/index'
-import { Route as appTestPlansIndexImport } from './routes/(app)/test-plans/index'
-import { Route as appTestCasesIndexImport } from './routes/(app)/test-cases/index'
-import { Route as appSettingsIndexImport } from './routes/(app)/settings/index'
-import { Route as appReportsIndexImport } from './routes/(app)/reports/index'
-import { Route as appProjectsIndexImport } from './routes/(app)/projects/index'
-import { Route as appIntegrationsIndexImport } from './routes/(app)/integrations/index'
-import { Route as appDashboardIndexImport } from './routes/(app)/dashboard/index'
-import { Route as appTestersInviteImport } from './routes/(app)/testers/invite'
-import { Route as projectProjectsProjectIdRouteImport } from './routes/(project)/projects/$projectId/route'
-import { Route as appTestCasesInboxRouteImport } from './routes/(app)/test-cases/inbox/route'
-import { Route as projectProjectsProjectIdIndexImport } from './routes/(project)/projects/$projectId/index'
-import { Route as appUsersNewIndexImport } from './routes/(app)/users/new/index'
-import { Route as appTestCasesNewIndexImport } from './routes/(app)/test-cases/new/index'
-import { Route as appProjectsNewIndexImport } from './routes/(app)/projects/new/index'
-import { Route as appUsersViewUserIDImport } from './routes/(app)/users/view/$userID'
-import { Route as projectProjectsProjectIdTestersIndexImport } from './routes/(project)/projects/$projectId/testers/index'
-import { Route as projectProjectsProjectIdTestPlansIndexImport } from './routes/(project)/projects/$projectId/test-plans/index'
-import { Route as projectProjectsProjectIdTestCasesIndexImport } from './routes/(project)/projects/$projectId/test-cases/index'
-import { Route as projectProjectsProjectIdSettingsIndexImport } from './routes/(project)/projects/$projectId/settings/index'
-import { Route as projectProjectsProjectIdReportsIndexImport } from './routes/(project)/projects/$projectId/reports/index'
-import { Route as projectProjectsProjectIdInsightsIndexImport } from './routes/(project)/projects/$projectId/insights/index'
-import { Route as projectProjectsProjectIdFeaturesIndexImport } from './routes/(project)/projects/$projectId/Features/index'
-import { Route as appTestersViewTesterIdIndexImport } from './routes/(app)/testers/view/$testerId/index'
-import { Route as appTestCasesInboxTestCaseIdIndexImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
-import { Route as projectProjectsProjectIdTestPlansTestPlanIDImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID'
-import { Route as projectProjectsProjectIdFeaturesEditFeatureModuleFormImport } from './routes/(project)/projects/$projectId/Features/EditFeatureModuleForm'
-import { Route as projectProjectsProjectIdFeaturesCreateFeatureModuleFormImport } from './routes/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
-import { Route as projectProjectsProjectIdTestPlansNewIndexImport } from './routes/(project)/projects/$projectId/test-plans/new/index'
-import { Route as projectProjectsProjectIdTestCasesNewIndexImport } from './routes/(project)/projects/$projectId/test-cases/new/index'
-import { Route as projectProjectsProjectIdTestCasesTestCaseIdIndexImport } from './routes/(project)/projects/$projectId/test-cases/$testCaseId/index'
-import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestersIndexImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/testers/index'
-import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/index'
-import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/index'
-import { Route as projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/execute/index'
-
-// Create/Update Routes
-
-const appRouteRoute = appRouteImport.update({
+const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const appIndexRoute = appIndexImport.update({
+const appIndexRoute = appIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const authLogoutIndexRoute = authLogoutIndexImport.update({
+const authLogoutIndexRoute = authLogoutIndexRouteImport.update({
   id: '/(auth)/logout/',
   path: '/logout/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const authLoginIndexRoute = authLoginIndexImport.update({
+const authLoginIndexRoute = authLoginIndexRouteImport.update({
   id: '/(auth)/login/',
   path: '/login/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const appUsersIndexRoute = appUsersIndexImport.update({
+const appUsersIndexRoute = appUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appTestersIndexRoute = appTestersIndexImport.update({
+const appTestersIndexRoute = appTestersIndexRouteImport.update({
   id: '/testers/',
   path: '/testers/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appTestPlansIndexRoute = appTestPlansIndexImport.update({
+const appTestPlansIndexRoute = appTestPlansIndexRouteImport.update({
   id: '/test-plans/',
   path: '/test-plans/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appTestCasesIndexRoute = appTestCasesIndexImport.update({
+const appTestCasesIndexRoute = appTestCasesIndexRouteImport.update({
   id: '/test-cases/',
   path: '/test-cases/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appSettingsIndexRoute = appSettingsIndexImport.update({
+const appSettingsIndexRoute = appSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appReportsIndexRoute = appReportsIndexImport.update({
+const appReportsIndexRoute = appReportsIndexRouteImport.update({
   id: '/reports/',
   path: '/reports/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appProjectsIndexRoute = appProjectsIndexImport.update({
+const appProjectsIndexRoute = appProjectsIndexRouteImport.update({
   id: '/projects/',
   path: '/projects/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appIntegrationsIndexRoute = appIntegrationsIndexImport.update({
+const appIntegrationsIndexRoute = appIntegrationsIndexRouteImport.update({
   id: '/integrations/',
   path: '/integrations/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appDashboardIndexRoute = appDashboardIndexImport.update({
+const appDashboardIndexRoute = appDashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appTestersInviteRoute = appTestersInviteImport.update({
+const appTestersInviteRoute = appTestersInviteRouteImport.update({
   id: '/testers/invite',
   path: '/testers/invite',
   getParentRoute: () => appRouteRoute,
 } as any)
-
 const projectProjectsProjectIdRouteRoute =
-  projectProjectsProjectIdRouteImport.update({
+  projectProjectsProjectIdRouteRouteImport.update({
     id: '/(project)/projects/$projectId',
     path: '/projects/$projectId',
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => rootRouteImport,
   } as any)
-
-const appTestCasesInboxRouteRoute = appTestCasesInboxRouteImport.update({
+const appTestCasesInboxRouteRoute = appTestCasesInboxRouteRouteImport.update({
   id: '/test-cases/inbox',
   path: '/test-cases/inbox',
   getParentRoute: () => appRouteRoute,
 } as any)
-
 const projectProjectsProjectIdIndexRoute =
-  projectProjectsProjectIdIndexImport.update({
+  projectProjectsProjectIdIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
-const appUsersNewIndexRoute = appUsersNewIndexImport.update({
+const appUsersNewIndexRoute = appUsersNewIndexRouteImport.update({
   id: '/users/new/',
   path: '/users/new/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appTestCasesNewIndexRoute = appTestCasesNewIndexImport.update({
+const appTestCasesNewIndexRoute = appTestCasesNewIndexRouteImport.update({
   id: '/test-cases/new/',
   path: '/test-cases/new/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appProjectsNewIndexRoute = appProjectsNewIndexImport.update({
+const appProjectsNewIndexRoute = appProjectsNewIndexRouteImport.update({
   id: '/projects/new/',
   path: '/projects/new/',
   getParentRoute: () => appRouteRoute,
 } as any)
-
-const appUsersViewUserIDRoute = appUsersViewUserIDImport.update({
+const appUsersViewUserIDRoute = appUsersViewUserIDRouteImport.update({
   id: '/users/view/$userID',
   path: '/users/view/$userID',
   getParentRoute: () => appRouteRoute,
 } as any)
-
 const projectProjectsProjectIdTestersIndexRoute =
-  projectProjectsProjectIdTestersIndexImport.update({
+  projectProjectsProjectIdTestersIndexRouteImport.update({
     id: '/testers/',
     path: '/testers/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansIndexRoute =
-  projectProjectsProjectIdTestPlansIndexImport.update({
+  projectProjectsProjectIdTestPlansIndexRouteImport.update({
     id: '/test-plans/',
     path: '/test-plans/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestCasesIndexRoute =
-  projectProjectsProjectIdTestCasesIndexImport.update({
+  projectProjectsProjectIdTestCasesIndexRouteImport.update({
     id: '/test-cases/',
     path: '/test-cases/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdSettingsIndexRoute =
-  projectProjectsProjectIdSettingsIndexImport.update({
+  projectProjectsProjectIdSettingsIndexRouteImport.update({
     id: '/settings/',
     path: '/settings/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdReportsIndexRoute =
-  projectProjectsProjectIdReportsIndexImport.update({
+  projectProjectsProjectIdReportsIndexRouteImport.update({
     id: '/reports/',
     path: '/reports/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdInsightsIndexRoute =
-  projectProjectsProjectIdInsightsIndexImport.update({
+  projectProjectsProjectIdInsightsIndexRouteImport.update({
     id: '/insights/',
     path: '/insights/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdFeaturesIndexRoute =
-  projectProjectsProjectIdFeaturesIndexImport.update({
+  projectProjectsProjectIdFeaturesIndexRouteImport.update({
     id: '/Features/',
     path: '/Features/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const appTestersViewTesterIdIndexRoute =
-  appTestersViewTesterIdIndexImport.update({
+  appTestersViewTesterIdIndexRouteImport.update({
     id: '/testers/view/$testerId/',
     path: '/testers/view/$testerId/',
     getParentRoute: () => appRouteRoute,
   } as any)
-
 const appTestCasesInboxTestCaseIdIndexRoute =
-  appTestCasesInboxTestCaseIdIndexImport.update({
+  appTestCasesInboxTestCaseIdIndexRouteImport.update({
     id: '/$testCaseId/',
     path: '/$testCaseId/',
     getParentRoute: () => appTestCasesInboxRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansTestPlanIDRoute =
-  projectProjectsProjectIdTestPlansTestPlanIDImport.update({
+  projectProjectsProjectIdTestPlansTestPlanIDRouteImport.update({
     id: '/test-plans/$testPlanID',
     path: '/test-plans/$testPlanID',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute =
-  projectProjectsProjectIdFeaturesEditFeatureModuleFormImport.update({
+  projectProjectsProjectIdFeaturesEditFeatureModuleFormRouteImport.update({
     id: '/Features/EditFeatureModuleForm',
     path: '/Features/EditFeatureModuleForm',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute =
-  projectProjectsProjectIdFeaturesCreateFeatureModuleFormImport.update({
+  projectProjectsProjectIdFeaturesCreateFeatureModuleFormRouteImport.update({
     id: '/Features/CreateFeatureModuleForm',
     path: '/Features/CreateFeatureModuleForm',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansNewIndexRoute =
-  projectProjectsProjectIdTestPlansNewIndexImport.update({
+  projectProjectsProjectIdTestPlansNewIndexRouteImport.update({
     id: '/test-plans/new/',
     path: '/test-plans/new/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestCasesNewIndexRoute =
-  projectProjectsProjectIdTestCasesNewIndexImport.update({
+  projectProjectsProjectIdTestCasesNewIndexRouteImport.update({
     id: '/test-cases/new/',
     path: '/test-cases/new/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestCasesTestCaseIdIndexRoute =
-  projectProjectsProjectIdTestCasesTestCaseIdIndexImport.update({
+  projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport.update({
     id: '/test-cases/$testCaseId/',
     path: '/test-cases/$testCaseId/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute =
-  projectProjectsProjectIdTestPlansTestPlanIDTestersIndexImport.update({
+  projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteImport.update({
     id: '/testers/',
     path: '/testers/',
     getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute =
-  projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexImport.update({
+  projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRouteImport.update({
     id: '/test-runs/',
     path: '/test-runs/',
     getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute =
-  projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexImport.update({
+  projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRouteImport.update({
     id: '/test-cases/',
     path: '/test-cases/',
     getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
   } as any)
-
 const projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
-  projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport.update({
+  projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRouteImport.update({
     id: '/execute/',
     path: '/execute/',
     getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
   } as any)
 
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof appIndexRoute
+  '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
+  '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
+  '/testers/invite': typeof appTestersInviteRoute
+  '/dashboard': typeof appDashboardIndexRoute
+  '/integrations': typeof appIntegrationsIndexRoute
+  '/projects': typeof appProjectsIndexRoute
+  '/reports': typeof appReportsIndexRoute
+  '/settings': typeof appSettingsIndexRoute
+  '/test-cases': typeof appTestCasesIndexRoute
+  '/test-plans': typeof appTestPlansIndexRoute
+  '/testers': typeof appTestersIndexRoute
+  '/users': typeof appUsersIndexRoute
+  '/login': typeof authLoginIndexRoute
+  '/logout': typeof authLogoutIndexRoute
+  '/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/projects/new': typeof appProjectsNewIndexRoute
+  '/test-cases/new': typeof appTestCasesNewIndexRoute
+  '/users/new': typeof appUsersNewIndexRoute
+  '/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
+  '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
+  '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
+  '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
+  '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
+  '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
+  '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
+  '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
+  '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
+  '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
+  '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
+  '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/execute': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/test-cases': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/test-runs': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/testers': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof appIndexRoute
+  '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
+  '/testers/invite': typeof appTestersInviteRoute
+  '/dashboard': typeof appDashboardIndexRoute
+  '/integrations': typeof appIntegrationsIndexRoute
+  '/projects': typeof appProjectsIndexRoute
+  '/reports': typeof appReportsIndexRoute
+  '/settings': typeof appSettingsIndexRoute
+  '/test-cases': typeof appTestCasesIndexRoute
+  '/test-plans': typeof appTestPlansIndexRoute
+  '/testers': typeof appTestersIndexRoute
+  '/users': typeof appUsersIndexRoute
+  '/login': typeof authLoginIndexRoute
+  '/logout': typeof authLogoutIndexRoute
+  '/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/projects/new': typeof appProjectsNewIndexRoute
+  '/test-cases/new': typeof appTestCasesNewIndexRoute
+  '/users/new': typeof appUsersNewIndexRoute
+  '/projects/$projectId': typeof projectProjectsProjectIdIndexRoute
+  '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
+  '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
+  '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
+  '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
+  '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
+  '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
+  '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
+  '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
+  '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
+  '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
+  '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/execute': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/test-cases': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/test-runs': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/testers': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/(app)': typeof appRouteRouteWithChildren
+  '/(app)/': typeof appIndexRoute
+  '/(app)/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
+  '/(project)/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
+  '/(app)/testers/invite': typeof appTestersInviteRoute
+  '/(app)/dashboard/': typeof appDashboardIndexRoute
+  '/(app)/integrations/': typeof appIntegrationsIndexRoute
+  '/(app)/projects/': typeof appProjectsIndexRoute
+  '/(app)/reports/': typeof appReportsIndexRoute
+  '/(app)/settings/': typeof appSettingsIndexRoute
+  '/(app)/test-cases/': typeof appTestCasesIndexRoute
+  '/(app)/test-plans/': typeof appTestPlansIndexRoute
+  '/(app)/testers/': typeof appTestersIndexRoute
+  '/(app)/users/': typeof appUsersIndexRoute
+  '/(auth)/login/': typeof authLoginIndexRoute
+  '/(auth)/logout/': typeof authLogoutIndexRoute
+  '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/(app)/projects/new/': typeof appProjectsNewIndexRoute
+  '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
+  '/(app)/users/new/': typeof appUsersNewIndexRoute
+  '/(project)/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
+  '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
+  '/(project)/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
+  '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
+  '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/(project)/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
+  '/(project)/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
+  '/(project)/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/(project)/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
+  '/(project)/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
+  '/(project)/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
+  '/(project)/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
+  '/(project)/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
+  '/(project)/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID/execute/': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID/testers/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/test-cases/inbox'
+    | '/projects/$projectId'
+    | '/testers/invite'
+    | '/dashboard'
+    | '/integrations'
+    | '/projects'
+    | '/reports'
+    | '/settings'
+    | '/test-cases'
+    | '/test-plans'
+    | '/testers'
+    | '/users'
+    | '/login'
+    | '/logout'
+    | '/users/view/$userID'
+    | '/projects/new'
+    | '/test-cases/new'
+    | '/users/new'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/Features/CreateFeatureModuleForm'
+    | '/projects/$projectId/Features/EditFeatureModuleForm'
+    | '/projects/$projectId/test-plans/$testPlanID'
+    | '/test-cases/inbox/$testCaseId'
+    | '/testers/view/$testerId'
+    | '/projects/$projectId/Features'
+    | '/projects/$projectId/insights'
+    | '/projects/$projectId/reports'
+    | '/projects/$projectId/settings'
+    | '/projects/$projectId/test-cases'
+    | '/projects/$projectId/test-plans'
+    | '/projects/$projectId/testers'
+    | '/projects/$projectId/test-cases/$testCaseId'
+    | '/projects/$projectId/test-cases/new'
+    | '/projects/$projectId/test-plans/new'
+    | '/projects/$projectId/test-plans/$testPlanID/execute'
+    | '/projects/$projectId/test-plans/$testPlanID/test-cases'
+    | '/projects/$projectId/test-plans/$testPlanID/test-runs'
+    | '/projects/$projectId/test-plans/$testPlanID/testers'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/test-cases/inbox'
+    | '/testers/invite'
+    | '/dashboard'
+    | '/integrations'
+    | '/projects'
+    | '/reports'
+    | '/settings'
+    | '/test-cases'
+    | '/test-plans'
+    | '/testers'
+    | '/users'
+    | '/login'
+    | '/logout'
+    | '/users/view/$userID'
+    | '/projects/new'
+    | '/test-cases/new'
+    | '/users/new'
+    | '/projects/$projectId'
+    | '/projects/$projectId/Features/CreateFeatureModuleForm'
+    | '/projects/$projectId/Features/EditFeatureModuleForm'
+    | '/projects/$projectId/test-plans/$testPlanID'
+    | '/test-cases/inbox/$testCaseId'
+    | '/testers/view/$testerId'
+    | '/projects/$projectId/Features'
+    | '/projects/$projectId/insights'
+    | '/projects/$projectId/reports'
+    | '/projects/$projectId/settings'
+    | '/projects/$projectId/test-cases'
+    | '/projects/$projectId/test-plans'
+    | '/projects/$projectId/testers'
+    | '/projects/$projectId/test-cases/$testCaseId'
+    | '/projects/$projectId/test-cases/new'
+    | '/projects/$projectId/test-plans/new'
+    | '/projects/$projectId/test-plans/$testPlanID/execute'
+    | '/projects/$projectId/test-plans/$testPlanID/test-cases'
+    | '/projects/$projectId/test-plans/$testPlanID/test-runs'
+    | '/projects/$projectId/test-plans/$testPlanID/testers'
+  id:
+    | '__root__'
+    | '/(app)'
+    | '/(app)/'
+    | '/(app)/test-cases/inbox'
+    | '/(project)/projects/$projectId'
+    | '/(app)/testers/invite'
+    | '/(app)/dashboard/'
+    | '/(app)/integrations/'
+    | '/(app)/projects/'
+    | '/(app)/reports/'
+    | '/(app)/settings/'
+    | '/(app)/test-cases/'
+    | '/(app)/test-plans/'
+    | '/(app)/testers/'
+    | '/(app)/users/'
+    | '/(auth)/login/'
+    | '/(auth)/logout/'
+    | '/(app)/users/view/$userID'
+    | '/(app)/projects/new/'
+    | '/(app)/test-cases/new/'
+    | '/(app)/users/new/'
+    | '/(project)/projects/$projectId/'
+    | '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
+    | '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID'
+    | '/(app)/test-cases/inbox/$testCaseId/'
+    | '/(app)/testers/view/$testerId/'
+    | '/(project)/projects/$projectId/Features/'
+    | '/(project)/projects/$projectId/insights/'
+    | '/(project)/projects/$projectId/reports/'
+    | '/(project)/projects/$projectId/settings/'
+    | '/(project)/projects/$projectId/test-cases/'
+    | '/(project)/projects/$projectId/test-plans/'
+    | '/(project)/projects/$projectId/testers/'
+    | '/(project)/projects/$projectId/test-cases/$testCaseId/'
+    | '/(project)/projects/$projectId/test-cases/new/'
+    | '/(project)/projects/$projectId/test-plans/new/'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID/execute/'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID/testers/'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  appRouteRoute: typeof appRouteRouteWithChildren
+  projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
+  authLoginIndexRoute: typeof authLoginIndexRoute
+  authLogoutIndexRoute: typeof authLogoutIndexRoute
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
@@ -322,286 +534,284 @@ declare module '@tanstack/react-router' {
       id: '/(app)'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof appRouteImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof appRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(app)/': {
       id: '/(app)/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof appIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/test-cases/inbox': {
-      id: '/(app)/test-cases/inbox'
-      path: '/test-cases/inbox'
-      fullPath: '/test-cases/inbox'
-      preLoaderRoute: typeof appTestCasesInboxRouteImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(project)/projects/$projectId': {
-      id: '/(project)/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
-      preLoaderRoute: typeof projectProjectsProjectIdRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/(app)/testers/invite': {
-      id: '/(app)/testers/invite'
-      path: '/testers/invite'
-      fullPath: '/testers/invite'
-      preLoaderRoute: typeof appTestersInviteImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/dashboard/': {
-      id: '/(app)/dashboard/'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof appDashboardIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/integrations/': {
-      id: '/(app)/integrations/'
-      path: '/integrations'
-      fullPath: '/integrations'
-      preLoaderRoute: typeof appIntegrationsIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/projects/': {
-      id: '/(app)/projects/'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof appProjectsIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/reports/': {
-      id: '/(app)/reports/'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof appReportsIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/settings/': {
-      id: '/(app)/settings/'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof appSettingsIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/test-cases/': {
-      id: '/(app)/test-cases/'
-      path: '/test-cases'
-      fullPath: '/test-cases'
-      preLoaderRoute: typeof appTestCasesIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/test-plans/': {
-      id: '/(app)/test-plans/'
-      path: '/test-plans'
-      fullPath: '/test-plans'
-      preLoaderRoute: typeof appTestPlansIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/testers/': {
-      id: '/(app)/testers/'
-      path: '/testers'
-      fullPath: '/testers'
-      preLoaderRoute: typeof appTestersIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(app)/users/': {
-      id: '/(app)/users/'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof appUsersIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(auth)/login/': {
-      id: '/(auth)/login/'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginIndexImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof appIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(auth)/logout/': {
       id: '/(auth)/logout/'
       path: '/logout'
       fullPath: '/logout'
-      preLoaderRoute: typeof authLogoutIndexImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authLogoutIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/(app)/users/view/$userID': {
-      id: '/(app)/users/view/$userID'
-      path: '/users/view/$userID'
-      fullPath: '/users/view/$userID'
-      preLoaderRoute: typeof appUsersViewUserIDImport
-      parentRoute: typeof appRouteImport
+    '/(auth)/login/': {
+      id: '/(auth)/login/'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/(app)/projects/new/': {
-      id: '/(app)/projects/new/'
-      path: '/projects/new'
-      fullPath: '/projects/new'
-      preLoaderRoute: typeof appProjectsNewIndexImport
-      parentRoute: typeof appRouteImport
+    '/(app)/users/': {
+      id: '/(app)/users/'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof appUsersIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
-    '/(app)/test-cases/new/': {
-      id: '/(app)/test-cases/new/'
-      path: '/test-cases/new'
-      fullPath: '/test-cases/new'
-      preLoaderRoute: typeof appTestCasesNewIndexImport
-      parentRoute: typeof appRouteImport
+    '/(app)/testers/': {
+      id: '/(app)/testers/'
+      path: '/testers'
+      fullPath: '/testers'
+      preLoaderRoute: typeof appTestersIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
-    '/(app)/users/new/': {
-      id: '/(app)/users/new/'
-      path: '/users/new'
-      fullPath: '/users/new'
-      preLoaderRoute: typeof appUsersNewIndexImport
-      parentRoute: typeof appRouteImport
+    '/(app)/test-plans/': {
+      id: '/(app)/test-plans/'
+      path: '/test-plans'
+      fullPath: '/test-plans'
+      preLoaderRoute: typeof appTestPlansIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/test-cases/': {
+      id: '/(app)/test-cases/'
+      path: '/test-cases'
+      fullPath: '/test-cases'
+      preLoaderRoute: typeof appTestCasesIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/settings/': {
+      id: '/(app)/settings/'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof appSettingsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/reports/': {
+      id: '/(app)/reports/'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof appReportsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/projects/': {
+      id: '/(app)/projects/'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof appProjectsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/integrations/': {
+      id: '/(app)/integrations/'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof appIntegrationsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/dashboard/': {
+      id: '/(app)/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof appDashboardIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/testers/invite': {
+      id: '/(app)/testers/invite'
+      path: '/testers/invite'
+      fullPath: '/testers/invite'
+      preLoaderRoute: typeof appTestersInviteRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(project)/projects/$projectId': {
+      id: '/(project)/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof projectProjectsProjectIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(app)/test-cases/inbox': {
+      id: '/(app)/test-cases/inbox'
+      path: '/test-cases/inbox'
+      fullPath: '/test-cases/inbox'
+      preLoaderRoute: typeof appTestCasesInboxRouteRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(project)/projects/$projectId/': {
       id: '/(project)/projects/$projectId/'
       path: '/'
       fullPath: '/projects/$projectId/'
-      preLoaderRoute: typeof projectProjectsProjectIdIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+      preLoaderRoute: typeof projectProjectsProjectIdIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
-    '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': {
-      id: '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
-      path: '/Features/CreateFeatureModuleForm'
-      fullPath: '/projects/$projectId/Features/CreateFeatureModuleForm'
-      preLoaderRoute: typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(app)/users/new/': {
+      id: '/(app)/users/new/'
+      path: '/users/new'
+      fullPath: '/users/new'
+      preLoaderRoute: typeof appUsersNewIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
-    '/(project)/projects/$projectId/Features/EditFeatureModuleForm': {
-      id: '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
-      path: '/Features/EditFeatureModuleForm'
-      fullPath: '/projects/$projectId/Features/EditFeatureModuleForm'
-      preLoaderRoute: typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(app)/test-cases/new/': {
+      id: '/(app)/test-cases/new/'
+      path: '/test-cases/new'
+      fullPath: '/test-cases/new'
+      preLoaderRoute: typeof appTestCasesNewIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
-    '/(project)/projects/$projectId/test-plans/$testPlanID': {
-      id: '/(project)/projects/$projectId/test-plans/$testPlanID'
-      path: '/test-plans/$testPlanID'
-      fullPath: '/projects/$projectId/test-plans/$testPlanID'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(app)/projects/new/': {
+      id: '/(app)/projects/new/'
+      path: '/projects/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof appProjectsNewIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
-    '/(app)/test-cases/inbox/$testCaseId/': {
-      id: '/(app)/test-cases/inbox/$testCaseId/'
-      path: '/$testCaseId'
-      fullPath: '/test-cases/inbox/$testCaseId'
-      preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexImport
-      parentRoute: typeof appTestCasesInboxRouteImport
-    }
-    '/(app)/testers/view/$testerId/': {
-      id: '/(app)/testers/view/$testerId/'
-      path: '/testers/view/$testerId'
-      fullPath: '/testers/view/$testerId'
-      preLoaderRoute: typeof appTestersViewTesterIdIndexImport
-      parentRoute: typeof appRouteImport
-    }
-    '/(project)/projects/$projectId/Features/': {
-      id: '/(project)/projects/$projectId/Features/'
-      path: '/Features'
-      fullPath: '/projects/$projectId/Features'
-      preLoaderRoute: typeof projectProjectsProjectIdFeaturesIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
-    }
-    '/(project)/projects/$projectId/insights/': {
-      id: '/(project)/projects/$projectId/insights/'
-      path: '/insights'
-      fullPath: '/projects/$projectId/insights'
-      preLoaderRoute: typeof projectProjectsProjectIdInsightsIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
-    }
-    '/(project)/projects/$projectId/reports/': {
-      id: '/(project)/projects/$projectId/reports/'
-      path: '/reports'
-      fullPath: '/projects/$projectId/reports'
-      preLoaderRoute: typeof projectProjectsProjectIdReportsIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
-    }
-    '/(project)/projects/$projectId/settings/': {
-      id: '/(project)/projects/$projectId/settings/'
-      path: '/settings'
-      fullPath: '/projects/$projectId/settings'
-      preLoaderRoute: typeof projectProjectsProjectIdSettingsIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
-    }
-    '/(project)/projects/$projectId/test-cases/': {
-      id: '/(project)/projects/$projectId/test-cases/'
-      path: '/test-cases'
-      fullPath: '/projects/$projectId/test-cases'
-      preLoaderRoute: typeof projectProjectsProjectIdTestCasesIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
-    }
-    '/(project)/projects/$projectId/test-plans/': {
-      id: '/(project)/projects/$projectId/test-plans/'
-      path: '/test-plans'
-      fullPath: '/projects/$projectId/test-plans'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(app)/users/view/$userID': {
+      id: '/(app)/users/view/$userID'
+      path: '/users/view/$userID'
+      fullPath: '/users/view/$userID'
+      preLoaderRoute: typeof appUsersViewUserIDRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(project)/projects/$projectId/testers/': {
       id: '/(project)/projects/$projectId/testers/'
       path: '/testers'
       fullPath: '/projects/$projectId/testers'
-      preLoaderRoute: typeof projectProjectsProjectIdTestersIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+      preLoaderRoute: typeof projectProjectsProjectIdTestersIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
-    '/(project)/projects/$projectId/test-cases/$testCaseId/': {
-      id: '/(project)/projects/$projectId/test-cases/$testCaseId/'
-      path: '/test-cases/$testCaseId'
-      fullPath: '/projects/$projectId/test-cases/$testCaseId'
-      preLoaderRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(project)/projects/$projectId/test-plans/': {
+      id: '/(project)/projects/$projectId/test-plans/'
+      path: '/test-plans'
+      fullPath: '/projects/$projectId/test-plans'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
-    '/(project)/projects/$projectId/test-cases/new/': {
-      id: '/(project)/projects/$projectId/test-cases/new/'
-      path: '/test-cases/new'
-      fullPath: '/projects/$projectId/test-cases/new'
-      preLoaderRoute: typeof projectProjectsProjectIdTestCasesNewIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+    '/(project)/projects/$projectId/test-cases/': {
+      id: '/(project)/projects/$projectId/test-cases/'
+      path: '/test-cases'
+      fullPath: '/projects/$projectId/test-cases'
+      preLoaderRoute: typeof projectProjectsProjectIdTestCasesIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/settings/': {
+      id: '/(project)/projects/$projectId/settings/'
+      path: '/settings'
+      fullPath: '/projects/$projectId/settings'
+      preLoaderRoute: typeof projectProjectsProjectIdSettingsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/reports/': {
+      id: '/(project)/projects/$projectId/reports/'
+      path: '/reports'
+      fullPath: '/projects/$projectId/reports'
+      preLoaderRoute: typeof projectProjectsProjectIdReportsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/insights/': {
+      id: '/(project)/projects/$projectId/insights/'
+      path: '/insights'
+      fullPath: '/projects/$projectId/insights'
+      preLoaderRoute: typeof projectProjectsProjectIdInsightsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/Features/': {
+      id: '/(project)/projects/$projectId/Features/'
+      path: '/Features'
+      fullPath: '/projects/$projectId/Features'
+      preLoaderRoute: typeof projectProjectsProjectIdFeaturesIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(app)/testers/view/$testerId/': {
+      id: '/(app)/testers/view/$testerId/'
+      path: '/testers/view/$testerId'
+      fullPath: '/testers/view/$testerId'
+      preLoaderRoute: typeof appTestersViewTesterIdIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/test-cases/inbox/$testCaseId/': {
+      id: '/(app)/test-cases/inbox/$testCaseId/'
+      path: '/$testCaseId'
+      fullPath: '/test-cases/inbox/$testCaseId'
+      preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexRouteImport
+      parentRoute: typeof appTestCasesInboxRouteRoute
+    }
+    '/(project)/projects/$projectId/test-plans/$testPlanID': {
+      id: '/(project)/projects/$projectId/test-plans/$testPlanID'
+      path: '/test-plans/$testPlanID'
+      fullPath: '/projects/$projectId/test-plans/$testPlanID'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/Features/EditFeatureModuleForm': {
+      id: '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
+      path: '/Features/EditFeatureModuleForm'
+      fullPath: '/projects/$projectId/Features/EditFeatureModuleForm'
+      preLoaderRoute: typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': {
+      id: '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
+      path: '/Features/CreateFeatureModuleForm'
+      fullPath: '/projects/$projectId/Features/CreateFeatureModuleForm'
+      preLoaderRoute: typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
     '/(project)/projects/$projectId/test-plans/new/': {
       id: '/(project)/projects/$projectId/test-plans/new/'
       path: '/test-plans/new'
       fullPath: '/projects/$projectId/test-plans/new'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansNewIndexImport
-      parentRoute: typeof projectProjectsProjectIdRouteImport
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansNewIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
-    '/(project)/projects/$projectId/test-plans/$testPlanID/execute/': {
-      id: '/(project)/projects/$projectId/test-plans/$testPlanID/execute/'
-      path: '/execute'
-      fullPath: '/projects/$projectId/test-plans/$testPlanID/execute'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexImport
-      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDImport
+    '/(project)/projects/$projectId/test-cases/new/': {
+      id: '/(project)/projects/$projectId/test-cases/new/'
+      path: '/test-cases/new'
+      fullPath: '/projects/$projectId/test-cases/new'
+      preLoaderRoute: typeof projectProjectsProjectIdTestCasesNewIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
-    '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/': {
-      id: '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/'
-      path: '/test-cases'
-      fullPath: '/projects/$projectId/test-plans/$testPlanID/test-cases'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexImport
-      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDImport
-    }
-    '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/': {
-      id: '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/'
-      path: '/test-runs'
-      fullPath: '/projects/$projectId/test-plans/$testPlanID/test-runs'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexImport
-      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDImport
+    '/(project)/projects/$projectId/test-cases/$testCaseId/': {
+      id: '/(project)/projects/$projectId/test-cases/$testCaseId/'
+      path: '/test-cases/$testCaseId'
+      fullPath: '/projects/$projectId/test-cases/$testCaseId'
+      preLoaderRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
     '/(project)/projects/$projectId/test-plans/$testPlanID/testers/': {
       id: '/(project)/projects/$projectId/test-plans/$testPlanID/testers/'
       path: '/testers'
       fullPath: '/projects/$projectId/test-plans/$testPlanID/testers'
-      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexImport
-      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDImport
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
+    }
+    '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/': {
+      id: '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/'
+      path: '/test-runs'
+      fullPath: '/projects/$projectId/test-plans/$testPlanID/test-runs'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
+    }
+    '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/': {
+      id: '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/'
+      path: '/test-cases'
+      fullPath: '/projects/$projectId/test-plans/$testPlanID/test-cases'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
+    }
+    '/(project)/projects/$projectId/test-plans/$testPlanID/execute/': {
+      id: '/(project)/projects/$projectId/test-plans/$testPlanID/execute/'
+      path: '/execute'
+      fullPath: '/projects/$projectId/test-plans/$testPlanID/execute'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
     }
   }
 }
-
-// Create and export the route tree
 
 interface appTestCasesInboxRouteRouteChildren {
   appTestCasesInboxTestCaseIdIndexRoute: typeof appTestCasesInboxTestCaseIdIndexRoute
@@ -739,267 +949,6 @@ const projectProjectsProjectIdRouteRouteWithChildren =
     projectProjectsProjectIdRouteRouteChildren,
   )
 
-export interface FileRoutesByFullPath {
-  '/': typeof appIndexRoute
-  '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
-  '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
-  '/testers/invite': typeof appTestersInviteRoute
-  '/dashboard': typeof appDashboardIndexRoute
-  '/integrations': typeof appIntegrationsIndexRoute
-  '/projects': typeof appProjectsIndexRoute
-  '/reports': typeof appReportsIndexRoute
-  '/settings': typeof appSettingsIndexRoute
-  '/test-cases': typeof appTestCasesIndexRoute
-  '/test-plans': typeof appTestPlansIndexRoute
-  '/testers': typeof appTestersIndexRoute
-  '/users': typeof appUsersIndexRoute
-  '/login': typeof authLoginIndexRoute
-  '/logout': typeof authLogoutIndexRoute
-  '/users/view/$userID': typeof appUsersViewUserIDRoute
-  '/projects/new': typeof appProjectsNewIndexRoute
-  '/test-cases/new': typeof appTestCasesNewIndexRoute
-  '/users/new': typeof appUsersNewIndexRoute
-  '/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
-  '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
-  '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
-  '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
-  '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
-  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
-  '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
-  '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
-  '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
-  '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
-  '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
-  '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
-  '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
-  '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
-  '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
-  '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/execute': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/test-cases': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/test-runs': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/testers': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof appIndexRoute
-  '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
-  '/testers/invite': typeof appTestersInviteRoute
-  '/dashboard': typeof appDashboardIndexRoute
-  '/integrations': typeof appIntegrationsIndexRoute
-  '/projects': typeof appProjectsIndexRoute
-  '/reports': typeof appReportsIndexRoute
-  '/settings': typeof appSettingsIndexRoute
-  '/test-cases': typeof appTestCasesIndexRoute
-  '/test-plans': typeof appTestPlansIndexRoute
-  '/testers': typeof appTestersIndexRoute
-  '/users': typeof appUsersIndexRoute
-  '/login': typeof authLoginIndexRoute
-  '/logout': typeof authLogoutIndexRoute
-  '/users/view/$userID': typeof appUsersViewUserIDRoute
-  '/projects/new': typeof appProjectsNewIndexRoute
-  '/test-cases/new': typeof appTestCasesNewIndexRoute
-  '/users/new': typeof appUsersNewIndexRoute
-  '/projects/$projectId': typeof projectProjectsProjectIdIndexRoute
-  '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
-  '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
-  '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
-  '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
-  '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
-  '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
-  '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
-  '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
-  '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
-  '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
-  '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
-  '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
-  '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
-  '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
-  '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/execute': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/test-cases': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/test-runs': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
-  '/projects/$projectId/test-plans/$testPlanID/testers': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/(app)': typeof appRouteRouteWithChildren
-  '/(app)/': typeof appIndexRoute
-  '/(app)/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
-  '/(project)/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
-  '/(app)/testers/invite': typeof appTestersInviteRoute
-  '/(app)/dashboard/': typeof appDashboardIndexRoute
-  '/(app)/integrations/': typeof appIntegrationsIndexRoute
-  '/(app)/projects/': typeof appProjectsIndexRoute
-  '/(app)/reports/': typeof appReportsIndexRoute
-  '/(app)/settings/': typeof appSettingsIndexRoute
-  '/(app)/test-cases/': typeof appTestCasesIndexRoute
-  '/(app)/test-plans/': typeof appTestPlansIndexRoute
-  '/(app)/testers/': typeof appTestersIndexRoute
-  '/(app)/users/': typeof appUsersIndexRoute
-  '/(auth)/login/': typeof authLoginIndexRoute
-  '/(auth)/logout/': typeof authLogoutIndexRoute
-  '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
-  '/(app)/projects/new/': typeof appProjectsNewIndexRoute
-  '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
-  '/(app)/users/new/': typeof appUsersNewIndexRoute
-  '/(project)/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
-  '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
-  '/(project)/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
-  '/(project)/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
-  '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
-  '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
-  '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
-  '/(project)/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
-  '/(project)/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
-  '/(project)/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
-  '/(project)/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
-  '/(project)/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
-  '/(project)/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
-  '/(project)/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
-  '/(project)/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
-  '/(project)/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
-  '/(project)/projects/$projectId/test-plans/$testPlanID/execute/': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
-  '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
-  '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
-  '/(project)/projects/$projectId/test-plans/$testPlanID/testers/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/test-cases/inbox'
-    | '/projects/$projectId'
-    | '/testers/invite'
-    | '/dashboard'
-    | '/integrations'
-    | '/projects'
-    | '/reports'
-    | '/settings'
-    | '/test-cases'
-    | '/test-plans'
-    | '/testers'
-    | '/users'
-    | '/login'
-    | '/logout'
-    | '/users/view/$userID'
-    | '/projects/new'
-    | '/test-cases/new'
-    | '/users/new'
-    | '/projects/$projectId/'
-    | '/projects/$projectId/Features/CreateFeatureModuleForm'
-    | '/projects/$projectId/Features/EditFeatureModuleForm'
-    | '/projects/$projectId/test-plans/$testPlanID'
-    | '/test-cases/inbox/$testCaseId'
-    | '/testers/view/$testerId'
-    | '/projects/$projectId/Features'
-    | '/projects/$projectId/insights'
-    | '/projects/$projectId/reports'
-    | '/projects/$projectId/settings'
-    | '/projects/$projectId/test-cases'
-    | '/projects/$projectId/test-plans'
-    | '/projects/$projectId/testers'
-    | '/projects/$projectId/test-cases/$testCaseId'
-    | '/projects/$projectId/test-cases/new'
-    | '/projects/$projectId/test-plans/new'
-    | '/projects/$projectId/test-plans/$testPlanID/execute'
-    | '/projects/$projectId/test-plans/$testPlanID/test-cases'
-    | '/projects/$projectId/test-plans/$testPlanID/test-runs'
-    | '/projects/$projectId/test-plans/$testPlanID/testers'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/test-cases/inbox'
-    | '/testers/invite'
-    | '/dashboard'
-    | '/integrations'
-    | '/projects'
-    | '/reports'
-    | '/settings'
-    | '/test-cases'
-    | '/test-plans'
-    | '/testers'
-    | '/users'
-    | '/login'
-    | '/logout'
-    | '/users/view/$userID'
-    | '/projects/new'
-    | '/test-cases/new'
-    | '/users/new'
-    | '/projects/$projectId'
-    | '/projects/$projectId/Features/CreateFeatureModuleForm'
-    | '/projects/$projectId/Features/EditFeatureModuleForm'
-    | '/projects/$projectId/test-plans/$testPlanID'
-    | '/test-cases/inbox/$testCaseId'
-    | '/testers/view/$testerId'
-    | '/projects/$projectId/Features'
-    | '/projects/$projectId/insights'
-    | '/projects/$projectId/reports'
-    | '/projects/$projectId/settings'
-    | '/projects/$projectId/test-cases'
-    | '/projects/$projectId/test-plans'
-    | '/projects/$projectId/testers'
-    | '/projects/$projectId/test-cases/$testCaseId'
-    | '/projects/$projectId/test-cases/new'
-    | '/projects/$projectId/test-plans/new'
-    | '/projects/$projectId/test-plans/$testPlanID/execute'
-    | '/projects/$projectId/test-plans/$testPlanID/test-cases'
-    | '/projects/$projectId/test-plans/$testPlanID/test-runs'
-    | '/projects/$projectId/test-plans/$testPlanID/testers'
-  id:
-    | '__root__'
-    | '/(app)'
-    | '/(app)/'
-    | '/(app)/test-cases/inbox'
-    | '/(project)/projects/$projectId'
-    | '/(app)/testers/invite'
-    | '/(app)/dashboard/'
-    | '/(app)/integrations/'
-    | '/(app)/projects/'
-    | '/(app)/reports/'
-    | '/(app)/settings/'
-    | '/(app)/test-cases/'
-    | '/(app)/test-plans/'
-    | '/(app)/testers/'
-    | '/(app)/users/'
-    | '/(auth)/login/'
-    | '/(auth)/logout/'
-    | '/(app)/users/view/$userID'
-    | '/(app)/projects/new/'
-    | '/(app)/test-cases/new/'
-    | '/(app)/users/new/'
-    | '/(project)/projects/$projectId/'
-    | '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
-    | '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
-    | '/(project)/projects/$projectId/test-plans/$testPlanID'
-    | '/(app)/test-cases/inbox/$testCaseId/'
-    | '/(app)/testers/view/$testerId/'
-    | '/(project)/projects/$projectId/Features/'
-    | '/(project)/projects/$projectId/insights/'
-    | '/(project)/projects/$projectId/reports/'
-    | '/(project)/projects/$projectId/settings/'
-    | '/(project)/projects/$projectId/test-cases/'
-    | '/(project)/projects/$projectId/test-plans/'
-    | '/(project)/projects/$projectId/testers/'
-    | '/(project)/projects/$projectId/test-cases/$testCaseId/'
-    | '/(project)/projects/$projectId/test-cases/new/'
-    | '/(project)/projects/$projectId/test-plans/new/'
-    | '/(project)/projects/$projectId/test-plans/$testPlanID/execute/'
-    | '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/'
-    | '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/'
-    | '/(project)/projects/$projectId/test-plans/$testPlanID/testers/'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  appRouteRoute: typeof appRouteRouteWithChildren
-  projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
-  authLoginIndexRoute: typeof authLoginIndexRoute
-  authLogoutIndexRoute: typeof authLogoutIndexRoute
-}
-
 const rootRouteChildren: RootRouteChildren = {
   appRouteRoute: appRouteRouteWithChildren,
   projectProjectsProjectIdRouteRoute:
@@ -1007,223 +956,6 @@ const rootRouteChildren: RootRouteChildren = {
   authLoginIndexRoute: authLoginIndexRoute,
   authLogoutIndexRoute: authLogoutIndexRoute,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/(app)",
-        "/(project)/projects/$projectId",
-        "/(auth)/login/",
-        "/(auth)/logout/"
-      ]
-    },
-    "/(app)": {
-      "filePath": "(app)/route.tsx",
-      "children": [
-        "/(app)/",
-        "/(app)/test-cases/inbox",
-        "/(app)/testers/invite",
-        "/(app)/dashboard/",
-        "/(app)/integrations/",
-        "/(app)/projects/",
-        "/(app)/reports/",
-        "/(app)/settings/",
-        "/(app)/test-cases/",
-        "/(app)/test-plans/",
-        "/(app)/testers/",
-        "/(app)/users/",
-        "/(app)/users/view/$userID",
-        "/(app)/projects/new/",
-        "/(app)/test-cases/new/",
-        "/(app)/users/new/",
-        "/(app)/testers/view/$testerId/"
-      ]
-    },
-    "/(app)/": {
-      "filePath": "(app)/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/test-cases/inbox": {
-      "filePath": "(app)/test-cases/inbox/route.tsx",
-      "parent": "/(app)",
-      "children": [
-        "/(app)/test-cases/inbox/$testCaseId/"
-      ]
-    },
-    "/(project)/projects/$projectId": {
-      "filePath": "(project)/projects/$projectId/route.tsx",
-      "children": [
-        "/(project)/projects/$projectId/",
-        "/(project)/projects/$projectId/Features/CreateFeatureModuleForm",
-        "/(project)/projects/$projectId/Features/EditFeatureModuleForm",
-        "/(project)/projects/$projectId/test-plans/$testPlanID",
-        "/(project)/projects/$projectId/Features/",
-        "/(project)/projects/$projectId/insights/",
-        "/(project)/projects/$projectId/reports/",
-        "/(project)/projects/$projectId/settings/",
-        "/(project)/projects/$projectId/test-cases/",
-        "/(project)/projects/$projectId/test-plans/",
-        "/(project)/projects/$projectId/testers/",
-        "/(project)/projects/$projectId/test-cases/$testCaseId/",
-        "/(project)/projects/$projectId/test-cases/new/",
-        "/(project)/projects/$projectId/test-plans/new/"
-      ]
-    },
-    "/(app)/testers/invite": {
-      "filePath": "(app)/testers/invite.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/dashboard/": {
-      "filePath": "(app)/dashboard/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/integrations/": {
-      "filePath": "(app)/integrations/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/projects/": {
-      "filePath": "(app)/projects/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/reports/": {
-      "filePath": "(app)/reports/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/settings/": {
-      "filePath": "(app)/settings/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/test-cases/": {
-      "filePath": "(app)/test-cases/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/test-plans/": {
-      "filePath": "(app)/test-plans/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/testers/": {
-      "filePath": "(app)/testers/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/users/": {
-      "filePath": "(app)/users/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(auth)/login/": {
-      "filePath": "(auth)/login/index.tsx"
-    },
-    "/(auth)/logout/": {
-      "filePath": "(auth)/logout/index.tsx"
-    },
-    "/(app)/users/view/$userID": {
-      "filePath": "(app)/users/view/$userID.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/projects/new/": {
-      "filePath": "(app)/projects/new/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/test-cases/new/": {
-      "filePath": "(app)/test-cases/new/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(app)/users/new/": {
-      "filePath": "(app)/users/new/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(project)/projects/$projectId/": {
-      "filePath": "(project)/projects/$projectId/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/Features/CreateFeatureModuleForm": {
-      "filePath": "(project)/projects/$projectId/Features/CreateFeatureModuleForm.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/Features/EditFeatureModuleForm": {
-      "filePath": "(project)/projects/$projectId/Features/EditFeatureModuleForm.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-plans/$testPlanID": {
-      "filePath": "(project)/projects/$projectId/test-plans/$testPlanID.tsx",
-      "parent": "/(project)/projects/$projectId",
-      "children": [
-        "/(project)/projects/$projectId/test-plans/$testPlanID/execute/",
-        "/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/",
-        "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/",
-        "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
-      ]
-    },
-    "/(app)/test-cases/inbox/$testCaseId/": {
-      "filePath": "(app)/test-cases/inbox/$testCaseId/index.tsx",
-      "parent": "/(app)/test-cases/inbox"
-    },
-    "/(app)/testers/view/$testerId/": {
-      "filePath": "(app)/testers/view/$testerId/index.tsx",
-      "parent": "/(app)"
-    },
-    "/(project)/projects/$projectId/Features/": {
-      "filePath": "(project)/projects/$projectId/Features/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/insights/": {
-      "filePath": "(project)/projects/$projectId/insights/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/reports/": {
-      "filePath": "(project)/projects/$projectId/reports/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/settings/": {
-      "filePath": "(project)/projects/$projectId/settings/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-cases/": {
-      "filePath": "(project)/projects/$projectId/test-cases/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-plans/": {
-      "filePath": "(project)/projects/$projectId/test-plans/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/testers/": {
-      "filePath": "(project)/projects/$projectId/testers/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-cases/$testCaseId/": {
-      "filePath": "(project)/projects/$projectId/test-cases/$testCaseId/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-cases/new/": {
-      "filePath": "(project)/projects/$projectId/test-cases/new/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-plans/new/": {
-      "filePath": "(project)/projects/$projectId/test-plans/new/index.tsx",
-      "parent": "/(project)/projects/$projectId"
-    },
-    "/(project)/projects/$projectId/test-plans/$testPlanID/execute/": {
-      "filePath": "(project)/projects/$projectId/test-plans/$testPlanID/execute/index.tsx",
-      "parent": "/(project)/projects/$projectId/test-plans/$testPlanID"
-    },
-    "/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/": {
-      "filePath": "(project)/projects/$projectId/test-plans/$testPlanID/test-cases/index.tsx",
-      "parent": "/(project)/projects/$projectId/test-plans/$testPlanID"
-    },
-    "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/": {
-      "filePath": "(project)/projects/$projectId/test-plans/$testPlanID/test-runs/index.tsx",
-      "parent": "/(project)/projects/$projectId/test-plans/$testPlanID"
-    },
-    "/(project)/projects/$projectId/test-plans/$testPlanID/testers/": {
-      "filePath": "(project)/projects/$projectId/test-plans/$testPlanID/testers/index.tsx",
-      "parent": "/(project)/projects/$projectId/test-plans/$testPlanID"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

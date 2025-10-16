@@ -139,6 +139,12 @@ VALUES (
 )
 RETURNING id;
 
+-- name: GetLatestCodeByPrefix :one
+SELECT code FROM test_cases
+WHERE code LiKE $1 || '%'
+ORDER BY code DESC
+LIMIT 1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
