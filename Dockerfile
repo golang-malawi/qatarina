@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine as go-builder
+FROM golang:1.25.1-alpine AS go-builder
 RUN apk add --no-cache git
 WORKDIR /go/qatarina
 COPY . .
