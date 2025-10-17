@@ -72,7 +72,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   defaultValues,
   onSubmit,
   submitText = "Submit",
-  submitLoading = false,
+  submitLoading,
   layout = "vertical",
   spacing = 4,
 }: FormConfig<T>) {
@@ -87,8 +87,19 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     },
   });
 
+  const isSubmitting = submitLoading ?? form.state.isSubmitting;
+
   const renderField = (fieldConfig: FieldConfig) => {
-    const { name, label, type, placeholder, helperText, options, customComponent, projectId } = fieldConfig;
+    const {
+      name,
+      label,
+      type,
+      placeholder,
+      helperText,
+      options,
+      customComponent,
+      projectId,
+    } = fieldConfig;
 
     return (
       <form.Field key={name} name={name}>
@@ -169,9 +180,16 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               </Checkbox.Root>
             )}
 
-            {["text", "email", "password", "number", "url", "tel", "date", "datetime-local"].includes(
-              type
-            ) && (
+            {[
+              "text",
+              "email",
+              "password",
+              "number",
+              "url",
+              "tel",
+              "date",
+              "datetime-local",
+            ].includes(type) && (
               <Input
                 type={type}
                 value={(field.state.value as string) || ""}
@@ -182,9 +200,15 @@ export function DynamicForm<T extends z.ZodTypeAny>({
             )}
 
             {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
-            {field.state.meta.errors && (
+            {field.state.meta.errors && field.state.meta.errors.length > 0 && (
               <Field.ErrorText>
-                {field.state.meta.errors.join(", ")}
+                {field.state.meta.errors
+                  .map((error) =>
+                    typeof error === "string"
+                      ? error
+                      : ((error as any)?.message ?? "Validation error")
+                  )
+                  .join(", ")}
               </Field.ErrorText>
             )}
           </Field.Root>
@@ -230,8 +254,8 @@ export function DynamicForm<T extends z.ZodTypeAny>({
         <Button
           type="submit"
           variant="outline"
-          loading={submitLoading}
-          disabled={submitLoading}
+          loading={isSubmitting}
+          disabled={isSubmitting}
         >
           {submitText}
         </Button>
