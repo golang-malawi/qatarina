@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -58,12 +61,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -71,14 +76,28 @@ func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseSer
 
 // BulkCreate implements TestCaseService.
 func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
-	createList := make([]uuid.UUID, 0)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCases := make([]dbsqlc.TestCase, 0)
 	for _, request := range bulkRequest.TestCases {
 		uuidVal, _ := uuid.NewV7()
+
+		code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
+		if err != nil {
+			return nil, err
+		}
+
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
 			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
 			Kind:             dbsqlc.TestKind(request.Kind),
-			Code:             request.Code,
+			Code:             code,
 			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 			Title:            request.Title,
 			Description:      request.Description,
@@ -90,14 +109,23 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 		}
 
-		createdID, err := t.queries.CreateTestCase(ctx, params)
+		createdID, err := tx.CreateTestCase(ctx, params)
 		if err != nil {
 			return nil, err
 		}
-		createList = append(createList, createdID)
+		tc, err := tx.GetTestCase(ctx, createdID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+		}
+
+		testCases = append(testCases, tc)
 	}
 
-	return []dbsqlc.TestCase{}, nil
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return testCases, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -107,12 +135,25 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
 	uuidVal, _ := uuid.NewV7()
+
+	code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
+	if err != nil {
+		return nil, err
+	}
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
 		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 		Kind:             dbsqlc.TestKind(request.Kind),
-		Code:             request.Code,
+		Code:             code,
 		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 		Title:            request.Title,
 		Description:      request.Description,
@@ -124,8 +165,12 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 	}
 
-	createdID, err := t.queries.CreateTestCase(ctx, params)
+	createdID, err := tx.CreateTestCase(ctx, params)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := sqlTx.Commit(); err != nil {
 		return nil, err
 	}
 	res, err := t.queries.GetTestCase(ctx, createdID)
@@ -198,4 +243,39 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 	return testCases, nil
 
+}
+
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, module string) (string, error) {
+	prefix := generatePrefix(module)
+
+	latest, err := db.GetLatestCodeByPrefix(ctx, common.NullString(prefix))
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	var nextNumber int
+	if latest != "" {
+		numStr := latest[len(prefix):]
+		num, _ := strconv.Atoi(numStr)
+		nextNumber = num + 1
+	} else {
+		nextNumber = 1
+	}
+
+	return fmt.Sprintf("%s%03d", prefix, nextNumber), nil
+}
+
+func generatePrefix(module string) string {
+	module = strings.TrimSpace(strings.ToLower(module))
+	words := strings.Fields(module)
+
+	if len(words) >= 2 {
+		return strings.ToUpper(string(words[0][0]) + string(words[1][0]))
+	}
+
+	if len(module) >= 2 {
+		return strings.ToUpper(module[:2])
+	}
+
+	return strings.ToUpper(module)
 }

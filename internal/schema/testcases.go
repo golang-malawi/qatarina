@@ -4,7 +4,7 @@ import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 
 type CreateTestCaseRequest struct {
 	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code" validate:"required"`
+	Code            string   `json:"code"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`
@@ -26,7 +26,7 @@ type TestCaseResponse struct {
 	IsDraft         bool     `json:"is_draft"`
 	Tags            []string `json:"tags"`
 	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {

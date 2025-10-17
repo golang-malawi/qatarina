@@ -77,7 +77,7 @@ func (api *API) routes() {
 
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
-		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
+		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))

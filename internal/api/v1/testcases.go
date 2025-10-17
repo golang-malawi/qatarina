@@ -28,11 +28,11 @@ import (
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [get]
-func ListTestCases(testCasesService services.TestCaseService) fiber.Handler {
+func ListTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCases, err := testCasesService.FindAll(context.Background())
 		if err != nil {
-			// TODO: log error
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test cases")
 		}
 		return c.JSON(fiber.Map{
@@ -120,15 +120,13 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		_, err := testCaseService.Create(context.Background(), request)
+		testCase, err := testCaseService.Create(context.Background(), request)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test case created",
-		})
+		return c.JSON(schema.NewTestCaseResponse(testCase))
 	}
 }
 
@@ -156,14 +154,14 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		_, err := testCaseService.BulkCreate(context.Background(), request)
+		testCases, err := testCaseService.BulkCreate(context.Background(), request)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			logger.Error(loggedmodule.ApiTestCases, "failed to create test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create test cases")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test cases created",
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
 		})
 	}
 }
