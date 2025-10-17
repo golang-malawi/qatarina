@@ -29,7 +29,8 @@ type API struct {
 
 func NewAPI(config *config.Config) *API {
 
-	dbConn := dbsqlc.New(config.OpenDB())
+	rawDB := config.OpenDB()
+	dbConn := dbsqlc.New(rawDB)
 	logger := logging.NewFromConfig(&config.Logging)
 
 	return &API{
@@ -38,7 +39,7 @@ func NewAPI(config *config.Config) *API {
 		Config:           config,
 		AuthService:      services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:  services.NewProjectService(dbConn, logger),
-		TestCasesService: services.NewTestCaseService(dbConn, logger),
+		TestCasesService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestPlansService: services.NewTestPlanService(dbConn, logger),
 		TestRunsService:  services.NewTestRunService(dbConn, logger),
 		UserService:      services.NewUserService(dbConn, logger, config.SMTP),

@@ -141,7 +141,7 @@ RETURNING id;
 
 -- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
-WHERE code LiKE $1 || '%'
+WHERE code LIKE $1 || '%'
 ORDER BY code DESC
 LIMIT 1;
 

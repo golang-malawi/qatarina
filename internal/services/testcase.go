@@ -61,12 +61,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -74,11 +76,19 @@ func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseSer
 
 // BulkCreate implements TestCaseService.
 func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
-	createList := make([]uuid.UUID, 0)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCases := make([]dbsqlc.TestCase, 0)
 	for _, request := range bulkRequest.TestCases {
 		uuidVal, _ := uuid.NewV7()
 
-		code, err := GenerateNextCode(ctx, t.queries, request.FeatureOrModule)
+		code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
 		if err != nil {
 			return nil, err
 		}
@@ -99,20 +109,20 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 		}
 
-		createdID, err := t.queries.CreateTestCase(ctx, params)
+		createdID, err := tx.CreateTestCase(ctx, params)
 		if err != nil {
 			return nil, err
 		}
-		createList = append(createList, createdID)
-	}
-	// Fetch and return the created test cases
-	testCases := make([]dbsqlc.TestCase, 0)
-	for _, id := range createList {
-		tc, err := t.queries.GetTestCase(ctx, id)
+		tc, err := tx.GetTestCase(ctx, createdID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
 		}
+
 		testCases = append(testCases, tc)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
 	}
 
 	return testCases, nil
@@ -125,9 +135,17 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
 	uuidVal, _ := uuid.NewV7()
 
-	code, err := GenerateNextCode(ctx, t.queries, request.FeatureOrModule)
+	code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +165,12 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 	}
 
-	createdID, err := t.queries.CreateTestCase(ctx, params)
+	createdID, err := tx.CreateTestCase(ctx, params)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := sqlTx.Commit(); err != nil {
 		return nil, err
 	}
 	res, err := t.queries.GetTestCase(ctx, createdID)
@@ -224,10 +246,7 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 }
 
 func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, module string) (string, error) {
-	prefix := strings.ToUpper(strings.TrimSpace(module))
-	if len(prefix) > 2 {
-		prefix = prefix[:2]
-	}
+	prefix := generatePrefix(module)
 
 	latest, err := db.GetLatestCodeByPrefix(ctx, common.NullString(prefix))
 	if err != nil && err != sql.ErrNoRows {
@@ -244,4 +263,19 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, module string) (s
 	}
 
 	return fmt.Sprintf("%s%03d", prefix, nextNumber), nil
+}
+
+func generatePrefix(module string) string {
+	module = strings.TrimSpace(strings.ToLower(module))
+	words := strings.Fields(module)
+
+	if len(words) >= 2 {
+		return strings.ToUpper(string(words[0][0]) + string(words[1][0]))
+	}
+
+	if len(module) >= 2 {
+		return strings.ToUpper(module[:2])
+	}
+
+	return strings.ToUpper(module)
 }
