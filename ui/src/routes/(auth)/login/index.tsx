@@ -26,7 +26,7 @@ import { LoginFormValues, loginSchema } from "@/data/forms/login";
 import { Logo } from "@/components/logo";
 import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const fallback = "/dashboard" as const;
 

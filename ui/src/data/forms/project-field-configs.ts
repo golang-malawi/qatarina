@@ -1,4 +1,4 @@
-import { createFieldConfig, FieldConfig } from '@/components/DynamicForm';
+import { createFieldConfig, FieldConfig } from '@/components/form';
 
 // Project creation fields
 export const projectCreationFields: FieldConfig[] = [

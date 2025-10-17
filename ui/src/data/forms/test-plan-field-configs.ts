@@ -1,4 +1,4 @@
-import { createFieldConfig, createSelectOptions, FieldConfig } from '@/components/DynamicForm';
+import { createFieldConfig, createSelectOptions, FieldConfig } from '@/components/form';
 
 // Test plan kind options
 export const testPlanKindOptions = createSelectOptions([

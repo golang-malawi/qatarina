@@ -5,7 +5,7 @@ import {
   DynamicForm,
   createFieldConfig,
   createSelectOptions,
-} from "./DynamicForm";
+} from "./form";
 import { toaster } from "./ui/toaster";
 
 // Example 1: User Registration Form

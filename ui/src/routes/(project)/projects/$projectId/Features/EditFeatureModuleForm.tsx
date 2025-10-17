@@ -23,7 +23,6 @@ function EditFeatureModuleForm() {
   const { projectId } = Route.useParams();
   const { moduleId } = Route.useSearch();
   const navigate = useNavigate();
-  const moduleService = new ModuleService();
   const [loading, setLoading] = useState(true);
   const [defaultValues, setDefaultValues] = useState<FeatureModuleEditFormData | undefined>();
 
@@ -38,6 +37,7 @@ function EditFeatureModuleForm() {
         return;
       }
 
+      const moduleService = new ModuleService();
       try {
         const data = await moduleService.getModuleById(moduleId);
         setDefaultValues({
@@ -73,6 +73,7 @@ function EditFeatureModuleForm() {
       ProjectID: parseInt(projectId),
     };
 
+    const moduleService = new ModuleService();
     try {
       await moduleService.updateModule(moduleId, payload);
 

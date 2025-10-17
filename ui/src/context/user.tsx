@@ -11,6 +11,7 @@ export interface AuthContext {
   user: string | null;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = React.createContext<AuthContext | null>(null);
 
 const key = "auth.user_id";

@@ -1,4 +1,4 @@
-import { createFieldConfig, FieldConfig } from '@/components/DynamicForm';
+import { createFieldConfig, FieldConfig } from '@/components/form';
 
 // User creation fields
 export const userCreationFields: FieldConfig[] = [
