@@ -3,7 +3,7 @@ import { Box, Heading } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useCreateProjectMutation } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
-import { DynamicForm } from "@/components/DynamicForm";
+import { DynamicForm } from "@/components/form/DynamicForm";
 import { projectCreationSchema } from "@/data/forms/project-schemas";
 import { projectCreationFields } from "@/data/forms/project-field-configs";
 

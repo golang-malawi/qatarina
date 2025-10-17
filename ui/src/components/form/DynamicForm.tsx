@@ -1,5 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
+import { ReactNode } from "react";
 import {
   Box,
   Button,
@@ -10,6 +11,9 @@ import {
   VStack,
   HStack,
 } from "@chakra-ui/react";
+import SelectTestKind from "./SelectTestKind";
+import SelectFeatureModule from "./SelectFeatureModule";
+import SelectFeatureModuleType from "./SelectFeatureModuleType";
 
 // Field type definitions
 export type FieldType =
@@ -21,7 +25,13 @@ export type FieldType =
   | "select"
   | "checkbox"
   | "url"
-  | "tel";
+  | "tel"
+  | "date"
+  | "datetime-local"
+  | "test-kind"
+  | "feature-module"
+  | "feature-module-type"
+  | "custom";
 
 // Field configuration interface
 export interface FieldConfig {
@@ -34,6 +44,13 @@ export interface FieldConfig {
   options?: { value: string; label: string }[]; // For select fields
   validation?: z.ZodTypeAny; // Custom validation for this field
   defaultValue?: unknown;
+  customComponent?: (props: {
+    value: unknown;
+    onChange: (value: unknown) => void;
+    onBlur: () => void;
+  }) => ReactNode; // For custom field components
+  // Props specific to certain field types
+  projectId?: string; // For feature-module type
 }
 
 // Form configuration interface
@@ -71,13 +88,45 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   });
 
   const renderField = (fieldConfig: FieldConfig) => {
-    const { name, label, type, placeholder, helperText, options } = fieldConfig;
+    const { name, label, type, placeholder, helperText, options, customComponent, projectId } = fieldConfig;
 
     return (
       <form.Field key={name} name={name}>
         {(field) => (
           <Field.Root invalid={!!field.state.meta.errors}>
             <Field.Label>{label}</Field.Label>
+
+            {type === "test-kind" && (
+              <SelectTestKind
+                value={field.state.value as string}
+                onChange={(val) => field.handleChange(val)}
+              />
+            )}
+
+            {type === "feature-module" && projectId && (
+              <SelectFeatureModule
+                projectId={projectId}
+                value={field.state.value as string}
+                onChange={(val) => field.handleChange(val)}
+              />
+            )}
+
+            {type === "feature-module-type" && (
+              <SelectFeatureModuleType
+                value={field.state.value as string}
+                onChange={(val) => field.handleChange(val)}
+              />
+            )}
+
+            {type === "custom" && customComponent && (
+              <>
+                {customComponent({
+                  value: field.state.value,
+                  onChange: field.handleChange,
+                  onBlur: field.handleBlur,
+                })}
+              </>
+            )}
 
             {type === "textarea" && (
               <Textarea
@@ -120,7 +169,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               </Checkbox.Root>
             )}
 
-            {["text", "email", "password", "number", "url", "tel"].includes(
+            {["text", "email", "password", "number", "url", "tel", "date", "datetime-local"].includes(
               type
             ) && (
               <Input

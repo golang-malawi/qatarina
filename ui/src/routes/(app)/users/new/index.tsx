@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCreateUserMutation } from "@/services/UserService";
 import { toaster } from "@/components/ui/toaster";
 import { useState } from "react";
-import { DynamicForm } from "@/components/DynamicForm";
+import { DynamicForm } from "@/components/form/DynamicForm";
 import { userCreationSchema } from "@/data/forms/user-schemas";
 import { userCreationFields as userFields } from "@/data/forms/user-field-configs";
 

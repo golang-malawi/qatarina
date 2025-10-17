@@ -1,10 +1,11 @@
-import { Field, Input, Button, Stack, Spinner } from "@chakra-ui/react";
-import { useEffect, useState, FormEvent } from "react";
+import { Box, Heading, Spinner } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
-import SelectFeatureModuleType from "@/components/SelectFeatureModuleType";
-import { Heading } from "@chakra-ui/react";
+import { DynamicForm } from "@/components/form/DynamicForm";
+import { featureModuleEditSchema, FeatureModuleEditFormData } from "@/data/forms/feature-module-schemas";
+import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/EditFeatureModuleForm",
@@ -23,13 +24,8 @@ function EditFeatureModuleForm() {
   const { moduleId } = Route.useSearch();
   const navigate = useNavigate();
   const moduleService = new ModuleService();
-  console.log("moduleId from search params:", moduleId);
-  const [name, setName] = useState("");
-  const [type, setType] = useState("feature");
-  const [description, setDescription] = useState("");
-  const [code, setCode] = useState("");
-  const [priority, setPriority] = useState("");
   const [loading, setLoading] = useState(true);
+  const [defaultValues, setDefaultValues] = useState<FeatureModuleEditFormData | undefined>();
 
   useEffect(() => {
     const fetchModule = async () => {
@@ -44,11 +40,13 @@ function EditFeatureModuleForm() {
 
       try {
         const data = await moduleService.getModuleById(moduleId);
-        setName(data.name || "");
-        setType(data.type || "");
-        setDescription(data.description || "");
-        setCode(data.code || "");
-        setPriority(data.priority?.toString() || "");
+        setDefaultValues({
+          name: data.name || "",
+          type: data.type || "feature",
+          description: data.description || "",
+          code: data.code || "",
+          priority: data.priority || 1,
+        });
       } catch (err) {
         console.error(err);
         toaster.create({
@@ -62,18 +60,16 @@ function EditFeatureModuleForm() {
     };
 
     fetchModule();
-  });
+  }, [moduleId]);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-
+  async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
       ID: parseInt(moduleId),
-      name,
-      type,
-      description,
-      code,
-      priority: parseInt(priority),
+      name: values.name,
+      type: values.type,
+      description: values.description || "",
+      code: values.code,
+      priority: values.priority,
       ProjectID: parseInt(projectId),
     };
 
@@ -82,7 +78,7 @@ function EditFeatureModuleForm() {
 
       toaster.create({
         title: "Module updated",
-        description: `Successfully updated ${type}: ${name}`,
+        description: `Successfully updated ${values.type}: ${values.name}`,
         type: "success",
         duration: 3000,
       });
@@ -101,73 +97,24 @@ function EditFeatureModuleForm() {
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", marginTop: "50px" }}>
+      <Box textAlign="center" mt={50}>
         <Spinner size="xl" />
         <p>Loading module details...</p>
-      </div>
+      </Box>
     );
 
   return (
-    <div>
+    <Box>
       <Heading>Edit Feature / Component / Module</Heading>
-      <form onSubmit={handleSubmit}>
-        <Stack gap={4} maxW="700px" mt={4}>
-          <Field.Root>
-            <Field.Label>Name</Field.Label>
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Login Module"
-              required
-            />
-            <Field.HelperText>Feature/Module name</Field.HelperText>
-          </Field.Root>
-
-          <Field.Root>
-            <SelectFeatureModuleType value={type} onChange={setType} />
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Description (optional)</Field.Label>
-            <Input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Short description"
-            />
-            <Field.HelperText>Summary of the feature/module</Field.HelperText>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Code</Field.Label>
-            <Input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="e.g., AUTH01"
-              required
-            />
-            <Field.HelperText>Unique identifier code</Field.HelperText>
-          </Field.Root>
-
-          <Field.Root>
-            <Field.Label>Priority</Field.Label>
-            <Input
-              type="number"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              placeholder="e.g., 1 for highest priority"
-              required
-            />
-            <Field.HelperText>Priority level (1 = high)</Field.HelperText>
-          </Field.Root>
-
-          <Button type="submit" colorScheme="teal">
-            Save Changes
-          </Button>
-        </Stack>
-      </form>
-    </div>
+      <DynamicForm
+        schema={featureModuleEditSchema}
+        fields={featureModuleEditFields}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+        submitText="Save Changes"
+        layout="vertical"
+        spacing={4}
+      />
+    </Box>
   );
 }

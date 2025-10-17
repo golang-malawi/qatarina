@@ -20,7 +20,7 @@ import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { toaster } from "@/components/ui/toaster";
-import { DynamicForm } from "@/components/DynamicForm";
+import { DynamicForm } from "@/components/form/DynamicForm";
 import { testPlanCreationSchema } from "@/data/forms/test-plan-schemas";
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 
