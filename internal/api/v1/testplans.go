@@ -15,6 +15,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
+	"github.com/google/uuid"
 )
 
 // ListTestPlans godoc
@@ -106,6 +107,39 @@ func GetOneTestPlan(testPlanService services.TestPlanService, logger logging.Log
 		return c.JSON(testPlan)
 	}
 
+}
+
+// GetTestPlanTestRuns godoc
+//
+//	@ID				GetTestPlanTestRuns
+//	@Summary		List all test cases of a test plan
+//	@Description	List all test cases of a test plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testplanID	path		string	true	"Test Plan ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/test-runs [get]
+func GetTestPlanTestRuns(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse test plan id from path")
+		}
+		testRuns, err := testPlanService.FindAllByTestPlanID(c.Context(), int32(testPlanID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info(loggedmodule.ApiTestPlans, "test run not found", "error", err)
+				return c.JSON(schema.TestRunListResponse{})
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(testRuns)
+	}
 }
 
 // CreateTestPlan godoc
@@ -263,5 +297,36 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 		return c.JSON(fiber.Map{
 			"message": "Test cases created and assigned",
 		})
+	}
+}
+
+// GetTestPlanTestCases godoc
+//
+//	@ID				GetTestPlanTestCases
+//	@Summary		List all tests of a test plan
+//	@Description	List all tests of a test plan
+//	@Tags			test-cases, test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testplanID	path		string	true	"Test Plan ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/test-cases [get]
+func GetTestPlanTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID := c.Params("testPlanID", "")
+
+		testCases, err := testCaseService.FindAllByTestPlanID(c.Context(), uuid.MustParse(testPlanID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info(loggedmodule.ApiTestPlans, "test run not found", "error", err)
+				return c.JSON(schema.TestCaseListResponse{})
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		return c.JSON(schema.NewTestCaseResponseList(testCases))
 	}
 }

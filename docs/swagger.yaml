@@ -180,6 +180,33 @@ components:
       - project_id
       - start_at
       type: object
+    schema.DashboardProjectRecord:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        updated_at:
+          type: string
+      type: object
+    schema.DashboardSummaryResponse:
+      properties:
+        closed_to_open_ratio:
+          type: number
+        project_count:
+          type: integer
+        recent_projects:
+          items:
+            $ref: '#/components/schemas/schema.DashboardProjectRecord'
+          type: array
+          uniqueItems: false
+        test_case_count:
+          type: integer
+        test_plan_count:
+          type: integer
+        tester_count:
+          type: integer
+      type: object
     schema.HealthStatus:
       properties:
         message:
@@ -571,6 +598,33 @@ components:
       - tags
       - title
       type: object
+    schema.UpdateUserRequest:
+      properties:
+        address:
+          type: string
+        city:
+          type: string
+        country_iso:
+          type: string
+        display_name:
+          type: string
+        first_name:
+          type: string
+        id:
+          type: integer
+        last_name:
+          type: string
+        org_id:
+          type: integer
+        phone:
+          type: string
+      required:
+      - city
+      - display_name
+      - first_name
+      - last_name
+      - org_id
+      type: object
     schema.UserCompact:
       properties:
         createdAt:
@@ -727,6 +781,37 @@ paths:
       summary: User signup
       tags:
       - auth
+  /v1/dashboard/summary:
+    get:
+      description: Returns key metrics for dashboard
+      operationId: DashboardSummary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.DashboardSummaryResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get dashboard summary
+      tags:
+      - dashboard
   /v1/modules:
     get:
       description: Get all Modules
@@ -2080,6 +2165,44 @@ paths:
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/test-cases:
+    get:
+      description: List all tests of a test plan
+      operationId: GetTestPlanTestCases
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testplanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all tests of a test plan
+      tags:
+      - test-cases
+      - test-runs
     post:
       description: Assign a test to a plan
       operationId: AssignTestsToPlan
@@ -2117,6 +2240,44 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Assign a test to a plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/test-runs:
+    get:
+      description: List all test cases of a test plan
+      operationId: GetTestPlanTestRuns
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testplanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all test cases of a test plan
       tags:
       - test-plans
   /v1/test-plans/query:
@@ -2697,7 +2858,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/schema.UpdateUserRequest'
         description: User ID
         required: true
       responses:

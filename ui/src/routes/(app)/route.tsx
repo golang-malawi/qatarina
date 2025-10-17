@@ -8,10 +8,12 @@ import {
 import AppSidebar from "@/components/app-sidebar";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { MainLinkItems } from "@/lib/navigation";
+import { ErrorComponent } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)")({
   beforeLoad: ({ context, location }) => {
-    if (!context.auth.isAuthenticated) {
+    console.log("beforeLoad auth context:", context.auth);
+    if (!context.auth?.isAuthenticated) {
       throw redirect({
         to: "/login",
         search: {
@@ -21,7 +23,9 @@ export const Route = createFileRoute("/(app)")({
     }
   },
   component: BaseLayout,
+  errorComponent: ({ error }) => <ErrorComponent error={error} />,
 });
+
 
 function BaseLayout() {
   return (

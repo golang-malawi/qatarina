@@ -1,52 +1,78 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Box, Button, Flex, Heading } from "@chakra-ui/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import $api from "@/lib/api/query";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Stack,
+  Text,
+  Icon,
+  Spinner,
+} from "@chakra-ui/react";
 import { IconUser } from "@tabler/icons-react";
+import { useUsersQuery } from "@/services/UserService";
+import ErrorAlert from "@/components/ui/error-alert";
 
 export const Route = createFileRoute("/(app)/users/")({
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData($api.queryOptions("get", "/v1/users")),
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const {
-    data: { users },
-    isPending,
-    error,
-  } = useSuspenseQuery($api.queryOptions("get", "/v1/users"));
+  const { data, isPending, isError } = useUsersQuery();
 
   if (isPending) {
-    return "Loading users...";
+    return (
+      <Flex justify="center" align="center" h="full" p={10}>
+        <Spinner size="xl" color="teal.500" />
+      </Flex>
+    );
   }
 
-  if (error) {
-    return <div className="error">Error: error fetching users</div>;
+  if (isError) {
+    return (
+      <ErrorAlert message={`Failed to load users: {(error as Error).message}`} />
+    );
   }
+
+  const users = data?.users || [];
+
   return (
-    <Box>
-      <Heading size="3xl">Users</Heading>
-      <Link to={`/users/new`}>
-        <Button>Add New User</Button>
-      </Link>
-      <Flex direction="column" gap="2" p="4" borderTop={"1px black solid"}>
-        {users &&
-          users.map((user) => (
-            <Box key={user.username}>
-              <IconUser />
-              <Link
-                to={`/users/view/$userID`}
-                params={{ userID: `${user.id}` }}
-              >
-                <strong>{user.displayName}</strong>
-              </Link>
-              <p>
-                <small>Registered At: {user.createdAt}</small>
-              </p>
-            </Box>
-          ))}
+    <Box p={6}>
+      <Flex justify="space-between" align="center" mb={6}>
+        <Heading size="lg">Users</Heading>
+        <Link to={`/users/new`}>
+          <Button colorScheme="teal">+ Add New User</Button>
+        </Link>
       </Flex>
+
+      <Stack gap={4}>
+        {users.map((user: any) => (
+          <Box
+            key={user.id}
+            p={4}
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="md"
+            _hover={{ bg: "gray.50", shadow: "sm" }}
+            transition="all 0.2s"
+          >
+            <Flex align="center" gap={3}>
+              <Icon as={IconUser} boxSize={6} color="teal.500" />
+              <Box>
+                <Link to={`/users/view/$userID`} params={{ userID: user.id }}>
+                  <Heading size="md">{user.displayName}</Heading>
+                </Link>
+                <Text fontSize="sm" color="gray.600">
+                  Username: {user.username}
+                </Text>
+                <Text fontSize="xs" color="gray.500">
+                  Registered At: {user.createdAt}
+                </Text>
+              </Box>
+            </Flex>
+          </Box>
+        ))}
+      </Stack>
     </Box>
   );
 }

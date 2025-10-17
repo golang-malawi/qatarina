@@ -6,7 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	_ "github.com/golang-malawi/qatarina/docs"
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
 )
 
@@ -16,6 +18,7 @@ func (api *API) routes() {
 	router.Get("/healthz", api.getSystemHealthz)
 	router.Get("/metrics", api.getSystemMetrics)
 	router.Get("/system/info", api.getSystemInfo)
+	router.Get("/swagger/*", swagger.New())
 
 	router.Post("/v1/auth/login", apiv1.AuthLogin(api.AuthService))
 	router.Post("/v1/auth/refresh-tokens", apiv1.AuthRefreshToken(api.AuthService))
@@ -30,11 +33,11 @@ func (api *API) routes() {
 	{
 		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))
 		usersV1.Post("", apiv1.CreateUser(api.UserService, api.logger))
-		usersV1.Get("/query", apiv1.SearchUsers(api.UserService))
-		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService))
-		usersV1.Post("/:userID", apiv1.UpdateUser(api.UserService))
+		usersV1.Get("/query", apiv1.SearchUsers(api.UserService, api.logger))
+		usersV1.Get("/:userID", apiv1.GetOneUser(api.UserService, api.logger))
+		usersV1.Post("/:userID", apiv1.UpdateUser(api.UserService, api.logger))
 		usersV1.Post("/invite/:email", apiv1.InviteUser(api.UserService))
-		usersV1.Delete("/:userID", apiv1.DeleteUser(api.UserService))
+		usersV1.Delete("/:userID", apiv1.DeleteUser(api.UserService, api.logger))
 	}
 
 	projectsV1 := router.Group("/v1/projects", authenticationMiddleware)
@@ -91,20 +94,22 @@ func (api *API) routes() {
 		testPlansV1.Get("/query", apiv1.SearchTestPlans(api.TestPlansService, api.logger))
 		testPlansV1.Get("/:testPlanID", apiv1.GetOneTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID/test-cases", apiv1.GetTestPlanTestCases(api.TestCasesService, api.logger))
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
 	{
-		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService))
-		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService))
-		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService))
+		testRunsV1.Get("", apiv1.ListTestRuns(api.TestRunsService, api.logger))
+		testRunsV1.Post("", apiv1.CreateTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Get("/query", apiv1.SearchTestRuns(api.TestRunsService, api.logger))
 		testRunsV1.Post("/bulk/commit", apiv1.CommitBulkTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService))
-		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService))
+		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService))
+		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
@@ -124,6 +129,11 @@ func (api *API) routes() {
 	frontendAssets, err := fs.Sub(ui.FrontendDistFS, "dist")
 	if err != nil {
 		panic(fmt.Errorf("failed to embed dist directory, cannot start Server. Got %v", err))
+	}
+
+	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
+	{
+		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"

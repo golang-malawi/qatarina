@@ -50,3 +50,9 @@ export async function deleteTestPlan(testPlanID: string) {
 export async function getTestPlans() {
   return apiClient.request("get", "/v1/test-plans");
 }
+
+export async function getTestRuns(testPlanID: string) {
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-runs", {
+    params: { path: { testplanID: testPlanID } },
+  });
+}

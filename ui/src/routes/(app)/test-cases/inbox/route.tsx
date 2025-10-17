@@ -1,12 +1,14 @@
 import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
+import { components } from "@/lib/api/v1";
 import {
   Box,
   Flex,
   Input,
-  Container,
-  Heading,
   Stack,
   Badge,
+  Text,
+  Spinner,
+  Heading,
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
@@ -25,57 +27,85 @@ function TestCasePageInbox() {
   } = useSuspenseQuery(findTestCaseAllQueryOptions);
 
   if (isPending) {
-    return "Loading Projects...";
+    return (
+      <Flex justify="center" align="center" minH="80vh">
+        <Spinner size="xl" color="teal.500" />
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: error fetching</div>;
+    return (
+      <Box p={6} textAlign="center" color="red.500">
+        Error fetching test cases.
+      </Box>
+    );
   }
 
   const testCaseRows = (testCases?.data?.test_cases ?? []).map(
-    (tc: any, idx: number) => (
-      <Box padding={"6px"} borderBottom={"1px solid #efefef"} key={idx}>
+    (tc: components["schemas"]["schema.TestCaseResponse"], idx: number) => (
+      <Box
+        key={idx}
+        p={4}
+        borderBottom="1px solid"
+        borderColor="gray.200"
+        _hover={{
+          bg: "gray.50",
+          cursor: "pointer",
+        }}
+        transition="background 0.2s"
+      >
         <Link
           to={`/test-cases/inbox/$testCaseId`}
-          params={{
-            testCaseId: tc.id,
-          }}
+          params={{ testCaseId: `${tc.id}` }}
           title={tc.description}
         >
-          <strong>{tc.code}</strong> -{" "}
-          {tc.description?.substring(0, 40) + "..."}
+          <Text fontWeight="semibold" mb={1}>
+            {tc.code}
+          </Text>
+          <Text fontSize="sm" color="gray.600" maxLines={1}>
+            {tc.description}
+          </Text>
+          <Stack direction="row" mt={2} gap={2}>
+            <Badge color="blue.700">
+              {/*tc.usageCount*/ 0} tests performed
+            </Badge>
+            <Badge color="green">Success: 0</Badge>
+            <Badge color="red">Failed: 0</Badge>
+          </Stack>
         </Link>
-        <Stack direction="row">
-          <Badge color="blue.700">{tc.usage_count ?? 0} tests performed</Badge>
-          <Badge color="green">Success: 0</Badge>
-          <Badge color="red.700">Failed: 0</Badge>
-        </Stack>
       </Box>
-    ),
+    )
   );
 
   return (
-    <div>
-      <Heading size={"3xl"}>Test Case Inbox</Heading>
-      <Flex
-        align={"right"}
-        mb="0"
-        gap={3}
-        p="4"
-        alignItems={"flex-end"}
-        borderBottom={"1px solid #efefef"}
-        className="actions"
+    <Flex h="100vh">
+      {/* Left Pane - Test Case List */}
+      <Box
+        w={{ base: "full", md: "400px" }}
+        borderRight="1px solid"
+        borderColor="gray.200"
+        overflowY="auto"
       >
-        <Input placeholder="Search for Test Cases " w="100%" />
-      </Flex>
-      <Flex direction={"row"} gap="0">
-        <Container height={"100vh"} p="0">
-          <Flex direction="column">{testCaseRows}</Flex>
-        </Container>
-        <Container p="2" borderLeft={"1px solid #efefef"}>
-          <Outlet />
-        </Container>
-      </Flex>
-    </div>
+        <Box p={6} borderBottom="1px solid" borderColor="gray.200">
+          <Heading size="lg" color="teal.600">
+            Test Case Inbox
+          </Heading>
+          <Input
+            placeholder="Search for Test Cases..."
+            mt={4}
+            variant="outline"
+            focusRingColor="teal.400"
+          />
+        </Box>
+
+        <Box>{testCaseRows}</Box>
+      </Box>
+
+      {/* Right Pane - Details */}
+      <Box flex="1" p={6} bg="gray.50">
+        <Outlet />
+      </Box>
+    </Flex>
   );
 }

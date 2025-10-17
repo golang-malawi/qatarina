@@ -8,6 +8,8 @@ import "./global.css";
 import { AuthProvider } from "./context/user";
 import { useAuth } from "./hooks/isLoggedIn";
 import { Provider } from "./components/ui/provider";
+import { Spinner } from "@chakra-ui/react";
+
 
 const queryClient = new QueryClient();
 
@@ -35,7 +37,23 @@ declare module "@tanstack/react-router" {
 // eslint-disable-next-line react-refresh/only-export-components
 function InnerApp() {
   const auth = useAuth();
-  return <RouterProvider router={router} context={{ auth }} />;
+
+   if (!auth) {
+    return <Spinner size="xl" />; // or a loading screen
+  }
+
+  const router = createRouter({
+    routeTree,
+    context: {
+      queryClient,
+      auth,
+    },
+    defaultPreload: "intent",
+    defaultPreloadStaleTime: 0,
+    scrollRestoration: true,
+  });
+
+  return <RouterProvider router={router} />;
 }
 
 const rootElement = document.getElementById("root")!;

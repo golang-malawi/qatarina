@@ -21,8 +21,6 @@ export const MainLinkItems: NavItem[] = [
   { path: "/test-cases/inbox", name: "Inbox", icon: FiInbox },
   { path: "/projects", name: "Projects", icon: FiFolder },
   { path: "/testers", name: "Testers", icon: FiUsers },
-  // TODO(zikani03): { path: "/integrations", name: "Integrations", icon: FiLink },
-  // TODO(zikani03): { path: "/reports", name: "Reports", icon: FiBarChart2 },
   { path: "/users", name: "Users", icon: FiUser },
   { path: "/settings", name: "Settings", icon: FiSettings },
   { path: "/logout", name: "Logout", icon: FiLogOut },
