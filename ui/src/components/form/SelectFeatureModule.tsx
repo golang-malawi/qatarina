@@ -10,11 +10,13 @@ import ModuleService, { Module } from "@/services/ModuleService";
 export type SelectFeatureModuleProps = {
   projectId: string;
   onChange: (value: string) => void;
+  value?: string;
 };
 
 export default function SelectFeatureModule({
   projectId,
   onChange,
+  value,
 }: SelectFeatureModuleProps) {
   const [featureModules, setFeatureModules] = useState<
     ListCollection<{ label: string; value: string }>
@@ -43,6 +45,7 @@ export default function SelectFeatureModule({
   return (
     <Select.Root
       collection={featureModules}
+      value={value ? [value] : []}
       onValueChange={(e) => onChange(e.value[0] ?? "")}
     >
       <Select.HiddenSelect />

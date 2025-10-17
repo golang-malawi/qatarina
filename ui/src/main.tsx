@@ -13,24 +13,10 @@ import { Spinner } from "@chakra-ui/react";
 
 const queryClient = new QueryClient();
 
-// Set up a Router instance
-const router = createRouter({
-  routeTree,
-  context: {
-    queryClient,
-    auth: undefined!,
-  },
-  defaultPreload: "intent",
-  // Since we're using React Query, we don't want loader calls to ever be stale
-  // This will ensure that the loader is always called when the route is preloaded or visited
-  defaultPreloadStaleTime: 0,
-  scrollRestoration: true,
-});
-
 // Register things for typesafety
 declare module "@tanstack/react-router" {
   interface Register {
-    router: typeof router;
+    router: ReturnType<typeof createRouter<typeof routeTree>>;
   }
 }
 
@@ -56,15 +42,6 @@ function InnerApp() {
   return <RouterProvider router={router} />;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-function App() {
-  return (
-    <AuthProvider>
-      <InnerApp />
-    </AuthProvider>
-  );
-}
-
 const rootElement = document.getElementById("root")!;
 
 if (!rootElement.innerHTML) {
@@ -73,10 +50,11 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <Provider>
-          <App />
+          <AuthProvider>
+            <InnerApp />
+          </AuthProvider>
         </Provider>
       </QueryClientProvider>
     </StrictMode>
   );
 }
-

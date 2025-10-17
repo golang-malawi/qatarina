@@ -2,6 +2,7 @@ import { createListCollection, Portal, Select } from "@chakra-ui/react";
 
 export type SelectTestKindProps = {
   onChange: (value: string) => void;
+  value?: string;
 };
 
 const testKinds = createListCollection({
@@ -45,10 +46,11 @@ const testKinds = createListCollection({
   ],
 });
 
-export default function SelectTestKind({ onChange }: SelectTestKindProps) {
+export default function SelectTestKind({ onChange, value }: SelectTestKindProps) {
   return (
     <Select.Root
       collection={testKinds}
+      value={value ? [value] : []}
       onValueChange={(e) => onChange(e.value[0] ?? "")}
     >
       <Select.HiddenSelect />

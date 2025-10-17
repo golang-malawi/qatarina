@@ -11,6 +11,7 @@ export interface AuthContext {
   user: string | null;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = React.createContext<AuthContext | null>(null);
 
 const key = "auth.user_id";
@@ -47,29 +48,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = React.useCallback(
     async (data: LoginFormValues) => {
       const { mutateAsync } = loginMutation;
-      const res = await mutateAsync({
-        body: {
-          email: data.email,
-          password: data.password,
-        },
-      });
-      if (!res) {
-        throw new Error("Something happened while logging in..");
+      try {
+        const res = await mutateAsync({
+          body: {
+            email: data.email,
+            password: data.password,
+          },
+        });
+        if (!res) {
+          throw new Error("Invalid email or password. Please try again.");
+        }
+        const loginData = res as components["schemas"]["schema.LoginResponse"];
+        if (!loginData.user_id || !loginData.token) {
+          throw new Error("Login response missing required fields");
+        }
+        localStorage.setItem("auth.user_id", `${loginData.user_id}`);
+        localStorage.setItem("auth.displayName", loginData.displayName ?? "");
+        localStorage.setItem("auth.email", loginData.email ?? "");
+        localStorage.setItem("auth.token", loginData.token);
+        localStorage.setItem(
+          "auth.expires_at",
+          loginData.expires_at?.toString() ?? ""
+        );
+        setStoredUser(loginData.displayName ?? "");
+        setUser(loginData.displayName ?? "");
+      } catch (error: unknown) {
+        console.log(error);
+        let message = "Invalid email or password. Please try again.";
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof (error as { message?: unknown }).message === "string"
+        ) {
+          message = "Invalid email or password. Please try again.";
+        }
+        throw new Error(message);
       }
-      const loginData = res as components["schemas"]["schema.LoginResponse"];
-      if (!loginData.user_id || !loginData.token) {
-        throw new Error("Login response missing required fields");
-      }
-      localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-      localStorage.setItem("auth.displayName", loginData.displayName ?? "");
-      localStorage.setItem("auth.email", loginData.email ?? "");
-      localStorage.setItem("auth.token", loginData.token);
-      localStorage.setItem(
-        "auth.expires_at",
-        loginData.expires_at?.toString() ?? ""
-      );
-      setStoredUser(loginData.displayName ?? "");
-      setUser(loginData.displayName ?? "");
     },
     [loginMutation]
   );
