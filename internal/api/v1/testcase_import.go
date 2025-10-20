@@ -50,7 +50,7 @@ func ImportTestCasesFromFile(testCaseService services.TestCaseService, importSer
 		defer file.Close()
 
 		// Parse file contents into test cases
-		testCases, err := importService.ParseFile(c.Context(), projectID, file, fileHeader.Filename)
+		testCases, err := importService.FromFile(c.Context(), projectID, file, fileHeader.Filename)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to parse test cases", "filename", fileHeader.Filename, "error", err)
 			return problemdetail.ServerErrorProblem(c, err.Error())

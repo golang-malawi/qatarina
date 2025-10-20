@@ -15,7 +15,7 @@ import (
 )
 
 type TestCaseImportService interface {
-	ParseFile(ctx context.Context, projectID int64, file multipart.File, filename string) ([]schema.CreateTestCaseRequest, error)
+	FromFile(ctx context.Context, projectID int64, file multipart.File, filename string) ([]schema.CreateTestCaseRequest, error)
 }
 
 type testCaseImportServiceImpl struct {
@@ -32,7 +32,7 @@ func NewTestCaseImportService(projectService ProjectService, logger logging.Logg
 	}
 }
 
-func (s *testCaseImportServiceImpl) ParseFile(ctx context.Context, projectID int64, file multipart.File, filename string) ([]schema.CreateTestCaseRequest, error) {
+func (s *testCaseImportServiceImpl) FromFile(ctx context.Context, projectID int64, file multipart.File, filename string) ([]schema.CreateTestCaseRequest, error) {
 	// Validate project existence
 	project, err := s.projectService.FindByID(ctx, projectID)
 	if err != nil || project == nil {
