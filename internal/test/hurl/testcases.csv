@@ -1,0 +1,4 @@
+Title,Description,Kind,Code,FeatureOrModule,Tags,IsDraft
+Login-valid creds,User logs in with correct password,general,TC-016,Login,"login,auth",false
+Login-invalid creds,Error shown for wrong password,regression,TC-017,Login,"login,error",false
+Login-empty fields,Validation errors for empty fields,user_interface,TC-18,Login,"login,validation",false
