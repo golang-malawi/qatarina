@@ -79,6 +79,7 @@ func (api *API) routes() {
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
