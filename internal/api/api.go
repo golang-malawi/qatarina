@@ -11,20 +11,21 @@ import (
 )
 
 type API struct {
-	logger           logging.Logger
-	app              *fiber.App
-	Config           *config.Config
-	RiverClient      *river.Client[pgx.Tx]
-	AuthService      services.AuthService
-	UserService      services.UserService
-	ProjectsService  services.ProjectService
-	TestCasesService services.TestCaseService
-	TestPlansService services.TestPlanService
-	TestRunsService  services.TestRunService
-	TesterService    services.TesterService
-	ModuleService    services.ModuleService
-	PageService      services.PageService
-	DashboardService services.DashboardService
+	logger                logging.Logger
+	app                   *fiber.App
+	Config                *config.Config
+	RiverClient           *river.Client[pgx.Tx]
+	AuthService           services.AuthService
+	UserService           services.UserService
+	ProjectsService       services.ProjectService
+	TestCasesService      services.TestCaseService
+	TestPlansService      services.TestPlanService
+	TestRunsService       services.TestRunService
+	TesterService         services.TesterService
+	ModuleService         services.ModuleService
+	PageService           services.PageService
+	DashboardService      services.DashboardService
+	TestCaseImportService services.TestCaseImportService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -32,20 +33,23 @@ func NewAPI(config *config.Config) *API {
 	dbConn := dbsqlc.New(config.OpenDB())
 	logger := logging.NewFromConfig(&config.Logging)
 
+	projectService := services.NewProjectService(dbConn, logger)
+
 	return &API{
-		logger:           logger,
-		app:              fiber.New(),
-		Config:           config,
-		AuthService:      services.NewAuthService(&config.Auth, dbConn, logger),
-		ProjectsService:  services.NewProjectService(dbConn, logger),
-		TestCasesService: services.NewTestCaseService(dbConn, logger),
-		TestPlansService: services.NewTestPlanService(dbConn, logger),
-		TestRunsService:  services.NewTestRunService(dbConn, logger),
-		UserService:      services.NewUserService(dbConn, logger, config.SMTP),
-		TesterService:    services.NewTesterService(dbConn, logger),
-		ModuleService:    services.NewModuleService(dbConn),
-		PageService:      services.NewPageService(dbConn),
-		DashboardService: services.NewDashboardService(dbConn, logger),
+		logger:                logger,
+		app:                   fiber.New(),
+		Config:                config,
+		AuthService:           services.NewAuthService(&config.Auth, dbConn, logger),
+		ProjectsService:       services.NewProjectService(dbConn, logger),
+		TestCasesService:      services.NewTestCaseService(dbConn, logger),
+		TestPlansService:      services.NewTestPlanService(dbConn, logger),
+		TestRunsService:       services.NewTestRunService(dbConn, logger),
+		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
+		TesterService:         services.NewTesterService(dbConn, logger),
+		ModuleService:         services.NewModuleService(dbConn),
+		PageService:           services.NewPageService(dbConn),
+		DashboardService:      services.NewDashboardService(dbConn, logger),
+		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
 	}
 }
 
