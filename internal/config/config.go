@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	Server   HTTPServerConfiguration `mapstructure:"server"`
-	Auth     AuthConfiguration       `mapstructure:"auth"`
-	Database DatabaseConfiguration   `mapstructure:"db"`
-	SMTP     SMTPConfiguration       `mapstructure:"smtp"`
-	Logging  LoggingConfiguration    `mapstructure:"logging"`
-	Platform PlatformConfiguration   `mapstructure:"platform"`
+	Server     HTTPServerConfiguration `mapstructure:"server"`
+	Auth       AuthConfiguration       `mapstructure:"auth"`
+	Database   DatabaseConfiguration   `mapstructure:"db"`
+	SMTP       SMTPConfiguration       `mapstructure:"smtp"`
+	Logging    LoggingConfiguration    `mapstructure:"logging"`
+	Platform   PlatformConfiguration   `mapstructure:"platform"`
+	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
 }
 
 type DatabaseConfiguration struct {
@@ -68,6 +69,10 @@ type AdminConfiguration struct {
 type PlatformConfiguration struct {
 	AnonymousTestCase     bool `mapstructure:"" envconfig:"QATARINA_ANONYMOUS_TEST_CASE"`
 	CreateDefaultTestPlan bool `mapstructure:"create_default_test_plan" envconfig:"QATARINA_ENABLE_DEFAULT_TEST_PLAN"`
+}
+
+type ImportFileConfiguration struct {
+	MaxRows int `mapstructure:"max_rows"`
 }
 
 func (c *Config) GetDatabaseURL() string {

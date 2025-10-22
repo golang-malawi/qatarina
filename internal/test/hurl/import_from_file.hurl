@@ -34,3 +34,16 @@ file: file,testcases.xlsx; application/vnd.openxmlformats-officedocument.spreads
 HTTP 200
 [Asserts]
 jsonpath "$.message" contains "Imported"
+
+# Try importing oversized file
+POST http://localhost:4597/v1/test-cases/import-file
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+[Multipart]
+projectID: 2
+file: file, testcases_over.csv; text/csv
+
+HTTP 500
+[Asserts]
+body contains "row limit"

@@ -49,7 +49,7 @@ func NewAPI(config *config.Config) *API {
 		ModuleService:         services.NewModuleService(dbConn),
 		PageService:           services.NewPageService(dbConn),
 		DashboardService:      services.NewDashboardService(dbConn, logger),
-		TestCaseImportService: services.NewTestCaseImportService(projectService, logger),
+		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
 	}
 }
 

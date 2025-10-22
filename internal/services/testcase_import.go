@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -22,13 +23,15 @@ type testCaseImportServiceImpl struct {
 	name           loggedmodule.Name
 	projectService ProjectService
 	logger         logging.Logger
+	config         config.ImportFileConfiguration
 }
 
-func NewTestCaseImportService(projectService ProjectService, logger logging.Logger) TestCaseImportService {
+func NewTestCaseImportService(projectService ProjectService, logger logging.Logger, cfg config.ImportFileConfiguration) TestCaseImportService {
 	return &testCaseImportServiceImpl{
 		projectService: projectService,
 		name:           "importTestcasesFromFile-service",
 		logger:         logger,
+		config:         cfg,
 	}
 }
 
@@ -74,6 +77,13 @@ func (s *testCaseImportServiceImpl) FromFile(ctx context.Context, projectID int6
 			start = i + 1
 			break
 		}
+	}
+
+	// Enforce row limit
+	rowCount := len(rows) - start
+	if rowCount > s.config.MaxRows {
+		s.logger.Error(s.name, "import row limit exceeded", "projectID", projectID, "rowCount", rowCount, "limit", s.config.MaxRows)
+		return nil, fmt.Errorf("import exceeds row limit of %d (got %d)", s.config.MaxRows, rowCount)
 	}
 
 	var testCases []schema.CreateTestCaseRequest
