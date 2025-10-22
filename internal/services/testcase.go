@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -84,18 +83,27 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 
 	tx := dbsqlc.New(sqlTx)
 
-	testCases := make([]dbsqlc.TestCase, 0)
+	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
 	for _, request := range bulkRequest.TestCases {
 		uuidVal, _ := uuid.NewV7()
 
-		code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
+		// Ensure sequence row exists for this project's item
+		prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+			ProjectID: int32(request.ProjectID),
+			Prefix:    prefixKey,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+		}
+
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
 		if err != nil {
 			return nil, err
 		}
 
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
-			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
+			ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 			Kind:             dbsqlc.TestKind(request.Kind),
 			Code:             code,
 			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
@@ -143,12 +151,20 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 
 	tx := dbsqlc.New(sqlTx)
 
-	uuidVal, _ := uuid.NewV7()
+	// Ensure sequence row exists for this project inside the same transaction
+	prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(request.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
 
-	code, err := GenerateNextCode(ctx, tx, request.FeatureOrModule)
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
 	if err != nil {
 		return nil, err
 	}
+	uuidVal, _ := uuid.NewV7()
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
 		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
@@ -170,11 +186,16 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		return nil, err
 	}
 
+	tc, err := tx.GetTestCase(ctx, createdID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+	}
+
 	if err := sqlTx.Commit(); err != nil {
 		return nil, err
 	}
-	res, err := t.queries.GetTestCase(ctx, createdID)
-	return &res, err
+
+	return &tc, err
 }
 
 // DeleteByID implements TestCaseService.
@@ -245,24 +266,22 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 }
 
-func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, module string) (string, error) {
-	prefix := generatePrefix(module)
-
-	latest, err := db.GetLatestCodeByPrefix(ctx, common.NullString(prefix))
-	if err != nil && err != sql.ErrNoRows {
-		return "", err
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, module string, userCode *string) (string, error) {
+	if userCode != nil && *userCode != "" {
+		return *userCode, nil
 	}
 
-	var nextNumber int
-	if latest != "" {
-		numStr := latest[len(prefix):]
-		num, _ := strconv.Atoi(numStr)
-		nextNumber = num + 1
-	} else {
-		nextNumber = 1
+	prefixKey := strings.ToLower(strings.TrimSpace(module)) // used for sequence lookup
+	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
+		ProjectID: int32(projectID),
+		Prefix:    prefixKey,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get next sequence: %w", err)
 	}
 
-	return fmt.Sprintf("%s%03d", prefix, nextNumber), nil
+	displayPrefix := generatePrefix(module) // used for code formatting
+	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
 func generatePrefix(module string) string {
