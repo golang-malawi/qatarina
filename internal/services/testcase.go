@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -183,8 +184,33 @@ func (t *testCaseServiceImpl) FindAllCreatedBy(ctx context.Context, createdByID 
 }
 
 // Update implements TestCaseService.
-func (t *testCaseServiceImpl) Update(context.Context, *schema.UpdateTestCaseRequest) (*dbsqlc.TestCase, error) {
-	panic("unimplemented")
+func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTestCaseRequest) (*dbsqlc.TestCase, error) {
+	id, err := uuid.Parse(req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid UUID: %w", err)
+	}
+
+	params := dbsqlc.UpdateTestCaseParams{
+		ID:              id,
+		Title:           req.Title,
+		Kind:            dbsqlc.TestKind(req.Kind),
+		Code:            req.Code,
+		Description:     req.Description,
+		FeatureOrModule: common.NullString(req.FeatureOrModule),
+		IsDraft:         common.NewNullBool(req.IsDraft),
+		Tags:            req.Tags,
+		UpdatedAt:       common.NullTime(time.Now()),
+	}
+
+	if err := t.queries.UpdateTestCase(ctx, params); err != nil {
+		return nil, err
+	}
+
+	tc, err := t.queries.GetTestCase(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }
 
 func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.TestCase, error) {
