@@ -722,6 +722,41 @@ func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
 	return items, nil
 }
 
+const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
+SELECT code FROM test_cases
+WHERE code LIKE $1 || '%'
+ORDER BY code DESC
+LIMIT 1
+FOR UPDATE
+`
+
+func (q *Queries) GetLatestCodeByPrefix(ctx context.Context, dollar_1 sql.NullString) (string, error) {
+	row := q.db.QueryRowContext(ctx, getLatestCodeByPrefix, dollar_1)
+	var code string
+	err := row.Scan(&code)
+	return code, err
+}
+
+const getNextTestCaseSequence = `-- name: GetNextTestCaseSequence :one
+UPDATE test_case_sequences
+SET current_val = current_val +1,
+last_generated_at = now()
+WHERE project_id = $1 AND prefix = $2
+RETURNING current_val
+`
+
+type GetNextTestCaseSequenceParams struct {
+	ProjectID int32
+	Prefix    string
+}
+
+func (q *Queries) GetNextTestCaseSequence(ctx context.Context, arg GetNextTestCaseSequenceParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getNextTestCaseSequence, arg.ProjectID, arg.Prefix)
+	var current_val int32
+	err := row.Scan(&current_val)
+	return current_val, err
+}
+
 const getOneModule = `-- name: GetOneModule :one
 SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
 WHERE id = $1
@@ -1167,6 +1202,22 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const initTestCaseSequence = `-- name: InitTestCaseSequence :exec
+INSERT INTO test_case_sequences (project_id, prefix, current_val, last_generated_at)
+VALUES ($1, $2, 0, now())
+ON CONFLICT (project_id, prefix) DO NOTHING
+`
+
+type InitTestCaseSequenceParams struct {
+	ProjectID int32
+	Prefix    string
+}
+
+func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequenceParams) error {
+	_, err := q.db.ExecContext(ctx, initTestCaseSequence, arg.ProjectID, arg.Prefix)
+	return err
 }
 
 const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one

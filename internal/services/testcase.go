@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -59,12 +60,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -72,14 +75,37 @@ func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseSer
 
 // BulkCreate implements TestCaseService.
 func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
-	createList := make([]uuid.UUID, 0)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
 	for _, request := range bulkRequest.TestCases {
 		uuidVal, _ := uuid.NewV7()
+
+		// Ensure sequence row exists for this project's item
+		prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+			ProjectID: int32(request.ProjectID),
+			Prefix:    prefixKey,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+		}
+
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
+		if err != nil {
+			return nil, err
+		}
+
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
-			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
+			ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 			Kind:             dbsqlc.TestKind(request.Kind),
-			Code:             request.Code,
+			Code:             code,
 			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 			Title:            request.Title,
 			Description:      request.Description,
@@ -91,14 +117,23 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 		}
 
-		createdID, err := t.queries.CreateTestCase(ctx, params)
+		createdID, err := tx.CreateTestCase(ctx, params)
 		if err != nil {
 			return nil, err
 		}
-		createList = append(createList, createdID)
+		tc, err := tx.GetTestCase(ctx, createdID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+		}
+
+		testCases = append(testCases, tc)
 	}
 
-	return []dbsqlc.TestCase{}, nil
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return testCases, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -108,12 +143,33 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	// Ensure sequence row exists for this project inside the same transaction
+	prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(request.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
+	if err != nil {
+		return nil, err
+	}
 	uuidVal, _ := uuid.NewV7()
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
 		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
 		Kind:             dbsqlc.TestKind(request.Kind),
-		Code:             request.Code,
+		Code:             code,
 		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
 		Title:            request.Title,
 		Description:      request.Description,
@@ -125,12 +181,21 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
 	}
 
-	createdID, err := t.queries.CreateTestCase(ctx, params)
+	createdID, err := tx.CreateTestCase(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	res, err := t.queries.GetTestCase(ctx, createdID)
-	return &res, err
+
+	tc, err := tx.GetTestCase(ctx, createdID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tc, err
 }
 
 // DeleteByID implements TestCaseService.
@@ -224,4 +289,37 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 	return testCases, nil
 
+}
+
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, module string, userCode *string) (string, error) {
+	if userCode != nil && *userCode != "" {
+		return *userCode, nil
+	}
+
+	prefixKey := strings.ToLower(strings.TrimSpace(module)) // used for sequence lookup
+	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
+		ProjectID: int32(projectID),
+		Prefix:    prefixKey,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get next sequence: %w", err)
+	}
+
+	displayPrefix := generatePrefix(module) // used for code formatting
+	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
+}
+
+func generatePrefix(module string) string {
+	module = strings.TrimSpace(strings.ToLower(module))
+	words := strings.Fields(module)
+
+	if len(words) >= 2 {
+		return strings.ToUpper(string(words[0][0]) + string(words[1][0]))
+	}
+
+	if len(module) >= 2 {
+		return strings.ToUpper(module[:2])
+	}
+
+	return strings.ToUpper(module)
 }

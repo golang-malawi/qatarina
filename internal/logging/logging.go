@@ -92,3 +92,11 @@ func CreateLogger(lc *config.LoggingConfiguration) *slog.Logger {
 		},
 	))
 }
+
+func NewForTest() Logger {
+	return &slogLogger{
+		logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})),
+	}
+}
