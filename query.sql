@@ -157,6 +157,17 @@ RETURNING current_val;
 INSERT INTO test_case_sequences (project_id, prefix, current_val, last_generated_at)
 VALUES ($1, $2, 0, now())
 ON CONFLICT (project_id, prefix) DO NOTHING;
+-- name: UpdateTestCase :exec
+UPDATE test_cases SET
+kind = $2,
+code = $3,
+feature_or_module = $4,
+title = $5,
+description = $6,
+is_draft = $7,
+tags = $8,
+updated_at = $9
+WHERE id = $1;
 
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;

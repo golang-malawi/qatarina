@@ -61,7 +61,7 @@ type UpdateTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`
-	IsDraft         string   `json:"is_draft" validate:"required"`
+	IsDraft         bool     `json:"is_draft" validate:"required"`
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
 }
