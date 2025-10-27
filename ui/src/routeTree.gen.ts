@@ -11,10 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as appIndexRouteImport } from './routes/(app)/index'
-<<<<<<< HEAD
-=======
 import { Route as UiDynamicFormDemoIndexRouteImport } from './routes/ui/dynamic-form-demo/index'
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
 import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
 import { Route as appUsersIndexRouteImport } from './routes/(app)/users/index'
@@ -63,14 +60,11 @@ const appIndexRoute = appIndexRouteImport.update({
   path: '/',
   getParentRoute: () => appRouteRoute,
 } as any)
-<<<<<<< HEAD
-=======
 const UiDynamicFormDemoIndexRoute = UiDynamicFormDemoIndexRouteImport.update({
   id: '/ui/dynamic-form-demo/',
   path: '/ui/dynamic-form-demo/',
   getParentRoute: () => rootRouteImport,
 } as any)
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
 const authLogoutIndexRoute = authLogoutIndexRouteImport.update({
   id: '/(auth)/logout/',
   path: '/logout/',
@@ -299,10 +293,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof appUsersIndexRoute
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
-<<<<<<< HEAD
-=======
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -343,10 +334,7 @@ export interface FileRoutesByTo {
   '/users': typeof appUsersIndexRoute
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
-<<<<<<< HEAD
-=======
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -390,10 +378,7 @@ export interface FileRoutesById {
   '/(app)/users/': typeof appUsersIndexRoute
   '/(auth)/login/': typeof authLoginIndexRoute
   '/(auth)/logout/': typeof authLogoutIndexRoute
-<<<<<<< HEAD
-=======
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
   '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
   '/(app)/projects/new/': typeof appProjectsNewIndexRoute
   '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
@@ -437,10 +422,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/login'
     | '/logout'
-<<<<<<< HEAD
-=======
     | '/ui/dynamic-form-demo'
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
     | '/users/view/$userID'
     | '/projects/new'
     | '/test-cases/new'
@@ -481,10 +463,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/login'
     | '/logout'
-<<<<<<< HEAD
-=======
     | '/ui/dynamic-form-demo'
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
     | '/users/view/$userID'
     | '/projects/new'
     | '/test-cases/new'
@@ -527,10 +506,7 @@ export interface FileRouteTypes {
     | '/(app)/users/'
     | '/(auth)/login/'
     | '/(auth)/logout/'
-<<<<<<< HEAD
-=======
     | '/ui/dynamic-form-demo/'
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
     | '/(app)/users/view/$userID'
     | '/(app)/projects/new/'
     | '/(app)/test-cases/new/'
@@ -562,23 +538,15 @@ export interface RootRouteChildren {
   projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
   authLoginIndexRoute: typeof authLoginIndexRoute
   authLogoutIndexRoute: typeof authLogoutIndexRoute
-<<<<<<< HEAD
-=======
   UiDynamicFormDemoIndexRoute: typeof UiDynamicFormDemoIndexRoute
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/(app)': {
       id: '/(app)'
-<<<<<<< HEAD
-      path: '/'
-      fullPath: '/'
-=======
       path: ''
       fullPath: ''
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
       preLoaderRoute: typeof appRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -588,8 +556,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof appIndexRouteImport
       parentRoute: typeof appRouteRoute
-<<<<<<< HEAD
-=======
     }
     '/ui/dynamic-form-demo/': {
       id: '/ui/dynamic-form-demo/'
@@ -597,7 +563,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/ui/dynamic-form-demo'
       preLoaderRoute: typeof UiDynamicFormDemoIndexRouteImport
       parentRoute: typeof rootRouteImport
->>>>>>> ad03a6aa31134e4cc92689c3b9aa888565ad0a2f
     }
     '/(auth)/logout/': {
       id: '/(auth)/logout/'
