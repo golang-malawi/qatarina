@@ -2139,6 +2139,46 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 	return err
 }
 
+const updateTestCase = `-- name: UpdateTestCase :exec
+UPDATE test_cases SET
+kind = $2,
+code = $3,
+feature_or_module = $4,
+title = $5,
+description = $6,
+is_draft = $7,
+tags = $8,
+updated_at = $9
+WHERE id = $1
+`
+
+type UpdateTestCaseParams struct {
+	ID              uuid.UUID
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	IsDraft         sql.NullBool
+	Tags            []string
+	UpdatedAt       sql.NullTime
+}
+
+func (q *Queries) UpdateTestCase(ctx context.Context, arg UpdateTestCaseParams) error {
+	_, err := q.db.ExecContext(ctx, updateTestCase,
+		arg.ID,
+		arg.Kind,
+		arg.Code,
+		arg.FeatureOrModule,
+		arg.Title,
+		arg.Description,
+		arg.IsDraft,
+		pq.Array(arg.Tags),
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const updateTestPlan = `-- name: UpdateTestPlan :exec
 UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
 updated_by_id = $5, kind = $6, description = $7, start_at = $8,
