@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -43,7 +44,37 @@ func (g *GitHubIntegration) FetchProjects(ctx context.Context) ([]string, error)
 }
 
 func (g *GitHubIntegration) ListIssues(ctx context.Context, project string) ([]any, error) {
-	return nil, fmt.Errorf("failed to list issues")
+	parts := strings.Split(project, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid project format, expected 'owner/repo'")
+	}
+	owner := parts[0]
+	repo := parts[1]
+
+	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
+		State:       "open",
+		Sort:        "created",
+		Direction:   "desc",
+		ListOptions: github.ListOptions{PerPage: 100},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list issues: %w", err)
+	}
+
+	results := make([]any, 0)
+	for _, issue := range issues {
+		if issue.PullRequestLinks != nil {
+			continue // skip pull requests
+		}
+		results = append(results, map[string]any{
+			"id":     issue.GetID(),
+			"title":  issue.GetTitle(),
+			"body":   issue.GetBody(),
+			"labels": issue.Labels,
+			"url":    issue.GetHTMLURL(),
+		})
+	}
+	return results, nil
 }
 
 func (g *GitHubIntegration) CreateTestCasesFromOpenIssues(ctx context.Context, owner, repo string, projectID int64) ([]dbsqlc.TestCase, error) {
@@ -82,7 +113,7 @@ func (g *GitHubIntegration) CreateTestCasesFromOpenIssues(ctx context.Context, o
 			body = *issue.Body
 		}
 		if title == "" {
-			return nil, fmt.Errorf("Test case title cannot be empty")
+			return nil, fmt.Errorf("test case title cannot be empty")
 		}
 		createdCase, err := g.testCaseService.Create(ctx, &schema.CreateTestCaseRequest{
 			ProjectID:       projectID,

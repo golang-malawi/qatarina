@@ -137,6 +137,11 @@ func (api *API) routes() {
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
 	}
 
+	githubIntegrationV1 := router.Group("/v1/github", authenticationMiddleware)
+	{
+		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.ProjectsService, api.Config.GitHub, api.logger))
+	}
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),

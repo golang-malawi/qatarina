@@ -2,10 +2,13 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -44,5 +47,33 @@ func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, t
 		return c.JSON(fiber.Map{
 			"test_cases": testCases,
 		})
+	}
+}
+
+func ListGitHubIssues(projectService services.ProjectService, githubConfig config.GitHubConfiguration, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.ImportFromGithubRequest)
+		_, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid request body")
+		}
+
+		if githubConfig.Token == "" {
+			return problemdetail.ServerErrorProblem(c, "GitHub token is not configured")
+		}
+		request.GitHubToken = githubConfig.Token
+
+		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
+		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, nil)
+
+		issues, err := githubIntegration.ListIssues(c.Context(), fmt.Sprintf("%s/%s", request.Owner, request.Repository))
+		if err != nil {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list issues", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to list issues")
+		}
+		return c.JSON(fiber.Map{
+			"issues": issues,
+		})
+
 	}
 }

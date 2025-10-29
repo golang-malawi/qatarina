@@ -17,6 +17,7 @@ type Config struct {
 	Logging    LoggingConfiguration    `mapstructure:"logging"`
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
+	GitHub     GitHubConfiguration     `mapstructure:"github"`
 }
 
 type DatabaseConfiguration struct {
@@ -73,6 +74,10 @@ type PlatformConfiguration struct {
 
 type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
+}
+
+type GitHubConfiguration struct {
+	Token string `mapstructure:"token" envconfig:"QATARINA_GITHUB_TOKEN"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -135,5 +140,8 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	GitHub: GitHubConfiguration{
+		Token: "",
 	},
 }
