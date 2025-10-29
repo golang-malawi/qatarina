@@ -50,6 +50,19 @@ func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, t
 	}
 }
 
+// ListGitHubIssues godoc
+//
+//	@ID				ListGitHubIssues
+//	@Summary		List GitHub issues for a repository
+//	@Description	List GitHub issues for a repository
+//	@Tags			github
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.ImportFromGithubRequest	true	"GitHub repositoy details"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/github/issues [post]
 func ListGitHubIssues(projectService services.ProjectService, githubConfig config.GitHubConfiguration, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ImportFromGithubRequest)
