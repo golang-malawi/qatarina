@@ -85,10 +85,14 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 
 	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
 	for _, request := range bulkRequest.TestCases {
-		uuidVal, _ := uuid.NewV7()
+		request.ProjectID = bulkRequest.ProjectID
+		project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch project: %w", err)
+		}
 
 		// Ensure sequence row exists for this project's item
-		prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+		prefixKey := strings.ToLower(strings.TrimSpace(project.Title))
 		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
 			ProjectID: int32(request.ProjectID),
 			Prefix:    prefixKey,
@@ -96,25 +100,26 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
 		}
 
-		code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, project.Title, &request.Code)
 		if err != nil {
 			return nil, err
 		}
 
+		uuidVal, _ := uuid.NewV7()
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
-			ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
+			ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
 			Kind:             dbsqlc.TestKind(request.Kind),
 			Code:             code,
-			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
+			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
 			ParentTestCaseID: sql.NullInt32{},
-			IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
+			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
 			CreatedByID:      1,
-			CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+			CreatedAt:        common.NewNullTime(time.Now()),
+			UpdatedAt:        common.NewNullTime(time.Now()),
 		}
 
 		createdID, err := tx.CreateTestCase(ctx, params)
@@ -151,8 +156,13 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 
 	tx := dbsqlc.New(sqlTx)
 
+	project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
 	// Ensure sequence row exists for this project inside the same transaction
-	prefixKey := strings.ToLower(strings.TrimSpace(request.FeatureOrModule))
+	prefixKey := strings.ToLower(strings.TrimSpace(project.Title))
 	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
 		ProjectID: int32(request.ProjectID),
 		Prefix:    prefixKey,
@@ -160,25 +170,25 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
 	}
 
-	code, err := GenerateNextCode(ctx, tx, request.ProjectID, request.FeatureOrModule, &request.Code)
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, project.Title, &request.Code)
 	if err != nil {
 		return nil, err
 	}
 	uuidVal, _ := uuid.NewV7()
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
-		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
+		ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
 		Kind:             dbsqlc.TestKind(request.Kind),
 		Code:             code,
-		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
+		FeatureOrModule:  common.NullString(request.FeatureOrModule),
 		Title:            request.Title,
 		Description:      request.Description,
 		ParentTestCaseID: sql.NullInt32{},
-		IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
+		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
 		CreatedByID:      1,
-		CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+		CreatedAt:        common.NewNullTime(time.Now()),
+		UpdatedAt:        common.NewNullTime(time.Now()),
 	}
 
 	createdID, err := tx.CreateTestCase(ctx, params)
@@ -291,12 +301,12 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 }
 
-func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, module string, userCode *string) (string, error) {
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, projectName string, userCode *string) (string, error) {
 	if userCode != nil && *userCode != "" {
 		return *userCode, nil
 	}
 
-	prefixKey := strings.ToLower(strings.TrimSpace(module)) // used for sequence lookup
+	prefixKey := strings.ToLower(strings.TrimSpace(projectName)) // used for sequence lookup
 	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
 		ProjectID: int32(projectID),
 		Prefix:    prefixKey,
@@ -305,21 +315,21 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 		return "", fmt.Errorf("failed to get next sequence: %w", err)
 	}
 
-	displayPrefix := generatePrefix(module) // used for code formatting
+	displayPrefix := generatePrefix(projectName) // used for code formatting
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
-func generatePrefix(module string) string {
-	module = strings.TrimSpace(strings.ToLower(module))
-	words := strings.Fields(module)
+func generatePrefix(name string) string {
+	name = strings.TrimSpace(strings.ToLower(name))
+	words := strings.Fields(name)
 
 	if len(words) >= 2 {
 		return strings.ToUpper(string(words[0][0]) + string(words[1][0]))
 	}
 
-	if len(module) >= 2 {
-		return strings.ToUpper(module[:2])
+	if len(name) >= 2 {
+		return strings.ToUpper(name[:2])
 	}
 
-	return strings.ToUpper(module)
+	return strings.ToUpper(name)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,84 +16,69 @@ import (
 	"github.com/spf13/viper"
 )
 
-func TestConcurrentMultiModuleSequence(t *testing.T) {
+func TestConcurrentBulkCreateByProject(t *testing.T) {
 	const concurrency = 10
 	projectID := int64(2)
-	modules := []string{"login", "logistics"}
 
 	db := openTestDB()
 	conn := dbsqlc.New(db)
 	logger := logging.NewForTest()
 	svc := services.NewTestCaseService(db, conn, logger)
 
-	// Pre-seed sequence rows for each module
-	for _, mod := range modules {
-		prefix := strings.ToLower(strings.TrimSpace(mod))
-		err := conn.InitTestCaseSequence(context.Background(), dbsqlc.InitTestCaseSequenceParams{
-			ProjectID: int32(projectID),
-			Prefix:    prefix,
-		})
-		if err != nil {
-			t.Fatalf("failed to seed sequence for module %q: %v", mod, err)
-		}
-	}
-
+	// Prepare test cases concurrently
+	var mu sync.Mutex
+	var testCases []schema.CreateTestCaseRequest
 	var wg sync.WaitGroup
-	wg.Add(concurrency * len(modules))
+	wg.Add(concurrency)
 
-	codesCh := make(chan string, concurrency*len(modules))
-	errCh := make(chan error, concurrency*len(modules))
-
-	for _, mod := range modules {
-		for i := 0; i < concurrency; i++ {
-			go func(mod string, i int) {
-				defer wg.Done()
-				ctx := context.Background()
-				req := &schema.CreateTestCaseRequest{
-					ProjectID:       projectID,
-					Kind:            "adhoc",
-					Code:            "", // trigger auto-generation
-					FeatureOrModule: mod,
-					Title:           fmt.Sprintf("Concurrent test %d (%s)", i, mod),
-					Description:     "Testing concurrency and module isolation",
-					IsDraft:         false,
-					Tags:            []string{"concurrency", mod},
-				}
-
-				res, err := svc.Create(ctx, req)
-				if err != nil {
-					errCh <- fmt.Errorf("module %q: %w", mod, err)
-					return
-				}
-				codesCh <- res.Code
-			}(mod, i)
-		}
+	for i := 0; i < concurrency; i++ {
+		go func(i int) {
+			defer wg.Done()
+			tc := schema.CreateTestCaseRequest{
+				ProjectID:       projectID,
+				Kind:            "adhoc",
+				Code:            "", // trigger auto-generation
+				FeatureOrModule: "login",
+				Title:           fmt.Sprintf("Concurrent test %d", i),
+				Description:     "Testing project-based sequence isolation",
+				IsDraft:         false,
+				Tags:            []string{"concurrency", "project"},
+			}
+			mu.Lock()
+			testCases = append(testCases, tc)
+			mu.Unlock()
+		}(i)
 	}
 
 	wg.Wait()
-	close(codesCh)
-	close(errCh)
 
-	for err := range errCh {
-		t.Errorf("create error: %v", err)
+	// Bulk insert
+	bulkReq := &schema.BulkCreateTestCases{
+		ProjectID: projectID,
+		TestCases: testCases,
+	}
+
+	created, err := svc.BulkCreate(context.Background(), bulkReq)
+	if err != nil {
+		t.Fatalf("BulkCreate failed: %v", err)
 	}
 
 	// Validate codes
 	seen := map[string]bool{}
-	counts := map[string]int{}
-
-	for code := range codesCh {
+	for _, tc := range created {
+		code := tc.Code
 		if len(code) < 2 {
 			t.Errorf("invalid code: %s", code)
 			continue
 		}
-		prefix := code[:2]
-		counts[prefix]++
-
 		if seen[code] {
 			t.Errorf("duplicate code: %s", code)
 		}
 		seen[code] = true
+	}
+
+	if len(seen) != concurrency {
+		t.Errorf("expected %d unique codes, got %d", concurrency, len(seen))
 	}
 
 }

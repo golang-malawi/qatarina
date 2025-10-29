@@ -157,6 +157,7 @@ RETURNING current_val;
 INSERT INTO test_case_sequences (project_id, prefix, current_val, last_generated_at)
 VALUES ($1, $2, 0, now())
 ON CONFLICT (project_id, prefix) DO NOTHING;
+
 -- name: UpdateTestCase :exec
 UPDATE test_cases SET
 kind = $2,
