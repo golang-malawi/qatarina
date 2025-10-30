@@ -811,7 +811,7 @@ func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects WHERE id = $1
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
@@ -833,6 +833,7 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Code,
 	)
 	return i, err
 }
@@ -928,6 +929,37 @@ SELECT id, kind, code, feature_or_module, title, description, parent_test_case_i
 
 func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, error) {
 	row := q.db.QueryRowContext(ctx, getTestCase, id)
+	var i TestCase
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Code,
+		&i.FeatureOrModule,
+		&i.Title,
+		&i.Description,
+		&i.ParentTestCaseID,
+		&i.IsDraft,
+		pq.Array(&i.Tags),
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+	)
+	return i, err
+}
+
+const getTestCaseByCode = `-- name: GetTestCaseByCode :one
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases 
+WHERE project_id = $1 AND code = $2
+`
+
+type GetTestCaseByCodeParams struct {
+	ProjectID sql.NullInt32
+	Code      string
+}
+
+func (q *Queries) GetTestCaseByCode(ctx context.Context, arg GetTestCaseByCodeParams) (TestCase, error) {
+	row := q.db.QueryRowContext(ctx, getTestCaseByCode, arg.ProjectID, arg.Code)
 	var i TestCase
 	err := row.Scan(
 		&i.ID,
@@ -1260,7 +1292,7 @@ func (q *Queries) IsTestCaseUsedInTestRun(ctx context.Context, testCaseID uuid.U
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects ORDER BY created_at DESC
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code FROM projects ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
@@ -1288,6 +1320,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Code,
 		); err != nil {
 			return nil, err
 		}
@@ -1843,7 +1876,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const searchProject = `-- name: SearchProject :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at FROM projects
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code FROM projects
 WHERE title ILIKE '%' || $1 || '%'
 `
 
@@ -1872,6 +1905,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Code,
 		); err != nil {
 			return nil, err
 		}

@@ -215,6 +215,7 @@ type Project struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   sql.NullTime
+	Code        string
 }
 
 type ProjectTester struct {

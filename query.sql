@@ -170,6 +170,10 @@ tags = $8,
 updated_at = $9
 WHERE id = $1;
 
+-- name: GetTestCaseByCode :one
+SELECT * FROM test_cases 
+WHERE project_id = $1 AND code = $2;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 

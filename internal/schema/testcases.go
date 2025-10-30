@@ -4,7 +4,7 @@ import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 
 type CreateTestCaseRequest struct {
 	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code"`
+	Code            string   `json:"code,omitempty"` // optional; auto-generated if blank
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`

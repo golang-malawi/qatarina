@@ -92,7 +92,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 		}
 
 		// Ensure sequence row exists for this project's item
-		prefixKey := strings.ToLower(strings.TrimSpace(project.Title))
+		prefixKey := strings.ToLower(project.Code)
 		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
 			ProjectID: int32(request.ProjectID),
 			Prefix:    prefixKey,
@@ -100,7 +100,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
 		}
 
-		code, err := GenerateNextCode(ctx, tx, request.ProjectID, project.Title, &request.Code)
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
 		if err != nil {
 			return nil, err
 		}
@@ -120,6 +120,16 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			CreatedByID:      1,
 			CreatedAt:        common.NewNullTime(time.Now()),
 			UpdatedAt:        common.NewNullTime(time.Now()),
+		}
+
+		if strings.TrimSpace(request.Code) != "" {
+			_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+				ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+				Code:      request.Code,
+			})
+			if err == nil {
+				return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+			}
 		}
 
 		createdID, err := tx.CreateTestCase(ctx, params)
@@ -162,7 +172,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 	}
 
 	// Ensure sequence row exists for this project inside the same transaction
-	prefixKey := strings.ToLower(strings.TrimSpace(project.Title))
+	prefixKey := strings.ToLower(project.Code)
 	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
 		ProjectID: int32(request.ProjectID),
 		Prefix:    prefixKey,
@@ -170,7 +180,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
 	}
 
-	code, err := GenerateNextCode(ctx, tx, request.ProjectID, project.Title, &request.Code)
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +199,16 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		CreatedByID:      1,
 		CreatedAt:        common.NewNullTime(time.Now()),
 		UpdatedAt:        common.NewNullTime(time.Now()),
+	}
+
+	if strings.TrimSpace(request.Code) != "" {
+		_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+			ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+			Code:      request.Code,
+		})
+		if err == nil {
+			return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+		}
 	}
 
 	createdID, err := tx.CreateTestCase(ctx, params)
@@ -301,12 +321,13 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 }
 
-func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, projectName string, userCode *string) (string, error) {
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, project *dbsqlc.Project, userCode *string) (string, error) {
 	if userCode != nil && *userCode != "" {
 		return *userCode, nil
 	}
 
-	prefixKey := strings.ToLower(strings.TrimSpace(projectName)) // used for sequence lookup
+	prefixKey := strings.ToLower(project.Code)
+
 	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
 		ProjectID: int32(projectID),
 		Prefix:    prefixKey,
@@ -315,21 +336,6 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 		return "", fmt.Errorf("failed to get next sequence: %w", err)
 	}
 
-	displayPrefix := generatePrefix(projectName) // used for code formatting
+	displayPrefix := strings.ToUpper(prefixKey) // used for code formatting
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
-}
-
-func generatePrefix(name string) string {
-	name = strings.TrimSpace(strings.ToLower(name))
-	words := strings.Fields(name)
-
-	if len(words) >= 2 {
-		return strings.ToUpper(string(words[0][0]) + string(words[1][0]))
-	}
-
-	if len(name) >= 2 {
-		return strings.ToUpper(name[:2])
-	}
-
-	return strings.ToUpper(name)
 }
