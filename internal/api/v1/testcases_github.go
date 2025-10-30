@@ -90,3 +90,43 @@ func ListGitHubIssues(projectService services.ProjectService, githubConfig confi
 
 	}
 }
+
+// ListGitubPullRequests godoc
+//
+//	@ID				ListGitubPullRequests
+//	@Summary		List GitHub pull requests for a repository
+//	@Description	List GitHub pull requests for a repository
+//	@Tags			github
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.ImportFromGithubRequest	true	"GitHub repository details"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/github/pull-requests [post]
+func ListGitHubPullRequests(projectService services.ProjectService, githubConfig config.GitHubConfiguration, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.ImportFromGithubRequest)
+		_, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid request body")
+		}
+
+		if githubConfig.Token == "" {
+			return problemdetail.ServerErrorProblem(c, "GitHub token not configured")
+		}
+		request.GitHubToken = githubConfig.Token
+
+		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
+		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, nil)
+
+		prs, err := githubIntegration.ListPullRequests(c.Context(), request.Owner, request.Repository)
+		if err != nil {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list pull requests", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to list pull requests")
+		}
+		return c.JSON(fiber.Map{
+			"pull_requests": prs,
+		})
+	}
+}

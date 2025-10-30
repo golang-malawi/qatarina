@@ -134,3 +134,27 @@ func (g *GitHubIntegration) CreateTestCasesFromOpenIssues(ctx context.Context, o
 
 	return testCases, nil
 }
+
+func (g *GitHubIntegration) ListPullRequests(ctx context.Context, owner, repo string) ([]any, error) {
+	prs, _, err := g.client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
+		State:       "open",
+		Sort:        "created",
+		Direction:   "desc",
+		ListOptions: github.ListOptions{PerPage: 100},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pull requests: %w", err)
+	}
+
+	results := make([]any, 0)
+	for _, pr := range prs {
+		results = append(results, map[string]any{
+			"id":     pr.GetID(),
+			"title":  pr.GetTitle(),
+			"body":   pr.GetBody(),
+			"url":    pr.GetHTMLURL(),
+			"labels": pr.Labels,
+		})
+	}
+	return results, nil
+}

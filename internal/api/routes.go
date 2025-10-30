@@ -140,6 +140,7 @@ func (api *API) routes() {
 	githubIntegrationV1 := router.Group("/v1/github", authenticationMiddleware)
 	{
 		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.ProjectsService, api.Config.GitHub, api.logger))
+		githubIntegrationV1.Post("/pull-requests", apiv1.ListGitHubPullRequests(api.ProjectsService, api.Config.GitHub, api.logger))
 	}
 
 	// Serves the app at the root path  "/"
