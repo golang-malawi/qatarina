@@ -181,6 +181,9 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 		err = module.Delete(context.Background(), int32(moduleID))
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.NotFound(c, "module not found")
+			}
 			logger.Error(loggedmodule.ApiModules, "failed delete module", "error", err)
 			return problemdetail.BadRequest(c, "failed to delete module")
 		}
