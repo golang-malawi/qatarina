@@ -87,5 +87,13 @@ func initConfig() {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
+
+	pemBytes, err := os.ReadFile(qatarinaConfig.GitHub.PrivateKeyPath)
+	if err != nil {
+		fmt.Println("Failed to read GitHub App private key:", err)
+		os.Exit(1)
+	}
+	qatarinaConfig.GitHub.PrivateKeyPEM = string(pemBytes)
+
 	// TODO: configure logging to file here..
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
-	"github.com/google/go-github/v62/github"
 )
 
 // ImportIssuesFromGitHubAsTestCases godoc
@@ -28,7 +27,7 @@ import (
 // @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
 // @Failure 500 {object} problemdetail.ProblemDetail "Server error"
 // @Router /v1/test-cases/import/github [post]
-func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, testCaseService services.TestCaseService, githubConfig config.GitHubConfiguration, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ImportFromGithubRequest)
 		_, err := common.ParseBodyThenValidate(c, request)
@@ -36,8 +35,11 @@ func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, t
 			return problemdetail.BadRequest(c, "failed to process request body")
 		}
 
-		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
-		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, testCaseService)
+		githubIntegration, err := services.NewGitHubIntegration(c.Context(), githubConfig.AppID, []byte(githubConfig.PrivateKeyPEM), request.InstallationID, projectService, testCaseService)
+		if err != nil {
+			logger.Error("github-api-import", "failed to authenticate GitHub App", "error", err)
+			return problemdetail.ServerErrorProblem(c, "GitHub App authentication failed")
+		}
 
 		testCases, err := githubIntegration.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, request.ProjectID)
 		if err != nil {
@@ -71,13 +73,11 @@ func ListGitHubIssues(projectService services.ProjectService, githubConfig confi
 			return problemdetail.BadRequest(c, "invalid request body")
 		}
 
-		if githubConfig.Token == "" {
-			return problemdetail.ServerErrorProblem(c, "GitHub token is not configured")
+		githubIntegration, err := services.NewGitHubIntegration(c.Context(), githubConfig.AppID, []byte(githubConfig.PrivateKeyPEM), request.InstallationID, projectService, nil)
+		if err != nil {
+			logger.Error("github-api-import", "failed to authenticate GitHub App", "error", err)
+			return problemdetail.ServerErrorProblem(c, "GitHub App authentication failed")
 		}
-		request.GitHubToken = githubConfig.Token
-
-		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
-		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, nil)
 
 		issues, err := githubIntegration.ListIssues(c.Context(), fmt.Sprintf("%s/%s", request.Owner, request.Repository))
 		if err != nil {
@@ -112,14 +112,11 @@ func ListGitHubPullRequests(projectService services.ProjectService, githubConfig
 			return problemdetail.BadRequest(c, "invalid request body")
 		}
 
-		if githubConfig.Token == "" {
-			return problemdetail.ServerErrorProblem(c, "GitHub token not configured")
+		githubIntegration, err := services.NewGitHubIntegration(c.Context(), githubConfig.AppID, []byte(githubConfig.PrivateKeyPEM), request.InstallationID, projectService, nil)
+		if err != nil {
+			logger.Error("github-api-import", "failed to authenticate GitHub App", "error", err)
+			return problemdetail.ServerErrorProblem(c, "GitHub App authentication failed")
 		}
-		request.GitHubToken = githubConfig.Token
-
-		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
-		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, nil)
-
 		prs, err := githubIntegration.ListPullRequests(c.Context(), request.Owner, request.Repository)
 		if err != nil {
 			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list pull requests", "error", err)

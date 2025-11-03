@@ -77,7 +77,9 @@ type ImportFileConfiguration struct {
 }
 
 type GitHubConfiguration struct {
-	Token string `mapstructure:"token" envconfig:"QATARINA_GITHUB_TOKEN"`
+	AppID          string `mapstructure:"app_id" envconfig:"QATARINA_GITHUB_APP_ID"`
+	PrivateKeyPEM  string // populated at runtime
+	PrivateKeyPath string `mapstructure:"private_key_path" envconfig:"QATARINA_GITHUB_PRIVATE_KEY_PATH"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -142,6 +144,7 @@ var DefaultConfig = Config{
 		CreateDefaultTestPlan: true,
 	},
 	GitHub: GitHubConfiguration{
-		Token: "",
+		AppID:         "",
+		PrivateKeyPEM: "",
 	},
 }
