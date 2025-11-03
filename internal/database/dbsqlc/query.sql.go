@@ -611,6 +611,32 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
 	return result.RowsAffected()
 }
 
+const executeTestCase = `-- name: ExecuteTestCase :exec
+UPDATE test_cases
+SET status = $2, result = $3, executed_by = $4,  notes = $5,
+ executed_at = NOW(), updated_at = NOW()
+WHERE id = $1
+`
+
+type ExecuteTestCaseParams struct {
+	ID         uuid.UUID
+	Status     sql.NullString
+	Result     sql.NullString
+	ExecutedBy sql.NullInt32
+	Notes      sql.NullString
+}
+
+func (q *Queries) ExecuteTestCase(ctx context.Context, arg ExecuteTestCaseParams) error {
+	_, err := q.db.ExecContext(ctx, executeTestCase,
+		arg.ID,
+		arg.Status,
+		arg.Result,
+		arg.ExecutedBy,
+		arg.Notes,
+	)
+	return err
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `
@@ -888,7 +914,7 @@ func (q *Queries) GetRecentProjects(ctx context.Context) ([]GetRecentProjectsRow
 }
 
 const getTestCase = `-- name: GetTestCase :one
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE id = $1
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases WHERE id = $1
 `
 
 func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, error) {
@@ -908,6 +934,11 @@ func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProjectID,
+		&i.Status,
+		&i.Result,
+		&i.ExecutedAt,
+		&i.ExecutedBy,
+		&i.Notes,
 	)
 	return i, err
 }
@@ -1171,7 +1202,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 
 const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one
 SELECT EXISTS(
-    SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE project_id = $1
+    SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases WHERE project_id = $1
 )
 `
 
@@ -1252,7 +1283,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 }
 
 const listTestCases = `-- name: ListTestCases :many
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases ORDER BY created_at DESC
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases ORDER BY created_at DESC
 `
 
 func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
@@ -1278,6 +1309,11 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -1293,7 +1329,7 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 }
 
 const listTestCasesByCreator = `-- name: ListTestCasesByCreator :many
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE created_by_id = $1
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases WHERE created_by_id = $1
 `
 
 func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32) ([]TestCase, error) {
@@ -1319,6 +1355,11 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -1334,7 +1375,7 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id FROM test_cases tc 
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.status, tc.result, tc.executed_at, tc.executed_by, tc.notes FROM test_cases tc 
 INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
 WHERE tp.test_plan_id = $1
 `
@@ -1362,6 +1403,11 @@ func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID uuid.UUID)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -1377,7 +1423,7 @@ func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID uuid.UUID)
 }
 
 const listTestCasesByProject = `-- name: ListTestCasesByProject :many
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE project_id = $1
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases WHERE project_id = $1
 `
 
 func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.NullInt32) ([]TestCase, error) {
@@ -1403,6 +1449,11 @@ func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.Null
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -1888,7 +1939,7 @@ func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullStr
 }
 
 const searchTestCases = `-- name: SearchTestCases :many
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases
 WHERE title ILIKE '%' || $1 || '%'
 OR code ILIKE '%' || $1 || '%'
 `
@@ -1916,6 +1967,11 @@ func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}

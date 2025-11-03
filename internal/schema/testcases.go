@@ -81,3 +81,11 @@ type ImportFromGithubRequest struct {
 type TestCaseListResponse struct {
 	TestCases []TestCaseResponse `json:"test_cases"`
 }
+
+type ExecuteTestCaseRequest struct {
+	ID         string `json:"id" validate:"required"`
+	Result     string `json:"result" validate:"required"`
+	Status     string `json:"status" validate:"required"`
+	ExecutedBy int64  `json:"executed_by" validate:"required"`
+	Notes      string `json:"notes,omitempty"`
+}

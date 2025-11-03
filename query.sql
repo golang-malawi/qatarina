@@ -151,6 +151,12 @@ tags = $8,
 updated_at = $9
 WHERE id = $1;
 
+-- name: ExecuteTestCase :exec
+UPDATE test_cases
+SET status = $2, result = $3, executed_by = $4,  notes = $5,
+ executed_at = NOW(), updated_at = NOW()
+WHERE id = $1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
