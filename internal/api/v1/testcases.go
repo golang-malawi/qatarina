@@ -272,3 +272,28 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 		})
 	}
 }
+
+func ExecuteTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.ExecuteTestCaseRequest)
+		request.ID = c.Params("testCaseID")
+
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid execution data", err)
+			}
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse execution request", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse execution data")
+		}
+
+		tc, err := testCaseService.Execute(context.Background(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to execute test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to execute test case")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_case": schema.NewTestCaseResponse(tc),
+		})
+	}
+}
