@@ -61,12 +61,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -229,11 +231,11 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 }
 
 func (t *testCaseServiceImpl) Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error) {
-	sqlTx, err := t.queries.BeginTx(ctx, nil)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer sqlTx.RollBack()
+	defer sqlTx.Rollback()
 
 	tx := dbsqlc.New(sqlTx)
 
