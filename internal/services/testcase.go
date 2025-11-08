@@ -419,11 +419,11 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 }
 
 func (t *testCaseServiceImpl) Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error) {
-	sqlTx, err := t.queries.BeginTx(ctx, nil)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer sqlTx.RollBack()
+	defer sqlTx.Rollback()
 
 	tx := dbsqlc.New(sqlTx)
 
