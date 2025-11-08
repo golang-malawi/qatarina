@@ -722,6 +722,17 @@ func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
 	return items, nil
 }
 
+const getInstallationIDByAccount = `-- name: GetInstallationIDByAccount :one
+SELECT installation_id FROM github_installations WHERE account_login = $1
+`
+
+func (q *Queries) GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getInstallationIDByAccount, accountLogin)
+	var installation_id int64
+	err := row.Scan(&installation_id)
+	return installation_id, err
+}
+
 const getOneModule = `-- name: GetOneModule :one
 SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
 WHERE id = $1
@@ -2249,6 +2260,22 @@ func (q *Queries) UpdateUserLastLogin(ctx context.Context, arg UpdateUserLastLog
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const upsertGitHubInstallation = `-- name: UpsertGitHubInstallation :exec
+INSERT INTO github_installations (installation_id, account_login)
+VALUES ($1, $2)
+ON CONFLICT (installation_id) DO UPDATE SET account_login = EXCLUDED.account_login
+`
+
+type UpsertGitHubInstallationParams struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) UpsertGitHubInstallation(ctx context.Context, arg UpsertGitHubInstallationParams) error {
+	_, err := q.db.ExecContext(ctx, upsertGitHubInstallation, arg.InstallationID, arg.AccountLogin)
+	return err
 }
 
 const userExists = `-- name: UserExists :one

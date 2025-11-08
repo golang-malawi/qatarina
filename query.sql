@@ -344,3 +344,11 @@ SELECT id, title AS name, updated_at
 FROM projects
 ORDER BY updated_at DESC
 LIMIT 5;
+
+-- name: UpsertGitHubInstallation :exec
+INSERT INTO github_installations (installation_id, account_login)
+VALUES ($1, $2)
+ON CONFLICT (installation_id) DO UPDATE SET account_login = EXCLUDED.account_login;
+
+-- name: GetInstallationIDByAccount :one
+SELECT installation_id FROM github_installations WHERE account_login = $1;

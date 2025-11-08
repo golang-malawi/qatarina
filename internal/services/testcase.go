@@ -59,12 +59,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}

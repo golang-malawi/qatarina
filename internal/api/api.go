@@ -6,6 +6,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/services"
+	"github.com/google/go-github/v62/github"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 )
@@ -26,14 +27,17 @@ type API struct {
 	PageService           services.PageService
 	DashboardService      services.DashboardService
 	TestCaseImportService services.TestCaseImportService
+	GitHubService         services.GitHubService
 }
 
 func NewAPI(config *config.Config) *API {
 
-	dbConn := dbsqlc.New(config.OpenDB())
+	rawDB := config.OpenDB()
+	dbConn := dbsqlc.New(rawDB)
 	logger := logging.NewFromConfig(&config.Logging)
 
 	projectService := services.NewProjectService(dbConn, logger)
+	testCaseService := services.NewTestCaseService(rawDB.DB, dbConn, logger)
 
 	return &API{
 		logger:                logger,
@@ -41,7 +45,7 @@ func NewAPI(config *config.Config) *API {
 		Config:                config,
 		AuthService:           services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:       services.NewProjectService(dbConn, logger),
-		TestCasesService:      services.NewTestCaseService(dbConn, logger),
+		TestCasesService:      services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestPlansService:      services.NewTestPlanService(dbConn, logger),
 		TestRunsService:       services.NewTestRunService(dbConn, logger),
 		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
@@ -50,6 +54,7 @@ func NewAPI(config *config.Config) *API {
 		PageService:           services.NewPageService(dbConn),
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
+		GitHubService:         services.NewGitHubService(github.NewClient(nil), projectService, testCaseService, dbConn, logger),
 	}
 }
 
