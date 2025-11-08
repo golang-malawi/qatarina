@@ -27,6 +27,10 @@ type TestCaseResponse struct {
 	Tags            []string `json:"tags"`
 	CreatedAt       string   `json:"created_at"`
 	UpdatedAt       string   `json:"updated_at"`
+	Status          string   `json:"status"`
+	Result          string   `json:"result"`
+	ExecutedBy      int64    `json:"executed_by"`
+	Notes           string   `json:"notes"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
@@ -43,6 +47,10 @@ func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
 		Tags:            e.Tags,
 		CreatedAt:       formatSqlDateTime(e.CreatedAt),
 		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
+		Status:          e.Status.String,
+		Result:          e.Result.String,
+		ExecutedBy:      int64(e.ExecutedBy.Int32),
+		Notes:           e.Notes.String,
 	}
 }
 
