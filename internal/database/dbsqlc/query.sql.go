@@ -1222,6 +1222,46 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 	return i, err
 }
 
+const insertTestRunResult = `-- name: InsertTestRunResult :one
+INSERT INTO test_run_results (
+    id, test_run_id, test_case_id, status, result, notes, executed_by, executed_at, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+)
+RETURNING id
+`
+
+type InsertTestRunResultParams struct {
+	ID         uuid.UUID
+	TestRunID  uuid.UUID
+	TestCaseID uuid.UUID
+	Status     string
+	Result     string
+	Notes      sql.NullString
+	ExecutedBy int32
+	ExecutedAt time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) InsertTestRunResult(ctx context.Context, arg InsertTestRunResultParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, insertTestRunResult,
+		arg.ID,
+		arg.TestRunID,
+		arg.TestCaseID,
+		arg.Status,
+		arg.Result,
+		arg.Notes,
+		arg.ExecutedBy,
+		arg.ExecutedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one
 SELECT EXISTS(
     SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE project_id = $1

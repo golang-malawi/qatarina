@@ -35,3 +35,11 @@ func NullTime(t time.Time) sql.NullTime {
 		Valid: !t.IsZero(),
 	}
 }
+
+// func ParseDate(dateStr string) sql.NullTime {
+// 	t, err := time.Parse("2006-01-02", dateStr)
+// 	if err != nil {
+// 		return sql.NullTime{Valid: false}
+// 	}
+// 	return sql.NullTime{Valid: true, Time: t}
+// }

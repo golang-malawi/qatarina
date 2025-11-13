@@ -319,6 +319,19 @@ type TestRun struct {
 	UpdatedAt             sql.NullTime
 }
 
+type TestRunResult struct {
+	ID         uuid.UUID
+	TestRunID  uuid.UUID
+	TestCaseID uuid.UUID
+	Status     string
+	Result     string
+	Notes      sql.NullString
+	ExecutedBy int32
+	ExecutedAt time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 type TestRunsComment struct {
 	ID        int64
 	TestRunID uuid.UUID
