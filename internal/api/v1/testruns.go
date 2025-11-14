@@ -261,17 +261,17 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID}/close [post]
-func CloseTestPlan(testRunSevice services.TestRunService, logger logging.Logger) fiber.Handler {
+func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, err := c.ParamsInt("testPlanID", 0)
 		if err != nil {
 			return problemdetail.BadRequest(c, "invalid testPlanID in request")
 		}
 
-		err = testRunSevice.CloseTestPlan(c.Context(), int32(testPlanID))
+		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to close test plan", "error", err)
-			return problemdetail.BadRequest(c, err.Error())
+			return problemdetail.BadRequest(c, "failed to process request")
 		}
 		return c.JSON(fiber.Map{
 			"message": "Test plan closed successfully",
