@@ -247,6 +247,20 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 	}
 }
 
+// CloseTestPlan godoc
+//
+//	@ID				CloseTestPlan
+//	@Summary		Close a Test Plan
+//	@Description	Close a Test Plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		int	true	"Test Plan ID"
+//	@Param			request	body			true	""
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/close [post]
 func CloseTestPlan(testRunSevice services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testPlanID, err := c.ParamsInt("testPlanID", 0)
