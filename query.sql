@@ -352,3 +352,13 @@ ON CONFLICT (installation_id) DO UPDATE SET account_login = EXCLUDED.account_log
 
 -- name: GetInstallationIDByAccount :one
 SELECT installation_id FROM github_installations WHERE account_login = $1;
+
+-- name: GetFirstInstallation :one
+SELECT installation_id, account_login
+FROM github_installations
+ORDER BY created_at ASC
+LIMIT 1;
+
+-- name: ListInstallations :many
+SELECT installation_id, account_login
+FROM github_installations;

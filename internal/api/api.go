@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -35,6 +37,20 @@ func NewAPI(config *config.Config) *API {
 	rawDB := config.OpenDB()
 	dbConn := dbsqlc.New(rawDB)
 	logger := logging.NewFromConfig(&config.Logging)
+	var ghClient *github.Client
+
+	installation, err := dbConn.GetFirstInstallation(context.Background())
+	if err != nil {
+		logger.Info("no installation found at startup, waiting for webhook", "error", err)
+	} else {
+		token, err := config.GetInstallationToken(installation.InstallationID)
+		if err != nil {
+			logger.Error("failed to get installation token", "error", err)
+			panic(err)
+		}
+
+		ghClient = services.NewGitHubClient(token)
+	}
 
 	projectService := services.NewProjectService(dbConn, logger)
 	testCaseService := services.NewTestCaseService(rawDB.DB, dbConn, logger)
@@ -54,7 +70,7 @@ func NewAPI(config *config.Config) *API {
 		PageService:           services.NewPageService(dbConn),
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
-		GitHubService:         services.NewGitHubService(github.NewClient(nil), projectService, testCaseService, dbConn, logger),
+		GitHubService:         services.NewGitHubService(ghClient, projectService, testCaseService, dbConn, config, logger),
 	}
 }
 

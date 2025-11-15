@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -27,15 +28,17 @@ type githubServiceImpl struct {
 	projectService  ProjectService
 	testCaseService TestCaseService
 	queries         *dbsqlc.Queries
+	config          *config.Config
 	logger          logging.Logger
 }
 
-func NewGitHubService(client *github.Client, projectService ProjectService, testCaseService TestCaseService, queries *dbsqlc.Queries, logger logging.Logger) GitHubService {
+func NewGitHubService(client *github.Client, projectService ProjectService, testCaseService TestCaseService, queries *dbsqlc.Queries, cfg *config.Config, logger logging.Logger) GitHubService {
 	return &githubServiceImpl{
 		client:          client,
 		projectService:  projectService,
 		testCaseService: testCaseService,
 		queries:         queries,
+		config:          cfg,
 		logger:          logger,
 	}
 }
@@ -82,7 +85,23 @@ func (g *githubServiceImpl) ListIssues(ctx context.Context, project string) ([]a
 	}
 	owner, repo := parts[0], parts[1]
 
-	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
+	// 1. Look up installation ID for this owner
+	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
+	if err != nil {
+		return nil, fmt.Errorf("no installation found for account %s: %w", owner, err)
+	}
+
+	// 2. Get a fresh installation token
+	token, err := g.config.GetInstallationToken(installationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation token: %w", err)
+	}
+
+	// 3. Build temporary GitHub client
+	client := NewGitHubClient(token)
+
+	// 4. Call GitHub API
+	issues, _, err := client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
 		State:       "open",
 		Sort:        "created",
 		Direction:   "desc",
@@ -109,7 +128,19 @@ func (g *githubServiceImpl) ListIssues(ctx context.Context, project string) ([]a
 }
 
 func (g *githubServiceImpl) ListPullRequests(ctx context.Context, owner, repo string) ([]any, error) {
-	prs, _, err := g.client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
+	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation token: %w", err)
+	}
+
+	token, err := g.config.GetInstallationToken(installationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation token: %w", err)
+	}
+
+	client := NewGitHubClient(token)
+
+	prs, _, err := client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
 		State:       "open",
 		Sort:        "created",
 		Direction:   "desc",

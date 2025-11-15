@@ -1,6 +1,10 @@
 package v1
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -8,8 +12,12 @@ import (
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
 
-func GitHubWebhook(installationStore services.GitHubService, logger logging.Logger) fiber.Handler {
+func GitHubWebhook(installationStore services.GitHubService, secret string, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		signature := c.Get("X-Hub-Signature-256")
+		if !verifySignature([]byte(secret), c.Body(), signature) {
+			return problemdetail.BadRequest(c, "invalid signature")
+		}
 		var payload map[string]any
 		if err := c.BodyParser(&payload); err != nil {
 			return problemdetail.BadRequest(c, "invalid webhook payload")
@@ -90,4 +98,11 @@ func splitProject(project string) []string {
 		}
 	}
 	return nil
+}
+
+func verifySignature(secret, body []byte, signature string) bool {
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(body)
+	expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(expected), []byte(signature))
 }

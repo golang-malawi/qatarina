@@ -27,7 +27,7 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
-	router.Post("/v1/github/webhook", apiv1.GitHubWebhook(api.GitHubService, api.logger))
+	router.Post("/v1/github/webhook", apiv1.GitHubWebhook(api.GitHubService, api.Config.GitHub.WebhookSecret, api.logger))
 
 	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
 
