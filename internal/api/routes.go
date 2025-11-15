@@ -27,6 +27,8 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
+	router.Post("/v1/github/webhook", apiv1.GitHubWebhook(api.GitHubService, api.Config.GitHub.WebhookSecret, api.logger))
+
 	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
@@ -82,7 +84,7 @@ func (api *API) routes() {
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
-		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
+		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.GitHubService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
@@ -135,6 +137,12 @@ func (api *API) routes() {
 	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
 	{
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
+	}
+
+	githubIntegrationV1 := router.Group("/v1/github", authenticationMiddleware)
+	{
+		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.GitHubService, api.logger))
+		githubIntegrationV1.Post("/pull-requests", apiv1.ListGitHubPullRequests(api.GitHubService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"

@@ -106,6 +106,15 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 	return string(ns.TestRunState), nil
 }
 
+type GithubInstallation struct {
+	InstallationID int64
+	AccountLogin   string
+	AccountType    string
+	UserID         sql.NullInt64
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
 type Invite struct {
 	ID            int32
 	SenderEmail   string

@@ -1,10 +1,13 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
@@ -17,6 +20,7 @@ type Config struct {
 	Logging    LoggingConfiguration    `mapstructure:"logging"`
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
+	GitHub     GitHubConfiguration     `mapstructure:"github"`
 }
 
 type DatabaseConfiguration struct {
@@ -75,6 +79,13 @@ type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
 }
 
+type GitHubConfiguration struct {
+	AppID          string `mapstructure:"app_id" envconfig:"QATARINA_GITHUB_APP_ID"`
+	PrivateKeyPEM  string // populated at runtime
+	PrivateKeyPath string `mapstructure:"private_key_path" envconfig:"QATARINA_GITHUB_PRIVATE_KEY_PATH"`
+	WebhookSecret  string `mapstructure:"webhook_secret" envconfig:"QATARINA_GITHUB_WEBHOOK_SECRET"`
+}
+
 func (c *Config) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s", c.Database.Username, c.Database.Password, c.Database.Host, c.Database.Port, c.Database.Database, c.Database.Options)
 }
@@ -94,6 +105,51 @@ func (c *Config) OpenDB() *sqlx.DB {
 	db.SetMaxIdleConns(10)
 
 	return db
+}
+
+// GenerateGitHubAppJWT creates asigned JWT for authenticating as GitHub App.
+// It uses the AppID and the private key PEM loaded into Config.GitHub
+func (c *Config) GenerateGitHubAppJWT() (string, error) {
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(c.GitHub.PrivateKeyPEM))
+	if err != nil {
+		return "", fmt.Errorf("invalid GitHub private key: %w", err)
+	}
+
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"iat": now.Unix(),
+		"exp": now.Add(time.Minute * 10).Unix(),
+		"iss": c.GitHub.AppID,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	return token.SignedString(key)
+}
+
+func (c *Config) GetInstallationToken(installationID int64) (string, error) {
+	jwtToken, err := c.GenerateGitHubAppJWT()
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("https://api.github.com/app/installations/%d/access_tokens", installationID)
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	return result.Token, nil
 }
 
 var DefaultConfig = Config{
@@ -135,5 +191,9 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	GitHub: GitHubConfiguration{
+		AppID:         "",
+		PrivateKeyPEM: "",
 	},
 }

@@ -72,10 +72,11 @@ type BulkCreateTestCases struct {
 }
 
 type ImportFromGithubRequest struct {
-	Owner       string `json:"owner"`
-	Repository  string `json:"repository"`
-	GitHubToken string `json:"github_token"`
-	ProjectID   int64  `json:"project_id"`
+	Owner          string `json:"owner"`
+	Repository     string `json:"repository"`
+	GitHubToken    string `json:"github_token"`
+	ProjectID      int64  `json:"project_id"`
+	InstallationID int64  `json:"installation_id" validate:"required"`
 }
 
 type TestCaseListResponse struct {

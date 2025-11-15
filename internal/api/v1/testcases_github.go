@@ -9,7 +9,6 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
-	"github.com/google/go-github/v62/github"
 )
 
 // ImportIssuesFromGitHubAsTestCases godoc
@@ -25,7 +24,7 @@ import (
 // @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
 // @Failure 500 {object} problemdetail.ProblemDetail "Server error"
 // @Router /v1/test-cases/import/github [post]
-func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+func ImportIssuesFromGitHubAsTestCases(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ImportFromGithubRequest)
 		_, err := common.ParseBodyThenValidate(c, request)
@@ -33,10 +32,7 @@ func ImportIssuesFromGitHubAsTestCases(projectService services.ProjectService, t
 			return problemdetail.BadRequest(c, "failed to process request body")
 		}
 
-		ghClient := github.NewClient(nil).WithAuthToken(request.GitHubToken)
-		githubIntegration := services.NewGitHubIntegration(ghClient, projectService, testCaseService)
-
-		testCases, err := githubIntegration.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, request.ProjectID)
+		testCases, err := githubService.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, request.ProjectID)
 		if err != nil {
 			logger.Error("github-api-import", "failed to process data import", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to complete import of issues")

@@ -13,6 +13,8 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/google/go-github/v62/github"
+	"golang.org/x/oauth2"
 )
 
 var ErrUserAlreadyExists = errors.New("user with given email already exists")
@@ -137,4 +139,10 @@ func (a *authServiceImpl) ResetPassword(ctx context.Context, email string) error
 
 func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error {
 	panic("not implemented")
+}
+
+func NewGitHubClient(token string) *github.Client {
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	tc := oauth2.NewClient(context.Background(), ts)
+	return github.NewClient(tc)
 }
