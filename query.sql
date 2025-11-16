@@ -139,6 +139,25 @@ VALUES (
 )
 RETURNING id;
 
+-- name: GetLatestCodeByPrefix :one
+SELECT code FROM test_cases
+WHERE code LIKE $1 || '%'
+ORDER BY code DESC
+LIMIT 1
+FOR UPDATE;
+
+-- name: GetNextTestCaseSequence :one
+UPDATE test_case_sequences
+SET current_val = current_val +1,
+last_generated_at = now()
+WHERE project_id = $1 AND prefix = $2
+RETURNING current_val;
+
+-- name: InitTestCaseSequence :exec
+INSERT INTO test_case_sequences (project_id, prefix, current_val, last_generated_at)
+VALUES ($1, $2, 0, now())
+ON CONFLICT (project_id, prefix) DO NOTHING;
+
 -- name: UpdateTestCase :exec
 UPDATE test_cases SET
 kind = $2,
@@ -150,6 +169,10 @@ is_draft = $7,
 tags = $8,
 updated_at = $9
 WHERE id = $1;
+
+-- name: GetTestCaseByCode :one
+SELECT * FROM test_cases 
+WHERE project_id = $1 AND code = $2;
 
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;

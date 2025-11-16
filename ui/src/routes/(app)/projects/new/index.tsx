@@ -11,13 +11,6 @@ export const Route = createFileRoute("/(app)/projects/new/")({
   component: CreateProject,
 });
 
-// interface newProjectRequest = {
-//   name: string;
-//   description: string;
-//   version: string;
-//   github_url: string;
-//   website_url: string;
-// }
 
 function CreateProject() {
   const createProjectMutation = useCreateProjectMutation();
@@ -26,6 +19,7 @@ function CreateProject() {
   const handleSubmit = async (values: {
     name: string;
     description: string;
+    code?: string;
     version: string;
     website_url?: string;
   }) => {
@@ -34,6 +28,7 @@ function CreateProject() {
         body: {
           name: values.name,
           description: values.description,
+          code: values.code || "",
           version: values.version,
           website_url: values.website_url || "",
         },

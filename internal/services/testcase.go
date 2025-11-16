@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -59,12 +60,14 @@ type TestCaseService interface {
 var _ TestCaseService = &testCaseServiceImpl{}
 
 type testCaseServiceImpl struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
+func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestCaseService {
 	return &testCaseServiceImpl{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -72,33 +75,80 @@ func NewTestCaseService(conn *dbsqlc.Queries, logger logging.Logger) TestCaseSer
 
 // BulkCreate implements TestCaseService.
 func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
-	createList := make([]uuid.UUID, 0)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
 	for _, request := range bulkRequest.TestCases {
-		uuidVal, _ := uuid.NewV7()
-		params := dbsqlc.CreateTestCaseParams{
-			ID:               uuidVal,
-			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
-			Kind:             dbsqlc.TestKind(request.Kind),
-			Code:             request.Code,
-			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
-			Title:            request.Title,
-			Description:      request.Description,
-			ParentTestCaseID: sql.NullInt32{},
-			IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
-			Tags:             request.Tags,
-			CreatedByID:      1,
-			CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+		request.ProjectID = bulkRequest.ProjectID
+		project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch project: %w", err)
 		}
 
-		createdID, err := t.queries.CreateTestCase(ctx, params)
+		// Ensure sequence row exists for this project's item
+		prefixKey := strings.ToLower(project.Code)
+		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+			ProjectID: int32(request.ProjectID),
+			Prefix:    prefixKey,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+		}
+
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
 		if err != nil {
 			return nil, err
 		}
-		createList = append(createList, createdID)
+
+		uuidVal, _ := uuid.NewV7()
+		params := dbsqlc.CreateTestCaseParams{
+			ID:               uuidVal,
+			ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
+			Kind:             dbsqlc.TestKind(request.Kind),
+			Code:             code,
+			FeatureOrModule:  common.NullString(request.FeatureOrModule),
+			Title:            request.Title,
+			Description:      request.Description,
+			ParentTestCaseID: sql.NullInt32{},
+			IsDraft:          common.NewNullBool(request.IsDraft),
+			Tags:             request.Tags,
+			CreatedByID:      1,
+			CreatedAt:        common.NewNullTime(time.Now()),
+			UpdatedAt:        common.NewNullTime(time.Now()),
+		}
+
+		if strings.TrimSpace(request.Code) != "" {
+			_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+				ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+				Code:      request.Code,
+			})
+			if err == nil {
+				return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+			}
+		}
+
+		createdID, err := tx.CreateTestCase(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+		tc, err := tx.GetTestCase(ctx, createdID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+		}
+
+		testCases = append(testCases, tc)
 	}
 
-	return []dbsqlc.TestCase{}, nil
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return testCases, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -108,29 +158,74 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
-	uuidVal, _ := uuid.NewV7()
-	params := dbsqlc.CreateTestCaseParams{
-		ID:               uuidVal,
-		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
-		Kind:             dbsqlc.TestKind(request.Kind),
-		Code:             request.Code,
-		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
-		Title:            request.Title,
-		Description:      request.Description,
-		ParentTestCaseID: sql.NullInt32{},
-		IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
-		Tags:             request.Tags,
-		CreatedByID:      1,
-		CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-	}
-
-	createdID, err := t.queries.CreateTestCase(ctx, params)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := t.queries.GetTestCase(ctx, createdID)
-	return &res, err
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
+	// Ensure sequence row exists for this project inside the same transaction
+	prefixKey := strings.ToLower(project.Code)
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(request.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
+	if err != nil {
+		return nil, err
+	}
+	uuidVal, _ := uuid.NewV7()
+	params := dbsqlc.CreateTestCaseParams{
+		ID:               uuidVal,
+		ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
+		Kind:             dbsqlc.TestKind(request.Kind),
+		Code:             code,
+		FeatureOrModule:  common.NullString(request.FeatureOrModule),
+		Title:            request.Title,
+		Description:      request.Description,
+		ParentTestCaseID: sql.NullInt32{},
+		IsDraft:          common.NewNullBool(request.IsDraft),
+		Tags:             request.Tags,
+		CreatedByID:      1,
+		CreatedAt:        common.NewNullTime(time.Now()),
+		UpdatedAt:        common.NewNullTime(time.Now()),
+	}
+
+	if strings.TrimSpace(request.Code) != "" {
+		_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+			ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+			Code:      request.Code,
+		})
+		if err == nil {
+			return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+		}
+	}
+
+	createdID, err := tx.CreateTestCase(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	tc, err := tx.GetTestCase(ctx, createdID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tc, err
 }
 
 // DeleteByID implements TestCaseService.
@@ -224,4 +319,23 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 	return testCases, nil
 
+}
+
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, project *dbsqlc.Project, userCode *string) (string, error) {
+	if userCode != nil && *userCode != "" {
+		return *userCode, nil
+	}
+
+	prefixKey := strings.ToLower(project.Code)
+
+	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
+		ProjectID: int32(projectID),
+		Prefix:    prefixKey,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get next sequence: %w", err)
+	}
+
+	displayPrefix := strings.ToUpper(prefixKey) // used for code formatting
+	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
