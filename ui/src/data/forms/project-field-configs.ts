@@ -6,6 +6,10 @@ export const projectCreationFields: FieldConfig[] = [
     placeholder: 'Enter project name',
     helperText: 'Choose a descriptive name for your project',
   }),
+  createFieldConfig('code', 'Project Code', 'text', {
+    placeholder: 'Choose project code',
+    helperText: 'Choose three letters for the project code - used for test numbers',
+  }),
   createFieldConfig('description', 'Description', 'textarea', {
     placeholder: 'Describe your project',
     helperText: 'Provide a detailed description of your project',
