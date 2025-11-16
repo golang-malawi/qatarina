@@ -835,6 +835,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/import-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import test cases from Excel or CSV file
+         * @description Import test cases from Excel or CSV file
+         */
+        post: operations["ImportTestCasesFromFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/import/github": {
         parameters: {
             query?: never;
@@ -1305,7 +1325,8 @@ export interface components {
             type: string;
         };
         "schema.CreateTestCaseRequest": {
-            code: string;
+            /** @description optional; auto-generated if blank */
+            code?: string;
             description: string;
             feature_or_module: string;
             is_draft?: boolean;
@@ -1368,6 +1389,7 @@ export interface components {
             uptimeSeconds?: number;
         };
         "schema.NewProjectRequest": {
+            code: string;
             description: string;
             github_url?: string;
             name: string;
@@ -1389,6 +1411,7 @@ export interface components {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
         "schema.ProjectResponse": {
+            code?: string;
             created_at?: string;
             description?: string;
             github_url?: string;
@@ -1440,6 +1463,7 @@ export interface components {
             project_id?: number;
             tags?: string[];
             title?: string;
+            updated_at?: string;
         };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
@@ -1494,6 +1518,7 @@ export interface components {
             type: string;
         };
         "schema.UpdateProjectRequest": {
+            code: string;
             description: string;
             github_url?: string;
             id: number;
@@ -1508,7 +1533,7 @@ export interface components {
             description: string;
             feature_or_module: string;
             id: string;
-            is_draft: string;
+            is_draft: boolean;
             kind: string;
             tags: string[];
             title: string;
@@ -2848,6 +2873,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ImportTestCasesFromFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                formData: string;
+            };
+            cookie?: never;
+        };
+        /** @description Excel or CSV file */
+        requestBody: {
+            content: {
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Bad Request */

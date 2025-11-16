@@ -123,6 +123,7 @@ components:
     schema.CreateTestCaseRequest:
       properties:
         code:
+          description: optional; auto-generated if blank
           type: string
         description:
           type: string
@@ -142,7 +143,6 @@ components:
         title:
           type: string
       required:
-      - code
       - description
       - feature_or_module
       - kind
@@ -263,6 +263,10 @@ components:
       type: object
     schema.NewProjectRequest:
       properties:
+        code:
+          maxLength: 10
+          minLength: 3
+          type: string
         description:
           type: string
         github_url:
@@ -278,6 +282,7 @@ components:
         website_url:
           type: string
       required:
+      - code
       - description
       - name
       - version
@@ -316,6 +321,8 @@ components:
       type: object
     schema.ProjectResponse:
       properties:
+        code:
+          type: string
         created_at:
           type: string
         description:
@@ -427,6 +434,8 @@ components:
           type: array
           uniqueItems: false
         title:
+          type: string
+        updated_at:
           type: string
       type: object
     schema.TestPlanListResponse:
@@ -543,6 +552,10 @@ components:
       type: object
     schema.UpdateProjectRequest:
       properties:
+        code:
+          maxLength: 10
+          minLength: 3
+          type: string
         description:
           type: string
         github_url:
@@ -560,6 +573,7 @@ components:
         website_url:
           type: string
       required:
+      - code
       - description
       - id
       - name
@@ -578,7 +592,7 @@ components:
         id:
           type: string
         is_draft:
-          type: string
+          type: boolean
         kind:
           type: string
         tags:
@@ -1920,6 +1934,46 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create multiple Test Cases at once
+      tags:
+      - test-cases
+  /v1/test-cases/import-file:
+    post:
+      description: Import test cases from Excel or CSV file
+      operationId: ImportTestCasesFromFile
+      parameters:
+      - description: Project ID
+        in: path
+        name: formData
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+        description: Excel or CSV file
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Import test cases from Excel or CSV file
       tags:
       - test-cases
   /v1/test-cases/import/github:

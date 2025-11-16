@@ -19,10 +19,10 @@ import (
 //	@Summary		Import test cases from Excel or CSV file
 //	@Description	Import test cases from Excel or CSV file
 //	@Tags			test-cases
-//	@Accept			json
+//	@Accept			multipart/form-data
 //	@Produce		json
 //	@Param			projectID formData	path		string	true	"Project ID"
-//	@Param			request	body		file	true	"Excel or CSV file"
+//	@Param			request	body		any	true	"Excel or CSV file"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail

@@ -7,7 +7,7 @@ import (
 // NewProjectRequest a request representing creation of a new project on the platform
 type NewProjectRequest struct {
 	Name            string `json:"name" validate:"required"`
-	Code            string `json:"code" validate:"required, min=3,max=10"`
+	Code            string `json:"code" validate:"required,min=3,max=10"`
 	Description     string `json:"description" validate:"required"`
 	WebsiteURL      string `json:"website_url,omitempty" validate:"required"`
 	Version         string `json:"version" validate:"required"`
@@ -19,7 +19,7 @@ type NewProjectRequest struct {
 type UpdateProjectRequest struct {
 	ID              int64  `json:"id" validate:"required"`
 	Name            string `json:"name" validate:"required"`
-	Code            string `json:"code" validate:"required, min=3,max=10"`
+	Code            string `json:"code" validate:"required,min=3,max=10"`
 	Description     string `json:"description" validate:"required"`
 	WebsiteURL      string `json:"website_url,omitempty" validate:"required"`
 	Version         string `json:"version" validate:"required"`
