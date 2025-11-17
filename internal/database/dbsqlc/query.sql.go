@@ -63,27 +63,6 @@ func (q *Queries) CloseTestPlan(ctx context.Context, arg CloseTestPlanParams) (i
 	return result.RowsAffected()
 }
 
-const closeTestPlan = `-- name: CloseTestPlan :execrows
-UPDATE test_plans
-SET is_complete = TRUE,
-closed_at = $2,
-updated_at = $2
-WHERE id = $1
-`
-
-type CloseTestPlanParams struct {
-	ID       int64
-	ClosedAt sql.NullTime
-}
-
-func (q *Queries) CloseTestPlan(ctx context.Context, arg CloseTestPlanParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, closeTestPlan, arg.ID, arg.ClosedAt)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
 const commitTestRunResult = `-- name: CommitTestRunResult :one
 UPDATE test_runs SET
     tested_by_id = $2,
@@ -1154,38 +1133,6 @@ func (q *Queries) GetTestRunStatesForPlan(ctx context.Context, testPlanID int32)
 	return items, nil
 }
 
-const getTestRunStatesForPlan = `-- name: GetTestRunStatesForPlan :many
-SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1
-`
-
-type GetTestRunStatesForPlanRow struct {
-	ResultState TestRunState
-	IsClosed    sql.NullBool
-}
-
-func (q *Queries) GetTestRunStatesForPlan(ctx context.Context, testPlanID int32) ([]GetTestRunStatesForPlanRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTestRunStatesForPlan, testPlanID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetTestRunStatesForPlanRow
-	for rows.Next() {
-		var i GetTestRunStatesForPlanRow
-		if err := rows.Scan(&i.ResultState, &i.IsClosed); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getTesterCount = `-- name: GetTesterCount :one
 SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE is_active = true
 `
@@ -1340,44 +1287,6 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const insertTestRunResult = `-- name: InsertTestRunResult :one
-INSERT INTO test_run_results (
-    id, test_run_id, status, result, notes, executed_by, executed_at, created_at, updated_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
-)
-RETURNING id
-`
-
-type InsertTestRunResultParams struct {
-	ID         uuid.UUID
-	TestRunID  uuid.UUID
-	Status     TestRunState
-	Result     string
-	Notes      sql.NullString
-	ExecutedBy int32
-	ExecutedAt time.Time
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-func (q *Queries) InsertTestRunResult(ctx context.Context, arg InsertTestRunResultParams) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, insertTestRunResult,
-		arg.ID,
-		arg.TestRunID,
-		arg.Status,
-		arg.Result,
-		arg.Notes,
-		arg.ExecutedBy,
-		arg.ExecutedAt,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-	)
-	var id uuid.UUID
-	err := row.Scan(&id)
-	return id, err
 }
 
 const initTestCaseSequence = `-- name: InitTestCaseSequence :exec
