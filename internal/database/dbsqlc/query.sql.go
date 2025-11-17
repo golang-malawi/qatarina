@@ -1307,9 +1307,9 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 
 const insertTestRunResult = `-- name: InsertTestRunResult :one
 INSERT INTO test_run_results (
-    id, test_run_id, test_case_id, status, result, notes, executed_by, executed_at, created_at, updated_at
+    id, test_run_id, status, result, notes, executed_by, executed_at, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
 RETURNING id
 `
@@ -1317,8 +1317,7 @@ RETURNING id
 type InsertTestRunResultParams struct {
 	ID         uuid.UUID
 	TestRunID  uuid.UUID
-	TestCaseID uuid.UUID
-	Status     string
+	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
 	ExecutedBy int32
@@ -1331,7 +1330,6 @@ func (q *Queries) InsertTestRunResult(ctx context.Context, arg InsertTestRunResu
 	row := q.db.QueryRowContext(ctx, insertTestRunResult,
 		arg.ID,
 		arg.TestRunID,
-		arg.TestCaseID,
 		arg.Status,
 		arg.Result,
 		arg.Notes,

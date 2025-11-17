@@ -100,8 +100,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 	_, err = t.queries.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
 		ID:         uuid.New(),
 		TestRunID:  uuid.MustParse(request.TestRunID),
-		TestCaseID: testRun.TestCaseID,
-		Status:     string(request.State),
+		Status:     request.State,
 		Result:     request.ActualResult,
 		Notes:      common.NullString(request.Notes),
 		ExecutedBy: int32(request.UserID),

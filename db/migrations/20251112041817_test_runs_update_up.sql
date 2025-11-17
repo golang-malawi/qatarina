@@ -2,11 +2,10 @@
 CREATE TABLE test_run_results (
     id UUID PRIMARY KEY,
     test_run_id UUID NOT NULL REFERENCES test_runs(id) ON DELETE CASCADE,
-    test_case_id UUID NOT NULL REFERENCES test_cases(id) ON DELETE CASCADE,
-    status TEXT NOT NULL CHECK (status IN ('passed', 'failed', 'skipped', 'blocked')),
+    status test_run_state NOT NULL, -- use the same enum as test_runs
     result TEXT NOT NULL,
     notes TEXT,
-    executed_by INT NOT NULL,
+    executed_by INT NOT NULL REFERENCES users(id),
     executed_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()

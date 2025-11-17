@@ -69,6 +69,7 @@ const (
 	TestRunStatePending TestRunState = "pending"
 	TestRunStatePassed  TestRunState = "passed"
 	TestRunStateFailed  TestRunState = "failed"
+	TestRunStateBlocked TestRunState = "blocked"
 )
 
 func (e *TestRunState) Scan(src interface{}) error {
@@ -330,8 +331,7 @@ type TestRun struct {
 type TestRunResult struct {
 	ID         uuid.UUID
 	TestRunID  uuid.UUID
-	TestCaseID uuid.UUID
-	Status     string
+	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
 	ExecutedBy int32

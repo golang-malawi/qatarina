@@ -270,9 +270,9 @@ RETURNING id;
 
 -- name: InsertTestRunResult :one
 INSERT INTO test_run_results (
-    id, test_run_id, test_case_id, status, result, notes, executed_by, executed_at, created_at, updated_at
+    id, test_run_id, status, result, notes, executed_by, executed_at, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
 RETURNING id; 
 
