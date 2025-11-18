@@ -3,9 +3,8 @@ package schema
 import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 
 type PublicTestCaseResponse struct {
-	TestCaseID string   `json:"test_case_id"`
-	Title      string   `json:"title"`
-	Steps      []string `json:"steps"`
+	TestCaseID string `json:"test_case_id"`
+	Title      string `json:"title"`
 }
 
 func NewPublicTestCaseResponse(tc *dbsqlc.TestCase) PublicTestCaseResponse {

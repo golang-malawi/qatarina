@@ -476,6 +476,9 @@ func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, use
 func (t *testCaseServiceImpl) FindByInviteToken(ctx context.Context, token string) (*dbsqlc.TestCase, error) {
 	testcase, err := t.queries.FindByInviteToken(ctx, token)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		t.logger.Error("failed to find test case by token", "error", err)
 		return nil, fmt.Errorf("failed to find testcase: %w", err)
 	}
