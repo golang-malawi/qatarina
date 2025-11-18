@@ -55,6 +55,8 @@ type TestCaseService interface {
 
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
+
+	FindByInviteToken(context.Context, string) (*dbsqlc.TestCase, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -338,4 +340,14 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 
 	displayPrefix := strings.ToUpper(prefixKey) // used for code formatting
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
+}
+
+func (t *testCaseServiceImpl) FindByInviteToken(ctx context.Context, token string) (*dbsqlc.TestCase, error) {
+	testcase, err := t.queries.FindByInviteToken(ctx, token)
+	if err != nil {
+		t.logger.Error("failed to find test case by token", "error", err)
+		return nil, fmt.Errorf("failed to find testcase: %w", err)
+	}
+
+	return &testcase, nil
 }

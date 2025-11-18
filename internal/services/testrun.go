@@ -30,6 +30,7 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
+	RecordPublicResult(context.Context, string, *schema.PublicTestResultRequest) error
 }
 
 type testRunService struct {
@@ -138,4 +139,9 @@ func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error
 // CreateFromFoundIssues implements TestRunService.
 func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
 	panic("unimplemented")
+}
+
+func (t *testRunService) RecordPublicResult(ctx context.Context, token string, req *schema.PublicTestResultRequest) error {
+	//return t.queries.InsertPublicResult(ctx, token, req.TestCaseID, req.Result, req.Comment)
+	return fmt.Errorf("not implemented")
 }
