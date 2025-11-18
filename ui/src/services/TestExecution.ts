@@ -4,7 +4,7 @@ export async function fetchTestcase(token: string) {
     if(!response.ok){
         throw new Error("Failed to fetch testcase");
     }
-    return response.json(); // expected: { testcaseId, title, steps}
+    return response.json() as Promise<{test_case_id: string; title: string}>; // expected: { testcaseId, title}
 }
 
 export async function recordTestResult(
