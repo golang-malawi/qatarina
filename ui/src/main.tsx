@@ -10,6 +10,9 @@ import { useAuth } from "./hooks/isLoggedIn";
 import { Provider } from "./components/ui/provider";
 import { Spinner } from "@chakra-ui/react";
 
+import {ToastContainer} from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 
 const queryClient = new QueryClient();
 
@@ -52,6 +55,7 @@ if (!rootElement.innerHTML) {
         <Provider>
           <AuthProvider>
             <InnerApp />
+            <ToastContainer position="top-right" autoClose={3000} />
           </AuthProvider>
         </Provider>
       </QueryClientProvider>

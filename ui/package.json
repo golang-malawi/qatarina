@@ -39,6 +39,7 @@
     "react-helmet": "^6.1.0",
     "react-hook-form": "^7.55.0",
     "react-icons": "^5.5.0",
+    "react-toastify": "^11.0.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -46,8 +47,8 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^24.0.13",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
     "@typescript-eslint/parser": "^8.36.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.31.0",
