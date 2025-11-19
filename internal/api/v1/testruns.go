@@ -246,3 +246,35 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		})
 	}
 }
+
+// CloseTestPlan godoc
+//
+//	@ID				CloseTestPlan
+//	@Summary		Close a Test Plan
+//	@Description	Close a Test Plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		int	true	"Test Plan ID"
+//	@Param			request	body			true	""
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/close [post]
+func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
+		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to close test plan", "error", err)
+			return problemdetail.BadRequest(c, "failed to process request")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Test plan closed successfully",
+		})
+	}
+}
