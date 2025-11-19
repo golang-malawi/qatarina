@@ -298,8 +298,8 @@ const projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof appIndexRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/': typeof appIndexRoute
   '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
   '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
   '/testers/invite': typeof appTestersInviteRoute
@@ -436,8 +436,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/invite/$token'
+    | '/'
     | '/test-cases/inbox'
     | '/projects/$projectId'
     | '/testers/invite'
@@ -584,8 +584,8 @@ declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/(app)': {
       id: '/(app)'
-      path: '/'
-      fullPath: '/'
+      path: ''
+      fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
       parentRoute: typeof rootRouteImport
     }

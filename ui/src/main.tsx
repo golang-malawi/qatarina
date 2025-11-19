@@ -53,6 +53,7 @@ if (!rootElement.innerHTML) {
           <AuthProvider>
             <Toaster />
             <InnerApp />
+            <ToastContainer position="top-right" autoClose={3000} />
           </AuthProvider>
         </Provider>
       </QueryClientProvider>

@@ -1,12 +1,24 @@
 import { useParams } from "@tanstack/react-router";
+import {
+    Box,
+    Heading,
+    Text,
+    Button,
+    Textarea,
+    Stack,
+    Spinner,
+} from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { fetchTestcase, recordTestResult } from "../services/TestExecution";
+import {toast} from "react-toastify";
+
+type Status = "Pass" | "Fail" | "Blocked";
 
 export default function PublicTestPage(){
     const {token} = useParams({from: "/invite/$token"});
     const [loading, setLoading] = useState(true);
     const [testcase, setTestcase] = useState<any>(null);
-    const [result, setResult] = useState<string | null>(null);
+    const [result, setResult] = useState<Status | null>(null);
     const[comment, setComment] = useState("");
 
     useEffect(() => {
@@ -15,7 +27,7 @@ export default function PublicTestPage(){
                 const data = await fetchTestcase(token);
                 setTestcase(data);                
             } catch (err) {
-                alert("Error loading testcase: " + (err as Error).message);
+                toast.error("Error loading testcase: " + (err as Error).message);
             }finally {
                 setLoading(false);
             }
@@ -25,73 +37,89 @@ export default function PublicTestPage(){
 
     const handleSubmit = async () => {
         if (!result) {
-            alert("Please select a result before submitting.");
+            toast.warn("Please select a result before submitting")
             return;
         }
         try {
             await recordTestResult(token, testcase.test_case_id, result, comment);
-            alert("Your result has been recorded. Thank you!");
+           toast.success("Your result has been recorded. Thank you!")
         } catch (err) {
-            alert("Error submitting results: " + (err as Error).message);
+            toast.error("Submission error: " + (err as Error).message);
         }
     };
 
-    if (loading) return <p className="text-center mt-10">Loading testcase...</p>;
-    if (!testcase) return <p className="text-center mt-10">No testcase found for this invite.</p>;
+    if (loading) return <Spinner size="xl" mt={10} display="block" mx="auto" />;
+    if (!testcase)
+     return (
+     <Text textAlign="center" mt={10}>
+        No testcase found for this invite.
+     </Text>
+     );
+
+     const colorSchemeMap: Record<Status, string> = {
+        Pass: "green",
+        Fail: "red",
+        Blocked: "gray",
+     };
 
     return (
-        <div className="max-w-xl mx-auto p-6 space-y-6">
-            <h1 className="text-2xl font-bold text-center">{testcase.title}</h1>
-            
-            <div className="space-y-2">
-                <p className="text-gray-700 font-medium">Select result:</p>
-                <div className="flex justify-center gap-4">
-                    {["Pass", "Fail", "Blocked"].map((status) => {
-                        const baseStyles = "px-4 py-2 rounded cursor-pointer transition";
-                        const selected = result === status;
-                        const colorMap: { [key: string]: string} = {
-                            Pass: selected ? "bg-green-600 text-white" : "bg-green-200 hover:bg-green-300 active:bg-green-400",
-                            Fail: selected ? "bg-red-600 text-white" : "bg-red-200 hover:bg-red-300 active:bg-red-400",
-                            Blocked: selected ? "bg-gray-600 text-white" : "bg-gray-200 hover:bg-gray-300 active:bg-gray-400",
-                        };
-                        return (
-                            <button
-                            key={status}
-                            onClick={() => setResult(status)}
-                            className={`${baseStyles} ${colorMap[status]}`}
-                            >
-                                {status === "Pass" && "Pass ✅"}
-                                {status === "Fail" && "Fail ❌"}
-                                {status == "Blocked" && "Blocked 🚫"}
-                            </button>
-                        );
-                    })}
-                </div>                
-            </div>
+        <Box maxW="xl" mx="auto" p={6}>
+            <Heading size="lg" textAlign="center" mb={6}>
+                {testcase.title}
+            </Heading>
 
-                    <div>
-                        <label className="block text-gray-700 font-medium mb-2">Add comments <span className="text-gray-500">(optional)</span></label> 
-                        <textarea
-                        className="w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                        placeholder="Describe what happened..."
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        />
-                    </div>
+            <Stack spacing={4}>
+                <Text fontWeight="medium">Select result:</Text>
+                <Stack direction="row" justify="center" spacing={4}>
+                    {(["Pass", "Fail", "Blocked"] as Status[]).map((status) =>(
+                    <Button
+                    key={status}
+                    onClick={() => setResult(status)}
+                    variant="ghost"
+                    bg={result === status ? `${colorSchemeMap[status]}.500` : "transparent"}
+                    color={result === status ? "white" : `${colorSchemeMap[status]}.500`}
+                    _hover={{
+                        bg: result === status ? `${colorSchemeMap[status]}.600` : "gray.100",
+                    }}
+                    _active={{
+                        bg: result === status ? `${colorSchemeMap[status]}.700` : "gray.200",
+                    }}
+                    _dark={{
+                        bg: result === status ? `${colorSchemeMap[status]}.400` : "transparent",
+                        color: result === status ? "black" : `${colorSchemeMap[status]}.300`,
+                        _hover: {
+                            bg: result === status ? `${colorSchemeMap[status]}.500` : "gray.700",
+                        },
+                    }}
+                    >
+                    {status === "Pass" && "Pass ✅"}
+                    {status === "Fail" && "Fail ❌"}
+                    {status === "Blocked" && "Blocked 🚫"}
+                    </Button>
+                ))}
+                </Stack>                        
 
-                    <div className="text-center">
-                        <button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className={`px-6 py-2 rounded transition ${
-                        loading
-                        ? "bg-blue-300 text-white cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
-                }`}
-                >
-                    {loading ? "Submitting..." : "Submit Result"}
-                </button>
-                </div>        
-        </div>
+            <Box>
+                <Text fontWeight="medium" mb={2}>
+                    Add comment <Text as="span" color="gray.500">(optional)</Text>
+                </Text>
+                <Textarea
+                placeholder="Describe what happened..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                />
+            </Box>
+
+            <Button
+            onClick={handleSubmit}
+            isDisabled={loading}
+            isLoading={loading}
+            colorScheme="blue"
+            alignSelf="center"
+            >
+                Submit Result
+            </Button>
+         </Stack>
+        </Box> 
     );
 }
