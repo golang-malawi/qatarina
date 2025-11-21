@@ -26,13 +26,13 @@ type BulkCommitTestResults struct {
 }
 
 type CommitTestRunResult struct {
-	UserID         int64  `json:"-"`
-	TestRunID      string `json:"test_run_id" validate:"required"`
-	Notes          string `json:"notes" validate:"required"`
-	IsClosed       bool   `json:"is_closed"`
-	TestedOn       string `json:"tested_on" validate:"required"`
-	ActualResult   string `json:"actual_result" validate:"required"`
-	ExpectedResult string `json:"expected_result"`
+	UserID         int64     `json:"-"`
+	TestRunID      string    `json:"test_run_id" validate:"required"`
+	Notes          string    `json:"notes" validate:"required"`
+	IsClosed       bool      `json:"is_closed"`
+	TestedOn       time.Time `json:"tested_on" validate:"required"`
+	ActualResult   string    `json:"actual_result" validate:"required"`
+	ExpectedResult string    `json:"expected_result"`
 	// State is the result of the test run
 	State dbsqlc.TestRunState `json:"result_state" validate:"required"`
 }
@@ -64,7 +64,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 			TestRunID:      "",
 			Notes:          entryNormalized,
 			IsClosed:       false,
-			TestedOn:       testDate.Format(time.DateOnly),
+			TestedOn:       testDate,
 			ActualResult:   entryNormalized,
 			ExpectedResult: fmt.Sprintf("Expected different behavior"),
 			State:          dbsqlc.TestRunStateFailed,

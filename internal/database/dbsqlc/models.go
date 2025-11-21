@@ -69,6 +69,7 @@ const (
 	TestRunStatePending TestRunState = "pending"
 	TestRunStatePassed  TestRunState = "passed"
 	TestRunStateFailed  TestRunState = "failed"
+	TestRunStateBlocked TestRunState = "blocked"
 )
 
 func (e *TestRunState) Scan(src interface{}) error {
@@ -326,6 +327,18 @@ type TestRun struct {
 	TestedOn              time.Time
 	CreatedAt             sql.NullTime
 	UpdatedAt             sql.NullTime
+}
+
+type TestRunResult struct {
+	ID         uuid.UUID
+	TestRunID  uuid.UUID
+	Status     TestRunState
+	Result     string
+	Notes      sql.NullString
+	ExecutedBy int32
+	ExecutedAt time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type TestRunsComment struct {

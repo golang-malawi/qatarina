@@ -3,7 +3,6 @@ package services
 import (
 	"cmp"
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -83,22 +82,35 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 	}
 
 	_, err = t.queries.CommitTestRunResult(ctx, dbsqlc.CommitTestRunResultParams{
-		ID:           uuid.MustParse(request.TestRunID),
-		TestedByID:   int32(request.UserID),
-		Notes:        request.Notes,
-		UpdatedAt:    sql.NullTime{Valid: true, Time: time.Now()},
-		ResultState:  request.State,
-		IsClosed:     sql.NullBool{Valid: true, Bool: request.IsClosed},
-		TestedOn:     time.Now(), // TODO: get from the request
-		ActualResult: sql.NullString{Valid: true, String: request.ActualResult},
-		ExpectedResult: sql.NullString{
-			Valid:  true,
-			String: cmp.Or(request.ExpectedResult, testRun.ExpectedResult.String),
-		},
+		ID:             uuid.MustParse(request.TestRunID),
+		TestedByID:     int32(request.UserID),
+		Notes:          request.Notes,
+		UpdatedAt:      common.NullTime(time.Now()),
+		ResultState:    request.State,
+		IsClosed:       common.NewNullBool(request.IsClosed),
+		TestedOn:       request.TestedOn,
+		ActualResult:   common.NullString(request.ActualResult),
+		ExpectedResult: common.NullString(cmp.Or(request.ExpectedResult, testRun.ExpectedResult.String)),
 	})
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Update the test_runs_results for historical logging
+	_, err = t.queries.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+		ID:         uuid.New(),
+		TestRunID:  uuid.MustParse(request.TestRunID),
+		Status:     request.State,
+		Result:     request.ActualResult,
+		Notes:      common.NullString(request.Notes),
+		ExecutedBy: int32(request.UserID),
+		ExecutedAt: request.TestedOn,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert to test_run_results: %w", err)
 	}
 
 	testRun, err = t.queries.GetTestRun(ctx, uuid.MustParse(request.TestRunID))

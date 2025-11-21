@@ -22,6 +22,7 @@ type TestPlanService interface {
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
+	CloseTestPlan(context.Context, int32) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -189,4 +190,26 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 		return false, err
 	}
 	return true, nil
+}
+
+// CloseTestPlan implements TestRunService
+func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) error {
+	testRuns, err := t.queries.ListTestRunsByPlan(ctx, testPlanID)
+	if err != nil {
+		t.logger.Error("error listing test runs", "error", err)
+		return err
+	}
+
+	for _, testRun := range testRuns {
+		if testRun.ResultState == "pending" || !testRun.IsClosed.Bool {
+			t.logger.Error("failed to close test plan", "error", err)
+			return fmt.Errorf("cannot close: some test run %v is still pending", testRun.ID)
+		}
+	}
+
+	_, err = t.queries.CloseTestPlan(ctx, dbsqlc.CloseTestPlanParams{
+		ID:       int64(testPlanID),
+		ClosedAt: common.NullTime(time.Now()),
+	})
+	return err
 }
