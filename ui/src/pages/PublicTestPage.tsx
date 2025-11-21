@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { fetchTestcase, recordTestResult } from "../services/TestExecution";
-import {toast} from "react-toastify";
+import {toaster} from "../components/ui/toaster";
 
 type Status = "Pass" | "Fail" | "Blocked";
 
@@ -27,7 +27,12 @@ export default function PublicTestPage(){
                 const data = await fetchTestcase(token);
                 setTestcase(data);                
             } catch (err) {
-                toast.error("Error loading testcase: " + (err as Error).message);
+                toaster.create({
+                    title: "Error loading testcase",
+                    description: (err as Error).message,
+                    type: "error",
+                    duration: 5000,
+            });
             }finally {
                 setLoading(false);
             }
@@ -37,14 +42,29 @@ export default function PublicTestPage(){
 
     const handleSubmit = async () => {
         if (!result) {
-            toast.warn("Please select a result before submitting")
+            toaster.create({
+                title: "Missing result",
+                description: "Please select a result before submitting.",
+                type: "warning",
+                duration: 4000,
+            });
             return;
         }
         try {
             await recordTestResult(token, testcase.test_case_id, result, comment);
-           toast.success("Your result has been recorded. Thank you!")
+           toaster.create({
+            title: "Result recorded",
+            description: "Your result has been recorded. Thank you!",
+            type: "success",
+            duration: 5000,
+           });
         } catch (err) {
-            toast.error("Submission error: " + (err as Error).message);
+            toaster.create({
+                title: "Submission error",
+                description: (err as Error).message,
+                type: "error",
+                duration: 5000,
+            });
         }
     };
 
