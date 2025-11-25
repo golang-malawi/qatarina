@@ -33,6 +33,13 @@ WHERE id = $1;
 INSERT INTO invites (sender_email, receiver_email, token, expires_at)
 VALUES ($1, $2, $3, $4);
 
+-- name: FindByInviteToken :one
+SELECT tc.*
+FROM test_cases tc
+INNER JOIN invites i ON i.test_case_id = tc.id
+WHERE i.token = $1
+LIMIT 1;
+
 -- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,

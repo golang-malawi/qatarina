@@ -27,6 +27,10 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
+	// Public test execution routes (no auth required)
+	router.Get("/api/test-execution/:token", apiv1.GetPublicTestCase(api.TestCasesService, api.logger))
+	router.Post("/api/test-execution/:token", apiv1.RecordPublicTestResult(api.TestRunsService, api.logger))
+
 	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
