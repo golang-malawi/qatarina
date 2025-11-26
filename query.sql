@@ -100,6 +100,13 @@ WHERE tp.test_plan_id = $1;
 -- name: ListTestCasesByCreator :many
 SELECT * FROM test_cases WHERE created_by_id = $1;
 
+-- name: ListTestCasesByAssignedUser :many
+SELECT tc.*
+FROM test_cases tc
+JOIN test_plan_test_cases tp_tc ON tc.id = tp_tc.test_case_id
+JOIN test_plans tp ON tp.id = tp_tc.test_plan_id
+WHERE tp.assigned_to_id = $1;
+
 -- name: IsTestCaseLinkedToProject :one
 SELECT EXISTS(
     SELECT * FROM test_cases WHERE project_id = $1

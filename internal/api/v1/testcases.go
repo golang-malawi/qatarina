@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
@@ -232,6 +233,34 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 
 		return c.JSON(fiber.Map{
 			"message": "Test case deleted successfully",
+		})
+	}
+}
+
+// ListAssignedTestCases godoc
+//
+//	@ID				ListAssignedTestCases
+//	@Summary		List Test Cases assigned to the current user
+//	@Description	List Test Cases assigned to the current user
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/inbox [get]
+func ListAssignedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		userID := authutil.GetAuthUserID(ctx)
+
+		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID)
+		if err != nil {
+			logger.Error("failed to fetch assigned test cases", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
+		}
+
+		return ctx.JSON(fiber.Map{
+			"Testcases": testCases,
 		})
 	}
 }
