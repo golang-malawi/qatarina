@@ -154,6 +154,42 @@ func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *sch
 }
 
 func (t *testRunService) RecordPublicResult(ctx context.Context, token string, req *schema.PublicTestResultRequest) error {
-	//return t.queries.InsertPublicResult(ctx, token, req.TestCaseID, req.Result, req.Comment)
-	return fmt.Errorf("not implemented")
+	invite, err := t.queries.GetInviteByToken(ctx, token)
+	if err != nil {
+		return fmt.Errorf("invalid or expired token: %w", err)
+	}
+
+	user, err := t.queries.FindUserLoginByEmail(ctx, invite.ReceiverEmail)
+	var testedByID int32
+	if err != nil {
+		// guest tester: no registered user found
+		testedByID = 0
+	} else {
+		testedByID = user.ID
+	}
+
+	testRun, err := t.queries.FindTestRunByCaseAndUser(ctx, dbsqlc.FindTestRunByCaseAndUserParams{
+		TestCaseID: invite.TestCaseID.UUID,
+		TestedByID: testedByID,
+	})
+	if err != nil {
+		return fmt.Errorf("no test run found for case %s and user %d: %w", invite.TestCaseID.UUID, testedByID, err)
+	}
+
+	commitReq := &schema.CommitTestRunResult{
+		TestRunID:    testRun.ID.String(),
+		UserID:       int64(testedByID),
+		State:        dbsqlc.TestRunState(req.Result),
+		Notes:        req.Comment,
+		TestedOn:     time.Now(),
+		IsClosed:     true,
+		ActualResult: req.Result,
+	}
+
+	_, err = t.Commit(ctx, commitReq)
+	if err != nil {
+		return fmt.Errorf("failed to commit pubic result: %w", err)
+	}
+
+	return nil
 }

@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -113,14 +115,39 @@ func GetOneTester(testerService services.TesterService, logger logging.Logger) f
 //	@Tags			testers
 //	@Accept			json
 //	@Produce		json
-//	@Param			email	path		string		true	"Email of tester"
-//	@Param			request	body		interface{}	true	"Invite data"
+//	@Param			request	body		schema.InviteTesterRequest true	"Invite data"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
-//	@Router			/v1/testers/invite/{email} [post]
+//	@Router			/v1/testers/invite [post]
 func InviteTester(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return problemdetail.NotImplemented(c, "failed to invite Tester")
+		var req schema.InviteTesterRequest
+		if validationErrors, err := common.ParseBodyThenValidate(c, &req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error(loggedmodule.ApiTesters, "failed to parse request body", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		if req.Email == "" {
+			return problemdetail.BadRequest(c, "No email address in request")
+		}
+
+		senderEmail := authutil.GetAuthUserEmail(c)
+		if senderEmail == "" {
+			return problemdetail.BadRequest(c, "Sender not authenticated")
+		}
+
+		err := testerService.Invite(c.Context(), senderEmail, req.Email, req.TestCaseID, req.ProjectID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTesters, "failed to send tester invite", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to send tester invite")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Tester invite sent",
+		})
 	}
 }

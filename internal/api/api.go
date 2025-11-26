@@ -46,7 +46,7 @@ func NewAPI(config *config.Config) *API {
 		TestPlansService:      services.NewTestPlanService(dbConn, logger),
 		TestRunsService:       services.NewTestRunService(dbConn, logger),
 		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
-		TesterService:         services.NewTesterService(dbConn, logger),
+		TesterService:         services.NewTesterService(dbConn, logger, config.SMTP, config.Server),
 		ModuleService:         services.NewModuleService(dbConn),
 		PageService:           services.NewPageService(dbConn),
 		DashboardService:      services.NewDashboardService(dbConn, logger),

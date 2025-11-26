@@ -16,11 +16,12 @@ export async function recordTestResult(
     const response = await fetch(`/api/test-execution/${token}`,{
         method: "POST",
         headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ testcaseId, result, comment}),
+        body: JSON.stringify({ test_case_id: testcaseId, result, comment}),
     }); 
 
     if (!response.ok) {
-        throw new Error("Failed to record result");
+        const errBody = await response.json();
+        throw new Error(errBody.detail || "Failed to record result");
     }
     return response.json();
 }

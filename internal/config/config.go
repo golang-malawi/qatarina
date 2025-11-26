@@ -30,9 +30,10 @@ type DatabaseConfiguration struct {
 }
 
 type HTTPServerConfiguration struct {
-	FQDN string `mapstructure:"fqdn" envconfig:"QATARINA_SERVER_FQDN"`
-	Host string `mapstructure:"host" envconfig:"QATARINA_SERVER_HOST"`
-	Port int    `mapstructure:"port" envconfig:"QATARINA_SERVER_PORT"`
+	FQDN          string `mapstructure:"fqdn" envconfig:"QATARINA_SERVER_FQDN"`
+	Host          string `mapstructure:"host" envconfig:"QATARINA_SERVER_HOST"`
+	Port          int    `mapstructure:"port" envconfig:"QATARINA_SERVER_PORT"`
+	InviteBaseURL string `mapstructure:"invite_base_url" enconfig:"QATARINA_SEVER_INVITE_BASE_URL"`
 }
 
 type LoggingConfiguration struct {

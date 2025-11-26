@@ -38,3 +38,14 @@ type BulkAssignTesters struct {
 type TesterListResponse struct {
 	Testers []Tester `json:"testers"`
 }
+
+type InviteTesterRequest struct {
+	ProjectID  int64  `json:"project_id"`
+	TestCaseID string `json:"test_case_id"`
+	Email      string `json:"email"`
+}
+
+type InviteResponse struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}

@@ -3,6 +3,8 @@ package common
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func NullString(value string) sql.NullString {
@@ -34,6 +36,17 @@ func NullTime(t time.Time) sql.NullTime {
 		Time:  t,
 		Valid: !t.IsZero(),
 	}
+}
+
+func NewNullUUID(id string) uuid.NullUUID {
+	if id == "" {
+		return uuid.NullUUID{Valid: false}
+	}
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return uuid.NullUUID{Valid: false}
+	}
+	return uuid.NullUUID{UUID: parsed, Valid: true}
 }
 
 // func ParseDate(dateStr string) sql.NullTime {

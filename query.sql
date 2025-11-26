@@ -30,8 +30,8 @@ UPDATE users SET
 WHERE id = $1;
 
 -- name: CreateInvite :exec
-INSERT INTO invites (sender_email, receiver_email, token, expires_at)
-VALUES ($1, $2, $3, $4);
+INSERT INTO invites (sender_email, receiver_email, token, expires_at, test_case_id)
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: FindByInviteToken :one
 SELECT tc.*
@@ -39,6 +39,9 @@ FROM test_cases tc
 INNER JOIN invites i ON i.test_case_id = tc.id
 WHERE i.token = $1
 LIMIT 1;
+
+-- name: GetInviteByToken :one
+SELECT * FROM invites WHERE token = $1 LIMIT 1;
 
 -- name: CreateUser :one
 INSERT INTO users (
@@ -214,6 +217,10 @@ WHERE id = $1;
 -- name: GetTestRunStatesForPlan :many
 SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
 
+-- name: FindTestRunByCaseAndUser :one
+SELECT * FROM test_runs WHERE test_case_id = $1 AND (tested_by_id = $2 OR tested_by_id IS NULL)
+ LIMIT 1;
+
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
@@ -309,7 +316,7 @@ u.last_login_at as tester_last_login_at
 FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
-WHERE project_id = $1;
+WHERE project_testers.id = $1;
 
 -- name: GetTestersByProject :many
 SELECT

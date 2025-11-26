@@ -120,8 +120,8 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 }
 
 const createInvite = `-- name: CreateInvite :exec
-INSERT INTO invites (sender_email, receiver_email, token, expires_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO invites (sender_email, receiver_email, token, expires_at, test_case_id)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateInviteParams struct {
@@ -129,6 +129,7 @@ type CreateInviteParams struct {
 	ReceiverEmail string
 	Token         string
 	ExpiresAt     sql.NullTime
+	TestCaseID    uuid.NullUUID
 }
 
 func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) error {
@@ -137,6 +138,7 @@ func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) erro
 		arg.ReceiverEmail,
 		arg.Token,
 		arg.ExpiresAt,
+		arg.TestCaseID,
 	)
 	return err
 }
@@ -661,6 +663,43 @@ func (q *Queries) FindByInviteToken(ctx context.Context, token string) (TestCase
 	return i, err
 }
 
+const findTestRunByCaseAndUser = `-- name: FindTestRunByCaseAndUser :one
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE test_case_id = $1 AND (tested_by_id = $2 OR tested_by_id IS NULL)
+ LIMIT 1
+`
+
+type FindTestRunByCaseAndUserParams struct {
+	TestCaseID uuid.UUID
+	TestedByID int32
+}
+
+func (q *Queries) FindTestRunByCaseAndUser(ctx context.Context, arg FindTestRunByCaseAndUserParams) (TestRun, error) {
+	row := q.db.QueryRowContext(ctx, findTestRunByCaseAndUser, arg.TestCaseID, arg.TestedByID)
+	var i TestRun
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.TestPlanID,
+		&i.TestCaseID,
+		&i.OwnerID,
+		&i.TestedByID,
+		&i.AssignedToID,
+		&i.AssigneeCanChangeCode,
+		&i.Code,
+		&i.ExternalIssueID,
+		&i.ResultState,
+		&i.IsClosed,
+		&i.Notes,
+		&i.ActualResult,
+		&i.ExpectedResult,
+		&i.Reactions,
+		&i.TestedOn,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `
@@ -770,6 +809,24 @@ func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getInviteByToken = `-- name: GetInviteByToken :one
+SELECT id, sender_email, receiver_email, token, expires_at, test_case_id FROM invites WHERE token = $1 LIMIT 1
+`
+
+func (q *Queries) GetInviteByToken(ctx context.Context, token string) (Invite, error) {
+	row := q.db.QueryRowContext(ctx, getInviteByToken, token)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.SenderEmail,
+		&i.ReceiverEmail,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.TestCaseID,
+	)
+	return i, err
 }
 
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
@@ -1193,7 +1250,7 @@ u.last_login_at as tester_last_login_at
 FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
-WHERE project_id = $1
+WHERE project_testers.id = $1
 `
 
 type GetTestersByIDRow struct {
@@ -1209,8 +1266,8 @@ type GetTestersByIDRow struct {
 	TesterLastLoginAt sql.NullTime
 }
 
-func (q *Queries) GetTestersByID(ctx context.Context, projectID int32) (GetTestersByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getTestersByID, projectID)
+func (q *Queries) GetTestersByID(ctx context.Context, id int32) (GetTestersByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTestersByID, id)
 	var i GetTestersByIDRow
 	err := row.Scan(
 		&i.ID,
