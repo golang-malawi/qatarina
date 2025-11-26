@@ -3008,3 +3008,27 @@ paths:
       summary: Search all Users
       tags:
       - users
+  /v1/test-cases/inbox:
+    get:
+      summary: List test cases assigned to the current user
+      tags:
+        - test-cases
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
