@@ -103,9 +103,8 @@ SELECT * FROM test_cases WHERE created_by_id = $1;
 -- name: ListTestCasesByAssignedUser :many
 SELECT tc.*
 FROM test_cases tc
-JOIN test_plans_cases tpc ON tc.id = tpc.test_case_id
-JOIN test_plans tp ON tp.id = tpc.test_plan_id
-WHERE tp.assigned_to_id = $1
+JOIN test_runs tr ON tc.id = tr.test_case_id
+WHERE tr.assigned_to_id = $1
 ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3;
 
