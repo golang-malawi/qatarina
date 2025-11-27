@@ -103,8 +103,8 @@ SELECT * FROM test_cases WHERE created_by_id = $1;
 -- name: ListTestCasesByAssignedUser :many
 SELECT tc.*
 FROM test_cases tc
-JOIN test_plan_test_cases tp_tc ON tc.id = tp_tc.test_case_id
-JOIN test_plans tp ON tp.id = tp_tc.test_plan_id
+JOIN test_plan_cases tpc ON tc.id = tpc.test_case_id
+JOIN test_plans tp ON tp.id = tpc.test_plan_id
 WHERE tp.assigned_to_id = $1;
 
 -- name: IsTestCaseLinkedToProject :one
