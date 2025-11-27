@@ -1470,13 +1470,21 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 const listTestCasesByAssignedUser = `-- name: ListTestCasesByAssignedUser :many
 SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
 FROM test_cases tc
-JOIN test_plan_test_cases tp_tc ON tc.id = tp_tc.test_case_id
-JOIN test_plans tp ON tp.id = tp_tc.test_plan_id
+JOIN test_plans_cases tpc ON tc.id = tpc.test_case_id
+JOIN test_plans tp ON tp.id = tpc.test_plan_id
 WHERE tp.assigned_to_id = $1
+ORDER BY tc.created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, assignedToID int32) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, listTestCasesByAssignedUser, assignedToID)
+type ListTestCasesByAssignedUserParams struct {
+	AssignedToID int32
+	Limit        int32
+	Offset       int32
+}
+
+func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesByAssignedUser, arg.AssignedToID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

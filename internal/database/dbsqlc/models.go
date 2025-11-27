@@ -299,13 +299,6 @@ type TestPlan struct {
 	UpdatedAt sql.NullTime
 }
 
-type TestPlanTestCase struct {
-	ID         uuid.UUID
-	TestPlanID int32
-	TestCaseID uuid.UUID
-	CreatedAt  sql.NullTime
-}
-
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID

@@ -252,15 +252,18 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 func ListAssignedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		userID := authutil.GetAuthUserID(ctx)
+		page := ctx.QueryInt("page", 1)
+		pageSize := ctx.QueryInt("pageSize", 20)
+		offset := (page - 1) * pageSize
 
-		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID)
+		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset))
 		if err != nil {
 			logger.Error("failed to fetch assigned test cases", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
 		}
 
-		return ctx.JSON(fiber.Map{
-			"Testcases": testCases,
+		return ctx.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
 		})
 	}
 }
