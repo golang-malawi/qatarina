@@ -3008,7 +3008,7 @@ paths:
       summary: Search all Users
       tags:
       - users
-  /v1/test-cases/inbox:
+  /v1/me/test-cases/inbox:
     get:
       summary: List test cases assigned to the current user
       tags:

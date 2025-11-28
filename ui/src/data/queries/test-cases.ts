@@ -5,19 +5,35 @@ import {
   getInboxTestCases,
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
+import { components } from "@/lib/api/v1";
+
+type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
+type TestCaseResponse = components["schemas"]["schema.TestCaseResponse"];
 
 export const findTestCaseAllQueryOptions = queryOptions({
   queryKey: ["testCases"],
-  queryFn: () => getTestCases(),
+  queryFn: async (): Promise<TestCaseListResponse> => {
+    const res = await getTestCases();
+    // unwrap if your service returns { data }
+    return (res?.data ?? res) as TestCaseListResponse;
+  },
 });
+
 export const findTestCaseInboxQueryOptions = queryOptions({
   queryKey: ["testCases", "inbox"],
-  queryFn: () => getInboxTestCases(),
+  queryFn: async (): Promise<TestCaseListResponse> => {
+    const res = await getInboxTestCases();
+    return (res?.data ?? res) as TestCaseListResponse;
+  },
 });
+
 export const findTestCaseByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projectTestCases", id],
-    queryFn: () => getTestCaseById(id),
+    queryFn: async (): Promise<TestCaseResponse> => {
+      const res = await getTestCaseById(id);
+      return (res?.data ?? res) as TestCaseResponse;
+    },
   });
 
 export const testCasesByProjectIdQueryOptions = (projectID: string) =>

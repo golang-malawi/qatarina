@@ -75,11 +75,15 @@ func (api *API) routes() {
 		pagesV1.Delete("/:pageID", apiv1.DeletePage(api.PageService, api.logger))
 	}
 
+	meV1 := router.Group("/v1/me", authenticationMiddleware)
+	{
+		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
+	}
+
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
-		testCasesV1.Get("/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))

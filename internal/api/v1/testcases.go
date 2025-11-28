@@ -248,7 +248,7 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-cases/inbox [get]
+//	@Router			/v1/me/test-cases/inbox [get]
 func ListAssignedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		userID := authutil.GetAuthUserID(ctx)

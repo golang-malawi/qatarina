@@ -13,7 +13,7 @@ import {
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/(app)/test-cases/inbox")({
+export const Route = createFileRoute("/test-cases/inbox")({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(findTestCaseInboxQueryOptions),
   component: TestCasePageInbox,
@@ -42,7 +42,7 @@ function TestCasePageInbox() {
     );
   }
 
-  const testCaseRows = (testCases?.data?.test_cases ?? []).map(
+  const testCaseRows = (testCases?.test_cases ?? []).map(
     (tc: components["schemas"]["schema.TestCaseResponse"], idx: number) => (
       <Box
         key={idx}

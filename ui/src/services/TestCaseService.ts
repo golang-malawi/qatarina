@@ -23,7 +23,7 @@ export async function getTestCases() {
 }
 
 export async function getInboxTestCases(){
-  return apiClient.request("get", "/v1/test-cases/inbox", {}) 
+  return apiClient.request("get", "/v1/me/test-cases/inbox", {}) 
 }
 
 export async function getTestCasesByTestPlanID(testPlanID: string) {
