@@ -91,33 +91,33 @@ type AssignedTestCaseListResponse struct {
 }
 
 type AssignedTestCase struct {
-	Kind                  dbsqlc.TestKind
-	Code                  string
-	FeatureOrModule       string
-	Title                 string
-	Description           string
-	ParentTestCaseID      int
-	IsDraft               bool
-	Tags                  []string
-	CreatedByID           int32
-	TestCaseCreatedAt     time.Time
-	TestCaseUpdatedAt     time.Time
-	ProjectID             int64
-	TestRunID             string
-	TestPlanID            int32
-	TestCaseID            string
-	OwnerID               int32
-	TestedByID            int32
-	AssignedToID          int32
-	AssigneeCanChangeCode bool
-	ExternalIssueID       string
-	ResultState           dbsqlc.TestRunState
-	IsClosed              bool
-	Notes                 string
-	ActualResult          string
-	ExpectedResult        string
-	Reactions             []byte
-	TestedOn              *time.Time
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	Kind                  dbsqlc.TestKind     `json:"kind"`
+	Code                  string              `json:"code"`
+	FeatureOrModule       string              `json:"feature_or_module"`
+	Title                 string              `json:"title"`
+	Description           string              `json:"description"`
+	ParentTestCaseID      int                 `json:"parent_test_case_id"`
+	IsDraft               bool                `json:"is_draft"`
+	Tags                  []string            `json:"tags"`
+	CreatedByID           int32               `json:"created_by_id"`
+	TestCaseCreatedAt     time.Time           `json:"test_case_created_at"`
+	TestCaseUpdatedAt     time.Time           `json:"test_case_updated_at"`
+	ProjectID             int64               `json:"project_id"`
+	TestRunID             string              `json:"test_run_id"`
+	TestPlanID            int32               `json:"test_plan_id"`
+	TestCaseID            string              `json:"test_case_id"`
+	OwnerID               int32               `json:"owner_id"`
+	TestedByID            int32               `json:"tested_by_id"`
+	AssignedToID          int32               `json:"assigned_to_id"`
+	AssigneeCanChangeCode bool                `json:"assignee_can_change_code"`
+	ExternalIssueID       string              `json:"external_issue_id"`
+	ResultState           dbsqlc.TestRunState `json:"result_state"`
+	IsClosed              bool                `json:"is_closed"`
+	Notes                 string              `json:"notes"`
+	ActualResult          string              `json:"actual_result"`
+	ExpectedResult        string              `json:"expected_result"`
+	Reactions             []byte              `json:"reactions"`
+	TestedOn              *time.Time          `json:"tested_on"`
+	CreatedAt             time.Time           `json:"created_at"`
+	UpdatedAt             time.Time           `json:"updated_at"`
 }
