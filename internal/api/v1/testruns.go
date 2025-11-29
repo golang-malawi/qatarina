@@ -256,7 +256,6 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 //	@Accept			json
 //	@Produce		json
 //	@Param			testPlanID	path		int	true	"Test Plan ID"
-//	@Param			request	body			true	""
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail

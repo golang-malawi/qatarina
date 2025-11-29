@@ -26,7 +26,7 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
-      <Heading size="lg">{testCase?.data?.description}</Heading>
+      <Heading size="lg">{testCase?.description}</Heading>
       <Menu.Root>
         <Menu.Trigger asChild>
           <Button>

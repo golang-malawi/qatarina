@@ -55,6 +55,8 @@ type TestCaseService interface {
 
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
+	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
+	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -338,4 +340,55 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 
 	displayPrefix := strings.ToUpper(prefixKey) // used for code formatting
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
+}
+
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error) {
+	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
+		AssignedToID: int32(userID),
+		Limit:        limit,
+		Offset:       offset,
+	})
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []schema.AssignedTestCase{}, nil
+		}
+		return nil, fmt.Errorf("failed to load assigned test cases: %v", err)
+	}
+
+	res := make([]schema.AssignedTestCase, 0)
+	for _, row := range rows {
+		res = append(res, schema.AssignedTestCase{
+			Kind:                  row.Kind,
+			Code:                  row.Code,
+			FeatureOrModule:       row.FeatureOrModule.String,
+			Title:                 row.Title,
+			Description:           row.Description,
+			ParentTestCaseID:      int(row.ParentTestCaseID.Int32),
+			IsDraft:               row.IsDraft.Bool,
+			Tags:                  row.Tags,
+			CreatedByID:           row.CreatedByID,
+			TestCaseCreatedAt:     row.CreatedAt.Time,
+			TestCaseUpdatedAt:     row.UpdatedAt.Time,
+			ProjectID:             int64(row.ProjectID.Int32),
+			TestRunID:             uuid.UUID(row.ID_2).String(),
+			TestPlanID:            row.TestPlanID,
+			TestCaseID:            row.TestCaseID.String(),
+			OwnerID:               row.OwnerID,
+			TestedByID:            row.TestedByID,
+			AssignedToID:          row.AssignedToID,
+			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
+			ExternalIssueID:       row.ExternalIssueID.String,
+			ResultState:           row.ResultState,
+			IsClosed:              row.IsClosed.Bool,
+			Notes:                 row.Notes,
+			ActualResult:          row.ActualResult.String,
+			ExpectedResult:        row.ExpectedResult.String,
+			Reactions:             nil, // row.Reactions.RawMessage.MarshalJSON()
+			TestedOn:              &row.TestedOn,
+			CreatedAt:             row.CreatedAt_2.Time,
+			UpdatedAt:             row.UpdatedAt_2.Time,
+		})
+	}
+	return res, nil
 }

@@ -1,4 +1,4 @@
-import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
+import {findTestCaseInboxQueryOptions } from "@/data/queries/test-cases";
 import { components } from "@/lib/api/v1";
 import {
   Box,
@@ -15,7 +15,7 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox")({
   loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData(findTestCaseAllQueryOptions),
+    queryClient.ensureQueryData(findTestCaseInboxQueryOptions),
   component: TestCasePageInbox,
 });
 
@@ -24,7 +24,7 @@ function TestCasePageInbox() {
     data: testCases,
     isPending,
     error,
-  } = useSuspenseQuery(findTestCaseAllQueryOptions);
+  } = useSuspenseQuery(findTestCaseInboxQueryOptions);
 
   if (isPending) {
     return (
@@ -42,7 +42,7 @@ function TestCasePageInbox() {
     );
   }
 
-  const testCaseRows = (testCases?.data?.test_cases ?? []).map(
+  const testCaseRows = (testCases?.test_cases ?? []).map(
     (tc: components["schemas"]["schema.TestCaseResponse"], idx: number) => (
       <Box
         key={idx}

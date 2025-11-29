@@ -22,6 +22,10 @@ export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
+export async function getInboxTestCases(){
+  return apiClient.request("get", "/v1/me/test-cases/inbox", {}) 
+}
+
 export async function getTestCasesByTestPlanID(testPlanID: string) {
   return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", { params: { path: { testplanID: testPlanID } } });
 }
