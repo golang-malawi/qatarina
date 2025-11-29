@@ -11,7 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-export const Route = createFileRoute("/test-cases/inbox/$testCaseId")({
+export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
     queryClient.ensureQueryData(findTestCaseByIdQueryOptions(testCaseId)),
   component: TestCaseInboxItem,

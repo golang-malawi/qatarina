@@ -102,10 +102,10 @@ SELECT * FROM test_cases WHERE created_by_id = $1;
 
 -- name: ListTestCasesByAssignedUser :many
 SELECT tc.*
-FROM test_cases tc
-JOIN test_runs tr ON tc.id = tr.test_case_id
+FROM test_runs tr
+INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 WHERE tr.assigned_to_id = $1
-ORDER BY tc.created_at DESC
+ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: IsTestCaseLinkedToProject :one
