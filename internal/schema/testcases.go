@@ -91,6 +91,7 @@ type AssignedTestCaseListResponse struct {
 }
 
 type AssignedTestCase struct {
+	ID                    string              `json:"id"`
 	Kind                  dbsqlc.TestKind     `json:"kind"`
 	Code                  string              `json:"code"`
 	FeatureOrModule       string              `json:"feature_or_module"`
@@ -105,7 +106,7 @@ type AssignedTestCase struct {
 	ProjectID             int64               `json:"project_id"`
 	TestRunID             string              `json:"test_run_id"`
 	TestPlanID            int32               `json:"test_plan_id"`
-	TestCaseID            string              `json:"test_case_id"`
+	TestCaseID            string              `json:"-"`
 	OwnerID               int32               `json:"owner_id"`
 	TestedByID            int32               `json:"tested_by_id"`
 	AssignedToID          int32               `json:"assigned_to_id"`

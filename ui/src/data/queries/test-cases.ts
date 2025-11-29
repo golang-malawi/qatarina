@@ -10,6 +10,8 @@ import { components } from "@/lib/api/v1";
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type TestCaseResponse = components["schemas"]["schema.TestCaseResponse"];
 
+type AssignedTestCaseListResponse = components["schemas"]["schema.AssignedTestCaseListResponse"];
+
 export const findTestCaseAllQueryOptions = queryOptions({
   queryKey: ["testCases"],
   queryFn: async (): Promise<TestCaseListResponse> => {
@@ -21,9 +23,9 @@ export const findTestCaseAllQueryOptions = queryOptions({
 
 export const findTestCaseInboxQueryOptions = queryOptions({
   queryKey: ["testCases", "inbox"],
-  queryFn: async (): Promise<TestCaseListResponse> => {
+  queryFn: async (): Promise<AssignedTestCaseListResponse> => {
     const res = await getInboxTestCases();
-    return (res?.data ?? res) as TestCaseListResponse;
+    return (res?.data ?? res) as AssignedTestCaseListResponse;
   },
 });
 
