@@ -1,6 +1,10 @@
 package schema
 
-import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+import (
+	"time"
+
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+)
 
 type CreateTestCaseRequest struct {
 	Kind            string   `json:"kind" validate:"required"`
@@ -80,4 +84,40 @@ type ImportFromGithubRequest struct {
 
 type TestCaseListResponse struct {
 	TestCases []TestCaseResponse `json:"test_cases"`
+}
+
+type AssignedTestCaseListResponse struct {
+	TestCases []AssignedTestCase `json:"test_cases"`
+}
+
+type AssignedTestCase struct {
+	Kind                  dbsqlc.TestKind
+	Code                  string
+	FeatureOrModule       string
+	Title                 string
+	Description           string
+	ParentTestCaseID      int
+	IsDraft               bool
+	Tags                  []string
+	CreatedByID           int32
+	TestCaseCreatedAt     time.Time
+	TestCaseUpdatedAt     time.Time
+	ProjectID             int64
+	TestRunID             string
+	TestPlanID            int32
+	TestCaseID            string
+	OwnerID               int32
+	TestedByID            int32
+	AssignedToID          int32
+	AssigneeCanChangeCode bool
+	ExternalIssueID       string
+	ResultState           dbsqlc.TestRunState
+	IsClosed              bool
+	Notes                 string
+	ActualResult          string
+	ExpectedResult        string
+	Reactions             []byte
+	TestedOn              *time.Time
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }

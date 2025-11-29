@@ -1,5 +1,27 @@
 components:
   schemas:
+    dbsqlc.TestKind:
+      enum:
+      - general
+      - adhoc
+      - triage
+      - integration
+      - user_acceptance
+      - regression
+      - security
+      - user_interface
+      - scenario
+      type: string
+      x-enum-varnames:
+      - TestKindGeneral
+      - TestKindAdhoc
+      - TestKindTriage
+      - TestKindIntegration
+      - TestKindUserAcceptance
+      - TestKindRegression
+      - TestKindSecurity
+      - TestKindUserInterface
+      - TestKindScenario
     dbsqlc.TestRunState:
       description: State is the result of the test run
       type: string
@@ -7,6 +29,7 @@ components:
       - TestRunStatePending
       - TestRunStatePassed
       - TestRunStateFailed
+      - TestRunStateBlocked
     problemdetail.ProblemDetail:
       properties:
         context: {}
@@ -34,6 +57,79 @@ components:
       - planned_tests
       - project_id
       - test_plan_id
+      type: object
+    schema.AssignedTestCase:
+      properties:
+        actualResult:
+          type: string
+        assignedToID:
+          type: integer
+        assigneeCanChangeCode:
+          type: boolean
+        code:
+          type: string
+        createdAt:
+          type: string
+        createdByID:
+          type: integer
+        description:
+          type: string
+        expectedResult:
+          type: string
+        externalIssueID:
+          type: string
+        featureOrModule:
+          type: string
+        isClosed:
+          type: boolean
+        isDraft:
+          type: boolean
+        kind:
+          $ref: '#/components/schemas/dbsqlc.TestKind'
+        notes:
+          type: string
+        ownerID:
+          type: integer
+        parentTestCaseID:
+          type: integer
+        projectID:
+          type: integer
+        reactions:
+          items:
+            type: integer
+          type: array
+        resultState:
+          $ref: '#/components/schemas/dbsqlc.TestRunState'
+        tags:
+          items:
+            type: string
+          type: array
+        testCaseCreatedAt:
+          type: string
+        testCaseID:
+          type: string
+        testCaseUpdatedAt:
+          type: string
+        testPlanID:
+          type: integer
+        testRunID:
+          type: string
+        testedByID:
+          type: integer
+        testedOn:
+          type: string
+        title:
+          type: string
+        updatedAt:
+          type: string
+      type: object
+    schema.AssignedTestCaseListResponse:
+      properties:
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.AssignedTestCase'
+          type: array
+          uniqueItems: false
       type: object
     schema.BulkAssignTesters:
       properties:
@@ -826,6 +922,37 @@ paths:
       summary: Get dashboard summary
       tags:
       - dashboard
+  /v1/me/test-cases/inbox:
+    get:
+      description: List Test Cases assigned to the current user
+      operationId: ListAssignedTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AssignedTestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List Test Cases assigned to the current user
+      tags:
+      - test-cases
   /v1/modules:
     get:
       description: Get all Modules
@@ -2218,6 +2345,44 @@ paths:
       summary: Update a Test Plan
       tags:
       - test-plans
+  /v1/test-plans/{testPlanID}/close:
+    post:
+      description: Close a Test Plan
+      operationId: CloseTestPlan
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Close a Test Plan
+      tags:
+      - test-plans
   /v1/test-plans/{testPlanID}/test-cases:
     get:
       description: List all tests of a test plan
@@ -3008,27 +3173,3 @@ paths:
       summary: Search all Users
       tags:
       - users
-  /v1/me/test-cases/inbox:
-    get:
-      summary: List test cases assigned to the current user
-      tags:
-        - test-cases
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/schema.TestCaseListResponse'
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-        "500":
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'

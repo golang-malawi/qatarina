@@ -101,7 +101,7 @@ WHERE tp.test_plan_id = $1;
 SELECT * FROM test_cases WHERE created_by_id = $1;
 
 -- name: ListTestCasesByAssignedUser :many
-SELECT tc.*
+SELECT tc.*, tr.*
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 WHERE tr.assigned_to_id = $1

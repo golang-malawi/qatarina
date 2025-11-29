@@ -245,7 +245,7 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.AssignedTestCaseListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/me/test-cases/inbox [get]
@@ -258,12 +258,12 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 
 		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset))
 		if err != nil {
-			logger.Error("failed to fetch assigned test cases", "error", err)
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch assigned test cases", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
 		}
 
-		return ctx.JSON(schema.TestCaseListResponse{
-			TestCases: schema.NewTestCaseResponseList(testCases),
+		return ctx.JSON(schema.AssignedTestCaseListResponse{
+			TestCases: testCases,
 		})
 	}
 }
