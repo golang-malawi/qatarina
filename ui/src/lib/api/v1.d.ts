@@ -329,6 +329,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Test Cases assigned to the current user
+         * @description List Test Cases assigned to the current user
+         */
+        get: operations["ListAssignedTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/modules": {
         parameters: {
             query?: never;
@@ -947,6 +967,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a Test Plan
+         * @description Close a Test Plan
+         */
+        post: operations["CloseTestPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-cases": {
         parameters: {
             query?: never;
@@ -1333,6 +1373,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        "dbsqlc.TestKind": "general" | "adhoc" | "triage" | "integration" | "user_acceptance" | "regression" | "security" | "user_interface" | "scenario";
         /** @description State is the result of the test run */
         "dbsqlc.TestRunState": string;
         "problemdetail.ProblemDetail": {
@@ -1345,6 +1387,40 @@ export interface components {
             planned_tests: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
             test_plan_id: number;
+        };
+        "schema.AssignedTestCase": {
+            actualResult?: string;
+            assignedToID?: number;
+            assigneeCanChangeCode?: boolean;
+            code?: string;
+            createdAt?: string;
+            createdByID?: number;
+            description?: string;
+            expectedResult?: string;
+            externalIssueID?: string;
+            featureOrModule?: string;
+            isClosed?: boolean;
+            isDraft?: boolean;
+            kind?: components["schemas"]["dbsqlc.TestKind"];
+            notes?: string;
+            ownerID?: number;
+            parentTestCaseID?: number;
+            projectID?: number;
+            reactions?: number[];
+            resultState?: components["schemas"]["dbsqlc.TestRunState"];
+            tags?: string[];
+            testCaseCreatedAt?: string;
+            testCaseID?: string;
+            testCaseUpdatedAt?: string;
+            testPlanID?: number;
+            testRunID?: string;
+            testedByID?: number;
+            testedOn?: string;
+            title?: string;
+            updatedAt?: string;
+        };
+        "schema.AssignedTestCaseListResponse": {
+            test_cases?: components["schemas"]["schema.AssignedTestCase"][];
         };
         "schema.BulkAssignTesters": {
             project_id?: number;
@@ -1638,6 +1714,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.DashboardSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListAssignedTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AssignedTestCaseListResponse"];
                 };
             };
             /** @description Bad Request */
@@ -3263,6 +3381,51 @@ export interface operations {
             path: {
                 /** @description Test Plan ID */
                 testPlanID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CloseTestPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
             };
             cookie?: never;
         };

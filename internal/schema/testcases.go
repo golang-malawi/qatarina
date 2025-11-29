@@ -1,6 +1,10 @@
 package schema
 
-import "github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+import (
+	"time"
+
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+)
 
 type CreateTestCaseRequest struct {
 	Kind            string   `json:"kind" validate:"required"`
@@ -80,4 +84,40 @@ type ImportFromGithubRequest struct {
 
 type TestCaseListResponse struct {
 	TestCases []TestCaseResponse `json:"test_cases"`
+}
+
+type AssignedTestCaseListResponse struct {
+	TestCases []AssignedTestCase `json:"test_cases"`
+}
+
+type AssignedTestCase struct {
+	Kind                  dbsqlc.TestKind     `json:"kind"`
+	Code                  string              `json:"code"`
+	FeatureOrModule       string              `json:"feature_or_module"`
+	Title                 string              `json:"title"`
+	Description           string              `json:"description"`
+	ParentTestCaseID      int                 `json:"parent_test_case_id"`
+	IsDraft               bool                `json:"is_draft"`
+	Tags                  []string            `json:"tags"`
+	CreatedByID           int32               `json:"created_by_id"`
+	TestCaseCreatedAt     time.Time           `json:"test_case_created_at"`
+	TestCaseUpdatedAt     time.Time           `json:"test_case_updated_at"`
+	ProjectID             int64               `json:"project_id"`
+	TestRunID             string              `json:"test_run_id"`
+	TestPlanID            int32               `json:"test_plan_id"`
+	TestCaseID            string              `json:"test_case_id"`
+	OwnerID               int32               `json:"owner_id"`
+	TestedByID            int32               `json:"tested_by_id"`
+	AssignedToID          int32               `json:"assigned_to_id"`
+	AssigneeCanChangeCode bool                `json:"assignee_can_change_code"`
+	ExternalIssueID       string              `json:"external_issue_id"`
+	ResultState           dbsqlc.TestRunState `json:"result_state"`
+	IsClosed              bool                `json:"is_closed"`
+	Notes                 string              `json:"notes"`
+	ActualResult          string              `json:"actual_result"`
+	ExpectedResult        string              `json:"expected_result"`
+	Reactions             []byte              `json:"reactions"`
+	TestedOn              *time.Time          `json:"tested_on"`
+	CreatedAt             time.Time           `json:"created_at"`
+	UpdatedAt             time.Time           `json:"updated_at"`
 }
