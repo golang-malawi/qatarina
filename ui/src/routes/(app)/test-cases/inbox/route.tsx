@@ -43,7 +43,7 @@ function TestCasePageInbox() {
   }
 
   const testCaseRows = (testCases?.test_cases ?? []).map(
-    (tc: components["schemas"]["schema.TestCaseResponse"], idx: number) => (
+    (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => (
       <Box
         key={idx}
         p={4}
