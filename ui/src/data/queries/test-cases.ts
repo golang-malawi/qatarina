@@ -8,9 +8,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
 
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
-type TestCaseResponse = components["schemas"]["schema.TestCaseResponse"];
-
 type AssignedTestCaseListResponse = components["schemas"]["schema.AssignedTestCaseListResponse"];
+type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 
 export const findTestCaseAllQueryOptions = queryOptions({
   queryKey: ["testCases"],
@@ -32,9 +31,9 @@ export const findTestCaseInboxQueryOptions = queryOptions({
 export const findTestCaseByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projectTestCases", id],
-    queryFn: async (): Promise<TestCaseResponse> => {
+    queryFn: async (): Promise<AssignedTestCase> => {
       const res = await getTestCaseById(id);
-      return (res?.data ?? res) as TestCaseResponse;
+      return (res?.data ?? res) as AssignedTestCase;
     },
   });
 

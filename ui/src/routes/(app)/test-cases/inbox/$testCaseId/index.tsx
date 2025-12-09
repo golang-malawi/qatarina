@@ -11,6 +11,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
+
+type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
@@ -25,34 +28,28 @@ function TestCaseInboxItem() {
     findTestCaseByIdQueryOptions(testCaseId)
   );
 
+  const runId = testCase?.testRunID
+
   const recordTestRun = useMutation({
     mutationFn: async ({state}: {state: "success" | "failure"}) => {
-      // Step 1: create a test run
-      const run = await apiClient.POST("/v1/test-runs", {
-       body:{
-        project_id: testCase.project_id!,
-        test_plan_id: testCase.test_plan_id!,
-        test_case_id: testCase.id!,
-        owner_id: testCase.created_by!,
-        tested_by_id: testCase.assigned_to_id!,
-       } as any
-      });
+      if (!runId) throw new Error("No test run ID available")
 
-      const runId = run.data?.id;
-      if (!runId) throw new Error("Failed to create test run");
-
-      // Step 2: commit the reuslt
+     const commitPayload: CommitTestRunResult = {
+      test_run_id: runId,
+      notes: state === "success" ? "Test passed" : "Test failed",
+      is_closed: true,
+      tested_on: new Date().toISOString(),
+       actual_result:
+        state === "success"
+          ? "Behavior matched expectation"
+          : "Behaviour did not match expectation",
+      expected_result: testCase.description ?? "",
+      result_state: state === "success" ? "passed" : "failed",
+    };  
+     
       return apiClient.POST("/v1/test-runs/{testRunID}/commit", {
         params: {path: { testRunID: runId}},
-        body: {
-          test_run_id: runId,
-        notes: state === "success" ? "Test passed" : "Test failed",
-        is_closed: true,
-        tested_on: new Date().toISOString(),
-        actual_result: state === "success" ? "Behavior matched expectation" : "Behaviour did not match expectation",
-        expected_result: testCase.description,
-        result_state: state === "success" ? "passed" : "failed",
-        } as any
+        body: commitPayload,
       });
     },
     onSuccess: () => {
