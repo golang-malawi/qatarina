@@ -1,5 +1,10 @@
-import { Tabs } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute} from "@tanstack/react-router";
+import {
+  Tabs
+} from "@chakra-ui/react";
+
+import { useTestCaseQuery } from "@/services/TestCaseService";
+
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/"
@@ -8,61 +13,75 @@ export const Route = createFileRoute(
 });
 
 function ViewTestCase() {
+  const { projectId, testCaseId } = Route.useParams();
+  const { data, isLoading, error } = useTestCaseQuery(testCaseId);
+
+
+  if (isLoading) return <div>Loading test case...</div>;
+  if (error) return <div>Error loading test case</div>;
+
+  const testCase = data?.test_case;
+  if (!testCase) return <div>No data found</div>;
+
   return (
-    <div className="card">
+    <div className="card space-y-4">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold">{testCase.title}</h1>
+        <p className="text-sm text-muted">
+          Code: {testCase.code} • Feature: {testCase.feature_or_module}
+        </p>
+        <p className="text-sm text-muted">Project ID: {projectId}</p>
+      </div>
+
+      {/* Tabs */}
       <Tabs.Root defaultValue="description">
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
-          <Tabs.Trigger value="testers">Testers</Tabs.Trigger>
-          <Tabs.Trigger value="results">Test Results</Tabs.Trigger>
-          <Tabs.Trigger value="documents">Documents and Media</Tabs.Trigger>
+          <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
+          <Tabs.Trigger value="tags">Tags</Tabs.Trigger>
+          <Tabs.Trigger value="documents">Documents</Tabs.Trigger>
         </Tabs.List>
+
+        {/* DESCRIPTION */}
         <Tabs.Content value="description" title="Description">
-          <p className="m-0">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Duis aute irure dolor in
-            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-            culpa qui officia deserunt mollit anim id est laborum.
-          </p>
+          <p className="m-0">{testCase.description || "No description"}</p>
         </Tabs.Content>
-        <Tabs.Content value="testers" title="Testers">
-          <p className="m-0">
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
-            quae ab illo inventore veritatis et quasi architecto beatae vitae
-            dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-            aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
-            eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci
-            velit, sed quia non numquam eius modi.
-          </p>
+
+        {/* METADATA */}
+        <Tabs.Content value="metadata" title="Metadata">
+          <div className="space-y-2 text-sm">
+            <p><strong>Type:</strong> {testCase.kind}</p>
+            <p><strong>Created By:</strong> User ID {testCase.created_by}</p>
+            <p><strong>Status:</strong> {testCase.is_draft ? "Draft" : "Published"}</p>
+            <p><strong>Created At:</strong> {new Date(testCase.created_at).toLocaleString()}</p>
+            <p><strong>Updated At:</strong> {new Date(testCase.updated_at).toLocaleString()}</p>
+          </div>
         </Tabs.Content>
-        <Tabs.Content value="results" title="Test Results">
-          <p className="m-0">
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
-            quae ab illo inventore veritatis et quasi architecto beatae vitae
-            dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-            aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
-            eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci
-            velit, sed quia non numquam eius modi.
-          </p>
+
+        {/* TAGS */}
+        <Tabs.Content value="tags" title="Tags">
+          {testCase.tags && testCase.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {testCase.tags.map((tag: string) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 rounded bg-gray-200 text-sm"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p>No tags</p>
+          )}
         </Tabs.Content>
+
+        {/* DOCUMENTS – placeholder for future API */}
         <Tabs.Content value="documents" title="Documents and Media">
-          <p className="m-0">
-            At vero eos et accusamus et iusto odio dignissimos ducimus qui
-            blanditiis praesentium voluptatum deleniti atque corrupti quos
-            dolores et quas molestias excepturi sint occaecati cupiditate non
-            provident, similique sunt in culpa qui officia deserunt mollitia
-            animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis
-            est et expedita distinctio. Nam libero tempore, cum soluta nobis est
-            eligendi optio cumque nihil impedit quo minus.
-          </p>
+          <p>No documents uploaded yet.</p>
         </Tabs.Content>
       </Tabs.Root>
     </div>
   );
 }
-

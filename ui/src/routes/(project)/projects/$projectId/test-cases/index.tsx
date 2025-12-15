@@ -11,6 +11,7 @@ import {
   Tabs,
   Table,
   Menu,
+  
 } from "@chakra-ui/react";
 import {
   IconAlertTriangle,
@@ -25,7 +26,9 @@ import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import TestersAvatarGroup from "@/components/TestersAvatarGroup";
 
-export const Route = createFileRoute("/(project)/projects/$projectId/test-cases/")({
+export const Route = createFileRoute(
+  "/(project)/projects/$projectId/test-cases/"
+)({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
     queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: ListProjectTestCases,
@@ -37,36 +40,38 @@ export default function ListProjectTestCases() {
     testCasesByProjectIdQueryOptions(projectId)
   );
 
-  const testCaseRows = (testCases?.test_cases ?? []).map((tc: any, idx: number) => (
-    <Table.Row key={idx}>
-      <Table.Cell>{tc.code}</Table.Cell>
-      <Table.Cell>{tc.description}</Table.Cell>
-      <Table.Cell>{tc.usage_count}</Table.Cell>
-      <Table.Cell>
-        <AvatarGroup size="md">
-          <TestersAvatarGroup testers={[]} />
-        </AvatarGroup>
-      </Table.Cell>
-      <Table.Cell>
-        <Menu.Root>
-          <Menu.Trigger asChild>
-            <Button>
-              <IconChevronDown /> Actions
-            </Button>
-          </Menu.Trigger>
-          <Menu.Content>
-            <Menu.Item value="">View</Menu.Item>
-            <Menu.Item value="">Create a Copy</Menu.Item>
-            <Menu.Item value="">Mark as Draft</Menu.Item>
-            <Menu.Item value="">Use in Test Session</Menu.Item>
-            <Menu.Item color="red" value="">
-              Delete
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Root>
-      </Table.Cell>
-    </Table.Row>
-  ));
+  const testCaseRows = (testCases?.test_cases ?? []).map(
+    (tc: any, idx: number) => (
+      <Table.Row key={idx}>
+        <Table.Cell>{tc.code}</Table.Cell>
+        <Table.Cell>{tc.description}</Table.Cell>
+        <Table.Cell>{tc.usage_count}</Table.Cell>
+        <Table.Cell>
+          <AvatarGroup size="md">
+            <TestersAvatarGroup testers={[]} />
+          </AvatarGroup>
+        </Table.Cell>
+        <Table.Cell>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button>
+                <IconChevronDown /> Actions
+              </Button>
+            </Menu.Trigger>
+            <Menu.Content zIndex={100} position="absolute">
+              <Menu.Item value="view"><Link to={`/projects/${projectId}/test-cases/${tc.id}`}>View</Link></Menu.Item>
+              <Menu.Item value="create-copy">Create a Copy</Menu.Item>
+              <Menu.Item value="mark-draft">Mark as Draft</Menu.Item>
+              <Menu.Item value="use">Use in Test Session</Menu.Item>
+              <Menu.Item color="red" value="delete">
+                Delete
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Root>
+        </Table.Cell>
+      </Table.Row>
+    )
+  );
 
   return (
     <div>

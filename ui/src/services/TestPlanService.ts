@@ -56,3 +56,27 @@ export async function getTestRuns(testPlanID: string) {
     params: { path: { testplanID: testPlanID } },
   });
 }
+
+export async function assignTestersToTestPlan(
+  testPlanID: string,
+  userIDs: string[]
+) {
+  return apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/assign-testers",
+    {
+      params: { path: { testPlanID } },
+      body: { userIDs },
+    }
+  );
+}
+
+// export async function removeTestersFromTestPlan(
+//   testPlanID: string,
+//   userIDs: string[]
+// ) {
+//   return apiClient.request("post", "/v1/test-plans/{testPlanID}/remove-testers", {
+//     params: { path: { testPlanID } },
+//     body: { userIDs },
+//   });
+// }
