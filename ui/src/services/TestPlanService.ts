@@ -63,7 +63,7 @@ export async function assignTestersToTestPlan(
 ) {
   return apiClient.request(
     "post",
-    "/v1/test-plans/{testPlanID}/assign-testers",
+    "/v1/test-plans/{testPlanID}/test-cases",
     {
       params: { path: { testPlanID } },
       body: { userIDs },

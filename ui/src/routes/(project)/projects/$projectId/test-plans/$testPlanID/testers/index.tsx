@@ -17,9 +17,11 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { LuPencil, LuTrash } from "react-icons/lu";
 import { useTestPlanQuery } from "@/services/TestPlanService";
+import { assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery, useGetUserQuery } from "@/services/UserService";
 import ErrorAlert from "@/components/ui/error-alert";
 import { useState } from "react";
+
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
@@ -105,19 +107,44 @@ function RouteComponent() {
     console.log("Edit tester", id);
   };
 
-  // HANDLER: Assigns the users currently in the selectedUsers state
-  const handleAssignSelected = () => {
-    if (selectedUsers.length === 0) {
-      alert("Please select at least one user to assign.");
+ const handleAssignSelected = async () => {
+  if (selectedUsers.length === 0) {
+    alert("Please select at least one user to assign.");
+    return;
+  }
+
+  try {
+    // Assuming testPlanQuery.data has project_id and test_cases array
+    // TODO : Adjust according to actual data structure
+    const projectId = testPlanQuery.data?.project_id;
+    const testPlanId = testPlanID;
+    const testCases = testPlanQuery.data?.test_cases ?? [];
+
+    if (!projectId || testCases.length === 0) {
+      alert("No test cases found in this test plan.");
       return;
     }
-    console.log("Assigning users with IDs:", selectedUsers);
-    // TODO: call assign-tester mutation here, using the selectedUsers array
 
-    // Reset selection and close dialog after successful assignment
+    // Prepare payload according to your API structure
+    const payload = {
+      project_id: projectId,
+      test_plan_id: testPlanId,
+      planned_tests: testCases.map((tc: any) => ({
+        test_case_id: tc.id,
+        user_ids: selectedUsers.map((id) => parseInt(id, 10)), 
+      })),
+    };
+
+    console.log("Assigning users with payload:", payload);
+    await assignTestersToTestPlan(testPlanId, selectedUsers);
     setSelectedUsers([]);
-    setIsDialogOpen(false); // Close the dialog
-  };
+    setIsDialogOpen(false);
+    alert("Testers assigned successfully!");
+  } catch (error) {
+    console.error("Error assigning testers:", error);
+    alert("Failed to assign testers. Check console for details.");
+  }
+};
 
   /* ----------------------- UI ----------------------- */
 
@@ -222,7 +249,7 @@ function RouteComponent() {
                     <Dialog.ActionTrigger asChild>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     </Dialog.ActionTrigger>
-                    <Button variant="ghost" onClick={handleAssignSelected} isDisabled={selectedUsers.length === 0}>Assign Testers</Button>
+                    {/* <Button variant="ghost" onClick={handleAssignSelected} isDisabled={selectedUsers.length === 0}>Assign Testers</Button> */}
                 </Dialog.Footer>
 
               </Dialog.Content>
