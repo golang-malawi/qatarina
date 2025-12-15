@@ -11,7 +11,6 @@ import {
   CloseButton,
   Dialog,
   Portal,
-  // ADDED: Import Checkbox components for multi-select
   Checkbox,
   CheckboxGroup,
 } from "@chakra-ui/react";
@@ -20,7 +19,6 @@ import { LuPencil, LuTrash } from "react-icons/lu";
 import { useTestPlanQuery } from "@/services/TestPlanService";
 import { useUsersQuery, useGetUserQuery } from "@/services/UserService";
 import ErrorAlert from "@/components/ui/error-alert";
-// ADDED: Import useState for managing selected users
 import { useState } from "react";
 
 export const Route = createFileRoute(
@@ -39,10 +37,7 @@ type Tester = {
 function RouteComponent() {
   const { testPlanID } = Route.useParams();
   const usersQuery = useUsersQuery();
-
-  // 1. STATE: State to store the IDs of the users selected via checkboxes
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  // 2. STATE: State to control the Dialog open/close
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const testPlanQuery = useTestPlanQuery(testPlanID) as {
@@ -135,12 +130,12 @@ function RouteComponent() {
           size="cover"
           placement="center"
           motionPreset="slide-in-bottom"
-          // Use the controlled state
+          
           open={isDialogOpen}
-          onOpenChange={(e) => setIsDialogOpen(e.open)} // Corrected type from reference
+          onOpenChange={(e) => setIsDialogOpen(e.open)} 
         >
           <Dialog.Trigger asChild>
-            <Button variant="outline" colorScheme="teal" size="sm">
+            <Button colorScheme="teal" size="sm">
               + Add New Tester
             </Button>
           </Dialog.Trigger>
@@ -172,21 +167,21 @@ function RouteComponent() {
                     <Text color="gray.500">No unassigned users available.</Text>
                   )}
 
-                  {/* 3. CHECKBOX GROUP: Use CheckboxGroup for multi-selection logic */}
+               
                   <CheckboxGroup
                     colorScheme="teal"
                     value={selectedUsers}
-                    // onValueChange is the correct handler for the composite CheckboxGroup
+                    
                     onValueChange={setSelectedUsers} 
                   >
                     <Stack gap={3}>
                       {unassignedUsers.map((user: any) => (
-                        // Use Checkbox.Root as the container for the user item
+                       
                         <Checkbox.Root
                           key={user.id}
-                          value={user.id.toString()} // Value is the user ID
+                          value={user.id.toString()} 
                         >
-                          {/* Required Ark-style sub-components */}
+                       
                           <Checkbox.HiddenInput /> 
                           <Checkbox.Control /> 
                           
@@ -212,7 +207,6 @@ function RouteComponent() {
                     </Stack>
                   </CheckboxGroup>
 
-                  {/* 5. ACTION BUTTON: Single button to assign all selected */}
                   <Button
                     mt={5}
                     colorScheme="teal"
@@ -224,7 +218,6 @@ function RouteComponent() {
                   </Button>
                 </Dialog.Body>
                 
-                {/* 6. Dialog Footer for action buttons */}
                 <Dialog.Footer>
                     <Dialog.ActionTrigger asChild>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -243,11 +236,6 @@ function RouteComponent() {
       </Text>
 
       <Stack gap="6">
-        {/* Table components are assumed to also use the composite structure, 
-            so we leave them as Table.Root, Table.Header, etc.
-            If you get the 'Element type is invalid' error again, 
-            it means your Table component is NOT the composite one.
-        */}
         <Table.Root size="md">
           <Table.Header>
             <Table.Row>
