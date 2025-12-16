@@ -8,9 +8,10 @@ import {
   VStack,
   Text,
 } from "@chakra-ui/react";
+import { Tooltip } from "./ui/tooltip";
 import { Sidebar, SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Logo } from "./logo";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { SiteConfig } from "@/lib/config/site";
 import { ReactNode, useState } from "react";
 import React from "react";
@@ -26,24 +27,46 @@ interface NavLinkProps {
 export default function AppSidebar({
   items,
   header,
+  variant = "default",
 }: {
   items: NavItem[];
   header?: ReactNode;
+  variant?: "default" | "inset";
 }) {
   return (
-    <Sidebar header={<SidebarHeader />}>
+    <Sidebar header={<SidebarHeader />} variant={variant}>
       <SidebarContent items={items} header={header} />
     </Sidebar>
   );
 }
 
 const SidebarHeader = () => {
-  const { isMobile } = useSidebar();
+  const { isMobile, isCollapsed } = useSidebar();
   return (
-    <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
-      <Link to="/" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <Flex 
+      h="16" 
+      alignItems="center" 
+      px={isCollapsed ? "2" : "4"} 
+      justifyContent={isCollapsed ? "center" : "space-between"}
+      borderBottom="1px solid"
+      borderColor="border.subtle"
+    >
+      <Link 
+        to="/" 
+        style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: isCollapsed ? 0 : 12,
+          width: isCollapsed ? "100%" : "auto",
+          justifyContent: isCollapsed ? "center" : "flex-start",
+        }}
+      >
         <Logo size="sm" />
-        <Heading>{SiteConfig.name}</Heading>
+        {!isCollapsed && (
+          <Heading size="md" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+            {SiteConfig.name}
+          </Heading>
+        )}
       </Link>
       {isMobile && <SidebarTrigger />}
     </Flex>
@@ -53,6 +76,16 @@ const SidebarHeader = () => {
 const NavLink: React.FC<NavLinkProps> = ({ item, expanded }) => {
   const [isOpen, setIsOpen] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
+  const { isCollapsed } = useSidebar();
+
+  // Don't show collapsible content when sidebar is collapsed
+  if (isCollapsed && hasChildren) {
+    return (
+      <Tooltip content={item.name} positioning={{ placement: "right" }}>
+        <NavLinkItem item={item} />
+      </Tooltip>
+    );
+  }
 
   return (
     <Collapsible.Root open={isOpen} onOpenChange={(d) => setIsOpen(d.open)}>
@@ -61,18 +94,24 @@ const NavLink: React.FC<NavLinkProps> = ({ item, expanded }) => {
           as={"button"}
           align="center"
           mx="1"
+          my="0.5"
+          px={expanded ? "3" : "2"}
+          py="2"
           borderRadius="md"
           role="group"
           cursor="pointer"
           justifyContent="space-between"
           width="100%"
           textAlign="left"
+          _hover={{
+            bg: "bg.subtle",
+          }}
         >
-          <Flex align="center">
+          <Flex align="center" gap={expanded ? "3" : "0"}>
             {item.icon && (
-              <Icon fontSize="16" as={item.icon} mr={expanded ? "3" : "0"} />
+              <Icon fontSize="16" as={item.icon} />
             )}
-            {expanded && <Text>{item.name}</Text>}
+            {expanded && <Text fontSize="sm">{item.name}</Text>}
           </Flex>
 
           {hasChildren && expanded && (
@@ -80,49 +119,73 @@ const NavLink: React.FC<NavLinkProps> = ({ item, expanded }) => {
           )}
         </Flex>
       </Collapsible.Trigger>
-      <Collapsible.Content>
-        <VStack align="stretch" pl={2} mt={1}>
-          {item.children!.map((child) => (
-            <NavLinkItem key={child.path} item={child} />
-          ))}
-        </VStack>
-      </Collapsible.Content>
+      {expanded && (
+        <Collapsible.Content>
+          <VStack align="stretch" pl={2} mt={1}>
+            {item.children!.map((child) => (
+              <NavLinkItem key={child.path} item={child} />
+            ))}
+          </VStack>
+        </Collapsible.Content>
+      )}
     </Collapsible.Root>
   );
 };
 
 const NavLinkItem = ({ item }: { item: NavItem }) => {
-  return (
+  const { isCollapsed } = useSidebar();
+  const location = useLocation();
+  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+  
+  const content = (
     <Flex
       asChild
       align="center"
-      mx="4"
-      p="4"
-      borderRadius="lg"
+      mx={isCollapsed ? "1" : "2"}
+      px={isCollapsed ? "2" : "3"}
+      py="2"
+      borderRadius="md"
       role="group"
       cursor="pointer"
       width="100%"
       textAlign="left"
+      justifyContent={isCollapsed ? "center" : "flex-start"}
+      colorPalette={isActive ? "brand" : undefined}
+      bg={isActive ? "colorPalette.solid" : "transparent"}
+      color={isActive ? "colorPalette.fg" : "fg.muted"}
       _hover={{
-        bg: "blue.600",
-        color: "white",
+        bg: isActive ? "colorPalette.solid" : "bg.subtle",
+        color: isActive ? "colorPalette.fg" : "fg",
       }}
+      transition="all 0.2s"
     >
       <Link to={item.path}>
         {item.icon && (
           <Icon
-            mr="4"
             fontSize="16"
             as={item.icon}
+            mr={isCollapsed ? "0" : "3"}
             _groupHover={{
-              color: "white",
+              color: isActive ? "colorPalette.fg" : "fg",
             }}
           />
         )}
-        {item.name}
+        {!isCollapsed && (
+          <Text fontSize="sm">{item.name}</Text>
+        )}
       </Link>
     </Flex>
   );
+
+  if (isCollapsed) {
+    return (
+      <Tooltip content={item.name} positioning={{ placement: "right" }}>
+        {content}
+      </Tooltip>
+    );
+  }
+
+  return content;
 };
 
 interface SidebarProps extends BoxProps {
@@ -131,17 +194,26 @@ interface SidebarProps extends BoxProps {
 }
 
 const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
+  const { isCollapsed } = useSidebar();
   return (
-    <Box borderRight="1px" w={"full"} h="full" {...rest}>
+    <Box 
+      w={"full"} 
+      h="full" 
+      overflowY="auto"
+      py="2"
+      {...rest}
+    >
       {header}
-      {items.map((link) => {
-        if (link.children) {
-          return (
-            <NavLink key={link.path} item={link} expanded={true} depth={1} />
-          );
-        }
-        return <NavLinkItem key={link.path} item={link} />;
-      })}
+      <VStack align="stretch" gap="1" px="1" mt="2">
+        {items.map((link) => {
+          if (link.children) {
+            return (
+              <NavLink key={link.path} item={link} expanded={!isCollapsed} depth={1} />
+            );
+          }
+          return <NavLinkItem key={link.path} item={link} />;
+        })}
+      </VStack>
     </Box>
   );
 };

@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Container, Flex } from "@chakra-ui/react";
+import { Box, Flex, Separator } from "@chakra-ui/react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/app-sidebar";
 import { ColorModeButton } from "@/components/ui/color-mode";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { MainLinkItems } from "@/lib/navigation";
 import { ErrorComponent } from "@tanstack/react-router";
 
@@ -31,14 +32,32 @@ function BaseLayout() {
   return (
     <SidebarProvider>
       <AppSidebar items={MainLinkItems}/>
-      <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
-        <Flex width={"100%"} padding={4} justifyContent="space-between">
-          <SidebarTrigger />
+      <SidebarInset>
+        <Box
+          as="header"
+          h="16"
+          display="flex"
+          alignItems="center"
+          gap="2"
+          px="4"
+          borderBottom="1px solid"
+          borderColor="border.subtle"
+          transition="height 200ms ease-linear"
+        >
+          <Flex alignItems="center" gap="2" flex="1">
+            <SidebarTrigger />
+            <Separator
+              orientation="vertical"
+              h="4"
+              display={{ base: "none", md: "block" }}
+            />
+            <Breadcrumb />
+          </Flex>
           <ColorModeButton />
-        </Flex>
-        <Container>
+        </Box>
+        <Box flex="1" display="flex" flexDirection="column" overflowY="auto">
           <Outlet />
-        </Container>
+        </Box>
       </SidebarInset>
     </SidebarProvider>
   );

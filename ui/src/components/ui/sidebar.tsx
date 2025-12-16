@@ -10,14 +10,18 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+type SidebarState = "expanded" | "collapsed";
+
 type SidebarContext = {
-  state: "expanded" | "collapsed";
+  state: SidebarState;
   open: boolean;
   setOpen: (open: boolean) => void;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  toggleState: () => void;
+  isCollapsed: boolean;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -73,6 +77,24 @@ const SidebarProvider = React.forwardRef<
       [setOpenProp, open]
     );
 
+    // Collapsed state for icon-only mode (desktop only)
+    const [collapsed, setCollapsed] = React.useState<boolean>(() => {
+      if (typeof window !== "undefined") {
+        const cookie = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("sidebar:collapsed="));
+        return cookie ? cookie.split("=")[1] === "true" : false;
+      }
+      return false;
+    });
+
+    const toggleState = React.useCallback(() => {
+      if (isMobile) return;
+      const newCollapsed = !collapsed;
+      setCollapsed(newCollapsed);
+      document.cookie = `sidebar:collapsed=${newCollapsed}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+    }, [collapsed, isMobile]);
+
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return isMobile
@@ -98,7 +120,12 @@ const SidebarProvider = React.forwardRef<
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
-    const state = open ? "expanded" : "collapsed";
+    // On desktop, collapsed state controls icon-only mode
+    // On mobile, open controls visibility
+    const state: SidebarState = isMobile 
+      ? (open ? "expanded" : "collapsed")
+      : (collapsed ? "collapsed" : "expanded");
+    const isCollapsed = isMobile ? !open : collapsed;
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
@@ -109,8 +136,10 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
+        toggleState,
+        isCollapsed,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, toggleState, isCollapsed]
     );
 
     return (
@@ -145,9 +174,10 @@ const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
     header?: ReactNode;
+    variant?: "default" | "inset";
   }
->(({ className, children, style, header, ...props }, ref) => {
-  const { isMobile, open, openMobile, toggleSidebar } = useSidebar();
+>(({ className, children, style, header, variant = "default", ...props }, ref) => {
+  const { isMobile, open, openMobile, toggleSidebar, isCollapsed } = useSidebar();
   if (isMobile) {
     return (
       <Drawer.Root
@@ -166,16 +196,24 @@ const Sidebar = React.forwardRef<
       </Drawer.Root>
     );
   }
-  const width = isMobile ? SIDEBAR_WIDTH_MOBILE : SIDEBAR_WIDTH;
+  // On desktop, sidebar is always visible (open), but can be collapsed to icons
+  // On mobile, sidebar visibility is controlled by openMobile
+  const width = isMobile 
+    ? (open ? SIDEBAR_WIDTH_MOBILE : "0")
+    : (isCollapsed ? SIDEBAR_WIDTH_ICON : SIDEBAR_WIDTH);
+  
+  const isVisible = isMobile ? openMobile : true;
+  
   return (
     <Box
       ref={ref}
       className={className}
+      data-state={isCollapsed ? "collapsed" : "expanded"}
       style={{
         position: "relative",
-        width: open ? width : "0",
+        width: isVisible ? width : "0",
         backgroundColor: "transparent",
-        transition: "width 200ms linear",
+        transition: "width 200ms ease-linear",
         ...style,
       }}
       {...props}
@@ -183,25 +221,28 @@ const Sidebar = React.forwardRef<
       <Box
         style={{
           width: width,
-          left: !open ? `calc(${width} * -1)` : undefined,
+          left: !isVisible ? `calc(${width} * -1)` : undefined,
           position: "fixed",
           inset: "0 auto 0 0",
           zIndex: 10,
           height: "100svh",
-          transition:
-            "left 200ms linear, right 200ms linear, width 200ms linear",
+          transition: "left 200ms ease-linear, width 200ms ease-linear",
           flexDirection: "column",
-          padding: "0.5rem",
+          padding: variant === "inset" ? "0.5rem" : "0",
         }}
       >
         <Box
-          style={{
-            display: "flex",
-            height: "100%",
-            width: "100%",
-            flexDirection: "column",
-            backgroundColor: "var(--sidebar)",
-          }}
+          display="flex"
+          height="100%"
+          width="100%"
+          flexDirection="column"
+          bg={variant === "inset" ? "bg.subtle" : "bg.surface"}
+          borderRight="1px solid"
+          borderColor="border.subtle"
+          {...(variant === "inset" && {
+            borderRadius: "md",
+            margin: "2",
+          })}
         >
           {header}
           {children}
@@ -215,6 +256,11 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, ...props }, ref) => {
+  const { isCollapsed, openMobile, isMobile } = useSidebar();
+  const sidebarWidth = isMobile 
+    ? (openMobile ? SIDEBAR_WIDTH_MOBILE : "0")
+    : (isCollapsed ? SIDEBAR_WIDTH_ICON : SIDEBAR_WIDTH);
+  
   return (
     <Box
       ref={ref}
@@ -228,6 +274,9 @@ const SidebarInset = React.forwardRef<
         flex: 1,
         flexDirection: "column",
         background: "initial",
+        transition: "margin-left 200ms ease-linear",
+        marginLeft: sidebarWidth,
+        minHeight: "100svh",
       }}
     />
   );
@@ -238,17 +287,22 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, toggleState, isMobile, isCollapsed } = useSidebar();
 
   return (
     <Button
       ref={ref}
       data-sidebar="trigger"
       variant="ghost"
+      size="sm"
       className={className}
       onClick={(event) => {
         onClick?.(event);
-        toggleSidebar();
+        if (isMobile) {
+          toggleSidebar();
+        } else {
+          toggleState();
+        }
       }}
       {...props}
     >
