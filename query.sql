@@ -191,6 +191,18 @@ SELECT * FROM test_plans WHERE project_id = $1;
 -- name: GetTestPlan :one
 SELECT * FROM test_plans WHERE id = $1;
 
+-- name: GetTestPlanWithTestCases :many
+SELECT 
+tp.*,
+tc.id AS test_case_id,
+tc.title AS test_case_title,
+tc.code AS test_case_code
+FROM test_plans tp
+LEFT JOIN test_runs tr ON tp.id = tr.test_plan_id
+LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
+WHERE tp.id = $1
+ORDER BY tc.id;
+
 -- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1;
 

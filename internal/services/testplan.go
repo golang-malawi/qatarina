@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,7 +18,7 @@ type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.TestRun, error)
-	GetOneTestPlan(context.Context, int64) (*dbsqlc.TestPlan, error)
+	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
 	DeleteByID(context.Context, int64) error
@@ -168,12 +169,52 @@ func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*dbsqlc.TestPlan, error) {
-	testPlan, err := t.queries.GetTestPlan(ctx, id)
+func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema.TestPlanResponseItem, error) {
+	rows, err := t.queries.GetTestPlanWithTestCases(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get test plan %d: %w", id, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("test plan %d not found: %w", id, err)
+		}
+		return nil, fmt.Errorf("failed to load test plan with cases: %w", err)
 	}
-	return &testPlan, nil
+
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("test plan %d not found", id)
+	}
+
+	firstRow := rows[0]
+
+	response := schema.TestPlanResponseItem{
+		ID:             firstRow.ID,
+		ProjectID:      firstRow.ProjectID,
+		AssignedToID:   firstRow.AssignedToID,
+		CreatedByID:    firstRow.CreatedByID,
+		UpdatedByID:    firstRow.UpdatedByID,
+		Kind:           string(firstRow.Kind),
+		Description:    firstRow.Description.String,
+		StartAt:        firstRow.StartAt.Time.Format(time.DateTime),
+		ClosedAt:       firstRow.ClosedAt.Time.Format(time.DateTime),
+		ScheduledEndAt: firstRow.ScheduledEndAt.Time.Format(time.DateTime),
+		NumTestCases:   firstRow.NumTestCases,
+		NumFailures:    firstRow.NumFailures,
+		IsComplete:     firstRow.IsComplete.Bool,
+		IsLocked:       firstRow.IsLocked.Bool,
+		HasReport:      firstRow.HasReport.Bool,
+		CreatedAt:      firstRow.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:      firstRow.UpdatedAt.Time.Format(time.DateTime),
+		TestCases:      []schema.TestCaseResponseItem{},
+	}
+
+	for _, row := range rows {
+		if row.TestCaseID.Valid {
+			response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
+				ID:    row.TestCaseID.UUID.String(),
+				Title: row.TestCaseTitle.String,
+			})
+		}
+	}
+
+	return &response, nil
 }
 
 func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestPlan) (bool, error) {
