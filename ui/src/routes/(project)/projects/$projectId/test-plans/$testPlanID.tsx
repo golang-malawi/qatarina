@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useTestPlanQuery } from "@/services/TestPlanService";
 import {
   Box,
@@ -8,10 +8,36 @@ import {
   Badge,
   Button,
   Flex,
+  Stat,
 } from "@chakra-ui/react";
-import { FormatNumber, Progress, Stat } from "@chakra-ui/react";
-import { Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/**
+ * Test plan type – MATCHES API RESPONSE EXACTLY
+ */
+type TestPlanData = {
+  id: number;
+  project_id: number;
+  assigned_to_id: number;
+  created_by_id: number;
+  updated_by_id: number;
+  kind: string;
+  description: string;
+  start_at: string;
+  closed_at: string;
+  scheduled_end_at: string;
+  num_test_cases: number;
+  num_failures: number;
+  is_complete: boolean;
+  is_locked: boolean;
+  has_report: boolean;
+  created_at: string;
+  updated_at: string;
+  test_cases: {
+    id: string;
+    title: string;
+  }[];
+};
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID"
@@ -19,143 +45,135 @@ export const Route = createFileRoute(
   component: ViewTestPlan,
 });
 
-// 2. Define the TestPlan type for cleaner type assertion
-type TestPlanData = {
-  ID: string;
-  Kind: string;
-  Description: { Valid: boolean; String: string };
-  IsComplete: { Bool: boolean };
-  AssignedToID: string;
-  CreatedByID: string;
-  StartAt: { Valid: boolean; Time: string };
-  ScheduledEndAt: { Valid: boolean; Time: string };
-  NumFailures: number;
-  IsLocked: { Bool: boolean };
-  HasReport: { Bool: boolean };
-  CreatedAt: { Time: string };
-  UpdatedAt: { Time: string };
-} | null;
-
 function ViewTestPlan() {
   const { projectId, testPlanID } = Route.useParams();
 
-  // Fetch test plan
+  /**
+   * Fetch test plan
+   */
   const {
     data: initialTestPlan,
     isLoading,
     error,
-  } = useTestPlanQuery(testPlanID!) as unknown as {
-    data: TestPlanData; // Use the defined type
-    isLoading: boolean;
-    error: unknown;
-  };
+  } = useTestPlanQuery(testPlanID);
 
-  // 3. Use the useState hook to manage the local state of the test plan
-  const [testPlan, setTestPlan] = useState(initialTestPlan);
+  /**
+   * Local state synced from query
+   */
+  const [testPlan, setTestPlan] = useState<TestPlanData | null>(null);
 
-  // 4. Implement mock action functions
-  const handleMarkComplete = () => {
-    if (testPlan) {
-      setTestPlan({
-        ...testPlan,
-        IsComplete: { Bool: true },
-        UpdatedAt: { Time: new Date().toISOString() }, // Optionally update timestamp
-      });
+  useEffect(() => {
+    if (initialTestPlan) {
+      setTestPlan(initialTestPlan);
     }
+  }, [initialTestPlan]);
+
+  /**
+   * Mock actions (UI-only)
+   */
+  const handleMarkComplete = () => {
+    if (!testPlan) return;
+
+    setTestPlan({
+      ...testPlan,
+      is_complete: true,
+      updated_at: new Date().toISOString(),
+    });
   };
 
   const handleMarkInProgress = () => {
-    if (testPlan) {
-      setTestPlan({
-        ...testPlan,
-        IsComplete: { Bool: false },
-        UpdatedAt: { Time: new Date().toISOString() },
-      });
-    }
+    if (!testPlan) return;
+
+    setTestPlan({
+      ...testPlan,
+      is_complete: false,
+      updated_at: new Date().toISOString(),
+    });
   };
 
+  /**
+   * Navigation tabs
+   */
   const navItems = [
     {
       label: "Test Cases",
-      path: `/projects/$projectId/test-plans/$testPlanID/test-cases`,
+      path: "/projects/$projectId/test-plans/$testPlanID/test-cases",
     },
     {
       label: "Test Runs",
-      path: `/projects/$projectId/test-plans/$testPlanID/test-runs`,
+      path: "/projects/$projectId/test-plans/$testPlanID/test-runs",
     },
     {
       label: "Testers",
-      path: `/projects/$projectId/test-plans/$testPlanID/testers`,
+      path: "/projects/$projectId/test-plans/$testPlanID/testers",
     },
   ];
 
-  // 5. Use the local 'testPlan' state in the loading check
+  /**
+   * Loading / Error guards
+   */
   if (isLoading) return <div>Loading...</div>;
-  // If the initial data fetch is successful, initialTestPlan is not null, so 'testPlan' will be set.
   if (error || !testPlan)
-    return <div>Error loading test plan or test runs</div>;
+    return <div>Error loading test plan</div>;
 
-  // Define status constants for clarity
-  const isComplete = testPlan.IsComplete.Bool;
-  const statusColorScheme = isComplete ? "green" : "orange";
-  const statusText = isComplete ? "Complete" : "In Progress";
+  const isComplete = testPlan.is_complete;
 
   return (
     <Box p={6}>
       <Heading mb={4}>Test Plan Details</Heading>
+
+      {/* Navigation */}
       <Flex
         gap="2"
         borderBottom="1px solid"
         borderColor="gray.200"
         bg="gray.50"
         overflowX="auto"
+        mb={4}
       >
-        {navItems.map((item) => {
-          const isActive = false;
-          // TODO: const isActive = matchRoute({item.path.replace("$projectId", projectId));
-          return (
-            <Link
-              key={item.label}
-              to={item.path}
-              params={{ projectId, testPlanID }}
-            >
-              <Button
-                variant={isActive ? "solid" : "ghost"}
-                colorScheme="teal"
-                size="sm"
-              >
-                {item.label}
-              </Button>
-            </Link>
-          );
-        })}
+        {navItems.map((item) => (
+          <Link
+            key={item.label}
+            to={item.path}
+            params={{ projectId, testPlanID }}
+          >
+            <Button variant="ghost" colorScheme="teal" size="sm">
+              {item.label}
+            </Button>
+          </Link>
+        ))}
       </Flex>
 
-      <Flex dir="column">
-        <Stack gap={3} flexGrow={2}>
+      <Flex gap={10} wrap="wrap">
+        {/* LEFT COLUMN */}
+        <Stack gap={3} flex={1} minW="280px">
           <Text>
-            <strong>ID:</strong> {testPlan.ID}
+            <strong>ID:</strong> {testPlan.id}
           </Text>
+
           <Text>
-            <strong>Kind:</strong> {testPlan.Kind}
+            <strong>Kind:</strong> {testPlan.kind}
           </Text>
+
           <Text>
-            <strong>Description:</strong>{" "}
-            {testPlan.Description.Valid ? testPlan.Description.String : "—"}
+            <strong>Description:</strong> {testPlan.description}
           </Text>
-          {/* 6. Display Status and Mock Action Buttons in a Flex container */}
+
+          {/* Status + Actions */}
           <Flex align="center" gap={3}>
             <Text>
               <strong>Status:</strong>{" "}
-              <Badge colorScheme={statusColorScheme}>{statusText}</Badge>
+              <Badge colorScheme={isComplete ? "green" : "orange"}>
+                {isComplete ? "Complete" : "In Progress"}
+              </Badge>
             </Text>
-            {/* 7. Action Buttons */}
+
             {isComplete ? (
               <Button
                 onClick={handleMarkInProgress}
                 size="xs"
-                colorScheme="orange"
                 variant="outline"
+                colorScheme="orange"
               >
                 Mark as In Progress
               </Button>
@@ -170,75 +188,59 @@ function ViewTestPlan() {
             )}
           </Flex>
 
-          <Flex gap="10" wrap="wrap">
-            <Stat.Root maxW="240px">
+          {/* Stats */}
+          <Flex gap={6} wrap="wrap" mt={4}>
+            <Stat.Root maxW="200px">
               <Stat.Label>Total Test Cases</Stat.Label>
-              <Stat.ValueText>
-                {testPlan.NumTestCases}
-              </Stat.ValueText>
+              <Stat.ValueText>{testPlan.num_test_cases}</Stat.ValueText>
             </Stat.Root>
 
-            <Stat.Root maxW="240px">
+            <Stat.Root maxW="200px">
               <Stat.Label>Passed Test Cases</Stat.Label>
-              <Stat.ValueText>98</Stat.ValueText>
-             
-            </Stat.Root>
-
-            <Stat.Root maxW="240px">
-              <Stat.Label>Failed Test Cases</Stat.Label>
               <Stat.ValueText>
-                 {testPlan.NumFailures}
+                {testPlan.num_test_cases - testPlan.num_failures}
               </Stat.ValueText>
             </Stat.Root>
 
-            <Stat.Root maxW="240px">
+            <Stat.Root maxW="200px">
+              <Stat.Label>Failed Test Cases</Stat.Label>
+              <Stat.ValueText>{testPlan.num_failures}</Stat.ValueText>
+            </Stat.Root>
+
+            <Stat.Root maxW="200px">
               <Stat.Label>Testers Assigned</Stat.Label>
-              <Stat.ValueText>5</Stat.ValueText>
-             
+              <Stat.ValueText>—</Stat.ValueText>
             </Stat.Root>
           </Flex>
         </Stack>
-        <Stack gap={3}>
-          {/* <Text>
-            <strong>Assigned To:</strong> {testPlan.AssignedToID}
-          </Text>
-          <Text>
-            <strong>Created By:</strong> {testPlan.CreatedByID}
-          </Text> */}
+
+        {/* RIGHT COLUMN */}
+        <Stack gap={3} flex={1} minW="280px">
           <Text>
             <strong>Start Date:</strong>{" "}
-            {testPlan.StartAt.Valid
-              ? new Date(testPlan.StartAt.Time).toLocaleString()
-              : "—"}
+            {new Date(testPlan.start_at).toLocaleString()}
           </Text>
+
           <Text>
             <strong>Scheduled End:</strong>{" "}
-            {testPlan.ScheduledEndAt.Valid
-              ? new Date(testPlan.ScheduledEndAt.Time).toLocaleString()
-              : "—"}
+            {new Date(testPlan.scheduled_end_at).toLocaleString()}
           </Text>
-          {/* <Text>
-            <strong>Failures:</strong> {testPlan.NumFailures}
-          </Text> */}
+
           <Text>
-            <strong>Locked:</strong> {testPlan.IsLocked.Bool ? "Yes" : "No"}
+            <strong>Locked:</strong>{" "}
+            {testPlan.is_locked ? "Yes" : "No"}
           </Text>
+
           <Text>
             <strong>Has Report:</strong>{" "}
-            {testPlan.HasReport.Bool ? "Yes" : "No"}
+            {testPlan.has_report ? "Yes" : "No"}
           </Text>
-          {/* <Text>
-            <strong>Created At:</strong>{" "}
-            {new Date(testPlan.CreatedAt.Time).toLocaleString()}
-          </Text>
-          <Text>
-            <strong>Updated At:</strong>{" "}
-            {new Date(testPlan.UpdatedAt.Time).toLocaleString()}
-          </Text> */}
         </Stack>
       </Flex>
-      <hr />
-      <Outlet />
+
+      <Box mt={6}>
+        <Outlet />
+      </Box>
     </Box>
   );
 }

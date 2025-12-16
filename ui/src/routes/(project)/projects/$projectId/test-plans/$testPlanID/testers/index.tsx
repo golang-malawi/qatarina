@@ -13,22 +13,26 @@ import {
   Portal,
   Checkbox,
   CheckboxGroup,
-  
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { LuPencil, LuTrash } from "react-icons/lu";
-import { useTestPlanQuery } from "@/services/TestPlanService";
-import { assignTestersToTestPlan } from "@/services/TestPlanService";
+import {
+  useTestPlanQuery,
+  assignTestersToTestPlan,
+} from "@/services/TestPlanService";
 import { useUsersQuery, useGetUserQuery } from "@/services/UserService";
 import ErrorAlert from "@/components/ui/error-alert";
 import { useState } from "react";
 
+/* ----------------------- ROUTE ----------------------- */
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
 )({
-  component: RouteComponent,
+  component: TestPlanTesters,
 });
+
+/* ----------------------- TYPES ----------------------- */
 
 type Tester = {
   id: string;
@@ -37,25 +41,37 @@ type Tester = {
   role: string;
 };
 
-function RouteComponent() {
+type UserApi = {
+  ID: number;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  displayName?: string;
+  username?: string;
+};
+
+/* ----------------------- COMPONENT ----------------------- */
+
+function TestPlanTesters() {
   const { testPlanID } = Route.useParams();
+
+  /* ----------------------- DATA FETCHING ----------------------- */
+
   const usersQuery = useUsersQuery();
+  const testPlanQuery = useTestPlanQuery(testPlanID);
+
+  const assignedToID: number | undefined = testPlanQuery.data?.assigned_to_id;
+
+  const assignedUserQuery = useGetUserQuery(assignedToID?.toString(), {
+    enabled: assignedToID !== undefined,
+  });
+
+  /* ----------------------- LOCAL STATE ----------------------- */
+
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const testPlanQuery = useTestPlanQuery(testPlanID) as {
-    data: any | null;
-    isLoading: boolean;
-    error: unknown;
-  };
-
-  const assignedToID = testPlanQuery.data?.AssignedToID;
-
-  const assignedUserQuery = useGetUserQuery(assignedToID ?? "", {
-    enabled: !!assignedToID,
-  });
-
-  /* ----------------------- RENDER STATES ----------------------- */
+  /* ----------------------- LOADING / ERROR STATES ----------------------- */
 
   if (usersQuery.isPending || testPlanQuery.isLoading) {
     return (
@@ -69,7 +85,7 @@ function RouteComponent() {
     return <ErrorAlert message="Failed to load users." />;
   }
 
-  if (testPlanQuery.error) {
+  if (testPlanQuery.isError) {
     return (
       <Text color="red.500" p={6}>
         Failed to load test plan.
@@ -77,75 +93,94 @@ function RouteComponent() {
     );
   }
 
-  /* ----------------------- DATA MAPPING ----------------------- */
+  /* ----------------------- DATA NORMALIZATION ----------------------- */
 
-  const testers: Tester[] =
-    testPlanQuery.data && assignedUserQuery.data
-      ? [
-          {
-            id: assignedUserQuery.data.ID.toString(),
-            name: `${assignedUserQuery.data.FirstName} ${assignedUserQuery.data.LastName}`,
-            email: assignedUserQuery.data.Email,
-            role: "Assigned Tester",
-          },
-        ]
-      : [];
+  const users: UserApi[] =
+    usersQuery.data?.users
+      ?.filter((u: any) => u.ID || u.id)
+      .map((u: any) => ({
+        ID: u.ID ?? u.id,
+        FirstName: u.FirstName ?? "",
+        LastName: u.LastName ?? "",
+        Email: u.Email ?? u.username ?? "",
+        displayName: u.displayName,
+        username: u.username,
+      })) ?? [];
 
-  const users = usersQuery.data?.users ?? [];
-  // Filter out users already assigned
-  const unassignedUsers = users.filter(
-    (user: any) => user.id !== assignedUserQuery.data?.ID?.toString()
-  );
+  const assignedUser = assignedUserQuery.data as UserApi | undefined;
+
+  const testers: Tester[] = assignedUser
+    ? [
+        {
+          id: String(assignedUser.ID),
+          name:
+            assignedUser.displayName ??
+            `${assignedUser.FirstName} ${assignedUser.LastName}`.trim(),
+          email: assignedUser.Email,
+          role: "Assigned Tester",
+        },
+      ]
+    : [];
+
+  const unassignedUsers = users.filter((user) => user.ID !== assignedToID);
 
   /* ----------------------- HANDLERS ----------------------- */
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    console.log("Delete tester", id);
+    console.log("Remove tester:", id);
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit tester", id);
+    console.log("Edit tester:", id);
   };
 
- const handleAssignSelected = async () => {
-  if (selectedUsers.length === 0) {
-    alert("Please select at least one user to assign.");
+const handleAssignSelected = async () => {
+  if (selectedUsers.length === 0) return;
+
+  const testPlan = testPlanQuery.data;
+  if (!testPlan) {
+    alert("Test plan data not loaded yet.");
     return;
   }
 
+  const projectId = testPlan.project_id;
+  const testPlanId = Number(testPlanID);
+  const testCases = testPlan.test_cases ?? [];
+
+  if (!projectId || !testPlanId) {
+    alert("Invalid project or test plan ID.");
+    return;
+  }
+
+  if (testCases.length === 0) {
+    alert("This test plan has no test cases.");
+    return;
+  }
+
+  const plannedTests = testCases.map((testCase) => ({
+    test_case_id: testCase.id,
+    user_ids: selectedUsers.map((id) => Number(id)),
+  }));
+
+  const payload = {
+    project_id: projectId,
+    test_plan_id: testPlanId,
+    planned_tests: plannedTests,
+  };
+
   try {
-    // Assuming testPlanQuery.data has project_id and test_cases array
-    // TODO : Adjust according to actual data structure
-    const projectId = testPlanQuery.data?.project_id;
-    const testPlanId = testPlanID;
-    const testCases = testPlanQuery.data?.test_cases ?? [];
+    await assignTestersToTestPlan(testPlanID, payload);
 
-    if (!projectId || testCases.length === 0) {
-      alert("No test cases found in this test plan.");
-      return;
-    }
-
-    // Prepare payload according to your API structure
-    const payload = {
-      project_id: projectId,
-      test_plan_id: testPlanId,
-      planned_tests: testCases.map((tc: any) => ({
-        test_case_id: tc.id,
-        user_ids: selectedUsers.map((id) => parseInt(id, 10)), 
-      })),
-    };
-
-    console.log("Assigning users with payload:", payload);
-    await assignTestersToTestPlan(testPlanId, selectedUsers);
     setSelectedUsers([]);
     setIsDialogOpen(false);
     alert("Testers assigned successfully!");
   } catch (error) {
-    console.error("Error assigning testers:", error);
-    alert("Failed to assign testers. Check console for details.");
+    console.error("Assign testers failed:", error);
+    alert("Failed to assign testers.");
   }
 };
+
 
   /* ----------------------- UI ----------------------- */
 
@@ -160,7 +195,7 @@ function RouteComponent() {
           motionPreset="slide-in-bottom"
           
           open={isDialogOpen}
-          onOpenChange={(e) => setIsDialogOpen(e.open)} 
+          onOpenChange={(e) => setIsDialogOpen(e.open)}
         >
           <Dialog.Trigger asChild>
             <Button colorScheme="teal" size="sm">
@@ -175,61 +210,43 @@ function RouteComponent() {
                 <Dialog.Header>
                   <Dialog.Title>Add Tester</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
-                    {/* Reset selection when closing the dialog */}
-                    <CloseButton size="sm" onClick={() => setSelectedUsers([])} />
+                    <CloseButton
+                      size="sm"
+                      onClick={() => setSelectedUsers([])}
+                    />
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
 
                 <Dialog.Body>
-                  {usersQuery.isPending && (
-                    <Flex justify="center" py={6}>
-                      <Spinner />
-                    </Flex>
-                  )}
-
-                  {usersQuery.isError && (
-                    <ErrorAlert message="Failed to load users." />
-                  )}
-
-                  {!usersQuery.isPending && unassignedUsers.length === 0 && (
+                  {unassignedUsers.length === 0 && (
                     <Text color="gray.500">No unassigned users available.</Text>
                   )}
 
-               
                   <CheckboxGroup
-                    colorScheme="teal"
                     value={selectedUsers}
-                    
-                    onValueChange={setSelectedUsers} 
+                    onValueChange={setSelectedUsers}
                   >
                     <Stack gap={3}>
-                      {unassignedUsers.map((user: any) => (
-                       
-                        <Checkbox.Root
-                          key={user.id}
-                          value={user.id.toString()} 
-                        >
-                       
-                          <Checkbox.HiddenInput /> 
-                          <Checkbox.Control /> 
-                          
-                          <Flex
-                            justify="space-between"
-                            align="center"
-                            p={3}
-                            borderWidth="1px"
-                            borderRadius="md"
-                            ml={4} 
-                          >
-                            <Box>
-                              <Checkbox.Label>
-                                <Text fontWeight="medium">{user.displayName}</Text>
-                                <Text fontSize="sm" color="gray.500">
-                                  {user.username}
-                                </Text>
-                              </Checkbox.Label>
-                            </Box>
-                          </Flex>
+                      {unassignedUsers.map((user) => (
+                        <Checkbox.Root key={user.ID} value={String(user.ID)}>
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                          <Checkbox.Label>
+                            <Flex
+                              direction="column"
+                              p={3}
+                              borderWidth="1px"
+                              borderRadius="md"
+                            >
+                              <Text fontWeight="medium">
+                                {user.displayName ||
+                                  `${user.FirstName} ${user.LastName}`.trim()}
+                              </Text>
+                              <Text fontSize="sm" color="gray.500">
+                                {user.username || user.Email}
+                              </Text>
+                            </Flex>
+                          </Checkbox.Label>
                         </Checkbox.Root>
                       ))}
                     </Stack>
@@ -245,14 +262,17 @@ function RouteComponent() {
                     Assign Selected Testers ({selectedUsers.length})
                   </Button>
                 </Dialog.Body>
-                
-                <Dialog.Footer>
-                    <Dialog.ActionTrigger asChild>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                    </Dialog.ActionTrigger>
-                    {/* <Button variant="ghost" onClick={handleAssignSelected} isDisabled={selectedUsers.length === 0}>Assign Testers</Button> */}
-                </Dialog.Footer>
 
+                <Dialog.Footer>
+                  <Dialog.ActionTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </Dialog.ActionTrigger>
+                </Dialog.Footer>
               </Dialog.Content>
             </Dialog.Positioner>
           </Portal>
@@ -263,51 +283,48 @@ function RouteComponent() {
         Total Testers: <strong>{testers.length}</strong>
       </Text>
 
-      <Stack gap="6">
-        <Table.Root size="md">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader>ID</Table.ColumnHeader>
-              <Table.ColumnHeader>Name</Table.ColumnHeader>
-              <Table.ColumnHeader>Email</Table.ColumnHeader>
-              <Table.ColumnHeader>Role</Table.ColumnHeader>
-              <Table.ColumnHeader>Actions</Table.ColumnHeader>
+      <Table.Root size="md">
+        <Table.Header>
+          <Table.Row>
+            <Table.ColumnHeader>ID</Table.ColumnHeader>
+            <Table.ColumnHeader>Name</Table.ColumnHeader>
+            <Table.ColumnHeader>Email</Table.ColumnHeader>
+            <Table.ColumnHeader>Role</Table.ColumnHeader>
+            <Table.ColumnHeader>Actions</Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+
+        <Table.Body>
+          {testers.map((tester) => (
+            <Table.Row key={tester.id}>
+              <Table.Cell>{tester.id}</Table.Cell>
+              <Table.Cell>{tester.name}</Table.Cell>
+              <Table.Cell>{tester.email}</Table.Cell>
+              <Table.Cell>{tester.role}</Table.Cell>
+              <Table.Cell>
+                <Flex gap={2}>
+                  <IconButton
+                    aria-label="Edit tester"
+                    size="sm"
+                    onClick={() => handleEdit(tester.id)}
+                  >
+                    <LuPencil />
+                  </IconButton>
+
+                  <IconButton
+                    aria-label="Delete tester"
+                    size="sm"
+                    colorScheme="red"
+                    onClick={() => handleDelete(tester.id)}
+                  >
+                    <LuTrash />
+                  </IconButton>
+                </Flex>
+              </Table.Cell>
             </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {testers.map((tester) => (
-              <Table.Row key={tester.id}>
-                <Table.Cell>{tester.id}</Table.Cell>
-                <Table.Cell>{tester.name}</Table.Cell>
-                <Table.Cell>{tester.email}</Table.Cell>
-                <Table.Cell>{tester.role}</Table.Cell>
-                <Table.Cell>
-                  <Flex gap={2}>
-                    <IconButton
-                      aria-label="Edit tester"
-                      onClick={() => handleEdit(tester.id)}
-                      colorScheme="blue"
-                      size="sm"
-                    >
-                      <LuPencil />
-                    </IconButton>
-
-                    <IconButton
-                      aria-label="Delete tester"
-                      onClick={() => handleDelete(tester.id)}
-                      colorScheme="red"
-                      size="sm"
-                    >
-                      <LuTrash />
-                    </IconButton>
-                  </Flex>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </Stack>
+          ))}
+        </Table.Body>
+      </Table.Root>
     </Box>
   );
 }

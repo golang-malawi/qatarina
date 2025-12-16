@@ -59,14 +59,14 @@ export async function getTestRuns(testPlanID: string) {
 
 export async function assignTestersToTestPlan(
   testPlanID: string,
-  userIDs: string[]
+  payload: AssignTestsToPlanPayload
 ) {
   return apiClient.request(
     "post",
     "/v1/test-plans/{testPlanID}/test-cases",
     {
       params: { path: { testPlanID } },
-      body: { userIDs },
+      body: payload,
     }
   );
 }
