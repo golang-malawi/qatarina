@@ -189,18 +189,23 @@ SELECT * FROM test_plans ORDER BY created_at DESC;
 SELECT * FROM test_plans WHERE project_id = $1;
 
 -- name: GetTestPlan :one
-SELECT * FROM test_plans WHERE id = $1;
-
--- name: GetTestPlanWithTestCases :many
-SELECT 
-tp.*,
-tc.id AS test_case_id,
-tc.title AS test_case_title,
-tc.code AS test_case_code
+SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
+       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
+       tp.created_at, tp.updated_at,
+       COUNT(DISTINCT tr.test_case_id) AS num_test_cases
 FROM test_plans tp
 LEFT JOIN test_runs tr ON tp.id = tr.test_plan_id
-LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
 WHERE tp.id = $1
+GROUP BY tp.id;
+
+-- name: GetTestPlanWithTestCases :many
+SELECT tc.*
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tc.title, tc.code, tc.kind, tc.description,
+            tc.created_by_id, tc.project_id, tc.created_at, tc.updated_at
 ORDER BY tc.id;
 
 -- name: DeleteTestPlan :execrows

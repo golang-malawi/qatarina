@@ -19,8 +19,8 @@ type TestPlanService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.TestRun, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
-	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
-	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
+	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
+	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
@@ -41,7 +41,7 @@ func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanSer
 }
 
 // Create implements TestPlanService.
-func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.TestPlan, error) {
+func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error) {
 
 	// TODO: create the test plan
 	// TODO: create test-runs for the plan from assigned
@@ -121,7 +121,7 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 }
 
 // AddTestCaseToPlan implements TestPlanService.
-func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error) {
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
 	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
 	if err != nil {
 		return nil, err
@@ -170,48 +170,45 @@ func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
 }
 
 func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema.TestPlanResponseItem, error) {
-	rows, err := t.queries.GetTestPlanWithTestCases(ctx, id)
+	plan, err := t.queries.GetTestPlan(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("test plan %d not found: %w", id, err)
 		}
-		return nil, fmt.Errorf("failed to load test plan with cases: %w", err)
+		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	if len(rows) == 0 {
-		return nil, fmt.Errorf("test plan %d not found", id)
+	cases, err := t.queries.GetTestPlanWithTestCases(ctx, int32(id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
-
-	firstRow := rows[0]
 
 	response := schema.TestPlanResponseItem{
-		ID:             firstRow.ID,
-		ProjectID:      firstRow.ProjectID,
-		AssignedToID:   firstRow.AssignedToID,
-		CreatedByID:    firstRow.CreatedByID,
-		UpdatedByID:    firstRow.UpdatedByID,
-		Kind:           string(firstRow.Kind),
-		Description:    firstRow.Description.String,
-		StartAt:        firstRow.StartAt.Time.Format(time.DateTime),
-		ClosedAt:       firstRow.ClosedAt.Time.Format(time.DateTime),
-		ScheduledEndAt: firstRow.ScheduledEndAt.Time.Format(time.DateTime),
-		NumTestCases:   firstRow.NumTestCases,
-		NumFailures:    firstRow.NumFailures,
-		IsComplete:     firstRow.IsComplete.Bool,
-		IsLocked:       firstRow.IsLocked.Bool,
-		HasReport:      firstRow.HasReport.Bool,
-		CreatedAt:      firstRow.CreatedAt.Time.Format(time.DateTime),
-		UpdatedAt:      firstRow.UpdatedAt.Time.Format(time.DateTime),
+		ID:             plan.ID,
+		ProjectID:      plan.ProjectID,
+		AssignedToID:   plan.AssignedToID,
+		CreatedByID:    plan.CreatedByID,
+		UpdatedByID:    plan.UpdatedByID,
+		Kind:           string(plan.Kind),
+		Description:    plan.Description.String,
+		StartAt:        plan.StartAt.Time.Format(time.DateTime),
+		ClosedAt:       plan.ClosedAt.Time.Format(time.DateTime),
+		ScheduledEndAt: plan.ScheduledEndAt.Time.Format(time.DateTime),
+		NumTestCases:   int32(plan.NumTestCases),
+		NumFailures:    plan.NumFailures,
+		IsComplete:     plan.IsComplete.Bool,
+		IsLocked:       plan.IsLocked.Bool,
+		HasReport:      plan.HasReport.Bool,
+		CreatedAt:      plan.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:      plan.UpdatedAt.Time.Format(time.DateTime),
 		TestCases:      []schema.TestCaseResponseItem{},
 	}
 
-	for _, row := range rows {
-		if row.TestCaseID.Valid {
-			response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
-				ID:    row.TestCaseID.UUID.String(),
-				Title: row.TestCaseTitle.String,
-			})
-		}
+	for _, tc := range cases {
+		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
+			ID:    tc.ID.String(),
+			Title: tc.Title,
+		})
 	}
 
 	return &response, nil

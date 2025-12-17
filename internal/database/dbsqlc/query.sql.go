@@ -1013,12 +1013,40 @@ func (q *Queries) GetTestCaseCount(ctx context.Context) (int64, error) {
 }
 
 const getTestPlan = `-- name: GetTestPlan :one
-SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at FROM test_plans WHERE id = $1
+SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
+       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
+       tp.created_at, tp.updated_at,
+       COUNT(DISTINCT tr.test_case_id) AS num_test_cases
+FROM test_plans tp
+LEFT JOIN test_runs tr ON tp.id = tr.test_plan_id
+WHERE tp.id = $1
+GROUP BY tp.id
 `
 
-func (q *Queries) GetTestPlan(ctx context.Context, id int64) (TestPlan, error) {
+type GetTestPlanRow struct {
+	ID             int64
+	ProjectID      int32
+	AssignedToID   int32
+	CreatedByID    int32
+	UpdatedByID    int32
+	Kind           TestKind
+	Description    sql.NullString
+	StartAt        sql.NullTime
+	ClosedAt       sql.NullTime
+	ScheduledEndAt sql.NullTime
+	NumFailures    int32
+	IsComplete     sql.NullBool
+	IsLocked       sql.NullBool
+	HasReport      sql.NullBool
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+	NumTestCases   int64
+}
+
+func (q *Queries) GetTestPlan(ctx context.Context, id int64) (GetTestPlanRow, error) {
 	row := q.db.QueryRowContext(ctx, getTestPlan, id)
-	var i TestPlan
+	var i GetTestPlanRow
 	err := row.Scan(
 		&i.ID,
 		&i.ProjectID,
@@ -1030,13 +1058,13 @@ func (q *Queries) GetTestPlan(ctx context.Context, id int64) (TestPlan, error) {
 		&i.StartAt,
 		&i.ClosedAt,
 		&i.ScheduledEndAt,
-		&i.NumTestCases,
 		&i.NumFailures,
 		&i.IsComplete,
 		&i.IsLocked,
 		&i.HasReport,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumTestCases,
 	)
 	return i, err
 }
@@ -1072,71 +1100,38 @@ func (q *Queries) GetTestPlanStatusRatio(ctx context.Context) (GetTestPlanStatus
 }
 
 const getTestPlanWithTestCases = `-- name: GetTestPlanWithTestCases :many
-SELECT 
-tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id, tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at, tp.num_test_cases, tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report, tp.created_at, tp.updated_at,
-tc.id AS test_case_id,
-tc.title AS test_case_title,
-tc.code AS test_case_code
-FROM test_plans tp
-LEFT JOIN test_runs tr ON tp.id = tr.test_plan_id
-LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
-WHERE tp.id = $1
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tc.title, tc.code, tc.kind, tc.description,
+            tc.created_by_id, tc.project_id, tc.created_at, tc.updated_at
 ORDER BY tc.id
 `
 
-type GetTestPlanWithTestCasesRow struct {
-	ID             int64
-	ProjectID      int32
-	AssignedToID   int32
-	CreatedByID    int32
-	UpdatedByID    int32
-	Kind           TestKind
-	Description    sql.NullString
-	StartAt        sql.NullTime
-	ClosedAt       sql.NullTime
-	ScheduledEndAt sql.NullTime
-	NumTestCases   int32
-	NumFailures    int32
-	IsComplete     sql.NullBool
-	IsLocked       sql.NullBool
-	HasReport      sql.NullBool
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
-	TestCaseID     uuid.NullUUID
-	TestCaseTitle  sql.NullString
-	TestCaseCode   sql.NullString
-}
-
-func (q *Queries) GetTestPlanWithTestCases(ctx context.Context, id int64) ([]GetTestPlanWithTestCasesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTestPlanWithTestCases, id)
+func (q *Queries) GetTestPlanWithTestCases(ctx context.Context, testPlanID int32) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, getTestPlanWithTestCases, testPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetTestPlanWithTestCasesRow
+	var items []TestCase
 	for rows.Next() {
-		var i GetTestPlanWithTestCasesRow
+		var i TestCase
 		if err := rows.Scan(
 			&i.ID,
-			&i.ProjectID,
-			&i.AssignedToID,
-			&i.CreatedByID,
-			&i.UpdatedByID,
 			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
 			&i.Description,
-			&i.StartAt,
-			&i.ClosedAt,
-			&i.ScheduledEndAt,
-			&i.NumTestCases,
-			&i.NumFailures,
-			&i.IsComplete,
-			&i.IsLocked,
-			&i.HasReport,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.TestCaseID,
-			&i.TestCaseTitle,
-			&i.TestCaseCode,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
