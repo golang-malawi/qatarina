@@ -11,7 +11,7 @@ import {
   Stat,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-
+import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 /**
  * Test plan type – MATCHES API RESPONSE EXACTLY
  */
@@ -113,10 +113,11 @@ function ViewTestPlan() {
    * Loading / Error guards
    */
   if (isLoading) return <div>Loading...</div>;
-  if (error || !testPlan)
-    return <div>Error loading test plan</div>;
+  if (error || !testPlan) return <div>Error loading test plan</div>;
 
   const isComplete = testPlan.is_complete;
+
+  const totalTestCases = testPlan.test_cases?.length ?? 0;
 
   return (
     <Box p={6}>
@@ -152,7 +153,8 @@ function ViewTestPlan() {
           </Text>
 
           <Text>
-            <strong>Kind:</strong> {testPlan.kind}
+            <strong>Kind:</strong>{" "}
+            {TEST_PLAN_KINDS[testPlan.kind] ?? testPlan.kind}
           </Text>
 
           <Text>
@@ -192,13 +194,13 @@ function ViewTestPlan() {
           <Flex gap={6} wrap="wrap" mt={4}>
             <Stat.Root maxW="200px">
               <Stat.Label>Total Test Cases</Stat.Label>
-              <Stat.ValueText>{testPlan.num_test_cases}</Stat.ValueText>
+              <Stat.ValueText>{totalTestCases}</Stat.ValueText>
             </Stat.Root>
 
             <Stat.Root maxW="200px">
               <Stat.Label>Passed Test Cases</Stat.Label>
               <Stat.ValueText>
-                {testPlan.num_test_cases - testPlan.num_failures}
+                {totalTestCases - testPlan.num_failures}
               </Stat.ValueText>
             </Stat.Root>
 
@@ -227,13 +229,11 @@ function ViewTestPlan() {
           </Text>
 
           <Text>
-            <strong>Locked:</strong>{" "}
-            {testPlan.is_locked ? "Yes" : "No"}
+            <strong>Locked:</strong> {testPlan.is_locked ? "Yes" : "No"}
           </Text>
 
           <Text>
-            <strong>Has Report:</strong>{" "}
-            {testPlan.has_report ? "Yes" : "No"}
+            <strong>Has Report:</strong> {testPlan.has_report ? "Yes" : "No"}
           </Text>
         </Stack>
       </Flex>
