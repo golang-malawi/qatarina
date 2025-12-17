@@ -78,7 +78,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 			return nil, err
 		}
 		for _, userID := range assignedTestCase.UserIds {
-			testRunID, err := uuid.NewV7()
+			testRunID, _ := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
 				ID:           testRunID,
 				ProjectID:    int32(request.ProjectID),
@@ -133,7 +133,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			return nil, err
 		}
 		for _, userID := range assignedTestCase.UserIds {
-			testRunID, err := uuid.NewV7()
+			testRunID, _ := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
 				ID:           testRunID,
 				ProjectID:    int32(request.ProjectID),

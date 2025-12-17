@@ -93,9 +93,10 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT tc.* FROM test_cases tc 
-INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
-WHERE tp.test_plan_id = $1;
+SELECT DISTINCT tc.*
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1::bigint;
 
 -- name: ListTestCasesByCreator :many
 SELECT * FROM test_cases WHERE created_by_id = $1;

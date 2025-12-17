@@ -1691,13 +1691,14 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id FROM test_cases tc 
-INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
-WHERE tp.test_plan_id = $1
+SELECT DISTINCT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1::bigint
 `
 
-func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID uuid.UUID) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, testPlanID)
+func (q *Queries) ListTestCasesByPlan(ctx context.Context, dollar_1 int64) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, dollar_1)
 	if err != nil {
 		return nil, err
 	}
