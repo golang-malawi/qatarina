@@ -96,6 +96,14 @@ type UpdateTestPlan struct {
 }
 
 type TestCaseResponseItem struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID                   string           `json:"id"`
+	Title                string           `json:"title"`
+	IsAssignedToTestPlan bool             `json:"is_assigned_to_test_plan"`
+	TestPlan             *TestPlanSummary `json:"test_plan,omitempty"`
+	AssignedTesterIDs    []int64          `json:"assigned_tester_ids"`
+}
+
+type TestPlanSummary struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }

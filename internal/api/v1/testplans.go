@@ -329,6 +329,6 @@ func GetTestPlanTestCases(testCaseService services.TestCaseService, logger loggi
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(schema.NewTestCaseResponseList(testCases))
+		return c.JSON(testCases)
 	}
 }

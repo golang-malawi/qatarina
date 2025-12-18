@@ -178,9 +178,9 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	cases, err := t.queries.GetTestPlanWithTestCases(ctx, int32(id))
+	cases, err := t.queries.GetTestCasesWithTestersByPlan(ctx, int32(id))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
+		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
 	}
 
 	response := schema.TestPlanResponseItem{
@@ -206,8 +206,14 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
-			ID:    tc.ID.String(),
-			Title: tc.Title,
+			ID:                   tc.TestCaseID.String(),
+			Title:                tc.Title,
+			IsAssignedToTestPlan: true,
+			TestPlan: &schema.TestPlanSummary{
+				ID:   plan.ID,
+				Name: plan.Description.String,
+			},
+			AssignedTesterIDs: tc.TesterIds,
 		})
 	}
 

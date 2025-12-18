@@ -1012,6 +1012,134 @@ func (q *Queries) GetTestCaseCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getTestCasesWithPlanInfo = `-- name: GetTestCasesWithPlanInfo :many
+SELECT 
+    tc.id AS test_case_id,
+    tc.title,
+    tc.project_id,
+    tc.created_by_id,
+    tc.kind,
+    tc.code,
+    tc.feature_or_module,
+    tc.description,
+    tc.is_draft,
+    tc.tags,
+    tc.created_at,
+    tc.updated_at,
+    tp.id AS plan_id,
+    tp.description AS plan_name,
+    array_agg(tr.assigned_to_id)::bigint[] AS tester_ids
+FROM test_cases tc
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tp.id, tp.description
+`
+
+type GetTestCasesWithPlanInfoRow struct {
+	TestCaseID      uuid.UUID
+	Title           string
+	ProjectID       sql.NullInt32
+	CreatedByID     int32
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Description     string
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	PlanID          sql.NullInt64
+	PlanName        sql.NullString
+	TesterIds       []int64
+}
+
+func (q *Queries) GetTestCasesWithPlanInfo(ctx context.Context, testPlanID int32) ([]GetTestCasesWithPlanInfoRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTestCasesWithPlanInfo, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestCasesWithPlanInfoRow
+	for rows.Next() {
+		var i GetTestCasesWithPlanInfoRow
+		if err := rows.Scan(
+			&i.TestCaseID,
+			&i.Title,
+			&i.ProjectID,
+			&i.CreatedByID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PlanID,
+			&i.PlanName,
+			pq.Array(&i.TesterIds),
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTestCasesWithTestersByPlan = `-- name: GetTestCasesWithTestersByPlan :many
+SELECT 
+    tc.id AS test_case_id,
+    tc.title,
+    tr.test_plan_id,
+    array_agg(tr.assigned_to_id)::bigint[] AS tester_ids
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tc.title, tr.test_plan_id
+`
+
+type GetTestCasesWithTestersByPlanRow struct {
+	TestCaseID uuid.UUID
+	Title      string
+	TestPlanID int32
+	TesterIds  []int64
+}
+
+func (q *Queries) GetTestCasesWithTestersByPlan(ctx context.Context, testPlanID int32) ([]GetTestCasesWithTestersByPlanRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTestCasesWithTestersByPlan, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestCasesWithTestersByPlanRow
+	for rows.Next() {
+		var i GetTestCasesWithTestersByPlanRow
+		if err := rows.Scan(
+			&i.TestCaseID,
+			&i.Title,
+			&i.TestPlanID,
+			pq.Array(&i.TesterIds),
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTestPlan = `-- name: GetTestPlan :one
 SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
        tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
@@ -1097,53 +1225,6 @@ func (q *Queries) GetTestPlanStatusRatio(ctx context.Context) (GetTestPlanStatus
 	var i GetTestPlanStatusRatioRow
 	err := row.Scan(&i.Closed, &i.Open)
 	return i, err
-}
-
-const getTestPlanWithTestCases = `-- name: GetTestPlanWithTestCases :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
-FROM test_cases tc
-INNER JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.test_plan_id = $1
-GROUP BY tc.id, tc.title, tc.code, tc.kind, tc.description,
-            tc.created_by_id, tc.project_id, tc.created_at, tc.updated_at
-ORDER BY tc.id
-`
-
-func (q *Queries) GetTestPlanWithTestCases(ctx context.Context, testPlanID int32) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, getTestPlanWithTestCases, testPlanID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TestCase
-	for rows.Next() {
-		var i TestCase
-		if err := rows.Scan(
-			&i.ID,
-			&i.Kind,
-			&i.Code,
-			&i.FeatureOrModule,
-			&i.Title,
-			&i.Description,
-			&i.ParentTestCaseID,
-			&i.IsDraft,
-			pq.Array(&i.Tags),
-			&i.CreatedByID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ProjectID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getTestRun = `-- name: GetTestRun :one
