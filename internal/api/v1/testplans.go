@@ -15,7 +15,6 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
-	"github.com/google/uuid"
 )
 
 // ListTestPlans godoc
@@ -315,9 +314,12 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 //	@Router			/v1/test-plans/{testPlanID}/test-cases [get]
 func GetTestPlanTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		testPlanID := c.Params("testPlanID", "")
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID == 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
 
-		testCases, err := testCaseService.FindAllByTestPlanID(c.Context(), uuid.MustParse(testPlanID))
+		testCases, err := testCaseService.FindAllByTestPlanID(c.Context(), int64(testPlanID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				logger.Info(loggedmodule.ApiTestPlans, "test run not found", "error", err)
@@ -327,6 +329,6 @@ func GetTestPlanTestCases(testCaseService services.TestCaseService, logger loggi
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(schema.NewTestCaseResponseList(testCases))
+		return c.JSON(testCases)
 	}
 }

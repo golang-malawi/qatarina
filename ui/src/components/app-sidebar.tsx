@@ -104,7 +104,7 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
       width="100%"
       textAlign="left"
       _hover={{
-        bg: "brand",
+        bg: "blue.600",
         color: "white",
       }}
     >

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,9 +18,9 @@ type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.TestRun, error)
-	GetOneTestPlan(context.Context, int64) (*dbsqlc.TestPlan, error)
-	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.TestPlan, error)
-	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error)
+	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
+	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
+	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
@@ -40,7 +41,7 @@ func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanSer
 }
 
 // Create implements TestPlanService.
-func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.TestPlan, error) {
+func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error) {
 
 	// TODO: create the test plan
 	// TODO: create test-runs for the plan from assigned
@@ -77,7 +78,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 			return nil, err
 		}
 		for _, userID := range assignedTestCase.UserIds {
-			testRunID, err := uuid.NewV7()
+			testRunID, _ := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
 				ID:           testRunID,
 				ProjectID:    int32(request.ProjectID),
@@ -120,7 +121,7 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 }
 
 // AddTestCaseToPlan implements TestPlanService.
-func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.TestPlan, error) {
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
 	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
 	if err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			return nil, err
 		}
 		for _, userID := range assignedTestCase.UserIds {
-			testRunID, err := uuid.NewV7()
+			testRunID, _ := uuid.NewV7()
 			testRunParams := dbsqlc.CreateNewTestRunParams{
 				ID:           testRunID,
 				ProjectID:    int32(request.ProjectID),
@@ -168,12 +169,55 @@ func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*dbsqlc.TestPlan, error) {
-	testPlan, err := t.queries.GetTestPlan(ctx, id)
+func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema.TestPlanResponseItem, error) {
+	plan, err := t.queries.GetTestPlan(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get test plan %d: %w", id, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("test plan %d not found: %w", id, err)
+		}
+		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
-	return &testPlan, nil
+
+	cases, err := t.queries.GetTestCasesWithTestersByPlan(ctx, int32(id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
+	}
+
+	response := schema.TestPlanResponseItem{
+		ID:             plan.ID,
+		ProjectID:      plan.ProjectID,
+		AssignedToID:   plan.AssignedToID,
+		CreatedByID:    plan.CreatedByID,
+		UpdatedByID:    plan.UpdatedByID,
+		Kind:           string(plan.Kind),
+		Description:    plan.Description.String,
+		StartAt:        plan.StartAt.Time.Format(time.DateTime),
+		ClosedAt:       plan.ClosedAt.Time.Format(time.DateTime),
+		ScheduledEndAt: plan.ScheduledEndAt.Time.Format(time.DateTime),
+		NumTestCases:   int32(plan.NumTestCases),
+		NumFailures:    plan.NumFailures,
+		IsComplete:     plan.IsComplete.Bool,
+		IsLocked:       plan.IsLocked.Bool,
+		HasReport:      plan.HasReport.Bool,
+		CreatedAt:      plan.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:      plan.UpdatedAt.Time.Format(time.DateTime),
+		TestCases:      []schema.TestCaseResponseItem{},
+	}
+
+	for _, tc := range cases {
+		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
+			ID:                   tc.TestCaseID.String(),
+			Title:                tc.Title,
+			IsAssignedToTestPlan: true,
+			TestPlan: &schema.TestPlanSummary{
+				ID:   plan.ID,
+				Name: plan.Description.String,
+			},
+			AssignedTesterIDs: tc.TesterIds,
+		})
+	}
+
+	return &response, nil
 }
 
 func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestPlan) (bool, error) {

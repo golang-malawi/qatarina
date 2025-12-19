@@ -1,5 +1,25 @@
-import { Tabs } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
+import {
+  Tabs,
+  Box,
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Dialog,
+  Fieldset,
+  Heading,
+  Portal,
+  Text,
+  Flex,
+  Alert,
+  Stack
+} from "@chakra-ui/react";
+
+import { useTestCaseQuery } from "@/services/TestCaseService";
+import { useProjectTestPlansQuery } from "@/services/TestPlanService";
+import { assignTestCaseToTestPlan } from "@/services/TestPlanService";
+import { useTestersQuery } from "@/services/TesterService";
+import { useState } from "react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/"
@@ -8,61 +28,321 @@ export const Route = createFileRoute(
 });
 
 function ViewTestCase() {
+  const { projectId, testCaseId } = Route.useParams();
+
+  const { data, isLoading, error } = useTestCaseQuery(testCaseId);
+  const testPlansQuery = useProjectTestPlansQuery(projectId);
+  const testersQuery = useTestersQuery();
+
+  /** ---------- STATE ---------- */
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
+
+  /** Optimistic UI state */
+  const [optimisticAssignment, setOptimisticAssignment] = useState<{
+    test_plan_id: string | null;
+    testers: string[];
+  } | null>(null);
+
+  if (isLoading) return <div>Loading test case...</div>;
+  if (error) return <div>Error loading test case</div>;
+
+  const testCase = data?.test_case;
+  if (!testCase) return <div>No data found</div>;
+
+  /** ---------- DERIVED ---------- */
+  const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
+
+  const isLockedToPlan =
+    testCase.is_assigned_to_test_plan || !!optimisticAssignment?.test_plan_id;
+
   return (
-    <div className="card">
+    <div className="card space-y-4">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold">{testCase.title}</h1>
+        <p className="text-sm text-muted">
+          Code: {testCase.code} • Feature: {testCase.feature_or_module}
+        </p>
+        <p className="text-sm text-muted">Project ID: {projectId}</p>
+      </div>
+
       <Tabs.Root defaultValue="description">
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
-          <Tabs.Trigger value="testers">Testers</Tabs.Trigger>
-          <Tabs.Trigger value="results">Test Results</Tabs.Trigger>
-          <Tabs.Trigger value="documents">Documents and Media</Tabs.Trigger>
+          {/* <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
+          <Tabs.Trigger value="tags">Tags</Tabs.Trigger>
+          <Tabs.Trigger value="documents">Documents</Tabs.Trigger> */}
+          <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
         </Tabs.List>
-        <Tabs.Content value="description" title="Description">
-          <p className="m-0">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Duis aute irure dolor in
-            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-            culpa qui officia deserunt mollit anim id est laborum.
-          </p>
+
+        {/* DESCRIPTION */}
+        {/* DESCRIPTION */}
+        <Tabs.Content value="description">
+          <Box p={4} bg="gray.50" rounded="md" shadow="sm">
+            {/* Description */}
+            <Text mb={3} color="gray.700">
+              {testCase.description || "No description provided."}
+            </Text>
+
+            {/* Tags */}
+            <Box mb={3}>
+              {testCase.tags?.length ? (
+                <Flex gap={2} wrap="wrap">
+                  {testCase.tags.map((tag: string) => (
+                    <Box
+                      key={tag}
+                      px={3}
+                      py={1}
+                      bg="teal.100"
+                      color="teal.800"
+                      fontSize="xs"
+                      fontWeight="medium"
+                      rounded="full"
+                    >
+                      {tag}
+                    </Box>
+                  ))}
+                </Flex>
+              ) : (
+                <Text fontSize="sm" color="gray.500">
+                  No tags
+                </Text>
+              )}
+            </Box>
+
+            {/* Metadata */}
+            <Box
+              p={3}
+              bg="white"
+              rounded="md"
+              borderWidth={1}
+              borderColor="gray.200"
+              shadow="xs"
+            >
+              <Stack spacing={2} fontSize="sm" color="gray.600">
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Type:</Text>
+                  <Text>{testCase.kind}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created By:</Text>
+                  <Text>User ID {testCase.created_by}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Status:</Text>
+                  <Text color={testCase.is_draft ? "orange.500" : "green.500"}>
+                    {testCase.is_draft ? "Draft" : "Published"}
+                  </Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created At:</Text>
+                  <Text>{new Date(testCase.created_at).toLocaleString()}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Updated At:</Text>
+                  <Text>{new Date(testCase.updated_at).toLocaleString()}</Text>
+                </Flex>
+              </Stack>
+            </Box>
+          </Box>
         </Tabs.Content>
-        <Tabs.Content value="testers" title="Testers">
-          <p className="m-0">
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
-            quae ab illo inventore veritatis et quasi architecto beatae vitae
-            dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-            aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
-            eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci
-            velit, sed quia non numquam eius modi.
-          </p>
+
+        {/* DOCUMENTS */}
+        <Tabs.Content value="documents">
+          <Text>No documents uploaded yet.</Text>
         </Tabs.Content>
-        <Tabs.Content value="results" title="Test Results">
-          <p className="m-0">
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
-            quae ab illo inventore veritatis et quasi architecto beatae vitae
-            dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit
-            aspernatur aut odit aut fugit, sed quia consequuntur magni dolores
-            eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci
-            velit, sed quia non numquam eius modi.
-          </p>
-        </Tabs.Content>
-        <Tabs.Content value="documents" title="Documents and Media">
-          <p className="m-0">
-            At vero eos et accusamus et iusto odio dignissimos ducimus qui
-            blanditiis praesentium voluptatum deleniti atque corrupti quos
-            dolores et quas molestias excepturi sint occaecati cupiditate non
-            provident, similique sunt in culpa qui officia deserunt mollitia
-            animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis
-            est et expedita distinctio. Nam libero tempore, cum soluta nobis est
-            eligendi optio cumque nihil impedit quo minus.
-          </p>
+
+        {/* ===================== USAGE & ASSIGNMENT ===================== */}
+        <Tabs.Content value="usage">
+          <Box mt={4} spaceY={4}>
+            <Heading size="sm">Assign to Test Plan</Heading>
+            <Alert.Root status="info">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>
+                  A test case can belong to only one test plan.
+                </Alert.Description>
+              </Alert.Content>
+            </Alert.Root>
+
+            {/* TEST PLANS */}
+            {testPlansQuery.data?.test_plans?.length ? (
+              <CheckboxGroup
+                value={effectivePlanId ? [effectivePlanId] : []}
+                onValueChange={(value) => {
+                  // 🚫 HARD VALIDATION — only one allowed
+                  if (value.length > 1) return;
+                  setSelectedPlanId(value[0] ?? null);
+                }}
+              >
+                <Fieldset.Root mt={3}>
+                  <Fieldset.Legend fontSize="sm">
+                    Available test plans
+                  </Fieldset.Legend>
+
+                  <Fieldset.Content>
+                    {testPlansQuery.data.test_plans.map((plan: any) => (
+                      <Checkbox.Root
+                        key={plan.id}
+                        value={plan.id.toString()}
+                        isDisabled={
+                          isLockedToPlan &&
+                          plan.id.toString() !== effectivePlanId
+                        }
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>{plan.description}</Checkbox.Label>
+                      </Checkbox.Root>
+                    ))}
+                  </Fieldset.Content>
+                </Fieldset.Root>
+              </CheckboxGroup>
+            ) : (
+              <Text fontSize="sm" color="gray.500">
+                No test plans available.
+              </Text>
+            )}
+
+            {/* ASSIGN CTA */}
+            <Button
+              mt={4}
+              size="sm"
+              isDisabled={!effectivePlanId}
+              onClick={() => setAssignOpen(true)}
+            >
+              Assign testers
+            </Button>
+
+            {/* -------- Assigned testers preview (OPTIMISTIC) -------- */}
+            <Box mt={4}>
+              <Heading size="xs" mb={2}>
+                Assigned testers
+              </Heading>
+
+              {optimisticAssignment?.testers?.length ? (
+                <Flex gap={2} wrap="wrap">
+                  {optimisticAssignment.testers.map((uid) => {
+                    const tester = testersQuery.data?.testers?.find(
+                      (t: any) => t.user_id.toString() === uid
+                    );
+
+                    return (
+                      <Box
+                        key={uid}
+                        px={2}
+                        py={1}
+                        bg="gray.100"
+                        rounded="md"
+                        fontSize="sm"
+                      >
+                        {tester?.name ?? "Unknown"}
+                      </Box>
+                    );
+                  })}
+                </Flex>
+              ) : (
+                <Text fontSize="sm" color="gray.500">
+                  No testers assigned yet.
+                </Text>
+              )}
+            </Box>
+          </Box>
+
+          {/* ===================== ASSIGN TESTERS DIALOG ===================== */}
+          <Dialog.Root
+            open={assignOpen}
+            onOpenChange={() => setAssignOpen(false)}
+          >
+            <Portal>
+              <Dialog.Backdrop />
+              <Dialog.Positioner>
+                <Dialog.Content>
+                  <Dialog.Header>Assign testers</Dialog.Header>
+
+                  <Dialog.Body>
+                    <CheckboxGroup
+                      value={selectedTesters}
+                      onValueChange={setSelectedTesters}
+                    >
+                      <Fieldset.Root>
+                        <Fieldset.Legend fontSize="sm">
+                          Select at least one tester
+                        </Fieldset.Legend>
+
+                        <Fieldset.Content>
+                          {testersQuery.data?.testers?.map((tester: any) => (
+                            <Checkbox.Root
+                              key={tester.user_id}
+                              value={tester.user_id.toString()}
+                            >
+                              <Checkbox.HiddenInput />
+                              <Checkbox.Control />
+                              <Checkbox.Label>{tester.name}</Checkbox.Label>
+                            </Checkbox.Root>
+                          ))}
+                        </Fieldset.Content>
+                      </Fieldset.Root>
+                    </CheckboxGroup>
+                  </Dialog.Body>
+
+                  <Dialog.Footer>
+                    <Button
+                      variant="outline"
+                      onClick={() => setAssignOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      isDisabled={selectedTesters.length === 0}
+                      onClick={async () => {
+                        if (!effectivePlanId) return;
+
+                        const payload = {
+                          project_id: Number(projectId),
+                          test_plan_id: Number(effectivePlanId),
+                          planned_tests: [
+                            {
+                              test_case_id: testCaseId,
+                              user_ids: selectedTesters.map((id) => Number(id)),
+                            },
+                          ],
+                        };
+
+                        try {
+                          await assignTestCaseToTestPlan(
+                            effectivePlanId,
+                            payload
+                          );
+
+                          setOptimisticAssignment({
+                            test_plan_id: effectivePlanId,
+                            testers: selectedTesters,
+                          });
+
+                          setAssignOpen(false);
+                        } catch (err) {
+                          console.error("Failed to assign test case:", err);
+                          alert("Failed to assign test case to test plan.");
+                        }
+                      }}
+                    >
+                      Confirm assignment
+                    </Button>
+                  </Dialog.Footer>
+                </Dialog.Content>
+              </Dialog.Positioner>
+            </Portal>
+          </Dialog.Root>
         </Tabs.Content>
       </Tabs.Root>
     </div>
   );
 }
-

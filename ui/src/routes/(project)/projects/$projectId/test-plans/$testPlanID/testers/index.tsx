@@ -1,13 +1,27 @@
-import { Box, Button, Flex, Heading, IconButton, Spinner, Stack, Table, Text } from '@chakra-ui/react';
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react';
-import { LuPencil, LuTrash } from 'react-icons/lu';
+import {
+  Box,
+  Flex,
+  Heading,
+  IconButton,
+  Spinner,
+  Table,
+  Text,
+} from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { LuPencil, LuTrash } from "react-icons/lu";
+import { useTestPlanQuery } from "@/services/TestPlanService";
+import { useGetUserQuery } from "@/services/UserService";
+import ErrorAlert from "@/components/ui/error-alert";
+
+/* ----------------------- ROUTE ----------------------- */
 
 export const Route = createFileRoute(
-  '/(project)/projects/$projectId/test-plans/$testPlanID/testers/',
+  "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
 )({
-  component: RouteComponent,
-})
+  component: TestPlanTesters,
+});
+
+/* ----------------------- TYPES ----------------------- */
 
 type Tester = {
   id: string;
@@ -16,118 +30,135 @@ type Tester = {
   role: string;
 };
 
+type UserApi = {
+  ID: number;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  displayName?: string;
+};
 
-function RouteComponent() {
-const [testers, setTesters] = useState<Tester[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/* ----------------------- COMPONENT ----------------------- */
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setTesters([
-          {
-            id: "1",
-            name: "Alice Johnson",
-            email: "alice@example.com",
-            role: "Lead Tester",
-          },
-          {
-            id: "2",
-            name: "Bob Smith",
-            email: "bob@example.com",
-            role: "QA Engineer",
-          },
-          {
-            id: "3",
-            name: "Charlie Brown",
-            email: "charlie@example.com",
-            role: "Junior Tester",
-          },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load testers.");
-        setLoading(false);
-      }
-    }, 1000);
+function TestPlanTesters() {
+  const { testPlanID } = Route.useParams();
 
-    return () => clearTimeout(timeout);
-  }, []);
+  /* ----------------------- DATA FETCHING ----------------------- */
+
+  const testPlanQuery = useTestPlanQuery(testPlanID);
+  const assignedToID: number | undefined = testPlanQuery.data?.assigned_to_id;
+
+  // We only fetch the specific user assigned to this test plan
+  const assignedUserQuery = useGetUserQuery(assignedToID?.toString(), {
+    enabled: assignedToID !== undefined,
+  });
+
+  /* ----------------------- LOADING / ERROR STATES ----------------------- */
+
+  if (testPlanQuery.isLoading || (assignedToID && assignedUserQuery.isLoading)) {
+    return (
+      <Flex justify="center" align="center" h="full" p={10}>
+        <Spinner size="xl" color="teal.500" />
+      </Flex>
+    );
+  }
+
+  if (testPlanQuery.isError) {
+    return <ErrorAlert message="Failed to load test plan." />;
+  }
+
+  /* ----------------------- DATA NORMALIZATION ----------------------- */
+
+  const assignedUser = assignedUserQuery.data as UserApi | undefined;
+
+  const testers: Tester[] = assignedUser
+    ? [
+        {
+          id: String(assignedUser.ID),
+          name:
+            assignedUser.displayName ??
+            `${assignedUser.FirstName} ${assignedUser.LastName}`.trim(),
+          email: assignedUser.Email,
+          role: "Assigned Tester",
+        },
+      ]
+    : [];
+
+  /* ----------------------- HANDLERS ----------------------- */
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    setTesters((prev) => prev.filter((t) => t.id !== id));
+    console.log("Remove tester:", id);
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit tester", id);
+    console.log("Edit tester:", id);
   };
+
+  /* ----------------------- UI ----------------------- */
 
   return (
     <Box p={6}>
-      {/* Header */}
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">Testers Assigned to this Plan</Heading>
-        <Button colorScheme="teal">+ Add New Tester</Button>
       </Flex>
 
-      {/* Total Testers */}
       <Text mb={4} color="gray.600">
         Total Testers: <strong>{testers.length}</strong>
       </Text>
 
-      {/* Tester Table */}
-      {loading ? (
-        <Flex justify="center" py={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
-      ) : (
-        <Stack gap="6">
-          <Table.Root size="md">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>ID</Table.ColumnHeader>
-                <Table.ColumnHeader>Name</Table.ColumnHeader>
-                <Table.ColumnHeader>Email</Table.ColumnHeader>
-                <Table.ColumnHeader>Role</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+      <Table.Root size="md" variant="line">
+        <Table.Header>
+          <Table.Row>
+            <Table.ColumnHeader>ID</Table.ColumnHeader>
+            <Table.ColumnHeader>Name</Table.ColumnHeader>
+            <Table.ColumnHeader>Email</Table.ColumnHeader>
+            <Table.ColumnHeader>Role</Table.ColumnHeader>
+            <Table.ColumnHeader>Actions</Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+
+        <Table.Body>
+          {testers.length > 0 ? (
+            testers.map((tester) => (
+              <Table.Row key={tester.id}>
+                <Table.Cell>{tester.id}</Table.Cell>
+                <Table.Cell fontWeight="medium">{tester.name}</Table.Cell>
+                <Table.Cell>{tester.email}</Table.Cell>
+                <Table.Cell>{tester.role}</Table.Cell>
+                <Table.Cell>
+                  <Flex gap={2}>
+                    <IconButton
+                      aria-label="Edit tester"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(tester.id)}
+                    >
+                      <LuPencil />
+                    </IconButton>
+
+                    <IconButton
+                      aria-label="Delete tester"
+                      variant="ghost"
+                      size="sm"
+                      colorPalette="red"
+                      onClick={() => handleDelete(tester.id)}
+                    >
+                      <LuTrash />
+                    </IconButton>
+                  </Flex>
+                </Table.Cell>
               </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {testers.map((tester) => (
-                <Table.Row key={tester.id}>
-                  <Table.Cell>{tester.id}</Table.Cell>
-                  <Table.Cell>{tester.name}</Table.Cell>
-                  <Table.Cell>{tester.email}</Table.Cell>
-                  <Table.Cell>{tester.role}</Table.Cell>
-                  <Table.Cell>
-                    <Flex gap={2}>
-                      <IconButton
-                        aria-label="Edit tester"
-                        onClick={() => handleEdit(tester.id)}
-                        colorScheme="blue"
-                        size="sm"
-                        children={<LuPencil />}
-                      />
-                      <IconButton
-                        aria-label="Delete tester"
-                        onClick={() => handleDelete(tester.id)}
-                        colorScheme="red"
-                        size="sm"
-                        children={<LuTrash />}
-                      />
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-        </Stack>
-      )}
+            ))
+          ) : (
+            <Table.Row>
+              <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
+                No testers assigned to this plan yet.
+              </Table.Cell>
+            </Table.Row>
+          )}
+        </Table.Body>
+      </Table.Root>
     </Box>
   );
 }

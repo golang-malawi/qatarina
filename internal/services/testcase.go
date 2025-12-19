@@ -27,7 +27,7 @@ type TestCaseService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
 
 	// FindAllByTestPlanID retrieves all test cases in the database by Test Plan ID
-	FindAllByTestPlanID(context.Context, uuid.UUID) ([]dbsqlc.TestCase, error)
+	FindAllByTestPlanID(context.Context, int64) ([]schema.TestCaseResponseItem, error)
 
 	// FindAllCreatedBy retrieves all test cases in the database created by a specific user
 	FindAllCreatedBy(context.Context, int64) ([]dbsqlc.TestCase, error)
@@ -271,8 +271,31 @@ func (t *testCaseServiceImpl) FindAllByProjectID(ctx context.Context, projectID 
 }
 
 // FindAllByProjectID implements TestCaseService.
-func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID uuid.UUID) ([]dbsqlc.TestCase, error) {
-	return t.queries.ListTestCasesByPlan(ctx, testPlanID)
+func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID int64) ([]schema.TestCaseResponseItem, error) {
+	rows, err := t.queries.GetTestCasesWithPlanInfo(ctx, int32(testPlanID))
+	if err != nil {
+		return nil, err
+	}
+
+	cases := make([]schema.TestCaseResponseItem, 0, len(rows))
+	for _, r := range rows {
+		assigned := r.PlanID.Valid
+		var planSummary *schema.TestPlanSummary
+		if assigned {
+			planSummary = &schema.TestPlanSummary{
+				ID:   r.PlanID.Int64,
+				Name: r.PlanName.String,
+			}
+		}
+		cases = append(cases, schema.TestCaseResponseItem{
+			ID:                   r.TestCaseID.String(),
+			Title:                r.Title,
+			IsAssignedToTestPlan: assigned,
+			TestPlan:             planSummary,
+			AssignedTesterIDs:    r.TesterIds,
+		})
+	}
+	return cases, nil
 }
 
 // FindAllCreatedBy implements TestCaseService.

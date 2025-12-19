@@ -32,23 +32,24 @@ type AssignTestsToPlanRequest struct {
 }
 
 type TestPlanResponseItem struct {
-	ID             int64  `json:"id"`
-	ProjectID      int32  `json:"project_id"`
-	AssignedToID   int32  `json:"assigned_to_id"`
-	CreatedByID    int32  `json:"created_by_id"`
-	UpdatedByID    int32  `json:"updated_by_id"`
-	Kind           string `json:"kind"`
-	Description    string `json:"description"`
-	StartAt        string `json:"start_at"`
-	ClosedAt       string `json:"closed_at"`
-	ScheduledEndAt string `json:"scheduled_end_at"`
-	NumTestCases   int32  `json:"num_test_cases"`
-	NumFailures    int32  `json:"num_failures"`
-	IsComplete     bool   `json:"is_complete"`
-	IsLocked       bool   `json:"is_locked"`
-	HasReport      bool   `json:"has_report"`
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
+	ID             int64                  `json:"id"`
+	ProjectID      int32                  `json:"project_id"`
+	AssignedToID   int32                  `json:"assigned_to_id"`
+	CreatedByID    int32                  `json:"created_by_id"`
+	UpdatedByID    int32                  `json:"updated_by_id"`
+	Kind           string                 `json:"kind"`
+	Description    string                 `json:"description"`
+	StartAt        string                 `json:"start_at"`
+	ClosedAt       string                 `json:"closed_at"`
+	ScheduledEndAt string                 `json:"scheduled_end_at"`
+	NumTestCases   int32                  `json:"num_test_cases"`
+	NumFailures    int32                  `json:"num_failures"`
+	IsComplete     bool                   `json:"is_complete"`
+	IsLocked       bool                   `json:"is_locked"`
+	HasReport      bool                   `json:"has_report"`
+	CreatedAt      string                 `json:"created_at"`
+	UpdatedAt      string                 `json:"updated_at"`
+	TestCases      []TestCaseResponseItem `json:"test_cases"`
 }
 
 func NewTestPlanListResponse(items []dbsqlc.TestPlan) []TestPlanResponseItem {
@@ -92,4 +93,17 @@ type UpdateTestPlan struct {
 	AssignedToID   int64     `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64     `json:"created_by_id" validate:"-"`
 	UpdatedByID    int64     `json:"updated_by_id" validate:"-"`
+}
+
+type TestCaseResponseItem struct {
+	ID                   string           `json:"id"`
+	Title                string           `json:"title"`
+	IsAssignedToTestPlan bool             `json:"is_assigned_to_test_plan"`
+	TestPlan             *TestPlanSummary `json:"test_plan,omitempty"`
+	AssignedTesterIDs    []int64          `json:"assigned_tester_ids"`
+}
+
+type TestPlanSummary struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }

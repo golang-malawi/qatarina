@@ -27,7 +27,9 @@ export async function getInboxTestCases(){
 }
 
 export async function getTestCasesByTestPlanID(testPlanID: string) {
-  return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", { params: { path: { testplanID: testPlanID } } });
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", {
+    params: { path: { testPlanID } },
+  });
 }
 
 export async function getTestCaseById(testCaseID: string) {

@@ -735,6 +735,25 @@ definitions:
       username:
         type: string
     type: object
+  schema.TestRunRequest:
+    type: object
+    properties:
+      project_id:
+        type: integer
+      test_plan_id:
+        type: integer
+      test_case_id:
+        type: string
+      owner_id:
+        type: integer
+      tested_by_id:
+        type: integer
+    required:
+      - project_id
+      - test_plan_id
+      - test_case_id
+      - owner_id
+      - tested_by_id
 info:
   contact: {}
 paths:
@@ -2730,4 +2749,69 @@ paths:
       summary: Search all Users
       tags:
       - users
+/v1/test-runs:
+  post:
+    summary: Create a new Test Run
+    operationId: CreateTestRun
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TestRunRequest'
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestRunResponse'
+      "400":
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDetail'
+      "500":
+        description: Internal Server Error
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDetail'
+
+/v1/test-runs/{testRunID}/commit:
+  post:
+    summary: Commit a Test Run result
+    operationId: CommitTestRun
+    parameters:
+      - name: testRunID
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommitTestRunResult'
+    responses:
+      "200":
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestRunResponse'
+      "400":
+        description: Bad Request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDetail'
+      "500":
+        description: Internal Server Error
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemDetail'
 swagger: "2.0"

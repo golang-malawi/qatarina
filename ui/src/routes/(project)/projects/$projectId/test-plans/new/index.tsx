@@ -4,7 +4,6 @@ import {
   Button,
   Checkbox,
   CheckboxGroup,
-  CloseButton,
   Dialog,
   Fieldset,
   Flex,
@@ -12,6 +11,7 @@ import {
   Heading,
   Portal,
 } from "@chakra-ui/react";
+import { Toaster, toaster } from "@/components/ui/toaster"
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -19,7 +19,6 @@ import { SelectAssignedTestCase, CreateTestPlan } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
-import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { testPlanCreationSchema } from "@/data/forms/test-plan-schemas";
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
@@ -39,13 +38,18 @@ function CreateNewTestPlan() {
   const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
-  const [open, setOpen] = useState(false);
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]
   >([]);
-  const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
 
+  const [activeTestCaseId, setActiveTestCaseId] = useState<number | null>(null);
+
+  const activeTestCase = selectedTestCases.find(
+    (t) => t.test_case_id === activeTestCaseId
+  );
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
   const {
     data: testCases,
     isPending,
@@ -60,42 +64,86 @@ function CreateNewTestPlan() {
     return <div className="error">Error: error fetching test cases</div>;
   }
 
-   
   const testers = testersQuery.data?.testers ?? [];
 
-  async function handleSubmit(data: CreateTestPlanForm) {
-    const res = await createTestPlanMutation.mutateAsync({
-      body: {
-        project_id: parseInt(projectId!),
-        assigned_to_id: data.assigned_to_id,
-        kind: data.kind,
-        description: data.description,
-        start_at: data.start_at,
-        closed_at: data.closed_at,
-        scheduled_end_at: data.scheduled_end_at,
-        planned_tests: [],
-      },
+ async function handleSubmit(data: CreateTestPlanForm) {
+  const { isValid, unassigned } =
+    validateTestCaseAssignments(selectedTestCases);
+
+  if (!isValid) {
+    toaster.create({
+      title: "Missing tester assignments",
+      description: `You have ${unassigned.length} test case(s) without assigned testers.`,
+      type: "error",
+      duration: 4000,
     });
 
-    if (res) {
-      toaster.create({
-        title: "Test Plan created.",
-        description:
-          "We've created your Test Plan - please add test cases to it.",
-        type: "success",
-        duration: 3000,
-      });
-      redirect({
-        to: "/projects/$projectId/test-plans",
-        params: {
-          projectId: projectId,
-        },
-      });
-    }
+    return;
   }
+
+  const res = await createTestPlanMutation.mutateAsync({
+    body: {
+      project_id: parseInt(projectId!),
+      assigned_to_id: data.assigned_to_id,
+      kind: data.kind,
+      description: data.description,
+      start_at: data.start_at,
+      closed_at: data.closed_at,
+      scheduled_end_at: data.scheduled_end_at,
+      planned_tests: selectedTestCases.map((tc) => ({
+        test_case_id: tc.test_case_id,
+        user_ids: tc.user_ids.map(Number),
+      })),
+    },
+  });
+
+  if (res) {
+    toaster.create({
+      title: "Test Plan created",
+      type: "success",
+    });
+
+    redirect({
+      to: "/projects/$projectId/test-plans",
+      params: { projectId },
+    });
+  }
+}
+
+
+  function openAssignModal(testCaseId: number) {
+    const exists = selectedTestCases.some((t) => t.test_case_id === testCaseId);
+
+    if (!exists) {
+    toaster.create({
+      title: "Test Case not selected",
+      description: "Please select the test case before assigning testers.",
+      type: "error",
+    });
+      return;
+    }
+
+    setActiveTestCaseId(testCaseId);
+  }
+
+  function validateTestCaseAssignments(
+    selectedTestCases: SelectAssignedTestCase[]
+  ) {
+    const unassigned = selectedTestCases.filter(
+      (tc) => tc.user_ids.length === 0
+    );
+
+    return {
+      isValid: unassigned.length === 0,
+      unassigned,
+    };
+  }
+  
 
   return (
     <div>
+      <Toaster
+      />
       <Box>
         <Heading>Create a Test Plan</Heading>
         <DynamicForm
@@ -107,78 +155,224 @@ function CreateNewTestPlan() {
           spacing={4}
         />
         <Heading>Select & Assign Test Cases</Heading>
+        <Flex
+          mb={4}
+          p={3}
+          borderWidth="1px"
+          borderRadius="md"
+          align="center"
+          justify="space-between"
+        >
+          <Box fontSize="sm">
+            <strong>{selectedTestCases.length}</strong> test case
+            {selectedTestCases.length !== 1 && "s"} selected
+          </Box>
+
+          <Button
+            size="sm"
+            variant="solid"
+            isDisabled={selectedTestCases.length === 0}
+            onClick={() => setBulkAssignOpen(true)}
+          >
+            Bulk assign testers
+          </Button>
+        </Flex>
         {testCases.test_cases?.map((testCase) => {
           return (
-            <Box key={testCase.id}>
-              <Flex>
-                <Box>
-                  <Checkbox.Root
-                    name={`testCase-${testCase.id}`}
-                    onCheckedChange={(e) => {
-                      const checked = e.checked;
-                      if (checked) {
-                        const newSelected = {
-                          test_case_id: testCase.id!,
-                          user_ids: [],
-                        };
-                        setSelectedTestCases([
-                          ...selectedTestCases,
-                          newSelected,
-                        ]);
-                      }
-                    }}
-                  />{" "}
-                  {testCase.code} - {testCase.title} (Tags:{" "}
-                  {testCase.tags?.join(", ")})
-                </Box>
-                <Box>
-                  <Button onClick={() => setOpen(true)}>Assign Testers</Button>
-                  {/* <SelectTesterModal testCaseID={t.ID} selectedTesters={selectedTesters} setSelectedTesters={setSelectedTesters} /> */}
-                  {/* <Button size="xs" onClick={showSelectTesterTray(t.ID)}>Assign Testers</Button> */}
-                </Box>
+            <Box
+              key={testCase.id}
+              borderWidth="1px"
+              borderRadius="md"
+              p={4}
+              mb={3}
+            >
+              <Flex justify="space-between" align="center">
+                <Checkbox.Root
+                  isChecked={selectedTestCases.some(
+                    (t) => t.test_case_id === testCase.id
+                  )}
+                  onCheckedChange={(e) => {
+                    if (e.checked) {
+                      setSelectedTestCases((prev) => [
+                        ...prev,
+                        { test_case_id: testCase.id!, user_ids: [] },
+                      ]);
+                    } else {
+                      setSelectedTestCases((prev) =>
+                        prev.filter((t) => t.test_case_id !== testCase.id)
+                      );
+                    }
+                  }}
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>
+                    <strong>{testCase.code}</strong> — {testCase.title}
+                  </Checkbox.Label>
+                </Checkbox.Root>
+
+                <Button size="sm" onClick={() => openAssignModal(testCase.id!)}>
+                  Assign testers
+                </Button>
               </Flex>
+
+              {/* Assigned testers preview */}
+              {selectedTestCases.find((t) => t.test_case_id === testCase.id)
+                ?.user_ids.length ? (
+                <Flex mt={2} gap={2} wrap="wrap">
+                  {selectedTestCases
+                    .find((t) => t.test_case_id === testCase.id)!
+                    .user_ids.map((uid) => {
+                      const tester = testers.find(
+                        (t) => t.user_id?.toString() === uid
+                      );
+                      return (
+                        <Box
+                          key={uid}
+                          px={2}
+                          py={1}
+                          bg="gray.100"
+                          borderRadius="md"
+                          fontSize="sm"
+                        >
+                          {tester?.name}
+                        </Box>
+                      );
+                    })}
+                </Flex>
+              ) : (
+                <Box mt={2} fontSize="sm" color="gray.500">
+                  No testers assigned
+                </Box>
+              )}
             </Box>
           );
         })}
       </Box>
-      <Dialog.Root lazyMount open={open} onOpenChange={(e) => setOpen(e.open)}>
+
+      <Dialog.Root
+        open={!!activeTestCaseId}
+        onOpenChange={() => setActiveTestCaseId(null)}
+      >
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content>
-              <Dialog.Header>Select Testers to Assign</Dialog.Header>
-              <CloseButton />
+              <Dialog.Header>Assign testers to test case</Dialog.Header>
               <Dialog.Body>
-                <Fieldset.Root>
-                  <CheckboxGroup
-                    value={selectedTesters}
-                    onValueChange={setSelectedTesters}
-                  >
-                    <Fieldset.Legend fontSize="sm" mb="2">
-                      Select Testers
+                <CheckboxGroup
+                  value={activeTestCase?.user_ids ?? []}
+                  onValueChange={(value) => {
+                    setSelectedTestCases((prev) =>
+                      prev.map((t) =>
+                        t.test_case_id === activeTestCaseId
+                          ? { ...t, user_ids: value }
+                          : t
+                      )
+                    );
+                  }}
+                >
+                  <Fieldset.Root>
+                    <Fieldset.Legend fontSize="sm">
+                      Select testers
                     </Fieldset.Legend>
+
                     <Fieldset.Content>
                       <For each={testers}>
-                        {(value) => (
+                        {(tester) => (
                           <Checkbox.Root
-                            key={value.user_id}
-                            value={value.user_id?.toString()}
+                            key={tester.user_id}
+                            value={tester.user_id!.toString()}
                           >
                             <Checkbox.HiddenInput />
                             <Checkbox.Control />
-                            <Checkbox.Label>{value.name}</Checkbox.Label>
+                            <Checkbox.Label>{tester.name}</Checkbox.Label>
                           </Checkbox.Root>
                         )}
                       </For>
                     </Fieldset.Content>
-                  </CheckboxGroup>
-                </Fieldset.Root>
+                  </Fieldset.Root>
+                </CheckboxGroup>
               </Dialog.Body>
+
               <Dialog.Footer>
-                <Dialog.ActionTrigger asChild>
-                  <Button variant="outline">Cancel</Button>
-                </Dialog.ActionTrigger>
-                <Button variant="ghost">Assign Testers</Button>
+                <Button onClick={() => setActiveTestCaseId(null)}>Done</Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={bulkAssignOpen}
+        onOpenChange={(e) => setBulkAssignOpen(e.open)}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>Bulk assign testers</Dialog.Header>
+
+              <Dialog.Body>
+                <Box fontSize="sm" mb={3} color="gray.600">
+                  Selected testers will be assigned to{" "}
+                  <strong>{selectedTestCases.length}</strong> test cases.
+                  Existing assignments will be kept.
+                </Box>
+
+                <CheckboxGroup
+                  value={bulkSelectedTesters}
+                  onValueChange={setBulkSelectedTesters}
+                >
+                  <Fieldset.Root>
+                    <Fieldset.Legend fontSize="sm">
+                      Select testers
+                    </Fieldset.Legend>
+
+                    <Fieldset.Content>
+                      <For each={testers}>
+                        {(tester) => (
+                          <Checkbox.Root
+                            key={tester.user_id}
+                            value={tester.user_id!.toString()}
+                          >
+                            <Checkbox.HiddenInput />
+                            <Checkbox.Control />
+                            <Checkbox.Label>{tester.name}</Checkbox.Label>
+                          </Checkbox.Root>
+                        )}
+                      </For>
+                    </Fieldset.Content>
+                  </Fieldset.Root>
+                </CheckboxGroup>
+              </Dialog.Body>
+
+              <Dialog.Footer>
+                <Button
+                  variant="outline"
+                  onClick={() => setBulkAssignOpen(false)}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  isDisabled={bulkSelectedTesters.length === 0}
+                  onClick={() => {
+                    setSelectedTestCases((prev) =>
+                      prev.map((tc) => ({
+                        ...tc,
+                        user_ids: Array.from(
+                          new Set([...tc.user_ids, ...bulkSelectedTesters])
+                        ),
+                      }))
+                    );
+
+                    setBulkSelectedTesters([]);
+                    setBulkAssignOpen(false);
+                  }}
+                >
+                  Assign testers
+                </Button>
               </Dialog.Footer>
             </Dialog.Content>
           </Dialog.Positioner>

@@ -93,9 +93,33 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT tc.* FROM test_cases tc 
-INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
-WHERE tp.test_plan_id = $1;
+SELECT DISTINCT tc.*
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1::bigint;
+
+-- name: GetTestCasesWithPlanInfo :many
+SELECT 
+    tc.id AS test_case_id,
+    tc.title,
+    tc.project_id,
+    tc.created_by_id,
+    tc.kind,
+    tc.code,
+    tc.feature_or_module,
+    tc.description,
+    tc.is_draft,
+    tc.tags,
+    tc.created_at,
+    tc.updated_at,
+    tp.id AS plan_id,
+    tp.description AS plan_name,
+    array_agg(tr.assigned_to_id)::bigint[] AS tester_ids
+FROM test_cases tc
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tp.id, tp.description;
 
 -- name: ListTestCasesByCreator :many
 SELECT * FROM test_cases WHERE created_by_id = $1;
@@ -189,7 +213,15 @@ SELECT * FROM test_plans ORDER BY created_at DESC;
 SELECT * FROM test_plans WHERE project_id = $1;
 
 -- name: GetTestPlan :one
-SELECT * FROM test_plans WHERE id = $1;
+SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
+       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
+       tp.created_at, tp.updated_at,
+       COUNT(DISTINCT tr.test_case_id) AS num_test_cases
+FROM test_plans tp
+LEFT JOIN test_runs tr ON tp.id = tr.test_plan_id
+WHERE tp.id = $1
+GROUP BY tp.id;
 
 -- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1;
@@ -377,6 +409,17 @@ SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is
 
 -- name: GetTestCaseCount :one
 SELECT COUNT(*) FROM test_cases;
+
+-- name: GetTestCasesWithTestersByPlan :many
+SELECT 
+    tc.id AS test_case_id,
+    tc.title,
+    tr.test_plan_id,
+    array_agg(tr.assigned_to_id)::bigint[] AS tester_ids
+FROM test_cases tc
+INNER JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.test_plan_id = $1
+GROUP BY tc.id, tc.title, tr.test_plan_id;
 
 -- name: GetTestPlanCount :one
 SELECT COUNT(*) FROM test_plans;
