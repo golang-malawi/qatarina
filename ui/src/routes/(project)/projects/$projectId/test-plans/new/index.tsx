@@ -38,7 +38,6 @@ function CreateNewTestPlan() {
   const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
-  const [open, setOpen] = useState(false);
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]

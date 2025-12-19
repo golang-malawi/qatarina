@@ -121,7 +121,6 @@ function RouteComponent() {
   const {
     data: testCases,
     isLoading: isLoadingCases,
-    error: errorCases,
     refetch // We need this to update the UI after assigning
   } = useQuery({
     queryKey: ["testCases", testPlanID],

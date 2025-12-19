@@ -1,4 +1,4 @@
-import { createFieldConfig, createSelectOptions, FieldConfig } from '@/components/form';
+import { createFieldConfig, FieldConfig } from '@/components/form';
 import { TEST_PLAN_KINDS } from '@/common/constants/test-plan-kind';
 
 // Test plan kind options
