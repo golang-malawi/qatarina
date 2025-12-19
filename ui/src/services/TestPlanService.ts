@@ -71,6 +71,20 @@ export async function assignTestersToTestPlan(
   );
 }
 
+export async function assignTestCaseToTestPlan(
+  testPlanID: string,
+  payload: AssignTestsToPlanPayload
+) {
+  return apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/test-cases",
+    {
+      params: { path: { testPlanID } },
+      body: payload,
+    }
+  );
+}
+
 // export async function removeTestersFromTestPlan(
 //   testPlanID: string,
 //   userIDs: string[]

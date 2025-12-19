@@ -16,6 +16,7 @@ import {
 
 import { useTestCaseQuery } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
+import { assignTestCaseToTestPlan } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 
@@ -132,7 +133,7 @@ function ViewTestCase() {
               <Alert.Indicator />
               <Alert.Content>
                 <Alert.Description>
-                 A test case can belong to only one test plan.
+                  A test case can belong to only one test plan.
                 </Alert.Description>
               </Alert.Content>
             </Alert.Root>
@@ -268,22 +269,36 @@ function ViewTestCase() {
 
                     <Button
                       isDisabled={selectedTesters.length === 0}
-                      onClick={() => {
-                        setOptimisticAssignment({
-                          test_plan_id: effectivePlanId,
-                          testers: selectedTesters,
-                        });
+                      onClick={async () => {
+                        if (!effectivePlanId) return;
 
-                        /**
-                         * TODO 
-                         * POST /test-plans/:id/test-cases
-                         * {
-                         *   test_case_id,
-                         *   user_ids
-                         * }
-                         */
+                        const payload = {
+                          project_id: Number(projectId),
+                          test_plan_id: Number(effectivePlanId),
+                          planned_tests: [
+                            {
+                              test_case_id: testCaseId,
+                              user_ids: selectedTesters.map((id) => Number(id)),
+                            },
+                          ],
+                        };
 
-                        setAssignOpen(false);
+                        try {
+                          await assignTestCaseToTestPlan(
+                            effectivePlanId,
+                            payload
+                          );
+
+                          setOptimisticAssignment({
+                            test_plan_id: effectivePlanId,
+                            testers: selectedTesters,
+                          });
+
+                          setAssignOpen(false);
+                        } catch (err) {
+                          console.error("Failed to assign test case:", err);
+                          alert("Failed to assign test case to test plan.");
+                        }
                       }}
                     >
                       Confirm assignment
