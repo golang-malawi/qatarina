@@ -12,6 +12,7 @@ import {
   Text,
   Flex,
   Alert,
+  Stack
 } from "@chakra-ui/react";
 
 import { useTestCaseQuery } from "@/services/TestCaseService";
@@ -70,54 +71,86 @@ function ViewTestCase() {
       <Tabs.Root defaultValue="description">
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
-          <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
+          {/* <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
           <Tabs.Trigger value="tags">Tags</Tabs.Trigger>
-          <Tabs.Trigger value="documents">Documents</Tabs.Trigger>
+          <Tabs.Trigger value="documents">Documents</Tabs.Trigger> */}
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION */}
+        {/* DESCRIPTION */}
         <Tabs.Content value="description">
-          <p>{testCase.description || "No description"}</p>
-        </Tabs.Content>
+          <Box p={4} bg="gray.50" rounded="md" shadow="sm">
+            {/* Description */}
+            <Text mb={3} color="gray.700">
+              {testCase.description || "No description provided."}
+            </Text>
 
-        {/* METADATA */}
-        <Tabs.Content value="metadata">
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Type:</strong> {testCase.kind}
-            </p>
-            <p>
-              <strong>Created By:</strong> User ID {testCase.created_by}
-            </p>
-            <p>
-              <strong>Status:</strong>{" "}
-              {testCase.is_draft ? "Draft" : "Published"}
-            </p>
-            <p>
-              <strong>Created At:</strong>{" "}
-              {new Date(testCase.created_at).toLocaleString()}
-            </p>
-            <p>
-              <strong>Updated At:</strong>{" "}
-              {new Date(testCase.updated_at).toLocaleString()}
-            </p>
-          </div>
-        </Tabs.Content>
+            {/* Tags */}
+            <Box mb={3}>
+              {testCase.tags?.length ? (
+                <Flex gap={2} wrap="wrap">
+                  {testCase.tags.map((tag: string) => (
+                    <Box
+                      key={tag}
+                      px={3}
+                      py={1}
+                      bg="teal.100"
+                      color="teal.800"
+                      fontSize="xs"
+                      fontWeight="medium"
+                      rounded="full"
+                    >
+                      {tag}
+                    </Box>
+                  ))}
+                </Flex>
+              ) : (
+                <Text fontSize="sm" color="gray.500">
+                  No tags
+                </Text>
+              )}
+            </Box>
 
-        {/* TAGS */}
-        <Tabs.Content value="tags">
-          {testCase.tags?.length ? (
-            <Flex gap={2} wrap="wrap">
-              {testCase.tags.map((tag: string) => (
-                <Box key={tag} px={3} py={1} bg="gray.200" rounded="md">
-                  {tag}
-                </Box>
-              ))}
-            </Flex>
-          ) : (
-            <Text>No tags</Text>
-          )}
+            {/* Metadata */}
+            <Box
+              p={3}
+              bg="white"
+              rounded="md"
+              borderWidth={1}
+              borderColor="gray.200"
+              shadow="xs"
+            >
+              <Stack spacing={2} fontSize="sm" color="gray.600">
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Type:</Text>
+                  <Text>{testCase.kind}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created By:</Text>
+                  <Text>User ID {testCase.created_by}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Status:</Text>
+                  <Text color={testCase.is_draft ? "orange.500" : "green.500"}>
+                    {testCase.is_draft ? "Draft" : "Published"}
+                  </Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created At:</Text>
+                  <Text>{new Date(testCase.created_at).toLocaleString()}</Text>
+                </Flex>
+
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Updated At:</Text>
+                  <Text>{new Date(testCase.updated_at).toLocaleString()}</Text>
+                </Flex>
+              </Stack>
+            </Box>
+          </Box>
         </Tabs.Content>
 
         {/* DOCUMENTS */}
