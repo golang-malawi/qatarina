@@ -94,7 +94,6 @@ type TestCaseListResponse struct {
 	TestCases []TestCaseResponse `json:"test_cases"`
 }
 
-<<<<<<< HEAD
 type AssignedTestCaseListResponse struct {
 	TestCases []AssignedTestCase `json:"test_cases"`
 }
@@ -130,12 +129,11 @@ type AssignedTestCase struct {
 	TestedOn              *time.Time          `json:"tested_on"`
 	CreatedAt             time.Time           `json:"created_at"`
 	UpdatedAt             time.Time           `json:"updated_at"`
-=======
+}
 type ExecuteTestCaseRequest struct {
 	ID         string `json:"id" validate:"required"`
 	Result     string `json:"result" validate:"required"`
 	Status     string `json:"status" validate:"required"`
 	ExecutedBy int64  `json:"executed_by" validate:"required"`
 	Notes      string `json:"notes,omitempty"`
->>>>>>> 582c86e (feature:Execute test case)
 }
