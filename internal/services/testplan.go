@@ -251,9 +251,16 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) e
 		}
 	}
 
-	_, err = t.queries.CloseTestPlan(ctx, dbsqlc.CloseTestPlanParams{
+	rowsAffected, err := t.queries.CloseTestPlan(ctx, dbsqlc.CloseTestPlanParams{
 		ID:       int64(testPlanID),
 		ClosedAt: common.NullTime(time.Now()),
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("test plan %d not found", testPlanID)
+	}
+
+	return nil
 }
