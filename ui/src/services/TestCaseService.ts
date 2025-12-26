@@ -7,7 +7,9 @@ export function useTestCasesQuery() {
 }
 
 export function useTestCaseQuery(testCaseID: string) {
-  return $api.useQuery("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
+  return $api.useQuery("get", "/v1/test-cases/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
 }
 
 export function useCreateTestCaseMutation() {
@@ -15,15 +17,17 @@ export function useCreateTestCaseMutation() {
 }
 
 export function useProjectTestCasesQuery(projectID: string) {
-  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases", { params: { path: { projectID } } });
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases", {
+    params: { path: { projectID } },
+  });
 }
 
 export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getInboxTestCases(){
-  return apiClient.request("get", "/v1/me/test-cases/inbox", {}) 
+export async function getInboxTestCases() {
+  return apiClient.request("get", "/v1/me/test-cases/inbox", {});
 }
 
 export async function getTestCasesByTestPlanID(testPlanID: string) {
@@ -33,9 +37,23 @@ export async function getTestCasesByTestPlanID(testPlanID: string) {
 }
 
 export async function getTestCaseById(testCaseID: string) {
-  return apiClient.request("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
+  return apiClient.request("get", "/v1/test-cases/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
 }
 
-export async function createTestCase(data: components["schemas"]["schema.CreateTestCaseRequest"]) {
+export async function createTestCase(
+  data: components["schemas"]["schema.CreateTestCaseRequest"]
+) {
   return apiClient.request("post", "/v1/test-cases", { body: data });
+}
+
+
+export async function importTestCasesFromFile(projectId: string, file: File) {
+  const formData = new FormData();
+  formData.append("projectID", projectId); 
+  formData.append("file", file);
+  return apiClient.request("post", "/v1/test-cases/import-file", {
+    body: formData as any,
+  });
 }
