@@ -1,4 +1,4 @@
-import {findTestCaseInboxQueryOptions } from "@/data/queries/test-cases";
+import { findTestCaseInboxQueryOptions } from "@/data/queries/test-cases";
 import { components } from "@/lib/api/v1";
 import {
   Box,
@@ -56,8 +56,8 @@ function TestCasePageInbox() {
         transition="background 0.2s"
       >
         <Link
-          to={`/test-cases/inbox/$testCaseId`}
-          params={{ testCaseId: tc.testCaseID}}
+          to="/test-cases/inbox/$testCaseId"
+          params={{ testCaseId: tc.id }}
           title={tc.description}
         >
           <Text fontWeight="semibold" mb={1}>
