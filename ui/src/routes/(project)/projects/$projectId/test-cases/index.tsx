@@ -11,8 +11,8 @@ import {
   Tabs,
   Table,
   Menu,
-  
 } from "@chakra-ui/react";
+import { Toaster, toaster } from "@/components/ui/toaster"
 import {
   IconAlertTriangle,
   IconChevronDown,
@@ -22,9 +22,13 @@ import {
   IconListDetails,
   IconTable,
 } from "@tabler/icons-react";
+import { useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import TestersAvatarGroup from "@/components/TestersAvatarGroup";
+import { importTestCasesFromFile } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/"
@@ -36,9 +40,43 @@ export const Route = createFileRoute(
 
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const queryClient = useQueryClient();
   const { data: testCases } = useSuspenseQuery(
     testCasesByProjectIdQueryOptions(projectId)
   );
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await importTestCasesFromFile(projectId, file);
+
+      toaster.create({
+        title: "Import successful",
+        description: "Test cases imported successfully",
+        type: "success",
+      });
+
+      // Refresh test cases list
+      await queryClient.invalidateQueries({
+        queryKey: testCasesByProjectIdQueryOptions(projectId).queryKey,
+      });
+
+      // reset input so same file can be re-uploaded
+      e.target.value = "";
+    } catch (err: any) {
+      toaster.create({
+        title: "Import failed",
+        description: err?.message || "Failed to import test cases",
+        type: "error",
+      });
+    }
+  };
 
   const testCaseRows = (testCases?.test_cases ?? []).map(
     (tc: any, idx: number) => (
@@ -59,7 +97,11 @@ export default function ListProjectTestCases() {
               </Button>
             </Menu.Trigger>
             <Menu.Content zIndex={100} position="absolute">
-              <Menu.Item value="view"><Link to={`/projects/${projectId}/test-cases/${tc.id}`}>View</Link></Menu.Item>
+              <Menu.Item value="view">
+                <Link to={`/projects/${projectId}/test-cases/${tc.id}`}>
+                  View
+                </Link>
+              </Menu.Item>
               <Menu.Item value="create-copy">Create a Copy</Menu.Item>
               <Menu.Item value="mark-draft">Mark as Draft</Menu.Item>
               <Menu.Item value="use">Use in Test Session</Menu.Item>
@@ -75,6 +117,7 @@ export default function ListProjectTestCases() {
 
   return (
     <div>
+      <Toaster />
       <Heading as="h6" size="xl">
         Test Cases
       </Heading>
@@ -96,9 +139,18 @@ export default function ListProjectTestCases() {
             Add Test Cases
           </Button>
         </Link>
-        <Button colorScheme="green" size={"sm"}>
+        <Button colorScheme="green" size="sm" onClick={handleImportClick}>
           Import from Excel
         </Button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+
         <Button bg="green" color="white" size={"sm"}>
           Import from Google Sheets
         </Button>
@@ -180,4 +232,3 @@ export default function ListProjectTestCases() {
     </div>
   );
 }
-
