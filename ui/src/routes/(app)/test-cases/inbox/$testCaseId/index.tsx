@@ -10,11 +10,11 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/query";
-import type { components } from "@/lib/api/v1";
+// import { apiClient } from "@/lib/api/query";
+// import type { components } from "@/lib/api/v1";
 import { executeTestCase } from "@/services/TestResultService";
 
-type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
+// type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
@@ -29,7 +29,7 @@ function TestCaseInboxItem() {
     findTestCaseByIdQueryOptions(testCaseId)
   );
 
-  const runId = testCase?.testRunID;
+  // const runId = testCase?.testRunID;
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
