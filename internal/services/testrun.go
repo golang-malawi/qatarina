@@ -30,7 +30,7 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
-	Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error)
+	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
 }
 
 type testRunService struct {
@@ -156,7 +156,7 @@ func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *sch
 	panic("unimplemented")
 }
 
-func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error) {
+func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error) {
 	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -165,23 +165,24 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 
 	tx := dbsqlc.New(sqlTx)
 
-	testCaseUUID, err := uuid.Parse(request.ID)
+	runUUID, err := uuid.Parse(request.ID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid test case ID: %w", err)
+		return nil, fmt.Errorf("invalid test run ID: %w", err)
 	}
 
-	err = tx.ExecuteTestCase(ctx, dbsqlc.ExecuteTestCaseParams{
-		ID:         testCaseUUID,
-		Status:     common.NullString(request.Status),
-		Result:     common.NullString(request.Result),
-		ExecutedBy: common.NewNullInt32(int32(request.ExecutedBy)),
-		Notes:      common.NullString(request.Notes),
+	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
+		ID:             runUUID,
+		ResultState:    dbsqlc.TestRunState(request.Status),
+		TestedByID:     int32(request.ExecutedBy),
+		Notes:          request.Notes,
+		ActualResult:   common.NullString(request.Result),
+		ExpectedResult: common.NullString(request.ExpectedResult),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute test case: %w", err)
 	}
 
-	tc, err := tx.GetTestCase(ctx, testCaseUUID)
+	tr, err := tx.GetTestRun(ctx, runUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
 	}
@@ -190,5 +191,5 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		return nil, err
 	}
 
-	return &tc, nil
+	return &tr, nil
 }

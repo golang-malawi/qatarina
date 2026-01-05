@@ -206,10 +206,15 @@ WHERE id = $1;
 SELECT * FROM test_cases 
 WHERE project_id = $1 AND code = $2;
 
--- name: ExecuteTestCase :exec
-UPDATE test_cases
-SET status = $2, result = $3, executed_by = $4,  notes = $5,
- executed_at = NOW(), updated_at = NOW()
+-- name: ExecuteTestRun :exec
+UPDATE test_runs
+SET result_state = $2,
+tested_by_id = $3,
+notes = $4,
+actual_result = $5,
+expected_result = $6,
+tested_on = NOW(),
+updated_at = NOW()
 WHERE id = $1;
 
 -- name: ListTestPlans :many

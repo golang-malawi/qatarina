@@ -277,3 +277,47 @@ func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logge
 		})
 	}
 }
+
+// ExecuteTestRun godoc
+//
+//	@ID				ExecuteTestRun
+//	@Summary		Execute a Test Run
+//	@Description	Execute a Test Run
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string	true	"Test Run ID"
+//	@Param			request	body		schema.ExecuteTestCaseRequest	true	"Execution data"
+//	@Success		200			{object}	schema.TestRunResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-runs/{testRunID}/execute [post]
+func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		pathID := c.Params("testRunID")
+
+		request := new(schema.ExecuteTestRunRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid execution data", err)
+			}
+			logger.Error(loggedmodule.ApiTestRuns, "failed to parse execution request", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse execution data")
+		}
+
+		if request.ID != "" && request.ID != pathID {
+			return problemdetail.BadRequest(c, "path parameter and body ID do not match")
+		}
+		request.ID = pathID
+
+		tr, err := testRunService.Execute(context.Background(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_run": schema.NewTestRunResponse(tr),
+		})
+	}
+}

@@ -404,7 +404,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			ExternalIssueID:       row.ExternalIssueID.String,
 			ResultState:           row.ResultState,
 			IsClosed:              row.IsClosed.Bool,
-			Notes:                 row.Notes,
+			Notes:                 row.Notes.String,
 			ActualResult:          row.ActualResult.String,
 			ExpectedResult:        row.ExpectedResult.String,
 			Reactions:             nil, // row.Reactions.RawMessage.MarshalJSON()

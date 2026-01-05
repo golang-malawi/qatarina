@@ -633,28 +633,35 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
 	return result.RowsAffected()
 }
 
-const executeTestCase = `-- name: ExecuteTestCase :exec
-UPDATE test_cases
-SET status = $2, result = $3, executed_by = $4,  notes = $5,
- executed_at = NOW(), updated_at = NOW()
+const executeTestRun = `-- name: ExecuteTestRun :exec
+UPDATE test_runs
+SET result_state = $2,
+tested_by_id = $3,
+notes = $4,
+actual_result = $5,
+expected_result = $6,
+tested_on = NOW(),
+updated_at = NOW()
 WHERE id = $1
 `
 
-type ExecuteTestCaseParams struct {
-	ID         uuid.UUID
-	Status     sql.NullString
-	Result     sql.NullString
-	ExecutedBy sql.NullInt32
-	Notes      sql.NullString
+type ExecuteTestRunParams struct {
+	ID             uuid.UUID
+	ResultState    TestRunState
+	TestedByID     int32
+	Notes          string
+	ActualResult   sql.NullString
+	ExpectedResult sql.NullString
 }
 
-func (q *Queries) ExecuteTestCase(ctx context.Context, arg ExecuteTestCaseParams) error {
-	_, err := q.db.ExecContext(ctx, executeTestCase,
+func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) error {
+	_, err := q.db.ExecContext(ctx, executeTestRun,
 		arg.ID,
-		arg.Status,
-		arg.Result,
-		arg.ExecutedBy,
+		arg.ResultState,
+		arg.TestedByID,
 		arg.Notes,
+		arg.ActualResult,
+		arg.ExpectedResult,
 	)
 	return err
 }
@@ -1002,7 +1009,7 @@ func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, erro
 }
 
 const getTestCaseByCode = `-- name: GetTestCaseByCode :one
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases 
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, status, result, executed_at, executed_by, notes FROM test_cases 
 WHERE project_id = $1 AND code = $2
 `
 
@@ -1028,6 +1035,11 @@ func (q *Queries) GetTestCaseByCode(ctx context.Context, arg GetTestCaseByCodePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ProjectID,
+		&i.Status,
+		&i.Result,
+		&i.ExecutedAt,
+		&i.ExecutedBy,
+		&i.Notes,
 	)
 	return i, err
 }
@@ -1661,7 +1673,7 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 }
 
 const listTestCasesByAssignedUser = `-- name: ListTestCasesByAssignedUser :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tr.id, tr.project_id, tr.test_plan_id, tr.test_case_id, tr.owner_id, tr.tested_by_id, tr.assigned_to_id, tr.assignee_can_change_code, tr.code, tr.external_issue_id, tr.result_state, tr.is_closed, tr.notes, tr.actual_result, tr.expected_result, tr.reactions, tr.tested_on, tr.created_at, tr.updated_at
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.status, tc.result, tc.executed_at, tc.executed_by, tc.notes, tr.id, tr.project_id, tr.test_plan_id, tr.test_case_id, tr.owner_id, tr.tested_by_id, tr.assigned_to_id, tr.assignee_can_change_code, tr.code, tr.external_issue_id, tr.result_state, tr.is_closed, tr.notes, tr.actual_result, tr.expected_result, tr.reactions, tr.tested_on, tr.created_at, tr.updated_at
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 WHERE tr.assigned_to_id = $1
@@ -1689,6 +1701,11 @@ type ListTestCasesByAssignedUserRow struct {
 	CreatedAt             sql.NullTime
 	UpdatedAt             sql.NullTime
 	ProjectID             sql.NullInt32
+	Status                sql.NullString
+	Result                sql.NullString
+	ExecutedAt            sql.NullTime
+	ExecutedBy            sql.NullInt32
+	Notes                 sql.NullString
 	ID_2                  uuid.UUID
 	ProjectID_2           int32
 	TestPlanID            int32
@@ -1701,7 +1718,7 @@ type ListTestCasesByAssignedUserRow struct {
 	ExternalIssueID       sql.NullString
 	ResultState           TestRunState
 	IsClosed              sql.NullBool
-	Notes                 string
+	Notes_2               string
 	ActualResult          sql.NullString
 	ExpectedResult        sql.NullString
 	Reactions             pqtype.NullRawMessage
@@ -1733,6 +1750,11 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProjectID,
+			&i.Status,
+			&i.Result,
+			&i.ExecutedAt,
+			&i.ExecutedBy,
+			&i.Notes,
 			&i.ID_2,
 			&i.ProjectID_2,
 			&i.TestPlanID,
@@ -1745,7 +1767,7 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.ExternalIssueID,
 			&i.ResultState,
 			&i.IsClosed,
-			&i.Notes,
+			&i.Notes_2,
 			&i.ActualResult,
 			&i.ExpectedResult,
 			&i.Reactions,
@@ -1813,16 +1835,10 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-<<<<<<< HEAD
-SELECT DISTINCT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
+SELECT DISTINCT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.status, tc.result, tc.executed_at, tc.executed_by, tc.notes
 FROM test_cases tc
 INNER JOIN test_runs tr ON tr.test_case_id = tc.id
 WHERE tr.test_plan_id = $1::bigint
-=======
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.status, tc.result, tc.executed_at, tc.executed_by, tc.notes FROM test_cases tc 
-INNER JOIN test_plans_cases tp ON tp.test_case_id = tc.id  
-WHERE tp.test_plan_id = $1
->>>>>>> 582c86e (feature:Execute test case)
 `
 
 func (q *Queries) ListTestCasesByPlan(ctx context.Context, dollar_1 int64) ([]TestCase, error) {
