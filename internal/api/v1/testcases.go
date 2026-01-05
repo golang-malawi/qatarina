@@ -287,7 +287,7 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/{testCaseID}/execute [post]
-func ExecuteTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+func ExecuteTestCase(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		pathID := c.Params("testCaseID")
 
@@ -305,7 +305,7 @@ func ExecuteTestCase(testCaseService services.TestCaseService, logger logging.Lo
 		}
 		request.ID = pathID
 
-		tc, err := testCaseService.Execute(context.Background(), request)
+		tc, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to execute test case", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to execute test case")

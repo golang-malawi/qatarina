@@ -57,8 +57,6 @@ type TestCaseService interface {
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
 	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error)
-
-	Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -416,41 +414,4 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 		})
 	}
 	return res, nil
-}
-
-func (t *testCaseServiceImpl) Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error) {
-	sqlTx, err := t.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer sqlTx.Rollback()
-
-	tx := dbsqlc.New(sqlTx)
-
-	testCaseUUID, err := uuid.Parse(request.ID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid test case ID: %w", err)
-	}
-
-	err = tx.ExecuteTestCase(ctx, dbsqlc.ExecuteTestCaseParams{
-		ID:         testCaseUUID,
-		Status:     common.NullString(request.Status),
-		Result:     common.NullString(request.Result),
-		ExecutedBy: common.NewNullInt32(int32(request.ExecutedBy)),
-		Notes:      common.NullString(request.Notes),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute test case: %w", err)
-	}
-
-	tc, err := tx.GetTestCase(ctx, testCaseUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
-	}
-
-	if err := sqlTx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &tc, nil
 }

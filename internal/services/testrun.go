@@ -3,6 +3,7 @@ package services
 import (
 	"cmp"
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -29,15 +30,18 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
+	Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error)
 }
 
 type testRunService struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestRunService(conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
 	return &testRunService{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -150,4 +154,41 @@ func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error
 // CreateFromFoundIssues implements TestRunService.
 func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
 	panic("unimplemented")
+}
+
+func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestCaseRequest) (*dbsqlc.TestCase, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCaseUUID, err := uuid.Parse(request.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test case ID: %w", err)
+	}
+
+	err = tx.ExecuteTestCase(ctx, dbsqlc.ExecuteTestCaseParams{
+		ID:         testCaseUUID,
+		Status:     common.NullString(request.Status),
+		Result:     common.NullString(request.Result),
+		ExecutedBy: common.NewNullInt32(int32(request.ExecutedBy)),
+		Notes:      common.NullString(request.Notes),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute test case: %w", err)
+	}
+
+	tc, err := tx.GetTestCase(ctx, testCaseUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tc, nil
 }
