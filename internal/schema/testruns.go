@@ -89,7 +89,7 @@ type ExecuteTestRunRequest struct {
 	ID             string `json:"id" validate:"required"`
 	Result         string `json:"result" validate:"required"`
 	Status         string `json:"status" validate:"required"`
-	ExecutedBy     int64  `json:"executed_by" validate:"required"`
+	ExecutedBy     int64  `json:"-"`
 	Notes          string `json:"notes,omitempty"`
 	ExpectedResult string `json:"expected_result"`
 }

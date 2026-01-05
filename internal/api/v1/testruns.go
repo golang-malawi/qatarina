@@ -310,6 +310,8 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		}
 		request.ID = pathID
 
+		request.ExecutedBy = authutil.GetAuthUserID(c)
+
 		tr, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "error", err)
