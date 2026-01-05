@@ -273,6 +273,20 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 	}
 }
 
+// ExecuteTestCase godoc
+//
+//	@ID				ExecuteTestCase
+//	@Summary		Execute a Test Case
+//	@Description	Execute a Test Case
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"testCaseID"
+//	@Param			request	body		schema.ExecuteTestCaseRequest	true	"Execution data"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/execute [post]
 func ExecuteTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ExecuteTestCaseRequest)
