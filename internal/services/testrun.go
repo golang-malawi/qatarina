@@ -31,6 +31,8 @@ type TestRunService interface {
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
 	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
+	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
+	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 }
 
 type testRunService struct {
@@ -182,6 +184,22 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		return nil, fmt.Errorf("failed to execute test case: %w", err)
 	}
 
+	// Insert itnot test_run_results for history
+	_, err = tx.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+		ID:         uuid.New(),
+		TestRunID:  runUUID,
+		Status:     dbsqlc.TestRunState(request.Status),
+		Result:     request.Result,
+		Notes:      common.NullString(request.Notes),
+		ExecutedBy: int32(request.ExecutedBy),
+		ExecutedAt: time.Now(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert test run result: %w", err)
+	}
+
 	tr, err := tx.GetTestRun(ctx, runUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
@@ -192,4 +210,23 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 	}
 
 	return &tr, nil
+}
+
+func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bool, error) {
+	plan, err := t.queries.GetTestPlan(ctx, planID)
+	if err != nil {
+		return false, err
+	}
+	return !plan.ClosedAt.Valid && !plan.IsComplete.Bool, nil
+}
+
+func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (bool, error) {
+	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(caseID))
+	if err != nil {
+		return false, err
+	}
+	if tc.IsDraft.Valid && tc.IsDraft.Bool {
+		return false, nil
+	}
+	return true, nil
 }

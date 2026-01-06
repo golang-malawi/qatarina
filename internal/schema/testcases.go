@@ -51,10 +51,6 @@ func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
 		Tags:            e.Tags,
 		CreatedAt:       formatSqlDateTime(e.CreatedAt),
 		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
-		Status:          e.Status.String,
-		Result:          e.Result.String,
-		ExecutedBy:      int64(e.ExecutedBy.Int32),
-		Notes:           e.Notes.String,
 	}
 }
 

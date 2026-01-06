@@ -247,37 +247,6 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 	}
 }
 
-// CloseTestPlan godoc
-//
-//	@ID				CloseTestPlan
-//	@Summary		Close a Test Plan
-//	@Description	Close a Test Plan
-//	@Tags			test-plans
-//	@Accept			json
-//	@Produce		json
-//	@Param			testPlanID	path		int	true	"Test Plan ID"
-//	@Success		200			{object}	interface{}
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-plans/{testPlanID}/close [post]
-func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logger) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		testPlanID, err := c.ParamsInt("testPlanID", 0)
-		if err != nil {
-			return problemdetail.BadRequest(c, "invalid testPlanID in request")
-		}
-
-		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to close test plan", "error", err)
-			return problemdetail.BadRequest(c, "failed to process request")
-		}
-		return c.JSON(fiber.Map{
-			"message": "Test plan closed successfully",
-		})
-	}
-}
-
 // ExecuteTestRun godoc
 //
 //	@ID				ExecuteTestRun
@@ -287,7 +256,7 @@ func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logge
 //	@Accept			json
 //	@Produce		json
 //	@Param			testRunID	path		string	true	"Test Run ID"
-//	@Param			request	body		schema.ExecuteTestCaseRequest	true	"Execution data"
+//	@Param			request	body		schema.ExecuteTestRunRequest	true	"Execution data"
 //	@Success		200			{object}	schema.TestRunResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
@@ -310,16 +279,61 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		}
 		request.ID = pathID
 
-		request.ExecutedBy = authutil.GetAuthUserID(c)
+		userID := authutil.GetAuthUserID(c)
+		request.ExecutedBy = userID
 
-		tr, err := testRunService.Execute(context.Background(), request)
+		// Validation checks
+		tr, err := testRunService.GetOneTestRun(c.Context(), pathID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return problemdetail.BadRequest(c, "test run not found")
+		}
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "error fetching test run")
+		}
+
+		if tr.IsClosed.Valid && tr.IsClosed.Bool {
+			return problemdetail.BadRequest(c, "test run already closed")
+		}
+
+		if tr.TestedByID != int32(userID) {
+			return problemdetail.BadRequest(c, "cannot execute another user's test run")
+		}
+
+		// Check if test plan is active
+		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID))
+		if errors.Is(err, sql.ErrNoRows) {
+			return problemdetail.BadRequest(c, "test plan not found")
+		}
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "error fetching test plan")
+		}
+		if !planActive {
+			return problemdetail.BadRequest(c, "test plan is closed")
+		}
+
+		// Check test case active
+		caseActive, err := testRunService.IsTestCaseActive(c.Context(), tr.TestCaseID.String())
+		if errors.Is(err, sql.ErrNoRows) {
+			return problemdetail.BadRequest(c, "test case not found")
+		}
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "error fetching test case")
+		}
+		if !caseActive {
+			return problemdetail.BadRequest(c, "test case is inactive")
+		}
+
+		executed, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
 		}
 
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponse(tr),
+			"test_run": schema.NewTestRunResponse(executed),
 		})
 	}
 }

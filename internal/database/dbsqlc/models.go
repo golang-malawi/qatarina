@@ -256,15 +256,6 @@ type TestCase struct {
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
 	ProjectID sql.NullInt32
-	// Current status of a test case, options can be open, closed, skipped, etc
-	Status sql.NullString
-	// Is the outcome of the test case, which can be passed, failed, blocked, etc
-	Result sql.NullString
-	// Time a test case is excecuted
-	ExecutedAt sql.NullTime
-	// The ID of a user carrying out the testing
-	ExecutedBy sql.NullInt32
-	Notes      sql.NullString
 }
 
 type TestCaseSequence struct {
