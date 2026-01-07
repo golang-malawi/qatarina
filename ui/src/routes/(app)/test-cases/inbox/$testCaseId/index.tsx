@@ -9,9 +9,11 @@ import {
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
-import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
+import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/query";
 import type { components } from "@/lib/api/v1";
+import { markTestCaseAsDraft } from "@/services/TestCaseService";
+import {toaster} from "@/components/ui/toaster";
 
 type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
 
@@ -23,10 +25,22 @@ export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
 
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
+  const queryClient = useQueryClient();
 
   const { data: testCase } = useSuspenseQuery(
     findTestCaseByIdQueryOptions(testCaseId)
   );
+
+  const markDraftMutation = useMutation({
+    mutationFn: async () => await markTestCaseAsDraft(testCaseId),
+    onSuccess: () => {
+      toaster.create({title: "Success", description: "Marked as draft", type: "success"});
+      queryClient.invalidateQueries({ queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey});
+    },
+    onError: () => {
+      toaster.create({ title: "Error", description: "Failed to mark as draft", type: "error"});
+    },
+  });
 
   const runId = testCase?.testRunID
 
@@ -73,7 +87,9 @@ function TestCaseInboxItem() {
         <Menu.Content>
           <Menu.Item value="">View</Menu.Item>
           <Menu.Item value="">Create a Copy</Menu.Item>
-          <Menu.Item value="">Mark as Draft</Menu.Item>
+          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate}>
+            Mark as Draft
+            </Menu.Item>
           <Menu.Item value="">Use in Test Plan</Menu.Item>
           <Menu.Item value="" color="red">
             Delete

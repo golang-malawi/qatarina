@@ -273,6 +273,19 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 	}
 }
 
+// MarkTestCaseAsDraft godoc
+//
+//	@ID				MarkTestCaseAsDraft
+//	@Summary		Mark a test case as draft
+//	@Description	Mark a test case as draft
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/mark-draft [post]
 func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testCaseID := c.Params("testCaseID", "")

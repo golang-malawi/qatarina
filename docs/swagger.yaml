@@ -1946,6 +1946,25 @@ paths:
       summary: Search for Test Cases
       tags:
       - test-cases
+  /v1/test-cases/{testCaseID}/mark-draft:
+    post:
+      summary: Mark a test case as draft
+      parameters:
+        - name: testCaseID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
   /v1/test-plans:
     get:
       consumes:

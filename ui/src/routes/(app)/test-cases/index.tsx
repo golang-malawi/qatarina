@@ -11,8 +11,10 @@ import {
   Tabs,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQueryClient, useMutation} from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { markTestCaseAsDraft } from "@/services/TestCaseService";
+import {toaster} from "@/components/ui/toaster";
 
 export const Route = createFileRoute("/(app)/test-cases/")({
   loader: ({ context: { queryClient } }) =>
@@ -26,6 +28,19 @@ function TestCasePage() {
     isPending,
     error,
   } = useSuspenseQuery(findTestCaseAllQueryOptions);
+
+  const queryClient = useQueryClient();
+
+  const markDraftMutation = useMutation({
+    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
+    onSuccess: () => {
+      toaster.create({title: "Success", description: "Marked as draft", type: "success"});
+      queryClient.invalidateQueries({queryKey: findTestCaseAllQueryOptions.queryKey});
+    },
+    onError: () => {
+      toaster.create({title: "Error", description: "Failed to mark as draft", type: "error"});
+    }
+  });
 
   if (isPending) {
     return "Loading Projects...";
@@ -59,7 +74,9 @@ function TestCasePage() {
           <Menu.Content>
             <Menu.Item value="">View</Menu.Item>
             <Menu.Item value="">Create a Copy</Menu.Item>
-            <Menu.Item value="">Mark as Draft</Menu.Item>
+            <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(tc.id)}>
+              Mark as Draft
+              </Menu.Item>
             <Menu.Item value="">Use in Test Plan</Menu.Item>
             <Menu.Item value="" color="red">
               Delete
@@ -131,4 +148,5 @@ function TestCasePage() {
     </div>
   );
 }
+
 

@@ -87,3 +87,10 @@ export async function importTestCasesFromFile(
     throw new Error(message);
   }
 }
+
+export async function markTestCaseAsDraft(testCaseID:string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/mark-draft",{
+    params: {path: {testCaseID}},
+  });
+  
+}
