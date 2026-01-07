@@ -285,14 +285,16 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		// Validation checks
 		tr, err := testRunService.GetOneTestRun(c.Context(), pathID)
 		if errors.Is(err, sql.ErrNoRows) {
+			logger.Info(loggedmodule.ApiTestRuns, "test run not found", "testRunID", pathID)
 			return problemdetail.BadRequest(c, "test run not found")
 		}
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test run", "error", err)
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test run", "testRunID", pathID)
 			return problemdetail.ServerErrorProblem(c, "error fetching test run")
 		}
 
 		if tr.IsClosed.Valid && tr.IsClosed.Bool {
+			logger.Debug(loggedmodule.ApiTestRuns, "attempt to execute closed run", "testRunID", pathID)
 			return problemdetail.BadRequest(c, "test run already closed")
 		}
 
@@ -306,7 +308,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test plan not found")
 		}
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "error", err)
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", pathID)
 			return problemdetail.ServerErrorProblem(c, "error fetching test plan")
 		}
 		if !planActive {
@@ -328,7 +330,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 
 		executed, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "error", err)
+			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "testRunID", pathID)
 			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
 		}
 
