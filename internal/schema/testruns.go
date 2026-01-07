@@ -121,9 +121,9 @@ func NewTestRunResponse(tr *dbsqlc.TestRun) TestRunResponse {
 		AssignedToID:   tr.AssignedToID,
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),
-		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool, // unwrap NullBool
+		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
 		Notes:          tr.Notes,
-		ActualResult:   tr.ActualResult.String,   // unwrap NullString
-		ExpectedResult: tr.ExpectedResult.String, // unwrap NullString
+		ActualResult:   tr.ActualResult.String,
+		ExpectedResult: tr.ExpectedResult.String,
 	}
 }
