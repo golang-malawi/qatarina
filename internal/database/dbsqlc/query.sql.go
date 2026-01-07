@@ -1533,6 +1533,17 @@ func (q *Queries) InsertTestRunResult(ctx context.Context, arg InsertTestRunResu
 	return id, err
 }
 
+const isTestCaseActive = `-- name: IsTestCaseActive :one
+SELECT is_draft FROM test_cases WHERE id = $1
+`
+
+func (q *Queries) IsTestCaseActive(ctx context.Context, id uuid.UUID) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, isTestCaseActive, id)
+	var is_draft sql.NullBool
+	err := row.Scan(&is_draft)
+	return is_draft, err
+}
+
 const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one
 SELECT EXISTS(
     SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases WHERE project_id = $1
@@ -1570,6 +1581,24 @@ func (q *Queries) IsTestCaseUsedInTestRun(ctx context.Context, testCaseID uuid.U
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const isTestPlanActive = `-- name: IsTestPlanActive :one
+SELECT closed_at, is_complete
+FROM test_plans
+WHERE id = $1
+`
+
+type IsTestPlanActiveRow struct {
+	ClosedAt   sql.NullTime
+	IsComplete sql.NullBool
+}
+
+func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanActiveRow, error) {
+	row := q.db.QueryRowContext(ctx, isTestPlanActive, id)
+	var i IsTestPlanActiveRow
+	err := row.Scan(&i.ClosedAt, &i.IsComplete)
+	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many

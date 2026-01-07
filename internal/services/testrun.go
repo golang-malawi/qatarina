@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -213,7 +214,10 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 }
 
 func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bool, error) {
-	plan, err := t.queries.GetTestPlan(ctx, planID)
+	plan, err := t.queries.IsTestPlanActive(ctx, planID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -221,11 +225,14 @@ func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bo
 }
 
 func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (bool, error) {
-	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(caseID))
+	isDraft, err := t.queries.IsTestCaseActive(ctx, uuid.MustParse(caseID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	if tc.IsDraft.Valid && tc.IsDraft.Bool {
+	if isDraft.Valid && isDraft.Bool {
 		return false, nil
 	}
 	return true, nil

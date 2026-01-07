@@ -206,6 +206,9 @@ WHERE id = $1;
 SELECT * FROM test_cases 
 WHERE project_id = $1 AND code = $2;
 
+-- name: IsTestCaseActive :one
+SELECT is_draft FROM test_cases WHERE id = $1;
+
 -- name: ExecuteTestRun :exec
 UPDATE test_runs
 SET result_state = $2,
@@ -215,6 +218,11 @@ actual_result = $5,
 expected_result = $6,
 tested_on = NOW(),
 updated_at = NOW()
+WHERE id = $1;
+
+-- name: IsTestPlanActive :one
+SELECT closed_at, is_complete
+FROM test_plans
 WHERE id = $1;
 
 -- name: ListTestPlans :many

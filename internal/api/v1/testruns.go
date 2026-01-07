@@ -304,11 +304,8 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 
 		// Check if test plan is active
 		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID))
-		if errors.Is(err, sql.ErrNoRows) {
-			return problemdetail.BadRequest(c, "test plan not found")
-		}
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", pathID)
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", pathID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "error fetching test plan")
 		}
 		if !planActive {
@@ -317,11 +314,8 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 
 		// Check test case active
 		caseActive, err := testRunService.IsTestCaseActive(c.Context(), tr.TestCaseID.String())
-		if errors.Is(err, sql.ErrNoRows) {
-			return problemdetail.BadRequest(c, "test case not found")
-		}
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test case", "error", err)
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test case", "testRunID", pathID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "error fetching test case")
 		}
 		if !caseActive {
