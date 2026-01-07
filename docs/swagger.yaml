@@ -527,6 +527,21 @@ definitions:
       updated_at:
         type: string
     type: object
+  schema.TestCaseResponseItem:
+    properties:
+      assigned_tester_ids:
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      is_assigned_to_test_plan:
+        type: boolean
+      test_plan:
+        $ref: '#/definitions/schema.TestPlanSummary'
+      title:
+        type: string
+    type: object
   schema.TestPlanListResponse:
     properties:
       test_plans:
@@ -566,10 +581,21 @@ definitions:
         type: string
       start_at:
         type: string
+      test_cases:
+        items:
+          $ref: '#/definitions/schema.TestCaseResponseItem'
+        type: array
       updated_at:
         type: string
       updated_by_id:
         type: integer
+    type: object
+  schema.TestPlanSummary:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   schema.TestRunListResponse:
     properties:
@@ -735,25 +761,6 @@ definitions:
       username:
         type: string
     type: object
-  schema.TestRunRequest:
-    type: object
-    properties:
-      project_id:
-        type: integer
-      test_plan_id:
-        type: integer
-      test_case_id:
-        type: string
-      owner_id:
-        type: integer
-      tested_by_id:
-        type: integer
-    required:
-      - project_id
-      - test_plan_id
-      - test_case_id
-      - owner_id
-      - tested_by_id
 info:
   contact: {}
 paths:
@@ -1825,6 +1832,35 @@ paths:
       summary: Update a Test Case
       tags:
       - test-cases
+  /v1/test-cases/{testCaseID}/mark-draft:
+    post:
+      consumes:
+      - application/json
+      description: Mark a test case as draft
+      operationId: MarkTestCaseAsDraft
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Mark a test case as draft
+      tags:
+      - test-cases
   /v1/test-cases/bulk:
     post:
       consumes:
@@ -1946,25 +1982,6 @@ paths:
       summary: Search for Test Cases
       tags:
       - test-cases
-  /v1/test-cases/{testCaseID}/mark-draft:
-    post:
-      summary: Mark a test case as draft
-      parameters:
-        - name: testCaseID
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
   /v1/test-plans:
     get:
       consumes:
@@ -2768,69 +2785,4 @@ paths:
       summary: Search all Users
       tags:
       - users
-/v1/test-runs:
-  post:
-    summary: Create a new Test Run
-    operationId: CreateTestRun
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TestRunRequest'
-    responses:
-      "200":
-        description: OK
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TestRunResponse'
-      "400":
-        description: Bad Request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-      "500":
-        description: Internal Server Error
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-
-/v1/test-runs/{testRunID}/commit:
-  post:
-    summary: Commit a Test Run result
-    operationId: CommitTestRun
-    parameters:
-      - name: testRunID
-        in: path
-        required: true
-        schema:
-          type: string
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CommitTestRunResult'
-    responses:
-      "200":
-        description: OK
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TestRunResponse'
-      "400":
-        description: Bad Request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-      "500":
-        description: Internal Server Error
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
 swagger: "2.0"
