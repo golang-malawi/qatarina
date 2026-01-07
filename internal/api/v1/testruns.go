@@ -298,7 +298,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test run already closed")
 		}
 
-		if tr.TestedByID != int32(userID) {
+		if tr.AssignedToID != int32(userID) {
 			return problemdetail.BadRequest(c, "cannot execute another user's test run")
 		}
 
