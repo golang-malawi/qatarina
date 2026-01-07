@@ -31,6 +31,10 @@ type TestCaseResponse struct {
 	Tags            []string `json:"tags"`
 	CreatedAt       string   `json:"created_at"`
 	UpdatedAt       string   `json:"updated_at"`
+	Status          string   `json:"status"`
+	Result          string   `json:"result"`
+	ExecutedBy      int64    `json:"executed_by"`
+	Notes           string   `json:"notes"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {

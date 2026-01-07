@@ -3,6 +3,8 @@ package services
 import (
 	"cmp"
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,15 +31,20 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
+	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
+	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
+	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 }
 
 type testRunService struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestRunService(conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
 	return &testRunService{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -150,4 +157,83 @@ func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error
 // CreateFromFoundIssues implements TestRunService.
 func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
 	panic("unimplemented")
+}
+
+func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error) {
+	runUUID, err := uuid.Parse(request.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID: %w", err)
+	}
+
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
+		ID:             runUUID,
+		ResultState:    dbsqlc.TestRunState(request.Status),
+		TestedByID:     int32(request.ExecutedBy),
+		Notes:          request.Notes,
+		ActualResult:   common.NullString(request.Result),
+		ExpectedResult: common.NullString(request.ExpectedResult),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute test case: %w", err)
+	}
+
+	// Insert itnot test_run_results for history
+	_, err = tx.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+		ID:         uuid.New(),
+		TestRunID:  runUUID,
+		Status:     dbsqlc.TestRunState(request.Status),
+		Result:     request.Result,
+		Notes:      common.NullString(request.Notes),
+		ExecutedBy: int32(request.ExecutedBy),
+		ExecutedAt: time.Now(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert test run result: %w", err)
+	}
+
+	tr, err := tx.GetTestRun(ctx, runUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tr, nil
+}
+
+func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bool, error) {
+	plan, err := t.queries.IsTestPlanActive(ctx, planID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return !plan.ClosedAt.Valid && !plan.IsComplete.Bool, nil
+}
+
+func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (bool, error) {
+	isDraft, err := t.queries.IsTestCaseActive(ctx, uuid.MustParse(caseID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if isDraft.Valid && isDraft.Bool {
+		return false, nil
+	}
+	return true, nil
 }

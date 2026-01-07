@@ -246,3 +246,91 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		})
 	}
 }
+
+// ExecuteTestRun godoc
+//
+//	@ID				ExecuteTestRun
+//	@Summary		Execute a Test Run
+//	@Description	Execute a Test Run
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string	true	"Test Run ID"
+//	@Param			request	body		schema.ExecuteTestRunRequest	true	"Execution data"
+//	@Success		200			{object}	schema.TestRunResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-runs/{testRunID}/execute [post]
+func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		pathID := c.Params("testRunID")
+
+		request := new(schema.ExecuteTestRunRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid execution data", err)
+			}
+			logger.Error(loggedmodule.ApiTestRuns, "failed to parse execution request", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse execution data")
+		}
+
+		if request.ID != "" && request.ID != pathID {
+			return problemdetail.BadRequest(c, "path parameter and body ID do not match")
+		}
+		request.ID = pathID
+
+		userID := authutil.GetAuthUserID(c)
+		request.ExecutedBy = userID
+
+		// Validation checks
+		tr, err := testRunService.GetOneTestRun(c.Context(), pathID)
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Info(loggedmodule.ApiTestRuns, "test run not found", "testRunID", pathID)
+			return problemdetail.BadRequest(c, "test run not found")
+		}
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test run", "testRunID", pathID)
+			return problemdetail.ServerErrorProblem(c, "error fetching test run")
+		}
+
+		if tr.IsClosed.Valid && tr.IsClosed.Bool {
+			logger.Debug(loggedmodule.ApiTestRuns, "attempt to execute closed run", "testRunID", pathID)
+			return problemdetail.BadRequest(c, "test run already closed")
+		}
+
+		if tr.AssignedToID != int32(userID) {
+			return problemdetail.BadRequest(c, "cannot execute another user's test run")
+		}
+
+		// Check if test plan is active
+		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", tr.TestPlanID, "testRunID", pathID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "error fetching test plan")
+		}
+		if !planActive {
+			return problemdetail.BadRequest(c, "test plan is closed")
+		}
+
+		// Check test case active
+		caseActive, err := testRunService.IsTestCaseActive(c.Context(), tr.TestCaseID.String())
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test case", "testRunID", pathID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "error fetching test case")
+		}
+		if !caseActive {
+			logger.Warn(loggedmodule.ApiTestRuns, "attempt to execute inactive test case", "testRunID", pathID, "testCaseID", tr.TestCaseID)
+			return problemdetail.BadRequest(c, "test case is inactive")
+		}
+
+		executed, err := testRunService.Execute(context.Background(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "testRunID", pathID)
+			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
+		}
+
+		return c.JSON(fiber.Map{
+			"test_run": schema.NewTestRunResponse(executed),
+		})
+	}
+}
