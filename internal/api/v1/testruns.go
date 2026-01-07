@@ -319,6 +319,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.ServerErrorProblem(c, "error fetching test case")
 		}
 		if !caseActive {
+			logger.Warn(loggedmodule.ApiTestRuns, "attempt to execute inactive test case", "testRunID", pathID, "testCaseID", tr.TestCaseID)
 			return problemdetail.BadRequest(c, "test case is inactive")
 		}
 
