@@ -57,6 +57,8 @@ type TestCaseService interface {
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
 	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error)
+	// MarkAsDraft is used to mark a test case as draft
+	MarkAsDraft(ctc context.Context, testCaseID string) error
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -414,4 +416,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 		})
 	}
 	return res, nil
+}
+
+func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {
+	return t.queries.MarkTestCaseAsDraft(ctx, uuid.MustParse(testCaseID))
 }

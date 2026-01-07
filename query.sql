@@ -206,6 +206,11 @@ WHERE id = $1;
 SELECT * FROM test_cases 
 WHERE project_id = $1 AND code = $2;
 
+-- name: MarkTestCaseAsDraft :exec
+UPDATE test_cases
+SET is_draft = TRUE, updated_at = NOW()
+WHERE id = $1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 

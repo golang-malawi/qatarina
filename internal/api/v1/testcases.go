@@ -272,3 +272,22 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 		})
 	}
 }
+
+func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID", "")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		err := testCaseService.MarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to mark test case as draft", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to mark test case as draft")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test case marked as draft",
+		})
+	}
+}

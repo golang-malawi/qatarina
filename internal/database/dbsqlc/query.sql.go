@@ -2230,6 +2230,17 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const markTestCaseAsDraft = `-- name: MarkTestCaseAsDraft :exec
+UPDATE test_cases
+SET is_draft = TRUE, updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) MarkTestCaseAsDraft(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, markTestCaseAsDraft, id)
+	return err
+}
+
 const searchProject = `-- name: SearchProject :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code FROM projects
 WHERE title ILIKE '%' || $1 || '%'
