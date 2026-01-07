@@ -159,6 +159,11 @@ func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *sch
 }
 
 func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error) {
+	runUUID, err := uuid.Parse(request.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID: %w", err)
+	}
+
 	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -166,11 +171,6 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 	defer sqlTx.Rollback()
 
 	tx := dbsqlc.New(sqlTx)
-
-	runUUID, err := uuid.Parse(request.ID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid test run ID: %w", err)
-	}
 
 	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
 		ID:             runUUID,
