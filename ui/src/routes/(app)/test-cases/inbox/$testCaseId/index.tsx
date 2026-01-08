@@ -9,9 +9,17 @@ import {
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { markTestCaseAsDraft } from "@/services/TestCaseService";
-import {toaster} from "@/components/ui/toaster";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  markTestCaseAsDraft,
+  unmarkTestCaseAsDraft,
+} from "@/services/TestCaseService";
+
+import { toaster } from "@/components/ui/toaster";
 
 // type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
 
@@ -29,17 +37,6 @@ function TestCaseInboxItem() {
     findTestCaseByIdQueryOptions(testCaseId)
   );
 
-  const markDraftMutation = useMutation({
-    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
-    onSuccess: () => {
-      toaster.create({title: "Success", description: "Marked as draft", type: "success"});
-      queryClient.invalidateQueries({ queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey});
-    },
-    onError: () => {
-      toaster.create({ title: "Error", description: "Failed to mark as draft", type: "error"});
-    },
-  });
-
   //const runId = testCase?.testRunID
 
   const executeMutation = useMutation({
@@ -56,12 +53,44 @@ function TestCaseInboxItem() {
           status === "passed"
             ? "Behavior matched expectation"
             : "Behaviour did not match expectation",
-            // TODO
-        executed_by: userId, 
+        // TODO
+        executed_by: userId,
         notes:
           status === "passed"
             ? "Test passed successfully"
             : "Test failed during execution",
+      });
+    },
+  });
+
+  const tc = testCase.test_case;
+  const isDraft = tc.is_draft;
+
+  const toggleDraftMutation = useMutation({
+    mutationFn: async () => {
+      if (isDraft) {
+        return unmarkTestCaseAsDraft(testCaseId);
+      }
+      return markTestCaseAsDraft(testCaseId);
+    },
+    onSuccess: () => {
+      toaster.create({
+        title: "Success",
+        description: isDraft
+          ? "Test case unmarked as draft"
+          : "Test case marked as draft",
+        type: "success",
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey,
+      });
+    },
+    onError: () => {
+      toaster.create({
+        title: "Error",
+        description: "Failed to update draft status",
+        type: "error",
       });
     },
   });
@@ -79,15 +108,44 @@ function TestCaseInboxItem() {
         <Menu.Content>
           <Menu.Item value="">View</Menu.Item>
           <Menu.Item value="">Create a Copy</Menu.Item>
-          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(testCaseId)}>
-            Mark as Draft
-            </Menu.Item>
+          <Menu.Item
+            value="toggle-draft"
+            disabled={toggleDraftMutation.isPending}
+            onClick={() => toggleDraftMutation.mutate()}
+          >
+            {isDraft ? "Unmark as Draft" : "Mark as Draft"}
+          </Menu.Item>
+
           <Menu.Item value="">Use in Test Plan</Menu.Item>
           <Menu.Item value="" color="red">
             Delete
           </Menu.Item>
         </Menu.Content>
       </Menu.Root>
+
+      <Container my="4">
+        <Heading size="lg">{tc.title}</Heading>
+        <p>
+          <strong>Code:</strong> {tc.code}
+        </p>
+        <p>
+          <strong>Description:</strong> {tc.description}
+        </p>
+        <p>
+          <strong>Kind:</strong> {tc.kind}
+        </p>
+        {isDraft && (
+          <Box
+            as="span"
+            fontSize="sm"
+            bg="orange.100"
+            color="orange.700"
+            borderRadius="md"
+          >
+            Draft
+          </Box>
+        )}
+      </Container>
 
       <Container p="4" border="1px solid #f3f3f3">
         <Heading size="lg">Record a Test Result on this test case</Heading>
@@ -97,7 +155,7 @@ function TestCaseInboxItem() {
           variant="outline"
           colorScheme="blue"
           onClick={() => executeMutation.mutate({ status: "passed" })}
-          loading={executeMutation.isPending}
+          isDisabled={tc.is_draft}
         >
           Record Successful Test
         </Button>
@@ -108,6 +166,7 @@ function TestCaseInboxItem() {
           colorScheme="red"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
+          isDisabled={tc.is_draft}
         >
           Record Failed Test
         </Button>

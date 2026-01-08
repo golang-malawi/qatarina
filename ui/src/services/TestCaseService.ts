@@ -94,3 +94,9 @@ export async function markTestCaseAsDraft(testCaseID:string) {
   });
   
 }
+export async function unmarkTestCaseAsDraft(testCaseID:string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/unmark-draft",{
+    params: {path: {testCaseID}},
+  });
+  
+}
