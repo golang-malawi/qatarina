@@ -304,3 +304,35 @@ func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger loggin
 		})
 	}
 }
+
+// UnMarkTestCaseAsDraft godoc
+//
+//	@ID				MarkTestCaseAsDraft
+//	@Summary		Mark a test case as draft
+//	@Description	Mark a test case as draft
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/unmark-draft [post]
+func UnMarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID", "")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		err := testCaseService.UnMarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to unmark test case as draft", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to unmark test case as draft")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test case unmarked as draft",
+		})
+	}
+}
