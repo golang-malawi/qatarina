@@ -32,7 +32,7 @@ function TestCaseInboxItem() {
   );
 
   const markDraftMutation = useMutation({
-    mutationFn: async () => await markTestCaseAsDraft(testCaseId),
+    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
     onSuccess: () => {
       toaster.create({title: "Success", description: "Marked as draft", type: "success"});
       queryClient.invalidateQueries({ queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey});
@@ -87,7 +87,7 @@ function TestCaseInboxItem() {
         <Menu.Content>
           <Menu.Item value="">View</Menu.Item>
           <Menu.Item value="">Create a Copy</Menu.Item>
-          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(tc.id)}>
+          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(testCaseId)}>
             Mark as Draft
             </Menu.Item>
           <Menu.Item value="">Use in Test Plan</Menu.Item>

@@ -1861,6 +1861,35 @@ paths:
       summary: Mark a test case as draft
       tags:
       - test-cases
+  /v1/test-cases/{testCaseID}/unmark-draft:
+    post:
+      consumes:
+      - application/json
+      description: Mark a test case as draft
+      operationId: UnMarkTestCaseAsDraft
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/problemdetail.ProblemDetail'
+      summary: Mark a test case as draft
+      tags:
+      - test-cases
   /v1/test-cases/bulk:
     post:
       consumes:

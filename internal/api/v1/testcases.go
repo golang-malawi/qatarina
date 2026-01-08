@@ -307,7 +307,7 @@ func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger loggin
 
 // UnMarkTestCaseAsDraft godoc
 //
-//	@ID				MarkTestCaseAsDraft
+//	@ID				UnMarkTestCaseAsDraft
 //	@Summary		Mark a test case as draft
 //	@Description	Mark a test case as draft
 //	@Tags			test-cases
