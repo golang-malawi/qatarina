@@ -10,8 +10,6 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/query";
-import type { components } from "@/lib/api/v1";
 import { markTestCaseAsDraft } from "@/services/TestCaseService";
 import {toaster} from "@/components/ui/toaster";
 
