@@ -40,7 +40,7 @@ function TestCaseInboxItem() {
     },
   });
 
-  const runId = testCase?.testRunID
+  //const runId = testCase?.testRunID
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
