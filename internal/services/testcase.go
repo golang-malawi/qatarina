@@ -419,5 +419,16 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 }
 
 func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {
-	return t.queries.MarkTestCaseAsDraft(ctx, uuid.MustParse(testCaseID))
+	params := dbsqlc.SetTestCaseDraftStatusParams{
+		ID:      uuid.MustParse(testCaseID),
+		IsDraft: common.TrueNullBool(),
+	}
+
+	err := t.queries.SetTestCaseDraftStatus(ctx, params)
+	if err != nil {
+		t.logger.Error("failed to update draft status", "error", err)
+		return err
+	}
+
+	return nil
 }

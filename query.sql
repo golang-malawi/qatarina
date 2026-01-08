@@ -206,9 +206,9 @@ WHERE id = $1;
 SELECT * FROM test_cases 
 WHERE project_id = $1 AND code = $2;
 
--- name: MarkTestCaseAsDraft :exec
+-- name: SetTestCaseDraftStatus :exec
 UPDATE test_cases
-SET is_draft = TRUE, updated_at = NOW()
+SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
 -- name: ListTestPlans :many
