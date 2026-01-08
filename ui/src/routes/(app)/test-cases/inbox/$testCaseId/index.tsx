@@ -87,7 +87,7 @@ function TestCaseInboxItem() {
         <Menu.Content>
           <Menu.Item value="">View</Menu.Item>
           <Menu.Item value="">Create a Copy</Menu.Item>
-          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate}>
+          <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(tc.id)}>
             Mark as Draft
             </Menu.Item>
           <Menu.Item value="">Use in Test Plan</Menu.Item>
