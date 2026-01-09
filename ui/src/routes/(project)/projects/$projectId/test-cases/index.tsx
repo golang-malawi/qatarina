@@ -109,7 +109,10 @@ export default function ListProjectTestCases() {
             </Menu.Trigger>
             <Menu.Content zIndex={100} position="absolute">
               <Menu.Item value="view">
-                <Link to={`/projects/${projectId}/test-cases/${tc.id}`}>
+                <Link
+                  to={"/projects/$projectId/test-cases/$testCaseId"}
+                  params={{ projectId: projectId, testCaseId: tc.id }}
+                >
                   View
                 </Link>
               </Menu.Item>

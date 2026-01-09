@@ -32,7 +32,7 @@ export async function getInboxTestCases() {
 
 export async function getTestCasesByTestPlanID(testPlanID: string) {
   return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", {
-    params: { path: { testPlanID } },
+    params: { path: { testplanID: testPlanID } },
   });
 }
 
@@ -62,6 +62,7 @@ export async function importTestCasesFromFile(
       "post",
       "/v1/test-cases/import-file",
       {
+        params: { path: { formData: "" } },
         body: formData as any,
       }
     );

@@ -17,7 +17,7 @@ import {
 
 import { useTestCaseQuery } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
-import { assignTestCaseToTestPlan } from "@/services/TestPlanService";
+import { assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 
@@ -48,14 +48,13 @@ function ViewTestCase() {
   if (isLoading) return <div>Loading test case...</div>;
   if (error) return <div>Error loading test case</div>;
 
-  const testCase = data?.test_case;
+  const testCase = data;
   if (!testCase) return <div>No data found</div>;
 
   /** ---------- DERIVED ---------- */
   const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
 
-  const isLockedToPlan =
-    testCase.is_assigned_to_test_plan || !!optimisticAssignment?.test_plan_id;
+  const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
 
   return (
     <div className="card space-y-4">
@@ -121,7 +120,7 @@ function ViewTestCase() {
               borderColor="gray.200"
               shadow="xs"
             >
-              <Stack spacing={2} fontSize="sm" color="gray.600">
+              <Stack gap={2} fontSize="sm" color="gray.600">
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Type:</Text>
                   <Text>{testCase.kind}</Text>
@@ -141,12 +140,12 @@ function ViewTestCase() {
 
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Created At:</Text>
-                  <Text>{new Date(testCase.created_at).toLocaleString()}</Text>
+                  <Text>{testCase.created_at ? new Date(testCase.created_at).toLocaleString() : "N/A"}</Text>
                 </Flex>
 
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Updated At:</Text>
-                  <Text>{new Date(testCase.updated_at).toLocaleString()}</Text>
+                  <Text>{testCase.updated_at ? new Date(testCase.updated_at).toLocaleString() : "N/A"}</Text>
                 </Flex>
               </Stack>
             </Box>
@@ -191,7 +190,7 @@ function ViewTestCase() {
                       <Checkbox.Root
                         key={plan.id}
                         value={plan.id.toString()}
-                        isDisabled={
+                        disabled={
                           isLockedToPlan &&
                           plan.id.toString() !== effectivePlanId
                         }
@@ -214,7 +213,7 @@ function ViewTestCase() {
             <Button
               mt={4}
               size="sm"
-              isDisabled={!effectivePlanId}
+              disabled={!effectivePlanId}
               onClick={() => setAssignOpen(true)}
             >
               Assign testers
@@ -301,7 +300,7 @@ function ViewTestCase() {
                     </Button>
 
                     <Button
-                      isDisabled={selectedTesters.length === 0}
+                      disabled={selectedTesters.length === 0}
                       onClick={async () => {
                         if (!effectivePlanId) return;
 
@@ -317,7 +316,7 @@ function ViewTestCase() {
                         };
 
                         try {
-                          await assignTestCaseToTestPlan(
+                          await assignTestersToTestPlan(
                             effectivePlanId,
                             payload
                           );

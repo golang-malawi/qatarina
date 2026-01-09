@@ -57,7 +57,7 @@ function TestCasePageInbox() {
       >
         <Link
           to="/test-cases/inbox/$testCaseId"
-          params={{ testCaseId: tc.id }}
+          params={{ testCaseId: tc.id ?? "" }}
           title={tc.description}
         >
           <Text fontWeight="semibold" mb={1}>

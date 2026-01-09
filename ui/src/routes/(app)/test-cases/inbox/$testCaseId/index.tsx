@@ -54,7 +54,7 @@ function TestCaseInboxItem() {
             ? "Behavior matched expectation"
             : "Behaviour did not match expectation",
         // TODO
-        executed_by: userId,
+        executed_by: String(userId),
         notes:
           status === "passed"
             ? "Test passed successfully"
@@ -63,7 +63,7 @@ function TestCaseInboxItem() {
     },
   });
 
-  const tc = testCase.test_case;
+  const tc = testCase;
   const isDraft = tc.is_draft;
 
   const toggleDraftMutation = useMutation({
@@ -155,7 +155,7 @@ function TestCaseInboxItem() {
           variant="outline"
           colorScheme="blue"
           onClick={() => executeMutation.mutate({ status: "passed" })}
-          isDisabled={tc.is_draft}
+          disabled={tc.is_draft}
         >
           Record Successful Test
         </Button>
@@ -166,7 +166,7 @@ function TestCaseInboxItem() {
           colorScheme="red"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
-          isDisabled={tc.is_draft}
+          disabled={tc.is_draft}
         >
           Record Failed Test
         </Button>
@@ -174,3 +174,35 @@ function TestCaseInboxItem() {
     </Box>
   );
 }
+async function executeTestCase(
+  testCaseId: string,
+  {
+    status,
+    result,
+    executed_by,
+    notes,
+  }: {
+    status: "passed" | "failed";
+    result: string;
+    executed_by: string;
+    notes: string;
+  }
+): Promise<void> {
+  const response = await fetch(`/api/test-cases/${testCaseId}/execute`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      status,
+      result,
+      executed_by,
+      notes,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to execute test case");
+  }
+}
+

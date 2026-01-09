@@ -1,6 +1,12 @@
 import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
 
+type AssignTestsToPlanPayload = {
+  planned_tests: { test_case_id?: string; user_ids?: number[] }[];
+  project_id: number;
+  test_plan_id: number;
+};
+
 export function useProjectTestPlansQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-plans", {
     params: { path: { projectID } },
@@ -58,20 +64,6 @@ export async function getTestRuns(testPlanID: string) {
 }
 
 export async function assignTestersToTestPlan(
-  testPlanID: string,
-  payload: AssignTestsToPlanPayload
-) {
-  return apiClient.request(
-    "post",
-    "/v1/test-plans/{testPlanID}/test-cases",
-    {
-      params: { path: { testPlanID } },
-      body: payload,
-    }
-  );
-}
-
-export async function assignTestCaseToTestPlan(
   testPlanID: string,
   payload: AssignTestsToPlanPayload
 ) {

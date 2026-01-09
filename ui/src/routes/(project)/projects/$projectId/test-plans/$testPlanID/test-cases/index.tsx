@@ -43,7 +43,7 @@ function AssignTesterDialog({
   users: any[], 
   onAssign: (selectedIds: string[]) => Promise<void>,
   buttonText: string,
-  buttonVariant?: string
+  buttonVariant?: "solid" | "subtle" | "surface" | "outline" | "ghost" | "plain"
 }) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -98,7 +98,7 @@ function AssignTesterDialog({
                 colorScheme="teal"
                 width="full"
                 loading={isSubmitting}
-                isDisabled={selectedUsers.length === 0}
+                disabled={selectedUsers.length === 0}
                 onClick={handleConfirm}
               >
                 Confirm Assignment
@@ -128,7 +128,7 @@ function RouteComponent() {
   });
 
   const users = usersQuery.data?.users ?? [];
-  const displayData = Array.isArray(testCases) ? testCases : (testCases?.data ?? []);
+  const displayData = (Array.isArray(testCases) ? testCases : (testCases?.data ?? [])) as any[];
 
   const userMap = new Map<number, string>();
   users.forEach((u: any) => {

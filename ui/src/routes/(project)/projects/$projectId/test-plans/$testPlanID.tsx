@@ -55,7 +55,11 @@ function ViewTestPlan() {
     data: initialTestPlan,
     isLoading,
     error,
-  } = useTestPlanQuery(testPlanID);
+  } = useTestPlanQuery(testPlanID) as {
+    data: TestPlanData | undefined;
+    isLoading: boolean;
+    error: unknown;
+  };
 
   /**
    * Local state synced from query
@@ -154,7 +158,7 @@ function ViewTestPlan() {
 
           <Text>
             <strong>Kind:</strong>{" "}
-            {TEST_PLAN_KINDS[testPlan.kind] ?? testPlan.kind}
+            {(TEST_PLAN_KINDS[testPlan.kind as keyof typeof TEST_PLAN_KINDS] as string) ?? testPlan.kind}
           </Text>
 
           <Text>

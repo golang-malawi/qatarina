@@ -49,13 +49,16 @@ function TestPlanTesters() {
   const assignedToID: number | undefined = testPlanQuery.data?.assigned_to_id;
 
   // We only fetch the specific user assigned to this test plan
-  const assignedUserQuery = useGetUserQuery(assignedToID?.toString(), {
-    enabled: assignedToID !== undefined,
-  });
+  const assignedUserQuery = useGetUserQuery(
+    assignedToID ? (assignedToID as any).toString() : undefined
+  );
 
   /* ----------------------- LOADING / ERROR STATES ----------------------- */
 
-  if (testPlanQuery.isLoading || (assignedToID && assignedUserQuery.isLoading)) {
+  if (
+    testPlanQuery.isLoading ||
+    (assignedToID && assignedUserQuery.isLoading)
+  ) {
     return (
       <Flex justify="center" align="center" h="full" p={10}>
         <Spinner size="xl" color="teal.500" />
@@ -152,7 +155,12 @@ function TestPlanTesters() {
             ))
           ) : (
             <Table.Row>
-              <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
+              <Table.Cell
+                colSpan={5}
+                textAlign="center"
+                py={10}
+                color="gray.500"
+              >
                 No testers assigned to this plan yet.
               </Table.Cell>
             </Table.Row>

@@ -43,7 +43,7 @@ function CreateNewTestPlan() {
     SelectAssignedTestCase[]
   >([]);
 
-  const [activeTestCaseId, setActiveTestCaseId] = useState<number | null>(null);
+  const [activeTestCaseId, setActiveTestCaseId] = useState<string | null>(null);
 
   const activeTestCase = selectedTestCases.find(
     (t) => t.test_case_id === activeTestCaseId
@@ -112,7 +112,7 @@ function CreateNewTestPlan() {
 
 
   function openAssignModal(testCaseId: number) {
-    const exists = selectedTestCases.some((t) => t.test_case_id === testCaseId);
+    const exists = selectedTestCases.some((t) => t.test_case_id === testCaseId.toString());
 
     if (!exists) {
     toaster.create({
@@ -123,7 +123,7 @@ function CreateNewTestPlan() {
       return;
     }
 
-    setActiveTestCaseId(testCaseId);
+    setActiveTestCaseId(testCaseId.toString());
   }
 
   function validateTestCaseAssignments(
@@ -171,7 +171,7 @@ function CreateNewTestPlan() {
           <Button
             size="sm"
             variant="solid"
-            isDisabled={selectedTestCases.length === 0}
+            disabled={selectedTestCases.length === 0}
             onClick={() => setBulkAssignOpen(true)}
           >
             Bulk assign testers
@@ -188,18 +188,18 @@ function CreateNewTestPlan() {
             >
               <Flex justify="space-between" align="center">
                 <Checkbox.Root
-                  isChecked={selectedTestCases.some(
-                    (t) => t.test_case_id === testCase.id
+                  checked={selectedTestCases.some(
+                    (t) => t.test_case_id === testCase.id!.toString()
                   )}
                   onCheckedChange={(e) => {
                     if (e.checked) {
                       setSelectedTestCases((prev) => [
                         ...prev,
-                        { test_case_id: testCase.id!, user_ids: [] },
+                        { test_case_id: testCase.id!.toString(), user_ids: [] },
                       ]);
                     } else {
                       setSelectedTestCases((prev) =>
-                        prev.filter((t) => t.test_case_id !== testCase.id)
+                        prev.filter((t) => t.test_case_id !== testCase.id!.toString())
                       );
                     }
                   }}
@@ -211,20 +211,20 @@ function CreateNewTestPlan() {
                   </Checkbox.Label>
                 </Checkbox.Root>
 
-                <Button size="sm" onClick={() => openAssignModal(testCase.id!)}>
+                <Button size="sm" onClick={() => openAssignModal(Number(testCase.id!))}>
                   Assign testers
                 </Button>
               </Flex>
 
               {/* Assigned testers preview */}
-              {selectedTestCases.find((t) => t.test_case_id === testCase.id)
+              {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
                 ?.user_ids.length ? (
                 <Flex mt={2} gap={2} wrap="wrap">
                   {selectedTestCases
-                    .find((t) => t.test_case_id === testCase.id)!
+                    .find((t) => t.test_case_id === testCase.id!.toString())!
                     .user_ids.map((uid) => {
                       const tester = testers.find(
-                        (t) => t.user_id?.toString() === uid
+                        (t) => t.user_id?.toString() === uid.toString()
                       );
                       return (
                         <Box
@@ -261,12 +261,12 @@ function CreateNewTestPlan() {
               <Dialog.Header>Assign testers to test case</Dialog.Header>
               <Dialog.Body>
                 <CheckboxGroup
-                  value={activeTestCase?.user_ids ?? []}
+                  value={activeTestCase?.user_ids.map(String) ?? []}
                   onValueChange={(value) => {
                     setSelectedTestCases((prev) =>
                       prev.map((t) =>
                         t.test_case_id === activeTestCaseId
-                          ? { ...t, user_ids: value }
+                          ? { ...t, user_ids: value.map(Number) }
                           : t
                       )
                     );
@@ -356,13 +356,13 @@ function CreateNewTestPlan() {
                 </Button>
 
                 <Button
-                  isDisabled={bulkSelectedTesters.length === 0}
+                  disabled={bulkSelectedTesters.length === 0}
                   onClick={() => {
                     setSelectedTestCases((prev) =>
                       prev.map((tc) => ({
                         ...tc,
                         user_ids: Array.from(
-                          new Set([...tc.user_ids, ...bulkSelectedTesters])
+                          new Set([...tc.user_ids, ...bulkSelectedTesters.map(Number)])
                         ),
                       }))
                     );
