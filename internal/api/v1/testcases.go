@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -15,6 +16,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
+	"github.com/google/uuid"
 )
 
 // ListTestCases godoc
@@ -292,10 +294,14 @@ func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger loggin
 		if testCaseID == "" {
 			return problemdetail.BadRequest(c, "missing testCaseID")
 		}
-
-		err := testCaseService.MarkAsDraft(c.Context(), testCaseID)
+		_, err := uuid.Parse(testCaseID)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to mark test case as draft", "error", err)
+			return problemdetail.BadRequest(c, "invalid testCaseID")
+		}
+
+		err = testCaseService.MarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to mark test case as draft ", slog.String("testCaseID", testCaseID), "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to mark test case as draft")
 		}
 
@@ -324,10 +330,13 @@ func UnMarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logg
 		if testCaseID == "" {
 			return problemdetail.BadRequest(c, "missing testCaseID")
 		}
-
-		err := testCaseService.UnMarkAsDraft(c.Context(), testCaseID)
+		_, err := uuid.Parse(testCaseID)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to unmark test case as draft", "error", err)
+			return problemdetail.BadRequest(c, "invalid testCaseID")
+		}
+		err = testCaseService.UnMarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to unmark test case as draft", slog.String("testCaseID", testCaseID), "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to unmark test case as draft")
 		}
 
