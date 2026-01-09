@@ -3,7 +3,7 @@ SELECT * FROM users
 ORDER BY created_at DESC;
 
 -- name: SearchUsers :many
-SELECT * FROM users 
+SELECT * FROM users
 WHERE first_name ILIKE '%' || $1 || '%'
 OR last_name ILIKE '%' || $1 || '%'
 OR display_name ILIKE '%' || $1 || '%'
@@ -22,7 +22,7 @@ SELECT id, display_name, email, password, last_login_at FROM users WHERE email =
 UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_at IS NULL;
 
 -- name: UpdateUser :exec
-UPDATE users SET 
+UPDATE users SET
     first_name = $2, last_name = $3, display_name = $4, phone = $5,
     org_id = $6, country_iso = $7, city = $8, address = $9,
     is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
@@ -62,11 +62,11 @@ WHERE title ILIKE '%' || $1 || '%';
 SELECT * FROM projects WHERE id = $1;
 
 -- name: UpdateProject :execrows
-UPDATE projects SET 
+UPDATE projects SET
 title = $2, description = $3, website_url = $4,
-version = $5, github_url = $6, 
+version = $5, github_url = $6,
 owner_user_id = $7
-WHERE id = $1;  
+WHERE id = $1;
 
 -- name: DeleteProject :execrows
 DELETE FROM projects WHERE id = $1;
@@ -99,7 +99,7 @@ INNER JOIN test_runs tr ON tr.test_case_id = tc.id
 WHERE tr.test_plan_id = $1::bigint;
 
 -- name: GetTestCasesWithPlanInfo :many
-SELECT 
+SELECT
     tc.id AS test_case_id,
     tc.title,
     tc.project_id,
@@ -203,26 +203,12 @@ updated_at = $9
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
-SELECT * FROM test_cases 
+SELECT * FROM test_cases
 WHERE project_id = $1 AND code = $2;
 
--- name: IsTestCaseActive :one
-SELECT is_draft FROM test_cases WHERE id = $1;
-
--- name: ExecuteTestRun :exec
-UPDATE test_runs
-SET result_state = $2,
-tested_by_id = $3,
-notes = $4,
-actual_result = $5,
-expected_result = $6,
-tested_on = NOW(),
-updated_at = NOW()
-WHERE id = $1;
-
--- name: IsTestPlanActive :one
-SELECT closed_at, is_complete
-FROM test_plans
+-- name: SetTestCaseDraftStatus :exec
+UPDATE test_cases
+SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
 -- name: ListTestPlans :many
@@ -333,7 +319,7 @@ INSERT INTO test_run_results (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id; 
+RETURNING id;
 
 -- name: AssignTesterToProject :execrows
 INSERT INTO project_testers (
@@ -342,7 +328,7 @@ INSERT INTO project_testers (
     $1, $2, $3, $4, now(), now()
 );
 -- name: SearchProjectTesters :many
-SELECT 
+SELECT
 project_testers.*,
 u.display_name AS tester_name
 FROM project_testers
@@ -430,7 +416,7 @@ SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is
 SELECT COUNT(*) FROM test_cases;
 
 -- name: GetTestCasesWithTestersByPlan :many
-SELECT 
+SELECT
     tc.id AS test_case_id,
     tc.title,
     tr.test_plan_id,
@@ -454,3 +440,22 @@ SELECT id, title AS name, updated_at
 FROM projects
 ORDER BY updated_at DESC
 LIMIT 5;
+
+-- name: IsTestCaseActive :one
+SELECT is_draft FROM test_cases WHERE id = $1;
+
+-- name: ExecuteTestRun :exec
+UPDATE test_runs
+SET result_state = $2,
+tested_by_id = $3,
+notes = $4,
+actual_result = $5,
+expected_result = $6,
+tested_on = NOW(),
+updated_at = NOW()
+WHERE id = $1;
+
+-- name: IsTestPlanActive :one
+SELECT closed_at, is_complete
+FROM test_plans
+WHERE id = $1;

@@ -835,6 +835,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/mark-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a test case as draft
+         * @description Mark a test case as draft
+         */
+        post: operations["MarkTestCaseAsDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/{testCaseID}/unmark-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a test case as draft
+         * @description Mark a test case as draft
+         */
+        post: operations["UnMarkTestCaseAsDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/bulk": {
         parameters: {
             query?: never;
@@ -1123,6 +1163,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-runs/{testRunID}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute a Test Run
+         * @description Execute a Test Run
+         */
+        post: operations["ExecuteTestRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-runs/query": {
         parameters: {
             query?: never;
@@ -1315,67 +1375,11 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/test-cases/inbox": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List test cases assigned to the current user */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["schema.TestCaseListResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @enum {string} */
-        "dbsqlc.TestKind": "general" | "adhoc" | "triage" | "integration" | "user_acceptance" | "regression" | "security" | "user_interface" | "scenario";
-        /** @description State is the result of the test run */
+        "dbsqlc.TestKind": string;
         "dbsqlc.TestRunState": string;
         "problemdetail.ProblemDetail": {
             context?: unknown;
@@ -1389,35 +1393,35 @@ export interface components {
             test_plan_id: number;
         };
         "schema.AssignedTestCase": {
-            actualResult?: string;
-            assignedToID?: number;
-            assigneeCanChangeCode?: boolean;
+            actual_result?: string;
+            assigned_to_id?: number;
+            assignee_can_change_code?: boolean;
             code?: string;
-            createdAt?: string;
-            createdByID?: number;
+            created_at?: string;
+            created_by_id?: number;
             description?: string;
-            expectedResult?: string;
-            externalIssueID?: string;
-            featureOrModule?: string;
-            isClosed?: boolean;
-            isDraft?: boolean;
+            expected_result?: string;
+            external_issue_id?: string;
+            feature_or_module?: string;
+            id?: string;
+            is_closed?: boolean;
+            is_draft?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             notes?: string;
-            ownerID?: number;
-            parentTestCaseID?: number;
-            projectID?: number;
+            owner_id?: number;
+            parent_test_case_id?: number;
+            project_id?: number;
             reactions?: number[];
-            resultState?: components["schemas"]["dbsqlc.TestRunState"];
+            result_state?: components["schemas"]["dbsqlc.TestRunState"];
             tags?: string[];
-            testCaseCreatedAt?: string;
-            testCaseID?: string;
-            testCaseUpdatedAt?: string;
-            testPlanID?: number;
-            testRunID?: string;
-            testedByID?: number;
-            testedOn?: string;
+            test_case_created_at?: string;
+            test_case_updated_at?: string;
+            test_plan_id?: number;
+            test_run_id?: string;
+            tested_by_id?: number;
+            tested_on?: string;
             title?: string;
-            updatedAt?: string;
+            updated_at?: string;
         };
         "schema.AssignedTestCaseListResponse": {
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
@@ -1438,7 +1442,8 @@ export interface components {
             expected_result?: string;
             is_closed?: boolean;
             notes: string;
-            result_state: components["schemas"]["dbsqlc.TestRunState"];
+            /** @description State is the result of the test run */
+            result_state: string;
             test_run_id: string;
             tested_on: string;
         };
@@ -1489,6 +1494,13 @@ export interface components {
             test_case_count?: number;
             test_plan_count?: number;
             tester_count?: number;
+        };
+        "schema.ExecuteTestRunRequest": {
+            expected_result?: string;
+            id: string;
+            notes?: string;
+            result: string;
+            status: string;
         };
         "schema.HealthStatus": {
             message?: string;
@@ -1586,14 +1598,25 @@ export interface components {
             created_at?: string;
             created_by?: number;
             description?: string;
+            executed_by?: number;
             feature_or_module?: string;
             id?: string;
             is_draft?: boolean;
             kind?: string;
+            notes?: string;
             project_id?: number;
+            result?: string;
+            status?: string;
             tags?: string[];
             title?: string;
             updated_at?: string;
+        };
+        "schema.TestCaseResponseItem": {
+            assigned_tester_ids?: number[];
+            id?: string;
+            is_assigned_to_test_plan?: boolean;
+            test_plan?: components["schemas"]["schema.TestPlanSummary"];
+            title?: string;
         };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
@@ -1614,16 +1637,31 @@ export interface components {
             project_id?: number;
             scheduled_end_at?: string;
             start_at?: string;
+            test_cases?: components["schemas"]["schema.TestCaseResponseItem"][];
             updated_at?: string;
             updated_by_id?: number;
+        };
+        "schema.TestPlanSummary": {
+            id?: number;
+            name?: string;
         };
         "schema.TestRunListResponse": {
             test_runs?: components["schemas"]["schema.TestRunResponse"][];
         };
         "schema.TestRunResponse": {
+            actual_result?: string;
+            assigned_to_id?: number;
+            code?: string;
+            expected_result?: string;
             id?: string;
+            is_closed?: boolean;
+            notes?: string;
+            owner_id?: number;
             project_id?: number;
+            result_state?: string;
+            test_case_id?: string;
             test_plan_id?: number;
+            tested_by_id?: number;
         };
         "schema.Tester": {
             created_at?: string;
@@ -3024,6 +3062,96 @@ export interface operations {
             };
         };
     };
+    MarkTestCaseAsDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UnMarkTestCaseAsDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     BulkCreateTestCases: {
         parameters: {
             query?: never;
@@ -3890,6 +4018,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ExecuteTestRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run ID */
+                testRunID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Execution data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ExecuteTestRunRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestRunResponse"];
                 };
             };
             /** @description Bad Request */

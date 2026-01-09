@@ -23,7 +23,7 @@ function RouteComponent() {
       type: values.type,
       description: values.description || "",
       code: values.code,
-      priority: parseInt(values.priority),
+      priority: values.priority,
       ProjectID: parseInt(params.projectId),
     };
 

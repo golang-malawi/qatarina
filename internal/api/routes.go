@@ -91,6 +91,8 @@ func (api *API) routes() {
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/mark-draft", apiv1.MarkTestCaseAsDraft(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/unmark-draft", apiv1.UnMarkTestCaseAsDraft(api.TestCasesService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)

@@ -1004,7 +1004,7 @@ func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, erro
 }
 
 const getTestCaseByCode = `-- name: GetTestCaseByCode :one
-SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases 
+SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id FROM test_cases
 WHERE project_id = $1 AND code = $2
 `
 
@@ -1046,7 +1046,7 @@ func (q *Queries) GetTestCaseCount(ctx context.Context) (int64, error) {
 }
 
 const getTestCasesWithPlanInfo = `-- name: GetTestCasesWithPlanInfo :many
-SELECT 
+SELECT
     tc.id AS test_case_id,
     tc.title,
     tc.project_id,
@@ -1127,7 +1127,7 @@ func (q *Queries) GetTestCasesWithPlanInfo(ctx context.Context, testPlanID int32
 }
 
 const getTestCasesWithTestersByPlan = `-- name: GetTestCasesWithTestersByPlan :many
-SELECT 
+SELECT
     tc.id AS test_case_id,
     tc.title,
     tr.test_plan_id,
@@ -2338,7 +2338,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 }
 
 const searchProjectTesters = `-- name: SearchProjectTesters :many
-SELECT 
+SELECT
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
 u.display_name AS tester_name
 FROM project_testers
@@ -2433,7 +2433,7 @@ func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) 
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users 
+SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users
 WHERE first_name ILIKE '%' || $1 || '%'
 OR last_name ILIKE '%' || $1 || '%'
 OR display_name ILIKE '%' || $1 || '%'
@@ -2484,6 +2484,22 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 	return items, nil
 }
 
+const setTestCaseDraftStatus = `-- name: SetTestCaseDraftStatus :exec
+UPDATE test_cases
+SET is_draft = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type SetTestCaseDraftStatusParams struct {
+	ID      uuid.UUID
+	IsDraft sql.NullBool
+}
+
+func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDraftStatusParams) error {
+	_, err := q.db.ExecContext(ctx, setTestCaseDraftStatus, arg.ID, arg.IsDraft)
+	return err
+}
+
 const updatePage = `-- name: UpdatePage :exec
 UPDATE pages SET parent_page_id = $2, page_version = $3, org_id = $4, project_id = $5, code = $6, title = $7, file_path = $8, content = $9, page_type = $10, mime_type = $11, has_embedded_media = $12, external_content_url = $13, notion_url = $14, last_edited_by = $15, created_by = $16
 WHERE id = $1
@@ -2531,9 +2547,9 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 }
 
 const updateProject = `-- name: UpdateProject :execrows
-UPDATE projects SET 
+UPDATE projects SET
 title = $2, description = $3, website_url = $4,
-version = $5, github_url = $6, 
+version = $5, github_url = $6,
 owner_user_id = $7
 WHERE id = $1
 `
@@ -2683,7 +2699,7 @@ func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) 
 }
 
 const updateUser = `-- name: UpdateUser :exec
-UPDATE users SET 
+UPDATE users SET
     first_name = $2, last_name = $3, display_name = $4, phone = $5,
     org_id = $6, country_iso = $7, city = $8, address = $9,
     is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,

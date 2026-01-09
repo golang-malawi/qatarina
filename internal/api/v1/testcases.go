@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -15,6 +16,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
+	"github.com/google/uuid"
 )
 
 // ListTestCases godoc
@@ -269,6 +271,77 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 
 		return ctx.JSON(schema.AssignedTestCaseListResponse{
 			TestCases: testCases,
+		})
+	}
+}
+
+// MarkTestCaseAsDraft godoc
+//
+//	@ID				MarkTestCaseAsDraft
+//	@Summary		Mark a test case as draft
+//	@Description	Mark a test case as draft
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/mark-draft [post]
+func MarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID", "")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+		_, err := uuid.Parse(testCaseID)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid testCaseID")
+		}
+
+		err = testCaseService.MarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to mark test case as draft ", slog.String("testCaseID", testCaseID), "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to mark test case as draft")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test case marked as draft",
+		})
+	}
+}
+
+// UnMarkTestCaseAsDraft godoc
+//
+//	@ID				UnMarkTestCaseAsDraft
+//	@Summary		Mark a test case as draft
+//	@Description	Mark a test case as draft
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/unmark-draft [post]
+func UnMarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID", "")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+		_, err := uuid.Parse(testCaseID)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid testCaseID")
+		}
+		err = testCaseService.UnMarkAsDraft(c.Context(), testCaseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to unmark test case as draft", slog.String("testCaseID", testCaseID), "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to unmark test case as draft")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Test case unmarked as draft",
 		})
 	}
 }

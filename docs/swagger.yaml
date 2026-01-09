@@ -1,785 +1,852 @@
-definitions:
-  dbsqlc.TestKind:
-    enum:
-    - general
-    - adhoc
-    - triage
-    - integration
-    - user_acceptance
-    - regression
-    - security
-    - user_interface
-    - scenario
-    type: string
-    x-enum-varnames:
-    - TestKindGeneral
-    - TestKindAdhoc
-    - TestKindTriage
-    - TestKindIntegration
-    - TestKindUserAcceptance
-    - TestKindRegression
-    - TestKindSecurity
-    - TestKindUserInterface
-    - TestKindScenario
-  dbsqlc.TestRunState:
-    enum:
-    - pending
-    - passed
-    - failed
-    - blocked
-    type: string
-    x-enum-varnames:
-    - TestRunStatePending
-    - TestRunStatePassed
-    - TestRunStateFailed
-    - TestRunStateBlocked
-  problemdetail.ProblemDetail:
-    properties:
-      context: {}
-      detail:
-        type: string
-      title:
-        type: string
-      type:
-        type: string
-    type: object
-  schema.AssignTestsToPlanRequest:
-    properties:
-      planned_tests:
-        items:
-          $ref: '#/definitions/schema.TestCaseAssignment'
-        maxItems: 100
-        minItems: 1
-        type: array
-      project_id:
-        type: integer
-      test_plan_id:
-        type: integer
-    required:
-    - planned_tests
-    - project_id
-    - test_plan_id
-    type: object
-  schema.AssignedTestCase:
-    properties:
-      actual_result:
-        type: string
-      assigned_to_id:
-        type: integer
-      assignee_can_change_code:
-        type: boolean
-      code:
-        type: string
-      created_at:
-        type: string
-      created_by_id:
-        type: integer
-      description:
-        type: string
-      expected_result:
-        type: string
-      external_issue_id:
-        type: string
-      feature_or_module:
-        type: string
-      id:
-        type: string
-      is_closed:
-        type: boolean
-      is_draft:
-        type: boolean
-      kind:
-        $ref: '#/definitions/dbsqlc.TestKind'
-      notes:
-        type: string
-      owner_id:
-        type: integer
-      parent_test_case_id:
-        type: integer
-      project_id:
-        type: integer
-      reactions:
-        items:
+components:
+  schemas:
+    dbsqlc.TestKind:
+      type: string
+      x-enum-varnames:
+      - TestKindGeneral
+      - TestKindAdhoc
+      - TestKindTriage
+      - TestKindIntegration
+      - TestKindUserAcceptance
+      - TestKindRegression
+      - TestKindSecurity
+      - TestKindUserInterface
+      - TestKindScenario
+    dbsqlc.TestRunState:
+      type: string
+      x-enum-varnames:
+      - TestRunStatePending
+      - TestRunStatePassed
+      - TestRunStateFailed
+      - TestRunStateBlocked
+    problemdetail.ProblemDetail:
+      properties:
+        context: {}
+        detail:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+      type: object
+    schema.AssignTestsToPlanRequest:
+      properties:
+        planned_tests:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseAssignment'
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+        project_id:
           type: integer
-        type: array
-      result_state:
-        $ref: '#/definitions/dbsqlc.TestRunState'
-      tags:
-        items:
-          type: string
-        type: array
-      test_case_created_at:
-        type: string
-      test_case_updated_at:
-        type: string
-      test_plan_id:
-        type: integer
-      test_run_id:
-        type: string
-      tested_by_id:
-        type: integer
-      tested_on:
-        type: string
-      title:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  schema.AssignedTestCaseListResponse:
-    properties:
-      test_cases:
-        items:
-          $ref: '#/definitions/schema.AssignedTestCase'
-        type: array
-    type: object
-  schema.BulkAssignTesters:
-    properties:
-      project_id:
-        type: integer
-      testers:
-        items:
-          properties:
-            role:
-              type: string
-            user_id:
-              type: integer
-          type: object
-        type: array
-    type: object
-  schema.BulkCreateTestCases:
-    properties:
-      project_id:
-        type: integer
-      test_cases:
-        items:
-          $ref: '#/definitions/schema.CreateTestCaseRequest'
-        maxItems: 100
-        minItems: 1
-        type: array
-    required:
-    - project_id
-    - test_cases
-    type: object
-  schema.CommitTestRunResult:
-    properties:
-      actual_result:
-        type: string
-      expected_result:
-        type: string
-      is_closed:
-        type: boolean
-      notes:
-        type: string
-      result_state:
-        allOf:
-        - $ref: '#/definitions/dbsqlc.TestRunState'
-        description: State is the result of the test run
-      test_run_id:
-        type: string
-      tested_on:
-        type: string
-    required:
-    - actual_result
-    - notes
-    - result_state
-    - test_run_id
-    - tested_on
-    type: object
-  schema.CompactUserListResponse:
-    properties:
-      total:
-        type: integer
-      users:
-        items:
-          $ref: '#/definitions/schema.UserCompact'
-        type: array
-    type: object
-  schema.CreateProjectModuleRequest:
-    properties:
-      code:
-        type: string
-      description:
-        type: string
-      name:
-        type: string
-      priority:
-        type: integer
-      projectID:
-        type: integer
-      type:
-        type: string
-    required:
-    - code
-    - description
-    - name
-    - priority
-    - projectID
-    - type
-    type: object
-  schema.CreateTestCaseRequest:
-    properties:
-      code:
-        description: optional; auto-generated if blank
-        type: string
-      description:
-        type: string
-      feature_or_module:
-        type: string
-      is_draft:
-        type: boolean
-      kind:
-        type: string
-      project_id:
-        type: integer
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-    required:
-    - description
-    - feature_or_module
-    - kind
-    - tags
-    - title
-    type: object
-  schema.CreateTestPlan:
-    properties:
-      assigned_to_id:
-        type: integer
-      closed_at:
-        type: string
-      created_by_id:
-        type: integer
-      description:
-        type: string
-      kind:
-        type: string
-      planned_tests:
-        items:
-          $ref: '#/definitions/schema.TestCaseAssignment'
-        type: array
-      project_id:
-        type: integer
-      scheduled_end_at:
-        type: string
-      start_at:
-        type: string
-      updated_by_id:
-        type: integer
-    required:
-    - description
-    - kind
-    - project_id
-    - start_at
-    type: object
-  schema.DashboardProjectRecord:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  schema.DashboardSummaryResponse:
-    properties:
-      closed_to_open_ratio:
-        type: number
-      project_count:
-        type: integer
-      recent_projects:
-        items:
-          $ref: '#/definitions/schema.DashboardProjectRecord'
-        type: array
-      test_case_count:
-        type: integer
-      test_plan_count:
-        type: integer
-      tester_count:
-        type: integer
-    type: object
-  schema.HealthStatus:
-    properties:
-      message:
-        type: string
-      status:
-        type: string
-      uptime:
-        type: integer
-    type: object
-  schema.ImportFromGithubRequest:
-    properties:
-      github_token:
-        type: string
-      owner:
-        type: string
-      project_id:
-        type: integer
-      repository:
-        type: string
-    type: object
-  schema.ImportProjectRequest:
-    type: object
-  schema.LoginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  schema.LoginResponse:
-    properties:
-      displayName:
-        type: string
-      email:
-        type: string
-      expires_at:
-        type: integer
-      token:
-        type: string
-      user_id:
-        type: integer
-    type: object
-  schema.Metrics:
-    properties:
-      errorsTotal:
-        type: integer
-      requestsTotal:
-        type: integer
-      uptimeSeconds:
-        type: integer
-    type: object
-  schema.NewProjectRequest:
-    properties:
-      code:
-        maxLength: 10
-        minLength: 3
-        type: string
-      description:
-        type: string
-      github_url:
-        type: string
-      name:
-        type: string
-      parent_project_id:
-        type: integer
-      project_owner_id:
-        type: integer
-      version:
-        type: string
-      website_url:
-        type: string
-    required:
-    - code
-    - description
-    - name
-    - version
-    - website_url
-    type: object
-  schema.NewUserRequest:
-    properties:
-      display_name:
-        type: string
-      email:
-        type: string
-      first_name:
-        type: string
-      last_name:
-        type: string
-      organization_id:
-        type: integer
-      password:
-        type: string
-    required:
-    - display_name
-    - email
-    - first_name
-    - last_name
-    - password
-    type: object
-  schema.PageRequest:
-    type: object
-  schema.ProjectListResponse:
-    properties:
-      projects:
-        items:
-          $ref: '#/definitions/schema.ProjectResponse'
-        type: array
-    type: object
-  schema.ProjectResponse:
-    properties:
-      code:
-        type: string
-      created_at:
-        type: string
-      description:
-        type: string
-      github_url:
-        type: string
-      id:
-        type: integer
-      is_active:
-        type: boolean
-      is_public:
-        type: boolean
-      jira_url:
-        type: string
-      monday_url:
-        type: string
-      owner_user_id:
-        type: integer
-      title:
-        type: string
-      trello_url:
-        type: string
-      updated_at:
-        type: string
-      version:
-        type: string
-      website_url:
-        type: string
-    type: object
-  schema.RefreshTokenRequest:
-    type: object
-  schema.RefreshTokenResponse:
-    type: object
-  schema.SignUpRequest:
-    properties:
-      display_name:
-        type: string
-      email:
-        type: string
-      firstname:
-        type: string
-      lastname:
-        type: string
-      password:
-        type: string
-    required:
-    - display_name
-    - email
-    - firstname
-    - lastname
-    - password
-    type: object
-  schema.SystemInfo:
-    properties:
-      buildDate:
-        type: string
-      developedBy:
-        type: string
-      projectUrl:
-        type: string
-      sha:
-        type: string
-      title:
-        type: string
-      version:
-        type: string
-    type: object
-  schema.TestCaseAssignment:
-    properties:
-      test_case_id:
-        type: string
-      user_ids:
-        items:
+        test_plan_id:
           type: integer
-        type: array
-    type: object
-  schema.TestCaseListResponse:
-    properties:
-      test_cases:
-        items:
-          $ref: '#/definitions/schema.TestCaseResponse'
-        type: array
-    type: object
-  schema.TestCaseResponse:
-    properties:
-      code:
-        type: string
-      created_at:
-        type: string
-      created_by:
-        type: integer
-      description:
-        type: string
-      feature_or_module:
-        type: string
-      id:
-        type: string
-      is_draft:
-        type: boolean
-      kind:
-        type: string
-      project_id:
-        type: integer
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-      updated_at:
-        type: string
-    type: object
-  schema.TestPlanListResponse:
-    properties:
-      test_plans:
-        items:
-          $ref: '#/definitions/schema.TestPlanResponseItem'
-        type: array
-    type: object
-  schema.TestPlanResponseItem:
-    properties:
-      assigned_to_id:
-        type: integer
-      closed_at:
-        type: string
-      created_at:
-        type: string
-      created_by_id:
-        type: integer
-      description:
-        type: string
-      has_report:
-        type: boolean
-      id:
-        type: integer
-      is_complete:
-        type: boolean
-      is_locked:
-        type: boolean
-      kind:
-        type: string
-      num_failures:
-        type: integer
-      num_test_cases:
-        type: integer
-      project_id:
-        type: integer
-      scheduled_end_at:
-        type: string
-      start_at:
-        type: string
-      updated_at:
-        type: string
-      updated_by_id:
-        type: integer
-    type: object
-  schema.TestRunListResponse:
-    properties:
-      test_runs:
-        items:
-          $ref: '#/definitions/schema.TestRunResponse'
-        type: array
-    type: object
-  schema.TestRunResponse:
-    properties:
-      id:
-        type: string
-      project_id:
-        type: integer
-      test_plan_id:
-        type: integer
-    type: object
-  schema.Tester:
-    properties:
-      created_at:
-        type: string
-      last_login_at:
-        type: string
-      name:
-        type: string
-      project:
-        type: string
-      project_id:
-        type: integer
-      role:
-        type: string
-      updated_at:
-        type: string
-      user_id:
-        type: integer
-    type: object
-  schema.TesterListResponse:
-    properties:
-      testers:
-        items:
-          $ref: '#/definitions/schema.Tester'
-        type: array
-    type: object
-  schema.UpdatePageRequest:
-    type: object
-  schema.UpdateProjectModuleRequest:
-    properties:
-      code:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      priority:
-        type: integer
-      type:
-        type: string
-    required:
-    - code
-    - id
-    - name
-    - priority
-    - type
-    type: object
-  schema.UpdateProjectRequest:
-    properties:
-      code:
-        maxLength: 10
-        minLength: 3
-        type: string
-      description:
-        type: string
-      github_url:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      parent_project_id:
-        type: integer
-      project_owner_id:
-        type: integer
-      version:
-        type: string
-      website_url:
-        type: string
-    required:
-    - code
-    - description
-    - id
-    - name
-    - project_owner_id
-    - version
-    - website_url
-    type: object
-  schema.UpdateTestCaseRequest:
-    properties:
-      code:
-        type: string
-      description:
-        type: string
-      feature_or_module:
-        type: string
-      id:
-        type: string
-      is_draft:
-        type: boolean
-      kind:
-        type: string
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-    required:
-    - code
-    - description
-    - feature_or_module
-    - id
-    - is_draft
-    - kind
-    - tags
-    - title
-    type: object
-  schema.UpdateUserRequest:
-    properties:
-      address:
-        type: string
-      city:
-        type: string
-      country_iso:
-        type: string
-      display_name:
-        type: string
-      first_name:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      org_id:
-        type: integer
-      phone:
-        type: string
-    required:
-    - city
-    - display_name
-    - first_name
-    - last_name
-    - org_id
-    type: object
-  schema.UserCompact:
-    properties:
-      createdAt:
-        type: string
-      displayName:
-        type: string
-      id:
-        type: integer
-      username:
-        type: string
-    type: object
-  schema.TestRunRequest:
-    type: object
-    properties:
-      project_id:
-        type: integer
-      test_plan_id:
-        type: integer
-      test_case_id:
-        type: string
-      owner_id:
-        type: integer
-      tested_by_id:
-        type: integer
-    required:
+      required:
+      - planned_tests
       - project_id
       - test_plan_id
-      - test_case_id
-      - owner_id
-      - tested_by_id
+      type: object
+    schema.AssignedTestCase:
+      properties:
+        actual_result:
+          type: string
+        assigned_to_id:
+          type: integer
+        assignee_can_change_code:
+          type: boolean
+        code:
+          type: string
+        created_at:
+          type: string
+        created_by_id:
+          type: integer
+        description:
+          type: string
+        expected_result:
+          type: string
+        external_issue_id:
+          type: string
+        feature_or_module:
+          type: string
+        id:
+          type: string
+        is_closed:
+          type: boolean
+        is_draft:
+          type: boolean
+        kind:
+          $ref: '#/components/schemas/dbsqlc.TestKind'
+        notes:
+          type: string
+        owner_id:
+          type: integer
+        parent_test_case_id:
+          type: integer
+        project_id:
+          type: integer
+        reactions:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+        result_state:
+          $ref: '#/components/schemas/dbsqlc.TestRunState'
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        test_case_created_at:
+          type: string
+        test_case_updated_at:
+          type: string
+        test_plan_id:
+          type: integer
+        test_run_id:
+          type: string
+        tested_by_id:
+          type: integer
+        tested_on:
+          type: string
+        title:
+          type: string
+        updated_at:
+          type: string
+      type: object
+    schema.AssignedTestCaseListResponse:
+      properties:
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.AssignedTestCase'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.BulkAssignTesters:
+      properties:
+        project_id:
+          type: integer
+        testers:
+          items:
+            properties:
+              role:
+                type: string
+              user_id:
+                type: integer
+            type: object
+          type: array
+          uniqueItems: false
+      type: object
+    schema.BulkCreateTestCases:
+      properties:
+        project_id:
+          type: integer
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.CreateTestCaseRequest'
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - project_id
+      - test_cases
+      type: object
+    schema.CommitTestRunResult:
+      properties:
+        actual_result:
+          type: string
+        expected_result:
+          type: string
+        is_closed:
+          type: boolean
+        notes:
+          type: string
+        result_state:
+          description: State is the result of the test run
+          type: string
+          x-enum-varnames:
+          - TestRunStatePending
+          - TestRunStatePassed
+          - TestRunStateFailed
+          - TestRunStateBlocked
+        test_run_id:
+          type: string
+        tested_on:
+          type: string
+      required:
+      - actual_result
+      - notes
+      - result_state
+      - test_run_id
+      - tested_on
+      type: object
+    schema.CompactUserListResponse:
+      properties:
+        total:
+          type: integer
+        users:
+          items:
+            $ref: '#/components/schemas/schema.UserCompact'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.CreateProjectModuleRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+        priority:
+          type: integer
+        projectID:
+          type: integer
+        type:
+          type: string
+      required:
+      - code
+      - description
+      - name
+      - priority
+      - projectID
+      - type
+      type: object
+    schema.CreateTestCaseRequest:
+      properties:
+        code:
+          description: optional; auto-generated if blank
+          type: string
+        description:
+          type: string
+        feature_or_module:
+          type: string
+        is_draft:
+          type: boolean
+        kind:
+          type: string
+        project_id:
+          type: integer
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      required:
+      - description
+      - feature_or_module
+      - kind
+      - tags
+      - title
+      type: object
+    schema.CreateTestPlan:
+      properties:
+        assigned_to_id:
+          type: integer
+        closed_at:
+          type: string
+        created_by_id:
+          type: integer
+        description:
+          type: string
+        kind:
+          type: string
+        planned_tests:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseAssignment'
+          type: array
+          uniqueItems: false
+        project_id:
+          type: integer
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+        updated_by_id:
+          type: integer
+      required:
+      - description
+      - kind
+      - project_id
+      - start_at
+      type: object
+    schema.DashboardProjectRecord:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        updated_at:
+          type: string
+      type: object
+    schema.DashboardSummaryResponse:
+      properties:
+        closed_to_open_ratio:
+          type: number
+        project_count:
+          type: integer
+        recent_projects:
+          items:
+            $ref: '#/components/schemas/schema.DashboardProjectRecord'
+          type: array
+          uniqueItems: false
+        test_case_count:
+          type: integer
+        test_plan_count:
+          type: integer
+        tester_count:
+          type: integer
+      type: object
+    schema.ExecuteTestRunRequest:
+      properties:
+        expected_result:
+          type: string
+        id:
+          type: string
+        notes:
+          type: string
+        result:
+          type: string
+        status:
+          type: string
+      required:
+      - id
+      - result
+      - status
+      type: object
+    schema.HealthStatus:
+      properties:
+        message:
+          type: string
+        status:
+          type: string
+        uptime:
+          type: integer
+      type: object
+    schema.ImportFromGithubRequest:
+      properties:
+        github_token:
+          type: string
+        owner:
+          type: string
+        project_id:
+          type: integer
+        repository:
+          type: string
+      type: object
+    schema.ImportProjectRequest:
+      type: object
+    schema.LoginRequest:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+      - email
+      - password
+      type: object
+    schema.LoginResponse:
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+        expires_at:
+          type: integer
+        token:
+          type: string
+        user_id:
+          type: integer
+      type: object
+    schema.Metrics:
+      properties:
+        errorsTotal:
+          type: integer
+        requestsTotal:
+          type: integer
+        uptimeSeconds:
+          type: integer
+      type: object
+    schema.NewProjectRequest:
+      properties:
+        code:
+          maxLength: 10
+          minLength: 3
+          type: string
+        description:
+          type: string
+        github_url:
+          type: string
+        name:
+          type: string
+        parent_project_id:
+          type: integer
+        project_owner_id:
+          type: integer
+        version:
+          type: string
+        website_url:
+          type: string
+      required:
+      - code
+      - description
+      - name
+      - version
+      - website_url
+      type: object
+    schema.NewUserRequest:
+      properties:
+        display_name:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        organization_id:
+          type: integer
+        password:
+          type: string
+      required:
+      - display_name
+      - email
+      - first_name
+      - last_name
+      - password
+      type: object
+    schema.PageRequest:
+      type: object
+    schema.ProjectListResponse:
+      properties:
+        projects:
+          items:
+            $ref: '#/components/schemas/schema.ProjectResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.ProjectResponse:
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        description:
+          type: string
+        github_url:
+          type: string
+        id:
+          type: integer
+        is_active:
+          type: boolean
+        is_public:
+          type: boolean
+        jira_url:
+          type: string
+        monday_url:
+          type: string
+        owner_user_id:
+          type: integer
+        title:
+          type: string
+        trello_url:
+          type: string
+        updated_at:
+          type: string
+        version:
+          type: string
+        website_url:
+          type: string
+      type: object
+    schema.RefreshTokenRequest:
+      type: object
+    schema.RefreshTokenResponse:
+      type: object
+    schema.SignUpRequest:
+      properties:
+        display_name:
+          type: string
+        email:
+          type: string
+        firstname:
+          type: string
+        lastname:
+          type: string
+        password:
+          type: string
+      required:
+      - display_name
+      - email
+      - firstname
+      - lastname
+      - password
+      type: object
+    schema.SystemInfo:
+      properties:
+        buildDate:
+          type: string
+        developedBy:
+          type: string
+        projectUrl:
+          type: string
+        sha:
+          type: string
+        title:
+          type: string
+        version:
+          type: string
+      type: object
+    schema.TestCaseAssignment:
+      properties:
+        test_case_id:
+          type: string
+        user_ids:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestCaseListResponse:
+      properties:
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestCaseResponse:
+      properties:
+        code:
+          type: string
+        created_at:
+          type: string
+        created_by:
+          type: integer
+        description:
+          type: string
+        executed_by:
+          type: integer
+        feature_or_module:
+          type: string
+        id:
+          type: string
+        is_draft:
+          type: boolean
+        kind:
+          type: string
+        notes:
+          type: string
+        project_id:
+          type: integer
+        result:
+          type: string
+        status:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+        updated_at:
+          type: string
+      type: object
+    schema.TestCaseResponseItem:
+      properties:
+        assigned_tester_ids:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+        id:
+          type: string
+        is_assigned_to_test_plan:
+          type: boolean
+        test_plan:
+          $ref: '#/components/schemas/schema.TestPlanSummary'
+        title:
+          type: string
+      type: object
+    schema.TestPlanListResponse:
+      properties:
+        test_plans:
+          items:
+            $ref: '#/components/schemas/schema.TestPlanResponseItem'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestPlanResponseItem:
+      properties:
+        assigned_to_id:
+          type: integer
+        closed_at:
+          type: string
+        created_at:
+          type: string
+        created_by_id:
+          type: integer
+        description:
+          type: string
+        has_report:
+          type: boolean
+        id:
+          type: integer
+        is_complete:
+          type: boolean
+        is_locked:
+          type: boolean
+        kind:
+          type: string
+        num_failures:
+          type: integer
+        num_test_cases:
+          type: integer
+        project_id:
+          type: integer
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+        test_cases:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseResponseItem'
+          type: array
+          uniqueItems: false
+        updated_at:
+          type: string
+        updated_by_id:
+          type: integer
+      type: object
+    schema.TestPlanSummary:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      type: object
+    schema.TestRunListResponse:
+      properties:
+        test_runs:
+          items:
+            $ref: '#/components/schemas/schema.TestRunResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestRunResponse:
+      properties:
+        actual_result:
+          type: string
+        assigned_to_id:
+          type: integer
+        code:
+          type: string
+        expected_result:
+          type: string
+        id:
+          type: string
+        is_closed:
+          type: boolean
+        notes:
+          type: string
+        owner_id:
+          type: integer
+        project_id:
+          type: integer
+        result_state:
+          type: string
+        test_case_id:
+          type: string
+        test_plan_id:
+          type: integer
+        tested_by_id:
+          type: integer
+      type: object
+    schema.Tester:
+      properties:
+        created_at:
+          type: string
+        last_login_at:
+          type: string
+        name:
+          type: string
+        project:
+          type: string
+        project_id:
+          type: integer
+        role:
+          type: string
+        updated_at:
+          type: string
+        user_id:
+          type: integer
+      type: object
+    schema.TesterListResponse:
+      properties:
+        testers:
+          items:
+            $ref: '#/components/schemas/schema.Tester'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.UpdatePageRequest:
+      type: object
+    schema.UpdateProjectModuleRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        priority:
+          type: integer
+        type:
+          type: string
+      required:
+      - code
+      - id
+      - name
+      - priority
+      - type
+      type: object
+    schema.UpdateProjectRequest:
+      properties:
+        code:
+          maxLength: 10
+          minLength: 3
+          type: string
+        description:
+          type: string
+        github_url:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        parent_project_id:
+          type: integer
+        project_owner_id:
+          type: integer
+        version:
+          type: string
+        website_url:
+          type: string
+      required:
+      - code
+      - description
+      - id
+      - name
+      - project_owner_id
+      - version
+      - website_url
+      type: object
+    schema.UpdateTestCaseRequest:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        feature_or_module:
+          type: string
+        id:
+          type: string
+        is_draft:
+          type: boolean
+        kind:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      required:
+      - code
+      - description
+      - feature_or_module
+      - id
+      - is_draft
+      - kind
+      - tags
+      - title
+      type: object
+    schema.UpdateUserRequest:
+      properties:
+        address:
+          type: string
+        city:
+          type: string
+        country_iso:
+          type: string
+        display_name:
+          type: string
+        first_name:
+          type: string
+        id:
+          type: integer
+        last_name:
+          type: string
+        org_id:
+          type: integer
+        phone:
+          type: string
+      required:
+      - city
+      - display_name
+      - first_name
+      - last_name
+      - org_id
+      type: object
+    schema.UserCompact:
+      properties:
+        createdAt:
+          type: string
+        displayName:
+          type: string
+        id:
+          type: integer
+        username:
+          type: string
+      type: object
+externalDocs:
+  description: ""
+  url: ""
 info:
-  contact: {}
+  title: ""
+  version: ""
+openapi: 3.1.0
 paths:
   /healthz:
     get:
       description: Returns the health status of the system
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.HealthStatus'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.HealthStatus'
       summary: Health check endpoint
       tags:
       - system
   /metrics:
     get:
       description: Returns system metrics for monitoring
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.Metrics'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.Metrics'
       summary: System metrics endpoint
       tags:
       - system
@@ -787,211 +854,240 @@ paths:
     get:
       description: Returns general information about the system including version
         and build details
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.SystemInfo'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.SystemInfo'
       summary: System information
       tags:
       - system
   /v1/auth/login:
     post:
-      consumes:
-      - application/json
       description: Authenticates a user and returns access tokens
-      parameters:
-      - description: Login credentials
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.LoginRequest'
+        description: Login credentials
         required: true
-        schema:
-          $ref: '#/definitions/schema.LoginRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.LoginResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.LoginResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Invalid credentials or request body
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: User login
       tags:
       - auth
   /v1/auth/refresh-token:
     post:
-      consumes:
-      - application/json
       description: Refreshes an expired access token using a valid refresh token
-      parameters:
-      - description: Refresh token
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.RefreshTokenRequest'
+        description: Refresh token
         required: true
-        schema:
-          $ref: '#/definitions/schema.RefreshTokenRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.RefreshTokenResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.RefreshTokenResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Invalid token
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Refresh access token
       tags:
       - auth
   /v1/auth/signup:
     post:
-      consumes:
-      - application/json
       description: Registers a new user account
-      parameters:
-      - description: User registration details
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.SignUpRequest'
+        description: User registration details
         required: true
-        schema:
-          $ref: '#/definitions/schema.SignUpRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
           description: Returns success message and token
-          schema:
-            additionalProperties: true
-            type: object
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: User already exists or invalid request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: User signup
       tags:
       - auth
   /v1/dashboard/summary:
     get:
-      consumes:
-      - application/json
       description: Returns key metrics for dashboard
       operationId: DashboardSummary
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.DashboardSummaryResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.DashboardSummaryResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get dashboard summary
       tags:
       - dashboard
   /v1/me/test-cases/inbox:
     get:
-      consumes:
-      - application/json
       description: List Test Cases assigned to the current user
       operationId: ListAssignedTestCases
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AssignedTestCaseListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.AssignedTestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List Test Cases assigned to the current user
       tags:
       - test-cases
   /v1/modules:
     get:
-      consumes:
-      - application/json
       description: Get all Modules
       operationId: GetAllModules
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get all Modules
       tags:
       - modules
     post:
-      consumes:
-      - application/json
       description: Create a Module
       operationId: CreateModule
-      parameters:
-      - description: Module data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateProjectModuleRequest'
+        description: Module data
         required: true
-        schema:
-          $ref: '#/definitions/schema.CreateProjectModuleRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a Module
       tags:
       - modules
   /v1/modules/{moduleID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a Module
       operationId: DeleteModule
       parameters:
@@ -999,27 +1095,36 @@ paths:
         in: path
         name: moduleID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a Module
       tags:
       - modules
     get:
-      consumes:
-      - application/json
       description: Get one Module
       operationId: GetOneModule
       parameters:
@@ -1027,27 +1132,36 @@ paths:
         in: path
         name: moduleID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get one Module
       tags:
       - modules
     post:
-      consumes:
-      - application/json
       description: Update a Module
       operationId: UpdateModule
       parameters:
@@ -1055,86 +1169,102 @@ paths:
         in: path
         name: moduleID
         required: true
-        type: string
-      - description: id
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.UpdateProjectModuleRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateProjectModuleRequest'
+        description: id
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Module
       tags:
       - modules
   /v1/pages:
     get:
-      consumes:
-      - application/json
       description: Get all pages
       operationId: GetAllPages
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get all pages
       tags:
       - pages
     post:
-      consumes:
-      - application/json
       description: Create a page
       operationId: CreatePage
-      parameters:
-      - description: Page data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.PageRequest'
+        description: Page data
         required: true
-        schema:
-          $ref: '#/definitions/schema.PageRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a page
       tags:
       - pages
   /v1/pages/{pageID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a page
       operationId: DeletePage
       parameters:
@@ -1142,27 +1272,36 @@ paths:
         in: path
         name: pageID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a page
       tags:
       - pages
     get:
-      consumes:
-      - application/json
       description: Get one page
       operationId: GetOnePage
       parameters:
@@ -1170,27 +1309,36 @@ paths:
         in: path
         name: pageID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get one page
       tags:
       - pages
     post:
-      consumes:
-      - application/json
       description: Update a page
       operationId: UpdatePage
       parameters:
@@ -1198,88 +1346,102 @@ paths:
         in: path
         name: pageID
         required: true
-        type: string
-      - description: id
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.UpdatePageRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdatePageRequest'
+        description: id
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a page
       tags:
       - pages
   /v1/projects:
     get:
-      consumes:
-      - application/json
       description: List Projects available on the platform
       operationId: ListProject
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List Projects available on the platform
       tags:
       - projects
     post:
-      consumes:
-      - application/json
       description: Create a Project
       operationId: CreateProject
-      parameters:
-      - description: Project Creation data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.NewProjectRequest'
+        description: Project Creation data
         required: true
-        schema:
-          $ref: '#/definitions/schema.NewProjectRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a Project
       tags:
       - projects
   /v1/projects/{projectID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a Project
       operationId: DeleteProject
       parameters:
@@ -1287,30 +1449,38 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
           description: Success message
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a Project
       tags:
       - projects
     get:
-      consumes:
-      - application/json
       description: Get a single Project
       operationId: GetOneProject
       parameters:
@@ -1318,28 +1488,36 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a single Project
       tags:
       - projects
     post:
-      consumes:
-      - application/json
       description: Update a Project
       operationId: UpdateProject
       parameters:
@@ -1347,35 +1525,39 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      - description: Project Update data
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.UpdateProjectRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateProjectRequest'
+        description: Project Update data
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Project
       tags:
       - projects
   /v1/projects/{projectID}/modules:
     get:
-      consumes:
-      - application/json
       description: Get a Modules by project
       operationId: GetProjectModule
       parameters:
@@ -1383,28 +1565,37 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a Modules by project
       tags:
       - modules
   /v1/projects/{projectID}/test-cases:
     get:
-      consumes:
-      - application/json
       description: Get a single Project's test cases
       operationId: GetProjectTestCases
       parameters:
@@ -1412,29 +1603,37 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a single Project's test cases
       tags:
       - projects
   /v1/projects/{projectID}/test-plans:
     get:
-      consumes:
-      - application/json
       description: Get a single Project's test plans
       operationId: GetProjectTestPlans
       parameters:
@@ -1442,29 +1641,37 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestPlanListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestPlanListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a single Project's test plans
       tags:
       - projects
   /v1/projects/{projectID}/test-runs:
     get:
-      consumes:
-      - application/json
       description: Get a single Project's test runs
       operationId: GetProjectTestRuns
       parameters:
@@ -1472,29 +1679,37 @@ paths:
         in: path
         name: projectID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestRunListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestRunListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a single Project's test runs
       tags:
       - projects
   /v1/projects/{projectID}/testers:
     get:
-      consumes:
-      - application/json
       description: Get all Testers for a specific Project
       operationId: GetProjectTesters
       parameters:
@@ -1502,29 +1717,37 @@ paths:
         in: path
         name: projectID
         required: true
-        type: integer
-      produces:
-      - application/json
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TesterListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TesterListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get all Testers for a specific Project
       tags:
       - projects
   /v1/projects/{projectID}/testers/assign:
     post:
-      consumes:
-      - application/json
       description: Assign multiple testers to a project
       operationId: AssignTesters
       parameters:
@@ -1532,144 +1755,167 @@ paths:
         in: path
         name: projectID
         required: true
-        type: integer
-      - description: Bulk assign testers request
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.BulkAssignTesters'
-      produces:
-      - application/json
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.BulkAssignTesters'
+        description: Bulk assign testers request
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
           description: Success message
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Invalid request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Assign testers to a project
       tags:
       - projects
   /v1/projects/import:
     post:
-      consumes:
-      - application/json
       description: Import Projects from some source
       operationId: ImportProject
-      parameters:
-      - description: Import Specification
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ImportProjectRequest'
+        description: Import Specification
         required: true
-        schema:
-          $ref: '#/definitions/schema.ImportProjectRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Import Projects from some source
       tags:
       - projects
   /v1/projects/query:
     get:
-      consumes:
-      - application/json
       description: Search for a Project
       operationId: SearchProjects
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.ProjectListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search for a Project
       tags:
       - projects
   /v1/settings:
     get:
       description: Retrieves all system settings
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
         "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       security:
       - ApiKeyAuth: []
       summary: Get system settings
       tags:
       - settings
     put:
-      consumes:
-      - application/json
       description: Updates a specific system setting
-      parameters:
-      - description: Setting key and value
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: {}
+              type: object
+        description: Setting key and value
         required: true
-        schema:
-          additionalProperties: true
-          type: object
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Invalid request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       security:
       - ApiKeyAuth: []
       summary: Update system setting
@@ -1677,62 +1923,69 @@ paths:
       - settings
   /v1/test-cases:
     get:
-      consumes:
-      - application/json
       description: List Test Cases
       operationId: ListTestCases
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List Test Cases
       tags:
       - test-cases
     post:
-      consumes:
-      - application/json
       description: Create a new Test Case
       operationId: CreateTestCase
-      parameters:
-      - description: Create Test Case data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateTestCaseRequest'
+        description: Create Test Case data
         required: true
-        schema:
-          $ref: '#/definitions/schema.CreateTestCaseRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a new Test Case
       tags:
       - test-cases
   /v1/test-cases/{testCaseID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a test case
       operationId: DeleteTestCase
       parameters:
@@ -1740,30 +1993,38 @@ paths:
         in: path
         name: testCaseID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
           description: Success message
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a test case
       tags:
       - test-cases
     get:
-      consumes:
-      - application/json
       description: Get a single Test Case
       operationId: GetOneTestCase
       parameters:
@@ -1771,28 +2032,36 @@ paths:
         in: path
         name: testCaseID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a single Test Case
       tags:
       - test-cases
     post:
-      consumes:
-      - application/json
       description: Update a Test Case
       operationId: UpdateTestCase
       parameters:
@@ -1800,66 +2069,148 @@ paths:
         in: path
         name: testCaseID
         required: true
-        type: string
-      - description: Test Case update data
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.UpdateTestCaseRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateTestCaseRequest'
+        description: Test Case update data
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/mark-draft:
+    post:
+      description: Mark a test case as draft
+      operationId: MarkTestCaseAsDraft
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Mark a test case as draft
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/unmark-draft:
+    post:
+      description: Mark a test case as draft
+      operationId: UnMarkTestCaseAsDraft
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Mark a test case as draft
       tags:
       - test-cases
   /v1/test-cases/bulk:
     post:
-      consumes:
-      - application/json
       description: Create multiple Test Cases at once
       operationId: BulkCreateTestCases
-      parameters:
-      - description: Bulk Create Test Case data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.BulkCreateTestCases'
+        description: Bulk Create Test Case data
         required: true
-        schema:
-          $ref: '#/definitions/schema.BulkCreateTestCases'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create multiple Test Cases at once
       tags:
       - test-cases
   /v1/test-cases/import-file:
     post:
-      consumes:
-      - multipart/form-data
       description: Import test cases from Excel or CSV file
       operationId: ImportTestCasesFromFile
       parameters:
@@ -1867,141 +2218,167 @@ paths:
         in: path
         name: formData
         required: true
-        type: string
-      - description: Excel or CSV file
-        in: body
-        name: request
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+        description: Excel or CSV file
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Import test cases from Excel or CSV file
       tags:
       - test-cases
   /v1/test-cases/import/github:
     post:
-      consumes:
-      - application/json
       description: Imports open issues from a GitHub repository as test cases for
         a project
       operationId: ImportIssuesFromGitHubAsTestCases
-      parameters:
-      - description: GitHub import request
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ImportFromGithubRequest'
+        description: GitHub import request
         required: true
-        schema:
-          $ref: '#/definitions/schema.ImportFromGithubRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: List of imported test cases
-          schema:
-            $ref: '#/definitions/schema.TestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Invalid request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Import GitHub issues as test cases
       tags:
       - test-cases
   /v1/test-cases/query:
     get:
-      consumes:
-      - application/json
       description: Search for Test Cases
       operationId: SearchTestCases
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TestCaseListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search for Test Cases
       tags:
       - test-cases
   /v1/test-plans:
     get:
-      consumes:
-      - application/json
       description: List all Test Plans
       operationId: ListTestPlans
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List all Test Plans
       tags:
       - test-plans
     post:
-      consumes:
-      - application/json
       description: Create a new Test Plan
       operationId: CreateTestPlan
-      parameters:
-      - description: Create Test plan data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateTestPlan'
+        description: Create Test plan data
         required: true
-        schema:
-          $ref: '#/definitions/schema.CreateTestPlan'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a new Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a Test Plan
       operationId: DeleteTestPlan
       parameters:
@@ -2009,27 +2386,36 @@ paths:
         in: path
         name: testPlanID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a Test Plan
       tags:
       - test-plans
     get:
-      consumes:
-      - application/json
       description: Get one Test Plan
       operationId: GetOneTestPlan
       parameters:
@@ -2037,27 +2423,36 @@ paths:
         in: path
         name: testPlanID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get one Test Plan
       tags:
       - test-plans
     post:
-      consumes:
-      - application/json
       description: Update a Test Plan
       operationId: UpdateTestPlan
       parameters:
@@ -2065,33 +2460,39 @@ paths:
         in: path
         name: testPlanID
         required: true
-        type: string
-      - description: Test Plan data
-        in: body
-        name: request
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+        description: Test Plan data
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/close:
     post:
-      consumes:
-      - application/json
       description: Close a Test Plan
       operationId: CloseTestPlan
       parameters:
@@ -2099,28 +2500,37 @@ paths:
         in: path
         name: testPlanID
         required: true
-        type: integer
-      produces:
-      - application/json
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Close a Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/test-cases:
     get:
-      consumes:
-      - application/json
       description: List all tests of a test plan
       operationId: GetTestPlanTestCases
       parameters:
@@ -2128,28 +2538,37 @@ paths:
         in: path
         name: testplanID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List all tests of a test plan
       tags:
       - test-cases
       - test-runs
     post:
-      consumes:
-      - application/json
       description: Assign a test to a plan
       operationId: AssignTestsToPlan
       parameters:
@@ -2157,34 +2576,39 @@ paths:
         in: path
         name: testPlanID
         required: true
-        type: string
-      - description: testPlanID
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.AssignTestsToPlanRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.AssignTestsToPlanRequest'
+        description: testPlanID
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Assign a test to a plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/test-runs:
     get:
-      consumes:
-      - application/json
       description: List all test cases of a test plan
       operationId: GetTestPlanTestRuns
       parameters:
@@ -2192,28 +2616,37 @@ paths:
         in: path
         name: testplanID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List all test cases of a test plan
       tags:
       - test-plans
   /v1/test-plans/query:
     get:
-      consumes:
-      - application/json
       description: Search test plans
       operationId: SearchTestPlans
       parameters:
@@ -2221,79 +2654,100 @@ paths:
         in: path
         name: query
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search test plans
       tags:
       - test-plans
   /v1/test-runs:
     get:
-      consumes:
-      - application/json
       description: List Test Runs
       operationId: ListTestRuns
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List Test Runs
       tags:
       - test-runs
     post:
-      consumes:
-      - application/json
       description: Create a new Test Run
       operationId: CreateTestRun
-      parameters:
-      - description: Test Run data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+        description: Test Run data
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a new Test Run
       tags:
       - test-runs
   /v1/test-runs/{testRunID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a Test Run
       operationId: DeleteTestRun
       parameters:
@@ -2301,27 +2755,36 @@ paths:
         in: path
         name: testRunID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a Test Run
       tags:
       - test-runs
     get:
-      consumes:
-      - application/json
       description: Get one Test Run
       operationId: GetOneTestRun
       parameters:
@@ -2329,27 +2792,36 @@ paths:
         in: path
         name: testRunID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get one Test Run
       tags:
       - test-runs
     post:
-      consumes:
-      - application/json
       description: Update a Test Run
       operationId: UpdateTestRun
       parameters:
@@ -2357,33 +2829,39 @@ paths:
         in: path
         name: testRunID
         required: true
-        type: string
-      - description: Test Run update data
-        in: body
-        name: request
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+        description: Test Run update data
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a Test Run
       tags:
       - test-runs
   /v1/test-runs/{testRunID}/commit:
     post:
-      consumes:
-      - application/json
       description: Mark a Test Run as committed
       operationId: CommitTestRun
       parameters:
@@ -2391,104 +2869,172 @@ paths:
         in: path
         name: testRunID
         required: true
-        type: string
-      - description: Test Run update data
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.CommitTestRunResult'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CommitTestRunResult'
+        description: Test Run update data
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Mark a Test Run as committed
+      tags:
+      - test-runs
+  /v1/test-runs/{testRunID}/execute:
+    post:
+      description: Execute a Test Run
+      operationId: ExecuteTestRun
+      parameters:
+      - description: Test Run ID
+        in: path
+        name: testRunID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ExecuteTestRunRequest'
+        description: Execution data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestRunResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Execute a Test Run
       tags:
       - test-runs
   /v1/test-runs/query:
     get:
-      consumes:
-      - application/json
       description: Search for Test Runs
       operationId: SearchTestRuns
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search for Test Runs
       tags:
       - test-runs
   /v1/testers:
     get:
-      consumes:
-      - application/json
       description: List all Testers
       operationId: ListTesters
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TesterListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.TesterListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List all Testers
       tags:
       - testers
   /v1/testers.query:
     get:
-      consumes:
-      - application/json
       description: Search all Testers
       operationId: SearchTesters
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search all Testers
       tags:
       - testers
   /v1/testers/{testerID}:
     get:
-      consumes:
-      - application/json
       description: Get a Tester by ID
       operationId: GetOneTester
       parameters:
@@ -2496,28 +3042,37 @@ paths:
         in: path
         name: testerID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get a Tester by ID
       tags:
       - testers
   /v1/testers/invite/{email}:
     post:
-      consumes:
-      - application/json
       description: Invite a tester by Email
       operationId: InviteTester
       parameters:
@@ -2525,86 +3080,102 @@ paths:
         in: path
         name: email
         required: true
-        type: string
-      - description: Invite data
-        in: body
-        name: request
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+        description: Invite data
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Invite a tester by Email
       tags:
       - testers
   /v1/users:
     get:
-      consumes:
-      - application/json
       description: List all Users
       operationId: ListUsers
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.CompactUserListResponse'
           description: OK
-          schema:
-            $ref: '#/definitions/schema.CompactUserListResponse'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: List all Users
       tags:
       - users
     post:
-      consumes:
-      - application/json
       description: Create a new User
       operationId: CreateUser
-      parameters:
-      - description: User data
-        in: body
-        name: request
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.NewUserRequest'
+        description: User data
         required: true
-        schema:
-          $ref: '#/definitions/schema.NewUserRequest'
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Create a new User
       tags:
       - users
   /v1/users/{userID}:
     delete:
-      consumes:
-      - application/json
       description: Delete a user
       operationId: DeleteUser
       parameters:
@@ -2612,27 +3183,36 @@ paths:
         in: path
         name: userID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Delete a user
       tags:
       - users
     get:
-      consumes:
-      - application/json
       description: Get one User
       operationId: GetOneUser
       parameters:
@@ -2640,27 +3220,36 @@ paths:
         in: path
         name: userID
         required: true
-        type: string
-      produces:
-      - application/json
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Get one User
       tags:
       - users
     post:
-      consumes:
-      - application/json
       description: Update a User
       operationId: UpdateUser
       parameters:
@@ -2668,34 +3257,39 @@ paths:
         in: path
         name: userID
         required: true
-        type: string
-      - description: User ID
-        in: body
-        name: request
-        required: true
         schema:
-          $ref: '#/definitions/schema.UpdateUserRequest'
-      produces:
-      - application/json
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateUserRequest'
+        description: User ID
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Update a User
       tags:
       - users
   /v1/users/invite/{email}:
     post:
-      consumes:
-      - application/json
       description: Invite a User by email
       operationId: InviteUser
       parameters:
@@ -2703,115 +3297,65 @@ paths:
         in: path
         name: email
         required: true
-        type: string
-      - description: User invite data
-        in: body
-        name: request
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+        description: User invite data
         required: true
-        schema: {}
-      produces:
-      - application/json
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Invite a User by email
       tags:
       - users
   /v1/users/query:
     get:
-      consumes:
-      - application/json
       description: Search all Users
       operationId: SearchUsers
-      produces:
-      - application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                type: object
           description: OK
-          schema: {}
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
         "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-          schema:
-            $ref: '#/definitions/problemdetail.ProblemDetail'
       summary: Search all Users
       tags:
       - users
-/v1/test-runs:
-  post:
-    summary: Create a new Test Run
-    operationId: CreateTestRun
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TestRunRequest'
-    responses:
-      "200":
-        description: OK
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TestRunResponse'
-      "400":
-        description: Bad Request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-      "500":
-        description: Internal Server Error
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-
-/v1/test-runs/{testRunID}/commit:
-  post:
-    summary: Commit a Test Run result
-    operationId: CommitTestRun
-    parameters:
-      - name: testRunID
-        in: path
-        required: true
-        schema:
-          type: string
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/CommitTestRunResult'
-    responses:
-      "200":
-        description: OK
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TestRunResponse'
-      "400":
-        description: Bad Request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-      "500":
-        description: Internal Server Error
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProblemDetail'
-swagger: "2.0"

@@ -23,12 +23,13 @@ import {
   IconTable,
 } from "@tabler/icons-react";
 import { useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import TestersAvatarGroup from "@/components/TestersAvatarGroup";
 import { importTestCasesFromFile } from "@/services/TestCaseService";
+import { markTestCaseAsDraft } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/"
@@ -42,6 +43,16 @@ export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+  const markDraftMutation = useMutation({
+    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
+    onSuccess: () => {
+      toaster.create({title: "Success", description: "Marked as draft", type: "success"});
+      queryClient.invalidateQueries({queryKey: testCasesByProjectIdQueryOptions(projectId)}.queryKey);
+    },
+    onError: () => {
+      toaster.create({title: "Error", description: "Failed to mark as draft", type: "error"});
+    },
+  });
   const { data: testCases } = useSuspenseQuery(
     testCasesByProjectIdQueryOptions(projectId)
   );
@@ -98,12 +109,17 @@ export default function ListProjectTestCases() {
             </Menu.Trigger>
             <Menu.Content zIndex={100} position="absolute">
               <Menu.Item value="view">
-                <Link to={`/projects/${projectId}/test-cases/${tc.id}`}>
+                <Link
+                  to={"/projects/$projectId/test-cases/$testCaseId"}
+                  params={{ projectId: projectId, testCaseId: tc.id }}
+                >
                   View
                 </Link>
               </Menu.Item>
               <Menu.Item value="create-copy">Create a Copy</Menu.Item>
-              <Menu.Item value="mark-draft">Mark as Draft</Menu.Item>
+              <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate}>
+                Mark as Draft
+                </Menu.Item>
               <Menu.Item value="use">Use in Test Session</Menu.Item>
               <Menu.Item color="red" value="delete">
                 Delete
