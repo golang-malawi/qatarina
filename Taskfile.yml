@@ -35,7 +35,7 @@ tasks:
   generate:
     cmds:
       - sqlc generate
-      - swag init --v3.1
+      - swag2 init --v3.1
       - cd ui && npm run gen:api
 
   dev-ui:
