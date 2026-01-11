@@ -58,10 +58,10 @@ function TestCasePageInbox() {
     {usage_count: number; success_count: number; failure_count: number}
   >();
   (summary ?? []).forEach((s) => {
-    summaryMap.set(s.test_case_id, {
-      usage_count: s.usage_count,
-      success_count: s.success_count,
-      failure_count: s.failure_count,
+    summaryMap.set(s.test_case_id ?? "", {
+      usage_count: s.usage_count ?? 0,
+      success_count: s.success_count ?? 0,
+      failure_count: s.failure_count ?? 0,
     });
   });
 
