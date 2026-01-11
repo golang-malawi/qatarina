@@ -1045,6 +1045,53 @@ func (q *Queries) GetTestCaseCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getTestCaseExecutionSummary = `-- name: GetTestCaseExecutionSummary :many
+SELECT
+    tr.test_case_id,
+    COUNT(*) AS usage_count,
+    SUM(CASE WHEN trr.status = 'passed' THEN 1 ELSE 0 END) AS success_count,
+    SUM(CASE WHEN trr.status = 'failed' THEN 1 ELSE 0 END) AS failure_count
+FROM test_run_results trr
+INNER JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.executed_by = $1
+GROUP BY tr.test_case_id
+`
+
+type GetTestCaseExecutionSummaryRow struct {
+	TestCaseID   uuid.UUID
+	UsageCount   int64
+	SuccessCount int64
+	FailureCount int64
+}
+
+func (q *Queries) GetTestCaseExecutionSummary(ctx context.Context, executedBy int32) ([]GetTestCaseExecutionSummaryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTestCaseExecutionSummary, executedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestCaseExecutionSummaryRow
+	for rows.Next() {
+		var i GetTestCaseExecutionSummaryRow
+		if err := rows.Scan(
+			&i.TestCaseID,
+			&i.UsageCount,
+			&i.SuccessCount,
+			&i.FailureCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTestCasesWithPlanInfo = `-- name: GetTestCasesWithPlanInfo :many
 SELECT
     tc.id AS test_case_id,

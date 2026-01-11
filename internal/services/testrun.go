@@ -53,6 +53,7 @@ func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) 
 // Create implements TestRunService
 func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
+		ID:           uuid.New(),
 		ProjectID:    request.ProjectID,
 		TestPlanID:   request.TestPlanID,
 		TestCaseID:   uuid.MustParse(request.TestCaseID),

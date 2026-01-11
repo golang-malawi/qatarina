@@ -6,10 +6,18 @@ import {
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
+import { _includes } from "zod/v4/core";
 
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type AssignedTestCaseListResponse = components["schemas"]["schema.AssignedTestCaseListResponse"];
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+
+export type TestCaseSummary = {
+  test_case_id: string;
+  usage_count: number;
+  success_count: number
+  failure_count: number;
+}
 
 export const findTestCaseAllQueryOptions = queryOptions({
   queryKey: ["testCases"],
@@ -41,3 +49,10 @@ export const testCasesByProjectIdQueryOptions = (projectID: string) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
     params: { path: { projectID } },
   });
+
+  export const findTestCaseSummaryQueryOptions = $api.queryOptions(
+  "get",
+  "/v1/me/test-cases/summary",
+  {}
+);
+  

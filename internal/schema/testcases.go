@@ -126,3 +126,10 @@ type AssignedTestCase struct {
 	CreatedAt             time.Time           `json:"created_at"`
 	UpdatedAt             time.Time           `json:"updated_at"`
 }
+
+type TestCaseExecutionSummary struct {
+	TestCaseID   string `json:"test_case_id"`
+	UsageCount   int    `json:"usage_count"`
+	SuccessCount int    `json:"success_count"`
+	FailureCount int    `json:"failure_count"`
+}
