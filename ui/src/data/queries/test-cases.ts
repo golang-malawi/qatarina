@@ -5,7 +5,8 @@ import {
   getInboxTestCases,
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
-import { components } from "@/lib/api/v1";
+import { components} from "@/lib/api/v1";
+import { _includes } from "zod/v4/core";
 
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type AssignedTestCaseListResponse = components["schemas"]["schema.AssignedTestCaseListResponse"];
@@ -41,3 +42,9 @@ export const testCasesByProjectIdQueryOptions = (projectID: string) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
     params: { path: { projectID } },
   });
+
+export const findTestCaseSummaryQueryOptions = $api.queryOptions(
+  "get",
+  "/v1/me/test-cases/summary",
+  {}
+);

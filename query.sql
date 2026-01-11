@@ -459,3 +459,14 @@ WHERE id = $1;
 SELECT closed_at, is_complete
 FROM test_plans
 WHERE id = $1;
+
+-- name: GetTestCaseExecutionSummary :many
+SELECT
+    tr.test_case_id,
+    COUNT(*) AS usage_count,
+    SUM(CASE WHEN trr.status = 'passed' THEN 1 ELSE 0 END) AS success_count,
+    SUM(CASE WHEN trr.status = 'failed' THEN 1 ELSE 0 END) AS failure_count
+FROM test_run_results trr
+INNER JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.executed_by = $1
+GROUP BY tr.test_case_id;

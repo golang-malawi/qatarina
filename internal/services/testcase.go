@@ -61,6 +61,8 @@ type TestCaseService interface {
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
 	UnMarkAsDraft(ctx context.Context, testCaseID string) error
+	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
+	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -448,4 +450,22 @@ func (t *testCaseServiceImpl) UnMarkAsDraft(ctx context.Context, testCaseID stri
 	}
 
 	return nil
+}
+
+func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error) {
+	rows, err := t.queries.GetTestCaseExecutionSummary(ctx, int32(userID))
+	if err != nil {
+		return nil, err
+	}
+
+	summaries := make([]schema.TestCaseExecutionSummary, 0, len(rows))
+	for _, r := range rows {
+		summaries = append(summaries, schema.TestCaseExecutionSummary{
+			TestCaseID:   r.TestCaseID.String(),
+			UsageCount:   int(r.UsageCount),
+			SuccessCount: int(r.SuccessCount),
+			FailureCount: int(r.FailureCount),
+		})
+	}
+	return summaries, nil
 }

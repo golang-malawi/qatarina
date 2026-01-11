@@ -349,6 +349,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get execution summary for assigned test cases
+         * @description Get execution summary for assigned test cases
+         */
+        get: operations["GetExecutionSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/modules": {
         parameters: {
             query?: never;
@@ -1590,6 +1610,12 @@ export interface components {
             test_case_id?: string;
             user_ids?: number[];
         };
+        "schema.TestCaseExecutionSummary": {
+            failure_count?: number;
+            success_count?: number;
+            test_case_id?: string;
+            usage_count?: number;
+        };
         "schema.TestCaseListResponse": {
             test_cases?: components["schemas"]["schema.TestCaseResponse"][];
         };
@@ -1794,6 +1820,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.AssignedTestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetExecutionSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseExecutionSummary"][];
                 };
             };
             /** @description Bad Request */

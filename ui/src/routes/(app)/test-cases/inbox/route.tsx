@@ -1,4 +1,7 @@
-import { findTestCaseInboxQueryOptions } from "@/data/queries/test-cases";
+import { 
+  findTestCaseInboxQueryOptions,
+  findTestCaseSummaryQueryOptions, 
+} from "@/data/queries/test-cases";
 import { components } from "@/lib/api/v1";
 import {
   Box,
@@ -14,19 +17,27 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox")({
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData(findTestCaseInboxQueryOptions),
+  loader: ({ context: { queryClient } }) =>{
+    queryClient.ensureQueryData(findTestCaseInboxQueryOptions);
+    queryClient.ensureQueryData(findTestCaseSummaryQueryOptions);
+  },
   component: TestCasePageInbox,
 });
 
 function TestCasePageInbox() {
   const {
     data: testCases,
-    isPending,
-    error,
+    isPending: isPendingInbox,
+    error: errorInbox,
   } = useSuspenseQuery(findTestCaseInboxQueryOptions);
 
-  if (isPending) {
+  const {
+    data: summary,
+    isPending: isPendingSummary,
+    error: errorSummary,
+  } = useSuspenseQuery(findTestCaseSummaryQueryOptions);
+
+  if (isPendingInbox || isPendingSummary) {
     return (
       <Flex justify="center" align="center" minH="80vh">
         <Spinner size="xl" color="teal.500" />
@@ -34,7 +45,7 @@ function TestCasePageInbox() {
     );
   }
 
-  if (error) {
+  if (errorInbox || errorSummary) {
     return (
       <Box p={6} textAlign="center" color="red.500">
         Error fetching test cases.
@@ -42,8 +53,28 @@ function TestCasePageInbox() {
     );
   }
 
+  const summaryMap = new Map<
+    string,
+    {usage_count: number; success_count: number; failure_count: number}
+  >();
+  (summary ?? []).forEach((s) => {
+    summaryMap.set(s.test_case_id ?? "", {
+      usage_count: s.usage_count ?? 0,
+      success_count: s.success_count ?? 0,
+      failure_count: s.failure_count ?? 0,
+    });
+  });
+
   const testCaseRows = (testCases?.test_cases ?? []).map(
-    (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => (
+    (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => {
+      const counts = 
+      summaryMap.get(tc.id ?? "") ?? {
+        usage_count: 0,
+        success_count: 0,
+        failure_count: 0,
+      };
+
+      return (
       <Box
         key={idx}
         p={4}
@@ -68,14 +99,15 @@ function TestCasePageInbox() {
           </Text>
           <Stack direction="row" mt={2} gap={2}>
             <Badge color="blue.700">
-              {/*tc.usageCount*/ 0} tests performed
+              {counts.usage_count} tests performed
             </Badge>
-            <Badge color="green">Success: 0</Badge>
-            <Badge color="red">Failed: 0</Badge>
+            <Badge color="green">Success: {counts.success_count}</Badge>
+            <Badge color="red">Failed: {counts.failure_count}</Badge>
           </Stack>
         </Link>
       </Box>
-    )
+      );
+    }
   );
 
   return (

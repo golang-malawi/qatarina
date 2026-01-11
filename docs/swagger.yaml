@@ -510,6 +510,17 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.TestCaseExecutionSummary:
+      properties:
+        failure_count:
+          type: integer
+        success_count:
+          type: integer
+        test_case_id:
+          type: string
+        usage_count:
+          type: integer
+      type: object
     schema.TestCaseListResponse:
       properties:
         test_cases:
@@ -1021,6 +1032,39 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: List Test Cases assigned to the current user
+      tags:
+      - test-cases
+  /v1/me/test-cases/summary:
+    get:
+      description: Get execution summary for assigned test cases
+      operationId: GetExecutionSummary
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/schema.TestCaseExecutionSummary'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get execution summary for assigned test cases
       tags:
       - test-cases
   /v1/modules:

@@ -345,3 +345,29 @@ func UnMarkTestCaseAsDraft(testCaseService services.TestCaseService, logger logg
 		})
 	}
 }
+
+// GetExecutionSummary godoc
+//
+//	@ID				GetExecutionSummary
+//	@Summary		Get execution summary for assigned test cases
+//	@Description	Get execution summary for assigned test cases
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{array}	schema.TestCaseExecutionSummary
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/me/test-cases/summary [get]
+func GetExecutionSummary(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userID := authutil.GetAuthUserID(c)
+
+		summaries, err := testCasesService.GetExecutionSummaryByUser(c.Context(), userID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch execution summary", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch execution summary")
+		}
+
+		return c.JSON(summaries)
+	}
+}
