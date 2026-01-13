@@ -307,7 +307,7 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 //	@Tags			test-cases, test-runs
 //	@Accept			json
 //	@Produce		json
-//	@Param			testplanID	path		string	true	"Test Plan ID"
+//	@Param			testPlanID	path		int	true	"Test Plan ID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
