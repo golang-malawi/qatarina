@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -22,6 +23,7 @@ import {
 import { toaster } from "@/components/ui/toaster";
 
 // type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
+import { findTestRunsByProjectQueryOptions } from "@/data/queries/test-runs";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
@@ -37,34 +39,62 @@ function TestCaseInboxItem() {
     findTestCaseByIdQueryOptions(testCaseId)
   );
 
-  //const runId = testCase?.testRunID
+  const tc = testCase;
+  const isDraft = tc.is_draft;
+
+  const {data: testRuns = []} = useSuspenseQuery(
+    tc.project_id
+    ? findTestRunsByProjectQueryOptions(tc.project_id)
+    : {queryKey: ["test-runs", "none"], queryFn: async () => []}
+  );
+  
+  const testRun = testRuns?.find(
+    (run) =>
+      run.test_case_id === tc.id &&
+      run.result_state == "pending"
+  );
+
+  const [resultText, setResultText] = useState("");
+  const [notesText, setNotesText] = useState("");
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-      const userId = testCase?.assigned_to_id;
+      const testRunId = testRun?.id;
+      const expectedResult = tc.description;
 
-      if (!userId) {
-        throw new Error("No user ID found to attribute this execution to.");
+      if (!testRunId || !expectedResult || !resultText) {
+        throw new Error("Missing required test case data.");
       }
 
-      return executeTestCase(testCaseId, {
+      return executeTestCase(testRunId, {
+        id: testRunId,
         status,
-        result:
-          status === "passed"
-            ? "Behavior matched expectation"
-            : "Behaviour did not match expectation",
-        // TODO
-        executed_by: String(userId),
-        notes:
-          status === "passed"
-            ? "Test passed successfully"
-            : "Test failed during execution",
+        result: resultText,
+        notes: notesText,
+        expected_result: expectedResult,
+      });
+    },
+    onSuccess: () => {
+      toaster.create({
+        title: "Success",
+        description: "Test result recorded",
+        type: "success",
+      });
+      setResultText("")
+      setNotesText("");
+
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey,
+      });
+    },
+    onError: () => {
+      toaster.create({
+        title: "Error",
+        description: "Failed to record test result",
+        type: "error",
       });
     },
   });
-
-  const tc = testCase;
-  const isDraft = tc.is_draft;
 
   const toggleDraftMutation = useMutation({
     mutationFn: async () => {
@@ -149,13 +179,24 @@ function TestCaseInboxItem() {
 
       <Container p="4" border="1px solid #f3f3f3">
         <Heading size="lg">Record a Test Result on this test case</Heading>
-        <Textarea placeholder="Record a Test Result on this test case" />
+        <Textarea
+          placeholder="Observed behaviour (result)"
+          value={resultText}
+          onChange={(e) => setResultText(e.target.value)}
+          mb="2" 
+        />
+        <Textarea placeholder="Notes about the testing process"
+        value={notesText}
+        onChange={(e) => setNotesText(e.target.value)} mb="4"/>
         <Button
           type="button"
           variant="outline"
           colorScheme="blue"
-          onClick={() => executeMutation.mutate({ status: "passed" })}
-          disabled={tc.is_draft}
+          onClick={() => {
+            executeMutation.mutate({ status: "passed" });
+          }}
+          disabled={tc.is_draft || !testRun}
+          loading={executeMutation.isPending}
         >
           Record Successful Test
         </Button>
@@ -166,7 +207,7 @@ function TestCaseInboxItem() {
           colorScheme="red"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
-          disabled={tc.is_draft}
+          disabled={tc.is_draft || !testRun}
         >
           Record Failed Test
         </Button>
@@ -175,29 +216,32 @@ function TestCaseInboxItem() {
   );
 }
 async function executeTestCase(
-  testCaseId: string,
+  testRunId: string,
   {
+    id,
     status,
     result,
-    executed_by,
     notes,
+    expected_result,
   }: {
+    id: string;
     status: "passed" | "failed";
     result: string;
-    executed_by: string;
     notes: string;
+    expected_result: string;
   }
 ): Promise<void> {
-  const response = await fetch(`/api/test-cases/${testCaseId}/execute`, {
+  const response = await fetch(`/v1/test-runs/${testRunId}/execute`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      id,
       status,
       result,
-      executed_by,
       notes,
+      expected_result,
     }),
   });
 
