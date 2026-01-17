@@ -10,6 +10,7 @@ type Tester struct {
 	UserID      int64  `json:"user_id"`
 	ProjectID   int64  `json:"project_id"`
 	Name        string `json:"name"`
+	Email       string `json:"email"`
 	Project     string `json:"project"`
 	Role        string `json:"role"`
 	LastLoginAt string `json:"last_login_at"`

@@ -1440,6 +1440,7 @@ SELECT
 project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
 p.title as project,
 u.display_name as tester_name,
+u.email as tester_email,
 u.last_login_at as tester_last_login_at
 FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
@@ -1457,6 +1458,7 @@ type GetTestersByProjectRow struct {
 	UpdatedAt         sql.NullTime
 	Project           string
 	TesterName        sql.NullString
+	TesterEmail       string
 	TesterLastLoginAt sql.NullTime
 }
 
@@ -1479,6 +1481,7 @@ func (q *Queries) GetTestersByProject(ctx context.Context, projectID int32) ([]G
 			&i.UpdatedAt,
 			&i.Project,
 			&i.TesterName,
+			&i.TesterEmail,
 			&i.TesterLastLoginAt,
 		); err != nil {
 			return nil, err

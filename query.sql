@@ -354,6 +354,7 @@ SELECT
 project_testers.*,
 p.title as project,
 u.display_name as tester_name,
+u.email as tester_email,
 u.last_login_at as tester_last_login_at
 FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id

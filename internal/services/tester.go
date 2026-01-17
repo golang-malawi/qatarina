@@ -90,6 +90,7 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 			UserID:      int64(tester.UserID),
 			ProjectID:   int64(tester.ProjectID),
 			Name:        tester.TesterName.String,
+			Email:       tester.TesterEmail,
 			Project:     tester.Project,
 			Role:        tester.Role,
 			LastLoginAt: tester.TesterLastLoginAt.Time.Format(time.DateTime),
