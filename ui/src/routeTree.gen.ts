@@ -40,6 +40,7 @@ import { Route as projectProjectsProjectIdInsightsIndexRouteImport } from './rou
 import { Route as projectProjectsProjectIdFeaturesIndexRouteImport } from './routes/(project)/projects/$projectId/Features/index'
 import { Route as appTestersViewTesterIdIndexRouteImport } from './routes/(app)/testers/view/$testerId/index'
 import { Route as appTestCasesInboxTestCaseIdIndexRouteImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
+import { Route as projectProjectsProjectIdTestersNewRouteImport } from './routes/(project)/projects/$projectId/testers/new'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID'
 import { Route as projectProjectsProjectIdFeaturesEditFeatureModuleFormRouteImport } from './routes/(project)/projects/$projectId/Features/EditFeatureModuleForm'
 import { Route as projectProjectsProjectIdFeaturesCreateFeatureModuleFormRouteImport } from './routes/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
@@ -216,6 +217,12 @@ const appTestCasesInboxTestCaseIdIndexRoute =
     path: '/$testCaseId/',
     getParentRoute: () => appTestCasesInboxRouteRoute,
   } as any)
+const projectProjectsProjectIdTestersNewRoute =
+  projectProjectsProjectIdTestersNewRouteImport.update({
+    id: '/testers/new',
+    path: '/testers/new',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
 const projectProjectsProjectIdTestPlansTestPlanIDRoute =
   projectProjectsProjectIdTestPlansTestPlanIDRouteImport.update({
     id: '/test-plans/$testPlanID',
@@ -302,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -343,6 +351,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -387,6 +396,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   '/(project)/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/(project)/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  '/(project)/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/Features/CreateFeatureModuleForm'
     | '/projects/$projectId/Features/EditFeatureModuleForm'
     | '/projects/$projectId/test-plans/$testPlanID'
+    | '/projects/$projectId/testers/new'
     | '/test-cases/inbox/$testCaseId'
     | '/testers/view/$testerId'
     | '/projects/$projectId/Features'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/Features/CreateFeatureModuleForm'
     | '/projects/$projectId/Features/EditFeatureModuleForm'
     | '/projects/$projectId/test-plans/$testPlanID'
+    | '/projects/$projectId/testers/new'
     | '/test-cases/inbox/$testCaseId'
     | '/testers/view/$testerId'
     | '/projects/$projectId/Features'
@@ -515,6 +527,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
     | '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
     | '/(project)/projects/$projectId/test-plans/$testPlanID'
+    | '/(project)/projects/$projectId/testers/new'
     | '/(app)/test-cases/inbox/$testCaseId/'
     | '/(app)/testers/view/$testerId/'
     | '/(project)/projects/$projectId/Features/'
@@ -760,6 +773,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexRouteImport
       parentRoute: typeof appTestCasesInboxRouteRoute
     }
+    '/(project)/projects/$projectId/testers/new': {
+      id: '/(project)/projects/$projectId/testers/new'
+      path: '/testers/new'
+      fullPath: '/projects/$projectId/testers/new'
+      preLoaderRoute: typeof projectProjectsProjectIdTestersNewRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
     '/(project)/projects/$projectId/test-plans/$testPlanID': {
       id: '/(project)/projects/$projectId/test-plans/$testPlanID'
       path: '/test-plans/$testPlanID'
@@ -921,6 +941,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   projectProjectsProjectIdTestPlansTestPlanIDRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
+  projectProjectsProjectIdTestersNewRoute: typeof projectProjectsProjectIdTestersNewRoute
   projectProjectsProjectIdFeaturesIndexRoute: typeof projectProjectsProjectIdFeaturesIndexRoute
   projectProjectsProjectIdInsightsIndexRoute: typeof projectProjectsProjectIdInsightsIndexRoute
   projectProjectsProjectIdReportsIndexRoute: typeof projectProjectsProjectIdReportsIndexRoute
@@ -942,6 +963,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute,
     projectProjectsProjectIdTestPlansTestPlanIDRoute:
       projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren,
+    projectProjectsProjectIdTestersNewRoute:
+      projectProjectsProjectIdTestersNewRoute,
     projectProjectsProjectIdFeaturesIndexRoute:
       projectProjectsProjectIdFeaturesIndexRoute,
     projectProjectsProjectIdInsightsIndexRoute:

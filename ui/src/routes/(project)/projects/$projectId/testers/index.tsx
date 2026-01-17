@@ -9,7 +9,7 @@ import {
   Text,
   IconButton,
 } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LuPencil, LuTrash } from "react-icons/lu";
 import {useProjectTestersQuery} from "@/services/TesterService";
 
@@ -29,6 +29,7 @@ type Tester = {
 function ProjectTestersPage() {
   const {projectId} = Route.useParams();
   const projectID = Number(projectId)
+  const navigate = useNavigate();
 
   const {data, isPending, isError, error} = useProjectTestersQuery(projectID);
 
@@ -72,7 +73,16 @@ function ProjectTestersPage() {
       {/* Header */}
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">Project Testers</Heading>
-        <Button colorScheme="teal">+ Add New Tester</Button>
+        <Button colorScheme="teal"
+        onClick={() =>
+          navigate({
+            to: "/projects/$projectId/testers/new",
+            params: {projectId},
+          })
+        }
+      >
+        + Add New Tester
+        </Button>
       </Flex>
 
       {/* Total Testers */}
