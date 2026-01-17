@@ -10,8 +10,8 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { LuPencil, LuTrash } from "react-icons/lu";
+import {useProjectTestersQuery} from "@/services/TesterService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/testers/"
@@ -27,51 +27,44 @@ type Tester = {
 };
 
 function ProjectTestersPage() {
-  const [testers, setTesters] = useState<Tester[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {projectId} = Route.useParams();
+  const projectID = Number(projectId)
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setTesters([
-          {
-            id: "1",
-            name: "Alice Johnson",
-            email: "alice@example.com",
-            role: "Lead Tester",
-          },
-          {
-            id: "2",
-            name: "Bob Smith",
-            email: "bob@example.com",
-            role: "QA Engineer",
-          },
-          {
-            id: "3",
-            name: "Charlie Brown",
-            email: "charlie@example.com",
-            role: "Junior Tester",
-          },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load testers.");
-        setLoading(false);
-      }
-    }, 1000);
+  const {data, isPending, isError, error} = useProjectTestersQuery(projectID);
 
-    return () => clearTimeout(timeout);
-  }, []);
+  if (isPending) {
+    return(
+      <Flex justify="center" py={10}>
+        <Spinner size="lg" />
+      </Flex>
+    );
+  }
+
+  if (isError) {
+    return(
+      <Text color="red.500">
+        Failed to load testers: {error?.detail ?? error?.title ?? "Unknown error"}
+      </Text>
+    ); 
+  }
+
+  const testers: Tester[] =
+    data?.testers?.map((t: any) => ({
+      id: String(t.user_id),
+      name: t.name,
+      email: t.email ?? "N/A",
+      role: t.role,
+    })) ?? [];
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    setTesters((prev) => prev.filter((t) => t.id !== id));
+    // TODO: call backend delete endpoint here
+    console.log("Delete tester", id);
   };
 
   const handleEdit = (id: string) => {
     console.log("Edit tester", id);
+    // TODO: navigate to edit form
   };
 
   return (
@@ -88,13 +81,6 @@ function ProjectTestersPage() {
       </Text>
 
       {/* Tester Table */}
-      {loading ? (
-        <Flex justify="center" py={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
-      ) : (
         <Stack gap="6">
           <Table.Root size="md">
             <Table.Header>
@@ -136,7 +122,6 @@ function ProjectTestersPage() {
             </Table.Body>
           </Table.Root>
         </Stack>
-      )}
     </Box>
   );
 }

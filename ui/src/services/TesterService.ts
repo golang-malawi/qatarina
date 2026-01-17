@@ -20,3 +20,9 @@ export async function getTesterById(testerID: string) {
     params: { path: { testerID } },
   });
 }
+
+export function useProjectTestersQuery(projectID: number) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/testers", {
+    params: {path: {projectID}},
+  });
+}
