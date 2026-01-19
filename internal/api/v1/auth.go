@@ -6,6 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -85,5 +87,39 @@ func Signup(authService services.AuthService) fiber.Handler {
 			"message": "Sign up process completed successfully",
 			"token":   token,
 		})
+	}
+}
+
+// Change password godoc
+//
+//	@ID				Change password
+//	@Summary		Allows autheticated user to change their password
+//	@Description	Allows autheticated user to change their password
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.ChangePasswordRequest	true	"Password change request"
+//	@Success		200			{object}	map[string]string "Password changed successfully"
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/auth/change-password [post]
+func ChangePassword(authService services.AuthService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		var req schema.ChangePasswordRequest
+		_, err := common.ParseBodyThenValidate(ctx, &req)
+		if err != nil {
+			return problemdetail.ValidationErrors(ctx, "invalid request body", err)
+		}
+
+		err = authService.ChangePassword(ctx.Context(), &req)
+		if err != nil {
+			if errors.Is(err, services.ErrInvalidCredentials) {
+				return problemdetail.BadRequest(ctx, "invalid old password")
+			}
+			logger.Error(loggedmodule.ApiAuth, "failed to change password", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to change password")
+		}
+
+		return ctx.JSON(fiber.Map{"message": "Password changed successfully"})
 	}
 }
