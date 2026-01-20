@@ -343,11 +343,12 @@ SELECT
 pt.*,
 p.title as project,
 u.display_name as tester_name,
+u.email as tester_email,
 u.last_login_at as tester_last_login_at
 FROM project_testers pt
 INNER JOIN users u ON u.id = pt.user_id
 INNER JOIN projects p ON p.id = pt.project_id
-WHERE pt.id = $1;
+WHERE pt.user_id = $1;
 
 -- name: GetAllProjectTesters :many
 SELECT

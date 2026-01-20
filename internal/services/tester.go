@@ -119,9 +119,10 @@ func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tes
 	}
 
 	tester := &schema.Tester{
-		UserID:      int64(dbTester.ID),
+		UserID:      int64(dbTester.UserID),
 		ProjectID:   int64(dbTester.ProjectID),
 		Name:        dbTester.TesterName.String,
+		Email:       dbTester.TesterEmail,
 		Project:     dbTester.Project,
 		Role:        dbTester.Role,
 		LastLoginAt: dbTester.TesterLastLoginAt.Time.String(),

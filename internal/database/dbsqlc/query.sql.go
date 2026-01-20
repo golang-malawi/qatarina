@@ -1437,11 +1437,12 @@ SELECT
 pt.id, pt.project_id, pt.user_id, pt.role, pt.is_active, pt.created_at, pt.updated_at,
 p.title as project,
 u.display_name as tester_name,
+u.email as tester_email,
 u.last_login_at as tester_last_login_at
 FROM project_testers pt
 INNER JOIN users u ON u.id = pt.user_id
 INNER JOIN projects p ON p.id = pt.project_id
-WHERE pt.id = $1
+WHERE pt.user_id = $1
 `
 
 type GetTesterByIDRow struct {
@@ -1454,11 +1455,12 @@ type GetTesterByIDRow struct {
 	UpdatedAt         sql.NullTime
 	Project           string
 	TesterName        sql.NullString
+	TesterEmail       string
 	TesterLastLoginAt sql.NullTime
 }
 
-func (q *Queries) GetTesterByID(ctx context.Context, id int32) (GetTesterByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getTesterByID, id)
+func (q *Queries) GetTesterByID(ctx context.Context, userID int32) (GetTesterByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTesterByID, userID)
 	var i GetTesterByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -1470,6 +1472,7 @@ func (q *Queries) GetTesterByID(ctx context.Context, id int32) (GetTesterByIDRow
 		&i.UpdatedAt,
 		&i.Project,
 		&i.TesterName,
+		&i.TesterEmail,
 		&i.TesterLastLoginAt,
 	)
 	return i, err
