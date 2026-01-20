@@ -126,6 +126,8 @@ func ChangePassword(authService services.AuthService, logger logging.Logger) fib
 			return problemdetail.ServerErrorProblem(ctx, "failed to change password")
 		}
 
+		logger.Info(loggedmodule.ApiAuth, "user changed password successfully", "user_id", authUserID)
+
 		return ctx.JSON(fiber.Map{"message": "Password changed successfully"})
 	}
 }
