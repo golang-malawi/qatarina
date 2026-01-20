@@ -777,6 +777,68 @@ func (q *Queries) GetAllPages(ctx context.Context) ([]Page, error) {
 	return items, nil
 }
 
+const getAllProjectTesters = `-- name: GetAllProjectTesters :many
+SELECT
+    pt.id, pt.project_id, pt.user_id, pt.role, pt.is_active, pt.created_at, pt.updated_at,
+    p.title AS project,
+    u.display_name AS tester_name,
+    u.email AS tester_email,
+    u.last_login_at AS tester_last_login_at
+FROM project_testers pt
+INNER JOIN users u ON u.id = pt.user_id
+INNER JOIN projects p ON p.id = pt.project_id
+ORDER BY pt.created_at DESC
+`
+
+type GetAllProjectTestersRow struct {
+	ID                int32
+	ProjectID         int32
+	UserID            int32
+	Role              string
+	IsActive          bool
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	Project           string
+	TesterName        sql.NullString
+	TesterEmail       string
+	TesterLastLoginAt sql.NullTime
+}
+
+func (q *Queries) GetAllProjectTesters(ctx context.Context) ([]GetAllProjectTestersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllProjectTesters)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllProjectTestersRow
+	for rows.Next() {
+		var i GetAllProjectTestersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UserID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Project,
+			&i.TesterName,
+			&i.TesterEmail,
+			&i.TesterLastLoginAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
@@ -1370,6 +1432,49 @@ func (q *Queries) GetTestRunStatesForPlan(ctx context.Context, testPlanID int32)
 	return items, nil
 }
 
+const getTesterByID = `-- name: GetTesterByID :one
+SELECT
+pt.id, pt.project_id, pt.user_id, pt.role, pt.is_active, pt.created_at, pt.updated_at,
+p.title as project,
+u.display_name as tester_name,
+u.last_login_at as tester_last_login_at
+FROM project_testers pt
+INNER JOIN users u ON u.id = pt.user_id
+INNER JOIN projects p ON p.id = pt.project_id
+WHERE pt.id = $1
+`
+
+type GetTesterByIDRow struct {
+	ID                int32
+	ProjectID         int32
+	UserID            int32
+	Role              string
+	IsActive          bool
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	Project           string
+	TesterName        sql.NullString
+	TesterLastLoginAt sql.NullTime
+}
+
+func (q *Queries) GetTesterByID(ctx context.Context, id int32) (GetTesterByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getTesterByID, id)
+	var i GetTesterByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Project,
+		&i.TesterName,
+		&i.TesterLastLoginAt,
+	)
+	return i, err
+}
+
 const getTesterCount = `-- name: GetTesterCount :one
 SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE is_active = true
 `
@@ -1390,49 +1495,6 @@ func (q *Queries) GetTesterCountByProject(ctx context.Context, projectID int32) 
 	var count int64
 	err := row.Scan(&count)
 	return count, err
-}
-
-const getTestersByID = `-- name: GetTestersByID :one
-SELECT
-project_testers.id, project_testers.project_id, project_testers.user_id, project_testers.role, project_testers.is_active, project_testers.created_at, project_testers.updated_at,
-p.title as project,
-u.display_name as tester_name,
-u.last_login_at as tester_last_login_at
-FROM project_testers
-INNER JOIN users u ON u.id = project_testers.user_id
-INNER JOIN projects p ON p.id = project_testers.project_id
-WHERE project_id = $1
-`
-
-type GetTestersByIDRow struct {
-	ID                int32
-	ProjectID         int32
-	UserID            int32
-	Role              string
-	IsActive          bool
-	CreatedAt         sql.NullTime
-	UpdatedAt         sql.NullTime
-	Project           string
-	TesterName        sql.NullString
-	TesterLastLoginAt sql.NullTime
-}
-
-func (q *Queries) GetTestersByID(ctx context.Context, projectID int32) (GetTestersByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getTestersByID, projectID)
-	var i GetTestersByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.ProjectID,
-		&i.UserID,
-		&i.Role,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Project,
-		&i.TesterName,
-		&i.TesterLastLoginAt,
-	)
-	return i, err
 }
 
 const getTestersByProject = `-- name: GetTestersByProject :many

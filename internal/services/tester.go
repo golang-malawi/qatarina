@@ -34,13 +34,23 @@ func NewTesterService(db *dbsqlc.Queries, logger logging.Logger) TesterService {
 }
 
 func (s *testerServiceImpl) FindAll(ctx context.Context) ([]schema.Tester, error) {
-	users, err := s.queries.ListUsers(ctx)
+	projectTesters, err := s.queries.GetAllProjectTesters(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch project testers: %w", err)
 	}
-	testers := make([]schema.Tester, 0)
-	for _, user := range users {
-		testers = append(testers, schema.NewTesterFromUser(&user))
+	testers := make([]schema.Tester, 0, len(projectTesters))
+	for _, tester := range projectTesters {
+		testers = append(testers, schema.Tester{
+			UserID:      int64(tester.UserID),
+			ProjectID:   int64(tester.ProjectID),
+			Name:        tester.TesterName.String,
+			Email:       tester.TesterEmail,
+			Project:     tester.Project,
+			Role:        tester.Role,
+			LastLoginAt: tester.TesterLastLoginAt.Time.Format(time.DateTime),
+			CreatedAt:   tester.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:   tester.UpdatedAt.Time.Format(time.DateTime),
+		})
 	}
 	return testers, nil
 }
@@ -102,7 +112,7 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 }
 
 func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tester, error) {
-	dbTester, err := t.queries.GetTestersByID(ctx, id)
+	dbTester, err := t.queries.GetTesterByID(ctx, id)
 	if err != nil {
 		t.logger.Error("failed to find the project tester", "error", err)
 		return nil, err
