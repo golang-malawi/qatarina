@@ -160,7 +160,7 @@ func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.Ch
 		UpdatedAt: common.NewNullTime(time.Now()),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update passowrd: %w", err)
+		return fmt.Errorf("failed to update password: %w", err)
 	}
 
 	return nil
