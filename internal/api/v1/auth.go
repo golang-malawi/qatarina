@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
@@ -109,6 +110,11 @@ func ChangePassword(authService services.AuthService, logger logging.Logger) fib
 		_, err := common.ParseBodyThenValidate(ctx, &req)
 		if err != nil {
 			return problemdetail.ValidationErrors(ctx, "invalid request body", err)
+		}
+
+		authUserID := authutil.GetAuthUserID(ctx)
+		if authUserID != req.UserID {
+			return problemdetail.BadRequest(ctx, "you can only change your own password")
 		}
 
 		err = authService.ChangePassword(ctx.Context(), &req)
