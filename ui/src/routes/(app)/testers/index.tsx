@@ -29,9 +29,10 @@ function ListTesters() {
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg">Testers</Heading>
+        {/* We have to think about this since adding a tester requires a project id which at this level we dont have
         <Link to="/testers/invite">
           <Button colorScheme="teal">+ Add New Tester</Button>
-        </Link>
+        </Link> */}
       </Flex>
 
       {isPending ? (
