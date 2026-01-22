@@ -15,11 +15,13 @@ export const Route = createFileRoute("/(app)/projects/")({
 function ProjectsPage() {
   const queryClient = useQueryClient();
 
+  const projectsQueryOptions = $api.queryOptions("get", "/v1/projects");
+
   const {
     data: { projects },
     isPending,
     error,
-  } = useSuspenseQuery($api.queryOptions("get", "/v1/projects"));
+  } = useSuspenseQuery(projectsQueryOptions);
 
   const deleteMutation = $api.useMutation("delete", "/v1/projects/{projectID}");
 
@@ -42,7 +44,14 @@ function ProjectsPage() {
               description: `Project "${title}" deleted successfully`,
               type: "success",
             });
-            queryClient.invalidateQueries({queryKey: ["projects"]});
+            queryClient.setQueryData(projectsQueryOptions.queryKey, (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                projects: oldData.projects.filter((p: any) => p.id !== projectID),
+              };
+            });
+            queryClient.invalidateQueries({queryKey: projectsQueryOptions.queryKey});
           },
           onError: (error: any) => {
             toaster.create({
