@@ -388,6 +388,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 	res := make([]schema.AssignedTestCase, 0)
 	for _, row := range rows {
 		res = append(res, schema.AssignedTestCase{
+			ID:                    row.TestCaseID.String(),
 			Kind:                  row.Kind,
 			Code:                  row.Code,
 			FeatureOrModule:       row.FeatureOrModule.String,
@@ -397,10 +398,10 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			IsDraft:               row.IsDraft.Bool,
 			Tags:                  row.Tags,
 			CreatedByID:           row.CreatedByID,
-			TestCaseCreatedAt:     row.CreatedAt.Time,
-			TestCaseUpdatedAt:     row.UpdatedAt.Time,
+			TestCaseCreatedAt:     row.TestCaseCreatedAt.Time,
+			TestCaseUpdatedAt:     row.TestCaseUpdatedAt.Time,
 			ProjectID:             int64(row.ProjectID.Int32),
-			TestRunID:             uuid.UUID(row.ID_2).String(),
+			TestRunID:             row.TestRunID.String(),
 			TestPlanID:            row.TestPlanID,
 			TestCaseID:            row.TestCaseID.String(),
 			OwnerID:               row.OwnerID,
@@ -413,10 +414,10 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			Notes:                 row.Notes,
 			ActualResult:          row.ActualResult.String,
 			ExpectedResult:        row.ExpectedResult.String,
-			Reactions:             nil, // row.Reactions.RawMessage.MarshalJSON()
+			Reactions:             row.Reactions.RawMessage,
 			TestedOn:              &row.TestedOn,
-			CreatedAt:             row.CreatedAt_2.Time,
-			UpdatedAt:             row.UpdatedAt_2.Time,
+			CreatedAt:             row.RunCreatedAt.Time,
+			UpdatedAt:             row.RunUpdatedAt.Time,
 		})
 	}
 	return res, nil

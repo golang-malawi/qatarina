@@ -3666,7 +3666,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testplanID: string;
+                testPlanID: number;
             };
             cookie?: never;
         };

@@ -264,11 +264,6 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
 		}
 
-		// Copy TestCaseID into ID before returning
-		for i := range testCases {
-			testCases[i].ID = testCases[i].TestCaseID
-		}
-
 		return ctx.JSON(schema.AssignedTestCaseListResponse{
 			TestCases: testCases,
 		})

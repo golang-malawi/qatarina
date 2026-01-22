@@ -29,6 +29,21 @@ export const findTestCaseInboxQueryOptions = queryOptions({
   },
 });
 
+export const findTestCaseInboxByIdQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", id],
+    queryFn: async (): Promise<AssignedTestCase> => {
+      const res = await getInboxTestCases();
+      const response = (res?.data ?? res) as AssignedTestCaseListResponse;
+
+      const match = response.test_cases?.find((tc: AssignedTestCase) => tc.id === id);
+      if (!match) {
+        throw new Error(`Inbox test case ${id} not found`);
+      }
+      return match;
+    },
+  });
+
 export const findTestCaseByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projectTestCases", id],
