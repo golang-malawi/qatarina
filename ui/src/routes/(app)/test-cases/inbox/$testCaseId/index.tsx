@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import { findInboxTestCasesQueryOptions, findTestCaseInboxByIdQueryOptions } from "@/data/queries/test-cases";
+import { findTestCaseInboxByIdQueryOptions, findTestCaseInboxQueryOptions, findTestCaseSummaryQueryOptions } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
   useMutation,
@@ -73,8 +73,12 @@ function TestCaseInboxItem() {
         queryKey: findTestCaseInboxByIdQueryOptions(testCaseId).queryKey,
       });
       queryClient.invalidateQueries({
-        queryKey: findInboxTestCasesQueryOptions().queryKey,
+        queryKey: findTestCaseInboxQueryOptions.queryKey,
       });
+
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseSummaryQueryOptions.queryKey,
+      })
     },
     onError: () => {
       toaster.create({
