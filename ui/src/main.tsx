@@ -9,7 +9,7 @@ import { AuthProvider } from "./context/user";
 import { useAuth } from "./hooks/isLoggedIn";
 import { Provider } from "./components/ui/provider";
 import { Spinner } from "@chakra-ui/react";
-
+import { Toaster } from "@/components/ui/toaster"
 
 const queryClient = new QueryClient();
 
@@ -51,6 +51,7 @@ if (!rootElement.innerHTML) {
       <QueryClientProvider client={queryClient}>
         <Provider>
           <AuthProvider>
+            <Toaster />
             <InnerApp />
           </AuthProvider>
         </Provider>

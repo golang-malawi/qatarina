@@ -133,3 +133,12 @@ type TestCaseExecutionSummary struct {
 	SuccessCount int    `json:"success_count"`
 	FailureCount int    `json:"failure_count"`
 }
+
+type TestCaseInboxResponse struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	ISDraft     bool   `json:"is_draft"`
+	TestRunID   string `json:"test_run_id,omitempty"`
+	ResultState string `json:"result_state,omitempty"`
+}
