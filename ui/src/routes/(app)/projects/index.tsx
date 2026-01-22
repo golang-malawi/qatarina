@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Alert, Box, Button, Flex, Heading, VStack } from "@chakra-ui/react";
+import { Alert, Box, Button, Flex, Heading, VStack} from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import {toaster} from "@/components/ui/toaster"
 import $api from "@/lib/api/query";
 
 export const Route = createFileRoute("/(app)/projects/")({
@@ -12,11 +13,15 @@ export const Route = createFileRoute("/(app)/projects/")({
 });
 
 function ProjectsPage() {
+  const queryClient = useQueryClient();
+
   const {
     data: { projects },
     isPending,
     error,
   } = useSuspenseQuery($api.queryOptions("get", "/v1/projects"));
+
+  const deleteMutation = $api.useMutation("delete", "/v1/projects/{projectID}");
 
   if (isPending) {
     return "Loading Projects...";
@@ -25,6 +30,31 @@ function ProjectsPage() {
   if (error) {
     return <div className="error">Error: error fetching</div>;
   }
+
+  const handleDelete = (projectID: number, title: string) => {
+    if (confirm(`Are you sure you want to delete project "${title}"?`)){
+      deleteMutation.mutate(
+        {params: {path: {projectID: projectID.toString()}}},
+        {
+          onSuccess: () => {
+            toaster.create({
+              title: "Success",
+              description: `Project "${title}" deleted successfully`,
+              type: "success",
+            });
+            queryClient.invalidateQueries({queryKey: ["projects"]});
+          },
+          onError: (error: any) => {
+            toaster.create({
+              title: "Error",
+              description: error?.message ?? "Failed to delete project",
+              type: "error",
+            });
+          },
+        }
+      );
+    }
+  };
 
   const projectList = (projects ?? []).map((record) => (
     <Box key={record.id} width={"100%"} p="4">
@@ -65,7 +95,13 @@ function ProjectsPage() {
             New Test Plan
           </Button>
         </Link>
-        <Button variant={"outline"} colorScheme="red" size={"sm"}>
+        <Button
+         variant="outline" 
+         colorScheme="red"
+         size={"sm"}
+          loading={deleteMutation.isPending}
+          onClick={() => handleDelete(record.id!, record.title!)}
+        >
           <IconTrash />
         </Button>
       </Flex>
