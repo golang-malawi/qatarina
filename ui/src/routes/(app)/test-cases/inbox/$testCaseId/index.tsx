@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import { findTestCaseInboxByIdQueryOptions } from "@/data/queries/test-cases";
+import { findInboxTestCasesQueryOptions, findTestCaseInboxByIdQueryOptions } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
   useMutation,
@@ -71,6 +71,9 @@ function TestCaseInboxItem() {
 
       queryClient.invalidateQueries({
         queryKey: findTestCaseInboxByIdQueryOptions(testCaseId).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: findInboxTestCasesQueryOptions().queryKey,
       });
     },
     onError: () => {

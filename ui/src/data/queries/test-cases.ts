@@ -63,3 +63,10 @@ export const findTestCaseSummaryQueryOptions = $api.queryOptions(
   "/v1/me/test-cases/summary",
   {}
 );
+
+export function findInboxTestCasesQueryOptions() {
+  return queryOptions({
+    queryKey: ["test-cases", "inbox"],
+    queryFn: () => getInboxTestCases(),
+  }); 
+}
