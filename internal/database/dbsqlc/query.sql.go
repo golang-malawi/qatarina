@@ -43,6 +43,23 @@ func (q *Queries) AssignTesterToProject(ctx context.Context, arg AssignTesterToP
 	return result.RowsAffected()
 }
 
+const changeUserPassword = `-- name: ChangeUserPassword :exec
+UPDATE users
+SET password = $2, updated_at = $3
+WHERE id = $1
+`
+
+type ChangeUserPasswordParams struct {
+	ID        int32
+	Password  string
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, changeUserPassword, arg.ID, arg.Password, arg.UpdatedAt)
+	return err
+}
+
 const closeTestPlan = `-- name: CloseTestPlan :execrows
 UPDATE test_plans
 SET is_complete = TRUE,

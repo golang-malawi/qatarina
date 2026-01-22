@@ -152,6 +152,22 @@ components:
       - project_id
       - test_cases
       type: object
+    schema.ChangePasswordRequest:
+      properties:
+        confirm_password:
+          type: string
+        new_password:
+          type: string
+        old_password:
+          type: string
+        user_id:
+          type: integer
+      required:
+      - confirm_password
+      - new_password
+      - old_password
+      - user_id
+      type: object
     schema.CommitTestRunResult:
       properties:
         actual_result:
@@ -875,6 +891,41 @@ paths:
       summary: System information
       tags:
       - system
+  /v1/auth/change-password:
+    post:
+      description: Allows autheticated user to change their password
+      operationId: Change password
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ChangePasswordRequest'
+        description: Password change request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: Password changed successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Allows autheticated user to change their password
+      tags:
+      - auth
   /v1/auth/login:
     post:
       description: Authenticates a user and returns access tokens

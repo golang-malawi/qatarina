@@ -136,5 +136,33 @@ func (a *authServiceImpl) ResetPassword(ctx context.Context, email string) error
 }
 
 func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error {
-	panic("not implemented")
+	user, err := a.queries.GetUser(ctx, int32(request.UserID))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrInvalidCredentials
+		}
+		return fmt.Errorf("failed to fetch user: %w", err)
+	}
+
+	if !common.CheckPasswordHash(request.OldPassword, user.Password) {
+		return ErrInvalidCredentials
+	}
+
+	if request.NewPassword != request.ConfirmPassword {
+		return fmt.Errorf("new password and confirmation do not match")
+	}
+
+	hashed := common.MustHashPassword(request.NewPassword)
+
+	err = a.queries.ChangeUserPassword(ctx, dbsqlc.ChangeUserPasswordParams{
+		ID:        user.ID,
+		Password:  hashed,
+		UpdatedAt: common.NewNullTime(time.Now()),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	return nil
+
 }
