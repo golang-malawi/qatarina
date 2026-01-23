@@ -1277,7 +1277,11 @@ export interface paths {
         get: operations["GetOneTester"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a Tester by ID
+         * @description Delete a Tester by ID
+         */
+        delete: operations["DeleteTester"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1691,6 +1695,7 @@ export interface components {
         };
         "schema.Tester": {
             created_at?: string;
+            email?: string;
             last_login_at?: string;
             name?: string;
             project?: string;
@@ -3666,7 +3671,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testplanID: string;
+                testPlanID: number;
             };
             cookie?: never;
         };
@@ -4281,6 +4286,51 @@ export interface operations {
         };
     };
     GetOneTester: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tester ID */
+                testerID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteTester: {
         parameters: {
             query?: never;
             header?: never;

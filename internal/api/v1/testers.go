@@ -124,3 +124,34 @@ func InviteTester(testerService services.TesterService, logger logging.Logger) f
 		return problemdetail.NotImplemented(c, "failed to invite Tester")
 	}
 }
+
+// DeleteTester godoc
+//
+//	@ID				DeleteTester
+//	@Summary		Delete a Tester by ID
+//	@Description	Delete a Tester by ID
+//	@Tags			testers
+//	@Accept			json
+//	@Produce		json
+//	@Param			testerID	path		string	true	"Tester ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/testers/{testerID} [delete]
+func DeleteTester(testerService services.TesterService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testerID, err := c.ParamsInt("testerID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid tester ID")
+		}
+		err = testerService.DeleteTester(c.Context(), int32(testerID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTesters, "failed to delete tester", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to delete tester")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Tester deleted successfully",
+		})
+	}
+}

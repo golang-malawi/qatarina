@@ -374,6 +374,9 @@ INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
 
+-- name: DeleteTesterByID :exec
+DELETE FROM project_testers WHERE id = $1;
+
 -- name: CreateProjectModules :one
 INSERT INTO modules(
     project_id, name, code, priority, type, description, created_at, updated_at

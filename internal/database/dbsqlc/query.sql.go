@@ -621,6 +621,15 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 	return result.RowsAffected()
 }
 
+const deleteTesterByID = `-- name: DeleteTesterByID :exec
+DELETE FROM project_testers WHERE id = $1
+`
+
+func (q *Queries) DeleteTesterByID(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTesterByID, id)
+	return err
+}
+
 const deleteUser = `-- name: DeleteUser :execrows
 DELETE FROM users WHERE id=$1
 `

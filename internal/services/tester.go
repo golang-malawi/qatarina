@@ -19,6 +19,7 @@ type TesterService interface {
 	FindByProjectID(context.Context, int64) ([]schema.Tester, error)
 	Invite(context.Context, any) (any, error)
 	FindByID(context.Context, int32) (*schema.Tester, error)
+	DeleteTester(ctx context.Context, testerID int32) error
 }
 
 type testerServiceImpl struct {
@@ -130,4 +131,13 @@ func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tes
 		UpdatedAt:   dbTester.UpdatedAt.Time.String(),
 	}
 	return tester, nil
+}
+
+func (t *testerServiceImpl) DeleteTester(ctx context.Context, testerID int32) error {
+	err := t.queries.DeleteTesterByID(ctx, testerID)
+	if err != nil {
+		t.logger.Error("tester-service", "failed to delete tester", "error", err)
+		return err
+	}
+	return nil
 }
