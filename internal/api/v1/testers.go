@@ -146,6 +146,9 @@ func DeleteTester(testerService services.TesterService, logger logging.Logger) f
 		}
 		err = testerService.DeleteTester(c.Context(), int32(testerID))
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.NotFound(c, "tester not found")
+			}
 			logger.Error(loggedmodule.ApiTesters, "failed to delete tester", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to delete tester")
 		}

@@ -574,11 +574,11 @@ func (q *Queries) DeleteProjectModule(ctx context.Context, id int32) (int64, err
 }
 
 const deleteProjectTester = `-- name: DeleteProjectTester :execrows
-DELETE FROM project_testers WHERE id = $1
+DELETE FROM project_testers WHERE user_id = $1
 `
 
-func (q *Queries) DeleteProjectTester(ctx context.Context, id int32) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteProjectTester, id)
+func (q *Queries) DeleteProjectTester(ctx context.Context, userID int32) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProjectTester, userID)
 	if err != nil {
 		return 0, err
 	}
@@ -619,15 +619,6 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const deleteTesterByID = `-- name: DeleteTesterByID :exec
-DELETE FROM project_testers WHERE id = $1
-`
-
-func (q *Queries) DeleteTesterByID(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteTesterByID, id)
-	return err
 }
 
 const deleteUser = `-- name: DeleteUser :execrows

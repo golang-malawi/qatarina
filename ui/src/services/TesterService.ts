@@ -30,3 +30,8 @@ export function useProjectTestersQuery(projectID: number) {
 export function useAssignTestersMutation() {
   return $api.useMutation("post", "/v1/projects/{projectID}/testers/assign");
 }
+
+export function useDeleteTesterMutation(){
+  return $api.useMutation("delete", "/v1/testers/{testerID}");
+
+} 

@@ -336,7 +336,7 @@ INNER JOIN users u On u.id = project_testers.user_id
 WHERE project_testers.role ILIKE '%' || $1 || '%';
 
 -- name: DeleteProjectTester :execrows
-DELETE FROM project_testers WHERE id = $1;
+DELETE FROM project_testers WHERE user_id = $1;
 
 -- name: GetTesterByID :one
 SELECT
@@ -373,9 +373,6 @@ FROM project_testers
 INNER JOIN users u ON u.id = project_testers.user_id
 INNER JOIN projects p ON p.id = project_testers.project_id
 WHERE project_id = $1;
-
--- name: DeleteTesterByID :exec
-DELETE FROM project_testers WHERE id = $1;
 
 -- name: CreateProjectModules :one
 INSERT INTO modules(

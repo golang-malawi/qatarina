@@ -134,10 +134,13 @@ func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tes
 }
 
 func (t *testerServiceImpl) DeleteTester(ctx context.Context, testerID int32) error {
-	err := t.queries.DeleteTesterByID(ctx, testerID)
+	rowsAffected, err := t.queries.DeleteProjectTester(ctx, testerID)
 	if err != nil {
 		t.logger.Error("tester-service", "failed to delete tester", "error", err)
 		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
