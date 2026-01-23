@@ -11,7 +11,8 @@ import {
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LuPencil, LuTrash } from "react-icons/lu";
-import {useProjectTestersQuery} from "@/services/TesterService";
+import {useProjectTestersQuery, useDeleteTesterMutation} from "@/services/TesterService";
+import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/testers/"
@@ -31,7 +32,8 @@ function ProjectTestersPage() {
   const projectID = Number(projectId)
   const navigate = useNavigate();
 
-  const {data, isPending, isError, error} = useProjectTestersQuery(projectID);
+  const {data, isPending, isError, error, refetch} = useProjectTestersQuery(projectID);
+  const deleteMutation = useDeleteTesterMutation();
 
   if (isPending) {
     return(
@@ -57,10 +59,19 @@ function ProjectTestersPage() {
       role: t.role,
     })) ?? [];
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    // TODO: call backend delete endpoint here
-    console.log("Delete tester", id);
+    
+    try {
+      await deleteMutation.mutateAsync({
+        params: {path: {testerID: id}}
+      });
+      toaster.success({title: "Tester removed successfully"});
+      refetch();
+    } catch (err){
+      console.error("Failed to delete tester", err);
+      toaster.error({title: "Failed to remove tester"})
+    }
   };
 
   const handleEdit = (id: string) => {
