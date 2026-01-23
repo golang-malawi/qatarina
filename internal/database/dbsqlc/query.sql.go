@@ -2721,6 +2721,23 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 	return err
 }
 
+const updateProjectTesterRole = `-- name: UpdateProjectTesterRole :execrows
+UPDATE project_testers SET role = $2 WHERE user_id = $1
+`
+
+type UpdateProjectTesterRoleParams struct {
+	UserID int32
+	Role   string
+}
+
+func (q *Queries) UpdateProjectTesterRole(ctx context.Context, arg UpdateProjectTesterRoleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProjectTesterRole, arg.UserID, arg.Role)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateTestCase = `-- name: UpdateTestCase :exec
 UPDATE test_cases SET
 kind = $2,

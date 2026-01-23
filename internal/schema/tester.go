@@ -39,3 +39,7 @@ type BulkAssignTesters struct {
 type TesterListResponse struct {
 	Testers []Tester `json:"testers"`
 }
+
+type UpdateTesterRoleRequest struct {
+	Role string `json:"role"`
+}

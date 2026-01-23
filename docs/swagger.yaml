@@ -791,6 +791,11 @@ components:
       - tags
       - title
       type: object
+    schema.UpdateTesterRoleRequest:
+      properties:
+        role:
+          type: string
+      type: object
     schema.UpdateUserRequest:
       properties:
         address:
@@ -3152,6 +3157,45 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Get a Tester by ID
+      tags:
+      - testers
+    post:
+      description: Updte a tester's role in a project
+      operationId: UpdateTesterRole
+      parameters:
+      - description: Tester User ID
+        in: path
+        name: testerID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateTesterRoleRequest'
+        description: New role
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Updte a tester's role in a project
       tags:
       - testers
   /v1/testers/invite/{email}:

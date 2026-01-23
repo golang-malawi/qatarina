@@ -350,6 +350,9 @@ INNER JOIN users u ON u.id = pt.user_id
 INNER JOIN projects p ON p.id = pt.project_id
 WHERE pt.user_id = $1;
 
+-- name: UpdateProjectTesterRole :execrows
+UPDATE project_testers SET role = $2 WHERE user_id = $1;
+
 -- name: GetAllProjectTesters :many
 SELECT
     pt.*,

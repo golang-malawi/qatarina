@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -156,5 +157,51 @@ func DeleteTester(testerService services.TesterService, logger logging.Logger) f
 		return c.JSON(fiber.Map{
 			"message": "Tester deleted successfully",
 		})
+	}
+}
+
+// UpdateTesterRole godoc
+//
+//	@ID				UpdateTesterRole
+//	@Summary		Updte a tester's role in a project
+//	@Description	Updte a tester's role in a project
+//	@Tags			testers
+//	@Accept			json
+//	@Produce		json
+//	@Param			testerID	path		int	true	"Tester User ID"
+//	@Param			request	body		schema.UpdateTesterRoleRequest	true	"New role"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/testers/{testerID} [post]
+func UpdateTesterRole(testerService services.TesterService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testerID, err := c.ParamsInt("testerID", 0)
+		if err != nil || testerID == 0 {
+			return problemdetail.BadRequest(c, "invalid tester ID")
+		}
+
+		var request schema.UpdateTesterRoleRequest
+		invalid, err := common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid request body")
+		}
+		if invalid {
+			return problemdetail.BadRequest(c, "validation failed")
+		}
+
+		err = testerService.UpdateRole(c.Context(), int32(testerID), request.Role)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.NotFound(c, "tester not found")
+			}
+			logger.Error(loggedmodule.ApiTesters, "failed to update tester role", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update tester role")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Tester role updated",
+		})
+
 	}
 }

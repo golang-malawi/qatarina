@@ -20,6 +20,7 @@ type TesterService interface {
 	Invite(context.Context, any) (any, error)
 	FindByID(context.Context, int32) (*schema.Tester, error)
 	DeleteTester(ctx context.Context, testerID int32) error
+	UpdateRole(ctx context.Context, userID int32, role string) error
 }
 
 type testerServiceImpl struct {
@@ -137,6 +138,20 @@ func (t *testerServiceImpl) DeleteTester(ctx context.Context, testerID int32) er
 	rowsAffected, err := t.queries.DeleteProjectTester(ctx, testerID)
 	if err != nil {
 		t.logger.Error("tester-service", "failed to delete tester", "error", err)
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (t *testerServiceImpl) UpdateRole(ctx context.Context, userID int32, role string) error {
+	rowsAffected, err := t.queries.UpdateProjectTesterRole(ctx, dbsqlc.UpdateProjectTesterRoleParams{
+		UserID: userID,
+		Role:   role,
+	})
+	if err != nil {
 		return err
 	}
 	if rowsAffected == 0 {
