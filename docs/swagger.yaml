@@ -3159,6 +3159,7 @@ paths:
       summary: Get a Tester by ID
       tags:
       - testers
+  /v1/testers/{testerID}/update-role:
     post:
       description: Updte a tester's role in a project
       operationId: UpdateTesterRole
@@ -3168,7 +3169,7 @@ paths:
         name: testerID
         required: true
         schema:
-          type: integer
+          type: string
       requestBody:
         content:
           application/json:

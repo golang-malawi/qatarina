@@ -168,12 +168,12 @@ func DeleteTester(testerService services.TesterService, logger logging.Logger) f
 //	@Tags			testers
 //	@Accept			json
 //	@Produce		json
-//	@Param			testerID	path		int	true	"Tester User ID"
+//	@Param			testerID	path		string	true	"Tester User ID"
 //	@Param			request	body		schema.UpdateTesterRoleRequest	true	"New role"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/testers/{testerID} [post]
+//	@Router			/v1/testers/{testerID}/update-role [post]
 func UpdateTesterRole(testerService services.TesterService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testerID, err := c.ParamsInt("testerID", 0)

@@ -75,8 +75,10 @@ function ProjectTestersPage() {
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit tester", id);
-    // TODO: navigate to edit form
+    navigate({
+      to: "/projects/$projectId/testers/edit/$testerId",
+      params: {projectId, testerId:id},
+    })
   };
 
   return (

@@ -34,4 +34,8 @@ export function useAssignTestersMutation() {
 export function useDeleteTesterMutation(){
   return $api.useMutation("delete", "/v1/testers/{testerID}");
 
-} 
+}
+
+export function useUpdateTesterRoleMutation() {
+  return $api.useMutation("post", "/v1/testers/{testerID}/update-role");
+}

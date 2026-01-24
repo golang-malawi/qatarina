@@ -1276,16 +1276,32 @@ export interface paths {
          */
         get: operations["GetOneTester"];
         put?: never;
-        /**
-         * Updte a tester's role in a project
-         * @description Updte a tester's role in a project
-         */
-        post: operations["UpdateTesterRole"];
+        post?: never;
         /**
          * Delete a Tester by ID
          * @description Delete a Tester by ID
          */
         delete: operations["DeleteTester"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/testers/{testerID}/update-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Updte a tester's role in a project
+         * @description Updte a tester's role in a project
+         */
+        post: operations["UpdateTesterRole"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4337,20 +4353,19 @@ export interface operations {
             };
         };
     };
-    UpdateTesterRole: {
+    DeleteTester: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Tester User ID */
-                testerID: number;
+                /** @description Tester ID */
+                testerID: string;
             };
             cookie?: never;
         };
-        /** @description New role */
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["schema.UpdateTesterRoleRequest"];
+                "application/json": Record<string, never>;
             };
         };
         responses: {
@@ -4383,19 +4398,20 @@ export interface operations {
             };
         };
     };
-    DeleteTester: {
+    UpdateTesterRole: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Tester ID */
+                /** @description Tester User ID */
                 testerID: string;
             };
             cookie?: never;
         };
-        requestBody?: {
+        /** @description New role */
+        requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.UpdateTesterRoleRequest"];
             };
         };
         responses: {
