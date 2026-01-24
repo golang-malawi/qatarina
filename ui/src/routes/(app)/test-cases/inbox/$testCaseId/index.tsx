@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -8,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
-import { findTestCaseByIdQueryOptions } from "@/data/queries/test-cases";
+import { findTestCaseInboxByIdQueryOptions, findTestCaseInboxQueryOptions, findTestCaseSummaryQueryOptions } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
   useMutation,
@@ -18,14 +19,13 @@ import {
   markTestCaseAsDraft,
   unmarkTestCaseAsDraft,
 } from "@/services/TestCaseService";
+import { executeTestRun } from "@/services/TestRunService";
 
 import { toaster } from "@/components/ui/toaster";
 
-// type CommitTestRunResult = components["schemas"]["schema.CommitTestRunResult"];
-
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
-    queryClient.ensureQueryData(findTestCaseByIdQueryOptions(testCaseId)),
+    queryClient.ensureQueryData(findTestCaseInboxByIdQueryOptions(testCaseId)),
   component: TestCaseInboxItem,
 });
 
@@ -34,37 +34,60 @@ function TestCaseInboxItem() {
   const queryClient = useQueryClient();
 
   const { data: testCase } = useSuspenseQuery(
-    findTestCaseByIdQueryOptions(testCaseId)
+    findTestCaseInboxByIdQueryOptions(testCaseId)
   );
-
-  //const runId = testCase?.testRunID
-
-  const executeMutation = useMutation({
-    mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-      const userId = testCase?.assigned_to_id;
-
-      if (!userId) {
-        throw new Error("No user ID found to attribute this execution to.");
-      }
-
-      return executeTestCase(testCaseId, {
-        status,
-        result:
-          status === "passed"
-            ? "Behavior matched expectation"
-            : "Behaviour did not match expectation",
-        // TODO
-        executed_by: String(userId),
-        notes:
-          status === "passed"
-            ? "Test passed successfully"
-            : "Test failed during execution",
-      });
-    },
-  });
 
   const tc = testCase;
   const isDraft = tc.is_draft;
+  const testRunId = tc.test_run_id;
+  const expectedResult = tc.expected_result ?? tc.description;
+
+  const [resultText, setResultText] = useState("");
+  const [notesText, setNotesText] = useState("");
+
+  const executeMutation = useMutation({
+    mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
+     
+      if (!testRunId || !expectedResult || !resultText) {
+        throw new Error("Missing required test case data.");
+      }
+
+      return executeTestRun(testRunId, {
+        id: testRunId,
+        status,
+        result: resultText,
+        notes: notesText,
+        expected_result: expectedResult,
+      });
+    },
+    onSuccess: () => {
+      toaster.create({
+        title: "Success",
+        description: "Test result recorded",
+        type: "success",
+      });
+      setResultText("")
+      setNotesText("");
+
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseInboxByIdQueryOptions(testCaseId).queryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseInboxQueryOptions.queryKey,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: findTestCaseSummaryQueryOptions.queryKey,
+      })
+    },
+    onError: () => {
+      toaster.create({
+        title: "Error",
+        description: "Failed to record test result",
+        type: "error",
+      });
+    },
+  });
 
   const toggleDraftMutation = useMutation({
     mutationFn: async () => {
@@ -83,7 +106,7 @@ function TestCaseInboxItem() {
       });
 
       queryClient.invalidateQueries({
-        queryKey: findTestCaseByIdQueryOptions(testCaseId).queryKey,
+        queryKey: findTestCaseInboxByIdQueryOptions(testCaseId).queryKey,
       });
     },
     onError: () => {
@@ -97,7 +120,7 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
-      <Heading size="lg">{testCase?.description}</Heading>
+      <Heading size="lg">{tc.description}</Heading>
       <Menu.Root>
         <Menu.Trigger asChild>
           <Button>
@@ -149,13 +172,24 @@ function TestCaseInboxItem() {
 
       <Container p="4" border="1px solid #f3f3f3">
         <Heading size="lg">Record a Test Result on this test case</Heading>
-        <Textarea placeholder="Record a Test Result on this test case" />
+        <Textarea
+          placeholder="Observed behaviour (result)"
+          value={resultText}
+          onChange={(e) => setResultText(e.target.value)}
+          mb="2" 
+        />
+        <Textarea placeholder="Notes about the testing process"
+        value={notesText}
+        onChange={(e) => setNotesText(e.target.value)} mb="4"/>
         <Button
           type="button"
           variant="outline"
           colorScheme="blue"
-          onClick={() => executeMutation.mutate({ status: "passed" })}
-          disabled={tc.is_draft}
+          onClick={() => {
+            executeMutation.mutate({ status: "passed" });
+          }}
+          disabled={isDraft || !testRunId}
+          loading={executeMutation.isPending}
         >
           Record Successful Test
         </Button>
@@ -166,7 +200,7 @@ function TestCaseInboxItem() {
           colorScheme="red"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
-          disabled={tc.is_draft}
+          disabled={isDraft || !testRunId}
         >
           Record Failed Test
         </Button>
@@ -174,35 +208,3 @@ function TestCaseInboxItem() {
     </Box>
   );
 }
-async function executeTestCase(
-  testCaseId: string,
-  {
-    status,
-    result,
-    executed_by,
-    notes,
-  }: {
-    status: "passed" | "failed";
-    result: string;
-    executed_by: string;
-    notes: string;
-  }
-): Promise<void> {
-  const response = await fetch(`/api/test-cases/${testCaseId}/execute`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      status,
-      result,
-      executed_by,
-      notes,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to execute test case");
-  }
-}
-

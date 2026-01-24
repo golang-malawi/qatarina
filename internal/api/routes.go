@@ -29,6 +29,11 @@ func (api *API) routes() {
 
 	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
 
+	authV1 := router.Group("/v1/auth", authenticationMiddleware)
+	{
+		authV1.Post("/change-password", apiv1.ChangePassword(api.AuthService, api.logger))
+	}
+
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
 		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))

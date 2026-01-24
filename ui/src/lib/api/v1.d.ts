@@ -121,6 +121,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Allows autheticated user to change their password
+         * @description Allows autheticated user to change their password
+         */
+        post: operations["Change password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/login": {
         parameters: {
             query?: never;
@@ -1481,6 +1501,12 @@ export interface components {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
         };
+        "schema.ChangePasswordRequest": {
+            confirm_password: string;
+            new_password: string;
+            old_password: string;
+            user_id: number;
+        };
         "schema.CommitTestRunResult": {
             actual_result: string;
             expected_result?: string;
@@ -1786,6 +1812,51 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "Change password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Password change request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     DashboardSummary: {
         parameters: {
             query?: never;

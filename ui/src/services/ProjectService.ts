@@ -22,3 +22,11 @@ export async function createProject(data: components["schemas"]["schema.NewProje
   return apiClient.request("post", "/v1/projects", { body: data });
 }
 
+export function useDeleteProjectMutation(){
+  return $api.useMutation("delete", "/v1/projects/{projectID}");
+}
+
+export function useUpdateProjectMutation(){
+  return $api.useMutation("post", "/v1/projects/{projectID}");
+}
+

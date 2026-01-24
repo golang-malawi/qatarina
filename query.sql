@@ -29,6 +29,11 @@ UPDATE users SET
     last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
 WHERE id = $1;
 
+-- name: ChangeUserPassword :exec
+UPDATE users
+SET password = $2, updated_at = $3
+WHERE id = $1;
+
 -- name: CreateInvite :exec
 INSERT INTO invites (sender_email, receiver_email, token, expires_at)
 VALUES ($1, $2, $3, $4);
@@ -125,7 +130,37 @@ GROUP BY tc.id, tp.id, tp.description;
 SELECT * FROM test_cases WHERE created_by_id = $1;
 
 -- name: ListTestCasesByAssignedUser :many
-SELECT tc.*, tr.*
+SELECT 
+tc.id As test_case_id,
+tc.kind,
+tc.code,
+tc.feature_or_module,
+tc.title,
+tc.description,
+tc.parent_test_case_id,
+tc.is_draft,
+tc.tags,
+tc.created_by_id,
+tc.created_at AS test_case_created_at,
+tc.updated_at AS test_case_updated_at,
+tc.project_id,
+
+tr.id AS test_run_id,
+tr.test_plan_id,
+tr.owner_id,
+tr.tested_by_id,
+tr.assigned_to_id,
+tr.assignee_can_change_code,
+tr.external_issue_id,
+tr.result_state,
+tr.is_closed,
+tr.notes,
+tr.actual_result,
+tr.expected_result,
+tr.reactions,
+tr.tested_on,
+tr.created_at AS run_created_at,
+tr.updated_at AS run_updated_at
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 WHERE tr.assigned_to_id = $1

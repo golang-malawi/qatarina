@@ -43,6 +43,23 @@ func (q *Queries) AssignTesterToProject(ctx context.Context, arg AssignTesterToP
 	return result.RowsAffected()
 }
 
+const changeUserPassword = `-- name: ChangeUserPassword :exec
+UPDATE users
+SET password = $2, updated_at = $3
+WHERE id = $1
+`
+
+type ChangeUserPasswordParams struct {
+	ID        int32
+	Password  string
+	UpdatedAt sql.NullTime
+}
+
+func (q *Queries) ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, changeUserPassword, arg.ID, arg.Password, arg.UpdatedAt)
+	return err
+}
+
 const closeTestPlan = `-- name: CloseTestPlan :execrows
 UPDATE test_plans
 SET is_complete = TRUE,
@@ -1802,7 +1819,37 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 }
 
 const listTestCasesByAssignedUser = `-- name: ListTestCasesByAssignedUser :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tr.id, tr.project_id, tr.test_plan_id, tr.test_case_id, tr.owner_id, tr.tested_by_id, tr.assigned_to_id, tr.assignee_can_change_code, tr.code, tr.external_issue_id, tr.result_state, tr.is_closed, tr.notes, tr.actual_result, tr.expected_result, tr.reactions, tr.tested_on, tr.created_at, tr.updated_at
+SELECT 
+tc.id As test_case_id,
+tc.kind,
+tc.code,
+tc.feature_or_module,
+tc.title,
+tc.description,
+tc.parent_test_case_id,
+tc.is_draft,
+tc.tags,
+tc.created_by_id,
+tc.created_at AS test_case_created_at,
+tc.updated_at AS test_case_updated_at,
+tc.project_id,
+
+tr.id AS test_run_id,
+tr.test_plan_id,
+tr.owner_id,
+tr.tested_by_id,
+tr.assigned_to_id,
+tr.assignee_can_change_code,
+tr.external_issue_id,
+tr.result_state,
+tr.is_closed,
+tr.notes,
+tr.actual_result,
+tr.expected_result,
+tr.reactions,
+tr.tested_on,
+tr.created_at AS run_created_at,
+tr.updated_at AS run_updated_at
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 WHERE tr.assigned_to_id = $1
@@ -1817,7 +1864,7 @@ type ListTestCasesByAssignedUserParams struct {
 }
 
 type ListTestCasesByAssignedUserRow struct {
-	ID                    uuid.UUID
+	TestCaseID            uuid.UUID
 	Kind                  TestKind
 	Code                  string
 	FeatureOrModule       sql.NullString
@@ -1827,18 +1874,15 @@ type ListTestCasesByAssignedUserRow struct {
 	IsDraft               sql.NullBool
 	Tags                  []string
 	CreatedByID           int32
-	CreatedAt             sql.NullTime
-	UpdatedAt             sql.NullTime
+	TestCaseCreatedAt     sql.NullTime
+	TestCaseUpdatedAt     sql.NullTime
 	ProjectID             sql.NullInt32
-	ID_2                  uuid.UUID
-	ProjectID_2           int32
+	TestRunID             uuid.UUID
 	TestPlanID            int32
-	TestCaseID            uuid.UUID
 	OwnerID               int32
 	TestedByID            int32
 	AssignedToID          int32
 	AssigneeCanChangeCode sql.NullBool
-	Code_2                string
 	ExternalIssueID       sql.NullString
 	ResultState           TestRunState
 	IsClosed              sql.NullBool
@@ -1847,8 +1891,8 @@ type ListTestCasesByAssignedUserRow struct {
 	ExpectedResult        sql.NullString
 	Reactions             pqtype.NullRawMessage
 	TestedOn              time.Time
-	CreatedAt_2           sql.NullTime
-	UpdatedAt_2           sql.NullTime
+	RunCreatedAt          sql.NullTime
+	RunUpdatedAt          sql.NullTime
 }
 
 func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]ListTestCasesByAssignedUserRow, error) {
@@ -1861,7 +1905,7 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 	for rows.Next() {
 		var i ListTestCasesByAssignedUserRow
 		if err := rows.Scan(
-			&i.ID,
+			&i.TestCaseID,
 			&i.Kind,
 			&i.Code,
 			&i.FeatureOrModule,
@@ -1871,18 +1915,15 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.IsDraft,
 			pq.Array(&i.Tags),
 			&i.CreatedByID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.TestCaseCreatedAt,
+			&i.TestCaseUpdatedAt,
 			&i.ProjectID,
-			&i.ID_2,
-			&i.ProjectID_2,
+			&i.TestRunID,
 			&i.TestPlanID,
-			&i.TestCaseID,
 			&i.OwnerID,
 			&i.TestedByID,
 			&i.AssignedToID,
 			&i.AssigneeCanChangeCode,
-			&i.Code_2,
 			&i.ExternalIssueID,
 			&i.ResultState,
 			&i.IsClosed,
@@ -1891,8 +1932,8 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.ExpectedResult,
 			&i.Reactions,
 			&i.TestedOn,
-			&i.CreatedAt_2,
-			&i.UpdatedAt_2,
+			&i.RunCreatedAt,
+			&i.RunUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
