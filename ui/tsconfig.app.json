@@ -18,6 +18,8 @@
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    
+    "types": ["node"],
 
 
     /* Linting */
