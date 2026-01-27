@@ -4,18 +4,9 @@ import * as React from "react";
 import { LoginFormValues } from "@/data/forms/login";
 import type { components } from "@/lib/api/v1";
 import { getStoredUser, setStoredUser } from "./UserStorage";
+import { AuthContext } from "./AuthContext";
 
 type LoginResponse = components["schemas"]["schema.LoginResponse"];
-
-export interface AuthContext {
-  isAuthenticated: boolean;
-  login: (data: LoginFormValues) => Promise<void>;
-  logout: () => Promise<void>;
-  user: LoginResponse | null;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = React.createContext<AuthContext | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<LoginResponse | null>(getStoredUser());
