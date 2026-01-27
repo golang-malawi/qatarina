@@ -19,6 +19,8 @@ type TesterService interface {
 	FindByProjectID(context.Context, int64) ([]schema.Tester, error)
 	Invite(context.Context, any) (any, error)
 	FindByID(context.Context, int32) (*schema.Tester, error)
+	DeleteTester(ctx context.Context, testerID int32) error
+	UpdateRole(ctx context.Context, userID int32, role string) error
 }
 
 type testerServiceImpl struct {
@@ -34,13 +36,23 @@ func NewTesterService(db *dbsqlc.Queries, logger logging.Logger) TesterService {
 }
 
 func (s *testerServiceImpl) FindAll(ctx context.Context) ([]schema.Tester, error) {
-	users, err := s.queries.ListUsers(ctx)
+	projectTesters, err := s.queries.GetAllProjectTesters(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch project testers: %w", err)
 	}
-	testers := make([]schema.Tester, 0)
-	for _, user := range users {
-		testers = append(testers, schema.NewTesterFromUser(&user))
+	testers := make([]schema.Tester, 0, len(projectTesters))
+	for _, tester := range projectTesters {
+		testers = append(testers, schema.Tester{
+			UserID:      int64(tester.UserID),
+			ProjectID:   int64(tester.ProjectID),
+			Name:        tester.TesterName.String,
+			Email:       tester.TesterEmail,
+			Project:     tester.Project,
+			Role:        tester.Role,
+			LastLoginAt: tester.TesterLastLoginAt.Time.Format(time.DateTime),
+			CreatedAt:   tester.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:   tester.UpdatedAt.Time.Format(time.DateTime),
+		})
 	}
 	return testers, nil
 }
@@ -90,6 +102,7 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 			UserID:      int64(tester.UserID),
 			ProjectID:   int64(tester.ProjectID),
 			Name:        tester.TesterName.String,
+			Email:       tester.TesterEmail,
 			Project:     tester.Project,
 			Role:        tester.Role,
 			LastLoginAt: tester.TesterLastLoginAt.Time.Format(time.DateTime),
@@ -101,16 +114,17 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 }
 
 func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tester, error) {
-	dbTester, err := t.queries.GetTestersByID(ctx, id)
+	dbTester, err := t.queries.GetTesterByID(ctx, id)
 	if err != nil {
 		t.logger.Error("failed to find the project tester", "error", err)
 		return nil, err
 	}
 
 	tester := &schema.Tester{
-		UserID:      int64(dbTester.ID),
+		UserID:      int64(dbTester.UserID),
 		ProjectID:   int64(dbTester.ProjectID),
 		Name:        dbTester.TesterName.String,
+		Email:       dbTester.TesterEmail,
 		Project:     dbTester.Project,
 		Role:        dbTester.Role,
 		LastLoginAt: dbTester.TesterLastLoginAt.Time.String(),
@@ -118,4 +132,30 @@ func (t *testerServiceImpl) FindByID(ctx context.Context, id int32) (*schema.Tes
 		UpdatedAt:   dbTester.UpdatedAt.Time.String(),
 	}
 	return tester, nil
+}
+
+func (t *testerServiceImpl) DeleteTester(ctx context.Context, testerID int32) error {
+	rowsAffected, err := t.queries.DeleteProjectTester(ctx, testerID)
+	if err != nil {
+		t.logger.Error("tester-service", "failed to delete tester", "error", err)
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (t *testerServiceImpl) UpdateRole(ctx context.Context, userID int32, role string) error {
+	rowsAffected, err := t.queries.UpdateProjectTesterRole(ctx, dbsqlc.UpdateProjectTesterRoleParams{
+		UserID: userID,
+		Role:   role,
+	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

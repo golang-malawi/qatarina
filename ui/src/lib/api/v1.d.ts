@@ -1297,6 +1297,30 @@ export interface paths {
         get: operations["GetOneTester"];
         put?: never;
         post?: never;
+        /**
+         * Delete a Tester by ID
+         * @description Delete a Tester by ID
+         */
+        delete: operations["DeleteTester"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/testers/{testerID}/update-role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Updte a tester's role in a project
+         * @description Updte a tester's role in a project
+         */
+        post: operations["UpdateTesterRole"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1717,6 +1741,7 @@ export interface components {
         };
         "schema.Tester": {
             created_at?: string;
+            email?: string;
             last_login_at?: string;
             name?: string;
             project?: string;
@@ -1757,6 +1782,9 @@ export interface components {
             kind: string;
             tags: string[];
             title: string;
+        };
+        "schema.UpdateTesterRoleRequest": {
+            role?: string;
         };
         "schema.UpdateUserRequest": {
             address?: string;
@@ -4364,6 +4392,97 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteTester: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tester ID */
+                testerID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateTesterRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tester User ID */
+                testerID: string;
+            };
+            cookie?: never;
+        };
+        /** @description New role */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateTesterRoleRequest"];
             };
         };
         responses: {

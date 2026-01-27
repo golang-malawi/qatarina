@@ -54,7 +54,7 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-plans", apiv1.GetProjectTestPlans(api.TestPlansService, api.logger))
 		projectsV1.Get("/:projectID/test-runs", apiv1.GetProjectTestRuns(api.TestRunsService, api.logger))
 		projectsV1.Get("/:projectID/testers", apiv1.GetProjectTesters(api.ProjectsService, api.TesterService, api.logger))
-		projectsV1.Post("/:projectID/testers", apiv1.AssignTesters(api.TesterService, api.logger))
+		projectsV1.Post("/:projectID/testers/assign", apiv1.AssignTesters(api.TesterService, api.logger))
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
@@ -134,6 +134,8 @@ func (api *API) routes() {
 		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService, api.logger))
 		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService, api.logger))
 		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
+		testersV1.Post("/:testerID/update-role", apiv1.UpdateTesterRole(api.TesterService, api.logger))
+		testersV1.Delete("/:testerID", apiv1.DeleteTester(api.TesterService, api.logger))
 	}
 
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
