@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "swagger-typescript-api": "^13.2.16"
-  },
-  "dependencies": {
-    "@chakra-ui/react": "^3.31.0"
-  }
-}
