@@ -4,40 +4,42 @@ import * as React from "react";
 import { LoginFormValues } from "@/data/forms/login";
 import type { components } from "@/lib/api/v1";
 
+type LoginResponse = components["schemas"]["schema.LoginResponse"];
+
 export interface AuthContext {
   isAuthenticated: boolean;
   login: (data: LoginFormValues) => Promise<void>;
   logout: () => Promise<void>;
-  user: string | null;
+  user: LoginResponse | null;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = React.createContext<AuthContext | null>(null);
 
-const key = "auth.user_id";
+const key = "auth.user";
 
-function getStoredUser() {
-  return localStorage.getItem(key);
+function getStoredUser(): LoginResponse | null {
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null
+  }
 }
-
-function setStoredUser(user: string | null) {
+function setStoredUser(user: LoginResponse | null) {
   if (user) {
-    localStorage.setItem(key, user);
+    localStorage.setItem(key, JSON.stringify(user));
   } else {
     localStorage.removeItem(key);
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<string | null>(getStoredUser());
+  const [user, setUser] = React.useState<LoginResponse | null>(getStoredUser());
   const isAuthenticated = !!user;
 
   const logout = React.useCallback(async () => {
-    localStorage.removeItem("auth.user_id");
-    localStorage.removeItem("auth.displayName");
-    localStorage.removeItem("auth.token");
-    localStorage.removeItem("auth.expires_at");
-    localStorage.removeItem("auth.email");
     setStoredUser(null);
     setUser(null);
     await sleep(1);
@@ -62,16 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!loginData.user_id || !loginData.token) {
           throw new Error("Login response missing required fields");
         }
-        localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-        localStorage.setItem("auth.displayName", loginData.displayName ?? "");
-        localStorage.setItem("auth.email", loginData.email ?? "");
-        localStorage.setItem("auth.token", loginData.token);
-        localStorage.setItem(
-          "auth.expires_at",
-          loginData.expires_at?.toString() ?? ""
-        );
-        setStoredUser(loginData.displayName ?? "");
-        setUser(loginData.displayName ?? "");
+        
+        setStoredUser(loginData);
+        setUser(loginData);
       } catch (error: unknown) {
         console.log(error);
         let message = "Invalid email or password. Please try again.";
@@ -98,4 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const ctx = React.useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
 }

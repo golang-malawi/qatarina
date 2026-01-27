@@ -6,7 +6,7 @@ import createAuthHeaders from "@/hooks/useAuthHeaders";
 
 const middleware: Middleware = {
   async onRequest({ request }) {
-    const { headers } = createAuthHeaders();
+    const headers  = createAuthHeaders();
 
     Object.entries(headers).forEach(([key, value]) => {
       request.headers.set(key, value as string);
@@ -18,8 +18,9 @@ const middleware: Middleware = {
 export const apiClient = createFetchClient<paths>({
   baseUrl: getApiEndpoint(),
 });
+
 apiClient.use(middleware);
-const $api = createClient(apiClient);
 
-export default $api;
+const $api = createClient(apiClient)
 
+export default $api

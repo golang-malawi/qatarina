@@ -11,10 +11,10 @@ export const Route = createFileRoute("/(app)/settings/")({
 });
 
 const changePasswordSchema = z.object({
-    old_pasword: z.string().min(1, "Old password is required"),
-    new_pasword: z.string().min(6, "New password must be atleast 6 characters"),
-    confirm_pasword: z.string().min(1, "Confirm password is required"),
-}).refine((data) => data.new_pasword === data.confirm_pasword, {
+    old_password: z.string().min(1, "Old password is required"),
+    new_password: z.string().min(6, "New password must be atleast 6 characters"),
+    confirm_password: z.string().min(1, "Confirm password is required"),
+}).refine((data) => data.new_password === data.confirm_password, {
   message: "Password do not match",
   path: ["confirm_password"],
 });
@@ -31,27 +31,56 @@ function RouteComponent() {
 
   const handleSubmit = async (values: any) => {
     const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      toaster.create({
+        title: "Error",
+        description: "No user ID found in local storage",
+        type: "error",
+        closable: true,
+      });
+      return;
+    }
     mutation.mutate(
       {
-        user_id: parseInt(userId || "0"),
+        user_id: parseInt(userId, 10),
         old_password: values.old_password,
         new_password: values.new_password,
         confirm_password: values.confirm_password,
       },
       {
         onSuccess: (data: any) => {
+          if (data?.type && data?.detail) {
+            toaster.create({
+              title: "Error",
+              description: data.detail,
+              type: "error",
+              closable: true,
+            });
+            return;
+          }
+
           toaster.create({
             title: "Password changed",
-            description: data.message ?? "Password updated successfully",
+            description: data?.message ?? "Password updated successfully",
             type: "success",
             closable: true,
-          });
+          });          
           setActiveSetting(null);
         },
         onError: (error: any) => {
+          // TODO DELETE DEBUG LOG
+          console.error("Change password error:", error);
+
+          const description =
+            error?.data?.detail ||
+            error?.data?.title ||
+            error?.message || 
+            "Failed to change password";
+
           toaster.create({
             title: "Error",
-            description: error?.message ?? "Failed to change password",
+            description,
             type: "error",
             closable: true,
           });
@@ -66,7 +95,7 @@ function RouteComponent() {
         Settings
       </Heading>
       {!activeSetting && (
-        <VStack align="start" spacing={4}>
+        <VStack align="start" gap={4}>
           <Button variant="outline" onClick={() => setActiveSetting("change-password")}>
             Change Password
           </Button>
