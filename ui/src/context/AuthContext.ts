@@ -12,3 +12,9 @@ export interface AuthContextType {
 }
 
 export const AuthContext = React.createContext<AuthContextType | null>(null);
+
+export function useAuth() {
+  const ctx = React.useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
