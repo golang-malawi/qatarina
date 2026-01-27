@@ -20,3 +20,22 @@ export async function getTesterById(testerID: string) {
     params: { path: { testerID } },
   });
 }
+
+export function useProjectTestersQuery(projectID: number) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/testers", {
+    params: {path: {projectID}},
+  });
+}
+
+export function useAssignTestersMutation() {
+  return $api.useMutation("post", "/v1/projects/{projectID}/testers/assign");
+}
+
+export function useDeleteTesterMutation(){
+  return $api.useMutation("delete", "/v1/testers/{testerID}");
+
+}
+
+export function useUpdateTesterRoleMutation() {
+  return $api.useMutation("post", "/v1/testers/{testerID}/update-role");
+}
