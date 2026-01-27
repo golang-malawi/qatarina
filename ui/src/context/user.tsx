@@ -3,6 +3,7 @@ import $api from "@/lib/api/query";
 import * as React from "react";
 import { LoginFormValues } from "@/data/forms/login";
 import type { components } from "@/lib/api/v1";
+import { getStoredUser, setStoredUser } from "./UserStorage";
 
 type LoginResponse = components["schemas"]["schema.LoginResponse"];
 
@@ -15,25 +16,6 @@ export interface AuthContext {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = React.createContext<AuthContext | null>(null);
-
-const key = "auth.user";
-
-function getStoredUser(): LoginResponse | null {
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null
-  }
-}
-function setStoredUser(user: LoginResponse | null) {
-  if (user) {
-    localStorage.setItem(key, JSON.stringify(user));
-  } else {
-    localStorage.removeItem(key);
-  }
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<LoginResponse | null>(getStoredUser());

@@ -69,10 +69,7 @@ function RouteComponent() {
           setActiveSetting(null);
         },
         onError: (error: any) => {
-          // TODO DELETE DEBUG LOG
-          console.error("Change password error:", error);
-
-          const description =
+            const description =
             error?.data?.detail ||
             error?.data?.title ||
             error?.message || 
