@@ -3,41 +3,16 @@ import $api from "@/lib/api/query";
 import * as React from "react";
 import { LoginFormValues } from "@/data/forms/login";
 import type { components } from "@/lib/api/v1";
+import { getStoredUser, setStoredUser } from "./UserStorage";
+import { AuthContext } from "./AuthContext";
 
-export interface AuthContext {
-  isAuthenticated: boolean;
-  login: (data: LoginFormValues) => Promise<void>;
-  logout: () => Promise<void>;
-  user: string | null;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = React.createContext<AuthContext | null>(null);
-
-const key = "auth.user_id";
-
-function getStoredUser() {
-  return localStorage.getItem(key);
-}
-
-function setStoredUser(user: string | null) {
-  if (user) {
-    localStorage.setItem(key, user);
-  } else {
-    localStorage.removeItem(key);
-  }
-}
+type LoginResponse = components["schemas"]["schema.LoginResponse"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<string | null>(getStoredUser());
+  const [user, setUser] = React.useState<LoginResponse | null>(getStoredUser());
   const isAuthenticated = !!user;
 
   const logout = React.useCallback(async () => {
-    localStorage.removeItem("auth.user_id");
-    localStorage.removeItem("auth.displayName");
-    localStorage.removeItem("auth.token");
-    localStorage.removeItem("auth.expires_at");
-    localStorage.removeItem("auth.email");
     setStoredUser(null);
     setUser(null);
     await sleep(1);
@@ -62,16 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!loginData.user_id || !loginData.token) {
           throw new Error("Login response missing required fields");
         }
-        localStorage.setItem("auth.user_id", `${loginData.user_id}`);
-        localStorage.setItem("auth.displayName", loginData.displayName ?? "");
-        localStorage.setItem("auth.email", loginData.email ?? "");
-        localStorage.setItem("auth.token", loginData.token);
-        localStorage.setItem(
-          "auth.expires_at",
-          loginData.expires_at?.toString() ?? ""
-        );
-        setStoredUser(loginData.displayName ?? "");
-        setUser(loginData.displayName ?? "");
+        
+        setStoredUser(loginData);
+        setUser(loginData);
       } catch (error: unknown) {
         console.log(error);
         let message = "Invalid email or password. Please try again.";
@@ -99,3 +67,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
+

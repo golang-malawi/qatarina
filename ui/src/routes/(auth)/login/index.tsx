@@ -20,13 +20,13 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/isLoggedIn";
 import { sleep } from "@/lib/utils";
 import { LoginFormValues, loginSchema } from "@/data/forms/login";
 import { Logo } from "@/components/logo";
 import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
+import { useAuth } from "@/hooks/isLoggedIn";
 
 const fallback = "/dashboard" as const;
 
@@ -67,14 +67,15 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
       setLoginError(null);
-      await auth.login(data);
+      
+      await auth.login(data)
+
       await router.invalidate();
 
       // TODO: 🥲 dies without this sleep because the context state is not refresing in time
       await sleep(1);
 
       await navigate({ to: search.redirect || fallback, replace: true });
-      return data;
     },
     onSuccess: (data) => {
       console.log("Login successful", data);
