@@ -16,7 +16,8 @@ export type Module = {
 export default class ModuleService {
   async getAllModules(): Promise<Module[]> {
     const res = await apiClient.request("get", "/v1/modules");
-    const apiModules = (res.data as unknown as { modules: any[] }).modules ?? [];
+    const apiModules =
+      (res.data as unknown as { modules: any[] }).modules ?? [];
     return apiModules.map((mod) => ({
       id: String(mod.ID),
       project_id: mod.ProjectID,
@@ -38,7 +39,7 @@ export default class ModuleService {
   }
 
   async createModule(
-    data: operations["CreateModule"]["requestBody"]["content"]["application/json"]
+    data: operations["CreateModule"]["requestBody"]["content"]["application/json"],
   ) {
     const res = await apiClient.request("post", "/v1/modules", { body: data });
     return res.data as unknown;
@@ -46,7 +47,7 @@ export default class ModuleService {
 
   async updateModule(
     id: string,
-    data: operations["UpdateModule"]["requestBody"]["content"]["application/json"]
+    data: operations["UpdateModule"]["requestBody"]["content"]["application/json"],
   ) {
     const res = await apiClient.request("post", "/v1/modules/{moduleID}", {
       params: { path: { moduleID: id } },
@@ -63,9 +64,13 @@ export default class ModuleService {
   }
 
   async getModulesByProjectId(projectId: string): Promise<Module[]> {
-    const res = await apiClient.request("get", "/v1/projects/{projectID}/modules", {
-      params: { path: { projectID: projectId } },
-    });
+    const res = await apiClient.request(
+      "get",
+      "/v1/projects/{projectID}/modules",
+      {
+        params: { path: { projectID: projectId } },
+      },
+    );
     const apiModules = res.data as unknown as any[];
     return apiModules.map((mod) => ({
       id: String(mod.ID),

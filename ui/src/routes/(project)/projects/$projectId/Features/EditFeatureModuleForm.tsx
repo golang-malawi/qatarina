@@ -4,7 +4,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { featureModuleEditSchema, FeatureModuleEditFormData } from "@/data/forms/feature-module-schemas";
+import {
+  featureModuleEditSchema,
+  FeatureModuleEditFormData,
+} from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
 
 export const Route = createFileRoute(
@@ -24,7 +27,9 @@ function EditFeatureModuleForm() {
   const { moduleId } = Route.useSearch();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [defaultValues, setDefaultValues] = useState<FeatureModuleEditFormData | undefined>();
+  const [defaultValues, setDefaultValues] = useState<
+    FeatureModuleEditFormData | undefined
+  >();
 
   useEffect(() => {
     const fetchModule = async () => {
@@ -64,13 +69,12 @@ function EditFeatureModuleForm() {
 
   async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
-      ID: parseInt(moduleId),
+      id: parseInt(moduleId),
       name: values.name,
       type: values.type,
       description: values.description || "",
       code: values.code,
       priority: values.priority,
-      ProjectID: parseInt(projectId),
     };
 
     const moduleService = new ModuleService();

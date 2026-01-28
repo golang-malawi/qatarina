@@ -1526,7 +1526,7 @@ export interface components {
             description: string;
             name: string;
             priority: number;
-            projectID: number;
+            project_id: number;
             type: string;
         };
         "schema.CreateTestCaseRequest": {

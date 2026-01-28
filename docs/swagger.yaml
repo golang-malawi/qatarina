@@ -217,7 +217,7 @@ components:
           type: string
         priority:
           type: integer
-        projectID:
+        project_id:
           type: integer
         type:
           type: string
@@ -226,7 +226,7 @@ components:
       - description
       - name
       - priority
-      - projectID
+      - project_id
       - type
       type: object
     schema.CreateTestCaseRequest:
