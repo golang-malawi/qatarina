@@ -1,8 +1,7 @@
-import axios from "axios";
-import { getApiEndpoint } from "@/common/request";
-import createAuthHeaders from "@/hooks/useAuthHeaders";
+import { apiClient } from "@/lib/api/query";
+import type { operations } from "@/lib/api/v1";
 
-export interface Module {
+export type Module = {
   id: string;
   name: string;
   code: string;
@@ -12,109 +11,72 @@ export interface Module {
   updated_at: string;
   description: string;
   project_id: number;
-}
+};
 
 export default class ModuleService {
-  apiEndpoint: string;
-
-  constructor() {
-    this.apiEndpoint = getApiEndpoint();
-  }
-
   async getAllModules(): Promise<Module[]> {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/modules/modules`,
-      createAuthHeaders(),
-    );
-
-    if (res.status === 200) {
-      const apiModules = res.data.modules;
-      const modules: Module[] = apiModules.map((mod: any) => ({
-        id: String(mod.ID),
-        project_id: mod.ProjectID,
-        name: mod.Name,
-        code: mod.Code,
-        type: mod.Type,
-        priority: mod.Priority,
-        description: mod.Description,
-        created_at: mod.CreatedAt?.Time || "",
-        updated_at: mod.UpdatedAt?.Time || "",
-      }));
-
-      return modules;
-    }
-
-    throw new Error(res.data);
+    const res = await apiClient.request("get", "/v1/modules");
+    const apiModules = (res.data as unknown as { modules: any[] }).modules ?? [];
+    return apiModules.map((mod) => ({
+      id: String(mod.ID),
+      project_id: mod.ProjectID,
+      name: mod.Name,
+      code: mod.Code,
+      type: mod.Type,
+      priority: mod.Priority,
+      description: mod.Description,
+      created_at: mod.CreatedAt?.Time || "",
+      updated_at: mod.UpdatedAt?.Time || "",
+    }));
   }
 
   async getModuleById(id: string): Promise<Module> {
-    console.log("API request to:", `${this.apiEndpoint}/modules/${id}`);
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/modules/modules/${id}`,
-      createAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-    console.log(res.data);
-    throw new Error(res.data);
+    const res = await apiClient.request("get", "/v1/modules/{moduleID}", {
+      params: { path: { moduleID: id } },
+    });
+    return res.data as unknown as Module;
   }
 
-  async createModule(data: Partial<Module>) {
-    const res = await axios.post(
-      `${this.apiEndpoint}/v1/modules`,
-      data,
-      createAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-    throw new Error(res.data);
+  async createModule(
+    data: operations["CreateModule"]["requestBody"]["content"]["application/json"]
+  ) {
+    const res = await apiClient.request("post", "/v1/modules", { body: data });
+    return res.data as unknown;
   }
 
-  async updateModule(id: string, data: Partial<Module>) {
-    const res = await axios.post(
-      `${this.apiEndpoint}/v1/modules/modules/${id}`,
-      data,
-      createAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-    throw new Error(res.data);
+  async updateModule(
+    id: string,
+    data: operations["UpdateModule"]["requestBody"]["content"]["application/json"]
+  ) {
+    const res = await apiClient.request("post", "/v1/modules/{moduleID}", {
+      params: { path: { moduleID: id } },
+      body: data,
+    });
+    return res.data as unknown;
   }
 
   async deleteModule(id: string) {
-    const res = await axios.delete(
-      `${this.apiEndpoint}/v1/modules/modules/${id}`,
-      createAuthHeaders(),
-    );
-    if (res.status === 200) {
-      return res.data;
-    }
-    throw new Error(res.data);
+    const res = await apiClient.request("delete", "/v1/modules/{moduleID}", {
+      params: { path: { moduleID: id } },
+    });
+    return res.data as unknown;
   }
 
   async getModulesByProjectId(projectId: string): Promise<Module[]> {
-    const res = await axios.get(
-      `${this.apiEndpoint}/v1/projects/${projectId}/modules`,
-      createAuthHeaders(),
-    );
-    if (res.status === 200) {
-      const apiModules = res.data;
-      const modules: Module[] = apiModules.map((mod: any) => ({
-        id: String(mod.ID),
-        name: mod.Name,
-        code: mod.Code,
-        type: mod.Type,
-        priority: mod.Priority,
-        description: mod.Description,
-        project_id: mod.ProjectID,
-        created_at: mod.CreatedAt?.Time || "",
-        updated_at: mod.UpdatedAt?.Time || "",
-      }));
-      return modules;
-    }
-    throw new Error(res.data);
+    const res = await apiClient.request("get", "/v1/projects/{projectID}/modules", {
+      params: { path: { projectID: projectId } },
+    });
+    const apiModules = res.data as unknown as any[];
+    return apiModules.map((mod) => ({
+      id: String(mod.ID),
+      name: mod.Name,
+      code: mod.Code,
+      type: mod.Type,
+      priority: mod.Priority,
+      description: mod.Description,
+      project_id: mod.ProjectID,
+      created_at: mod.CreatedAt?.Time || "",
+      updated_at: mod.UpdatedAt?.Time || "",
+    }));
   }
 }
