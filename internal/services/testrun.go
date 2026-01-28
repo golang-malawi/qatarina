@@ -34,6 +34,7 @@ type TestRunService interface {
 	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
+	RecordPublicResult(context.Context, string, *schema.PublicTestResultRequest) error
 }
 
 type testRunService struct {
@@ -237,4 +238,9 @@ func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (b
 		return false, nil
 	}
 	return true, nil
+}
+
+func (t *testRunService) RecordPublicResult(ctx context.Context, token string, req *schema.PublicTestResultRequest) error {
+	//return t.queries.InsertPublicResult(ctx, token, req.TestCaseID, req.Result, req.Comment)
+	return fmt.Errorf("not implemented")
 }

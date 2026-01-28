@@ -15,7 +15,12 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+
+    /* JSX settings */
     "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+
+    /*  Interop */
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     

@@ -14,4 +14,12 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)), // Alias for src folder
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:4597",
+        changeOrigin: true,
+      }
+    }
+  }
 });

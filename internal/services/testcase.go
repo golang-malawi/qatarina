@@ -63,6 +63,8 @@ type TestCaseService interface {
 	UnMarkAsDraft(ctx context.Context, testCaseID string) error
 	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
 	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
+
+	FindByInviteToken(context.Context, string) (*dbsqlc.TestCase, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -469,4 +471,17 @@ func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, use
 		})
 	}
 	return summaries, nil
+}
+
+func (t *testCaseServiceImpl) FindByInviteToken(ctx context.Context, token string) (*dbsqlc.TestCase, error) {
+	testcase, err := t.queries.FindByInviteToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		t.logger.Error("failed to find test case by token", "error", err)
+		return nil, fmt.Errorf("failed to find testcase: %w", err)
+	}
+
+	return &testcase, nil
 }
