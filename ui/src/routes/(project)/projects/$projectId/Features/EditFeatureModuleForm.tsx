@@ -74,7 +74,7 @@ function EditFeatureModuleForm() {
       type: values.type,
       description: values.description || "",
       code: values.code,
-      priority: values.priority,
+      priority: Number(values.priority),
     };
 
     const moduleService = new ModuleService();
