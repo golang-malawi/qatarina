@@ -3,14 +3,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import {
-  featureModuleCreationSchema,
-  FeatureModuleCreationFormData,
-} from "@/data/forms/feature-module-schemas";
+import { featureModuleCreationSchema, FeatureModuleCreationFormData } from "@/data/forms/feature-module-schemas";
 import { featureModuleCreationFields } from "@/data/forms/feature-module-field-configs";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/Features/CreateFeatureModuleForm",
+  "/(project)/projects/$projectId/Features/CreateFeatureModuleForm"
 )({
   component: RouteComponent,
 });
@@ -26,7 +23,7 @@ function RouteComponent() {
       type: values.type,
       description: values.description || "",
       code: values.code,
-      priority: values.priority,
+      priority: Number(values.priority),
       project_id: parseInt(params.projectId),
     };
 
