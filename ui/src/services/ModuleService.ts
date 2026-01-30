@@ -72,6 +72,10 @@ export default class ModuleService {
       },
     );
     const apiModules = res.data as unknown as any[];
+
+    if (!Array.isArray(apiModules)){
+      return [];
+    }
     return apiModules.map((mod) => ({
       id: String(mod.ID),
       name: mod.Name,

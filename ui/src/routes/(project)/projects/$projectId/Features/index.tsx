@@ -32,11 +32,16 @@ function RouteComponent() {
       try {
         const service = new ModuleService();
         const data = await service.getModulesByProjectId(projectId);
-        setFeatures(
-          data
-        );
+
+        if (!Array.isArray(data)){
+          throw new Error("Invalid response format");
+        }
+
+        setFeatures(data);
+        setError(null);
       } catch (err: any) {
         console.error(err);
+        setFeatures([]);
         setError("Failed to load modules.");
       } finally {
         setLoading(false);
@@ -76,7 +81,9 @@ function RouteComponent() {
         </Flex>
       ) : error ? (
         <Text color="red.500">{error}</Text>
-      ) : (
+      ) : Array.isArray(features) && features.length === 0 ?(
+        <Text color="gray.500">No modules found for this project.</Text>
+      ): Array.isArray(features) ? (
         <Stack gap="6">
           <Table.Root size="md">
             <Table.Header>
@@ -123,6 +130,8 @@ function RouteComponent() {
             </Table.Body>
           </Table.Root>
         </Stack>
+      ):(
+        <Text color="red.500">Failed to load modules.</Text>
       )}
     </Box>
   );
