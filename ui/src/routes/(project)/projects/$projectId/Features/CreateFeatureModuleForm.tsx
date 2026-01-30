@@ -28,8 +28,12 @@ function RouteComponent() {
     };
 
     try {
-      await moduleService.createModule(payload);
+      const res = await moduleService.createModule(payload)
 
+      if (!res || (res as any).type === "problemdetail.example.com/http/types/BadRequest"){
+        throw new Error((res as any).detail || "Failed to create module");
+      }
+      
       toaster.create({
         title: "Module created",
         description: `We've created ${values.type}: ${values.name}`,
