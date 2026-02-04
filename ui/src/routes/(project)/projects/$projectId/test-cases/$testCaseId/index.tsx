@@ -12,7 +12,7 @@ import {
   Text,
   Flex,
   Alert,
-  Stack
+  Stack,
 } from "@chakra-ui/react";
 
 import { useTestCaseQuery } from "@/services/TestCaseService";
@@ -22,7 +22,7 @@ import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-cases/$testCaseId/"
+  "/(project)/projects/$projectId/test-cases/$testCaseId/",
 )({
   component: ViewTestCase,
 });
@@ -48,7 +48,7 @@ function ViewTestCase() {
   if (isLoading) return <div>Loading test case...</div>;
   if (error) return <div>Error loading test case</div>;
 
-  const testCase = data;
+  const testCase = data.test_case || {};
   if (!testCase) return <div>No data found</div>;
 
   /** ---------- DERIVED ---------- */
@@ -140,12 +140,20 @@ function ViewTestCase() {
 
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Created At:</Text>
-                  <Text>{testCase.created_at ? new Date(testCase.created_at).toLocaleString() : "N/A"}</Text>
+                  <Text>
+                    {testCase.created_at
+                      ? new Date(testCase.created_at).toLocaleString()
+                      : "N/A"}
+                  </Text>
                 </Flex>
 
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Updated At:</Text>
-                  <Text>{testCase.updated_at ? new Date(testCase.updated_at).toLocaleString() : "N/A"}</Text>
+                  <Text>
+                    {testCase.updated_at
+                      ? new Date(testCase.updated_at).toLocaleString()
+                      : "N/A"}
+                  </Text>
                 </Flex>
               </Stack>
             </Box>
@@ -229,7 +237,7 @@ function ViewTestCase() {
                 <Flex gap={2} wrap="wrap">
                   {optimisticAssignment.testers.map((uid) => {
                     const tester = testersQuery.data?.testers?.find(
-                      (t: any) => t.user_id.toString() === uid
+                      (t: any) => t.user_id.toString() === uid,
                     );
 
                     return (
@@ -318,7 +326,7 @@ function ViewTestCase() {
                         try {
                           await assignTestersToTestPlan(
                             effectivePlanId,
-                            payload
+                            payload,
                           );
 
                           setOptimisticAssignment({

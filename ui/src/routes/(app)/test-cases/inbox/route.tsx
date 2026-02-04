@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { findProjectsQueryOptions } from "@/data/queries/projects";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox")({
   loader: ({ context: { queryClient } }) =>{
@@ -30,6 +31,12 @@ function TestCasePageInbox() {
     isPending: isPendingInbox,
     error: errorInbox,
   } = useSuspenseQuery(findTestCaseInboxQueryOptions);
+
+  const {data: projects} = useSuspenseQuery(findProjectsQueryOptions);
+  const projectMap: Record<number, string> = {};
+  (projects?.projects ?? []).forEach((p: any) => {
+    projectMap[p.id] = p.title;
+  });
 
   const {
     data: summary,
@@ -91,12 +98,14 @@ function TestCasePageInbox() {
           params={{ testCaseId: tc.id ?? "" }}
           title={tc.description}
         >
-          <Text fontWeight="semibold" mb={1}>
-            {tc.code}
-          </Text>
-          <Text fontSize="sm" color="gray.600" maxLines={1}>
-            {tc.description}
-          </Text>
+          <Flex direction="column">
+            <Text fontWeight="semibold" fontSize="md">
+              {tc.title}
+            </Text>
+            <Text fontSize="sm" color="gray.500">
+              {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
+            </Text>
+          </Flex>
           <Stack direction="row" mt={2} gap={2}>
             <Badge color="blue.700">
               {counts.usage_count} tests performed

@@ -14,8 +14,8 @@ export const createTestCaseFields = (projectId: string): FieldConfig[] => [
     label: "Code",
     type: "text",
     placeholder: "Enter test case code",
-    helperText: "Test Case Code.",
-    required: true,
+    helperText: "Leave blank to auto-generate based on project",
+    required: false,
   },
   {
     name: "feature_or_module",
