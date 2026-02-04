@@ -93,9 +93,7 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 		if err != nil {
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test case with given id")
 		}
-		return c.JSON(fiber.Map{
-			"test_case": schema.NewTestCaseResponse(testCase),
-		})
+		return c.JSON(schema.NewTestCaseResponse(testCase))
 	}
 }
 

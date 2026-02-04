@@ -48,7 +48,7 @@ function ViewTestCase() {
   if (isLoading) return <div>Loading test case...</div>;
   if (error) return <div>Error loading test case</div>;
 
-  const testCase = data.test_case || {};
+  const testCase = data;
   if (!testCase) return <div>No data found</div>;
 
   /** ---------- DERIVED ---------- */
