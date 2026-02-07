@@ -28,6 +28,10 @@ type TestPlanData = {
   scheduled_end_at: string;
   num_test_cases: number;
   num_failures: number;
+  passed_count: number;
+  failed_count: number;
+  pending_count: number;
+  assigned_testers: number;
   is_complete: boolean;
   is_locked: boolean;
   has_report: boolean;
@@ -36,6 +40,7 @@ type TestPlanData = {
   test_cases: {
     id: string;
     title: string;
+    assigned_tester_ids: number[];
   }[];
 };
 
@@ -121,7 +126,7 @@ function ViewTestPlan() {
 
   const isComplete = testPlan.is_complete;
 
-  const totalTestCases = testPlan.test_cases?.length ?? 0;
+  const totalTestCases = testPlan.num_test_cases ?? 0;
 
   return (
     <Box p={6}>
@@ -204,18 +209,18 @@ function ViewTestPlan() {
             <Stat.Root maxW="200px">
               <Stat.Label>Passed Test Cases</Stat.Label>
               <Stat.ValueText>
-                {totalTestCases - testPlan.num_failures}
+                {testPlan.passed_count}
               </Stat.ValueText>
             </Stat.Root>
 
             <Stat.Root maxW="200px">
               <Stat.Label>Failed Test Cases</Stat.Label>
-              <Stat.ValueText>{testPlan.num_failures}</Stat.ValueText>
+              <Stat.ValueText>{testPlan.failed_count}</Stat.ValueText>
             </Stat.Root>
 
             <Stat.Root maxW="200px">
               <Stat.Label>Testers Assigned</Stat.Label>
-              <Stat.ValueText>—</Stat.ValueText>
+              <Stat.ValueText>{testPlan.assigned_testers}</Stat.ValueText>
             </Stat.Root>
           </Flex>
         </Stack>

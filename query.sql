@@ -512,6 +512,15 @@ SELECT closed_at, is_complete
 FROM test_plans
 WHERE id = $1;
 
+-- name: GetTestPlanRunStats :one
+SELECT
+    COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
+    COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
+    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+FROM test_runs
+WHERE test_plan_id = $1;
+
 -- name: GetTestCaseExecutionSummary :many
 SELECT
     tr.test_case_id,
