@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useTestPlanQuery } from "@/services/TestPlanService";
+import { closeTestPlan } from "@/services/TestPlanService";
 import {
   Box,
   Heading,
@@ -11,6 +12,7 @@ import {
   Stat,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { toaster } from "@/components/ui/toaster";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 /**
  * Test plan type – MATCHES API RESPONSE EXACTLY
@@ -55,16 +57,19 @@ function ViewTestPlan() {
     data: initialTestPlan,
     isLoading,
     error,
+    refetch,
   } = useTestPlanQuery(testPlanID) as {
     data: TestPlanData | undefined;
     isLoading: boolean;
     error: unknown;
+    refetch: () => void;
   };
 
   /**
    * Local state synced from query
    */
   const [testPlan, setTestPlan] = useState<TestPlanData | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (initialTestPlan) {
@@ -73,26 +78,54 @@ function ViewTestPlan() {
   }, [initialTestPlan]);
 
   /**
-   * Mock actions (UI-only)
+   * Close test plan via API
    */
-  const handleMarkComplete = () => {
+  const handleMarkComplete = async () => {
     if (!testPlan) return;
 
-    setTestPlan({
-      ...testPlan,
-      is_complete: true,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      setIsClosing(true);
+      await closeTestPlan(testPlan.id);
+
+      // Force refetch to get latest data from server
+      await refetch();
+      
+      toaster.success({
+        title: "Test plan closed successfully",
+      });
+    } catch (error: any) {
+      console.error("Failed to close test plan:", error);
+      
+      toaster.error({
+        title: "Failed to close test plan",
+      });
+    } finally {
+      setIsClosing(false);
+    }
   };
 
-  const handleMarkInProgress = () => {
+  /**
+   * Mark test plan as in progress
+   */
+  const handleMarkInProgress = async () => {
     if (!testPlan) return;
 
-    setTestPlan({
-      ...testPlan,
-      is_complete: false,
-      updated_at: new Date().toISOString(),
-    });
+    try {
+      setIsClosing(true);
+      // Note: You may need to add an API endpoint for this too if it doesn't exist
+      // For now, assuming the UI just manages this locally
+      setTestPlan({
+        ...testPlan,
+        is_complete: false,
+        closed_at: "",
+        updated_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Failed to mark as in progress:", error);
+      alert("Failed to mark as in progress. Please try again.");
+    } finally {
+      setIsClosing(false);
+    }
   };
 
   /**
@@ -180,6 +213,8 @@ function ViewTestPlan() {
                 size="xs"
                 variant="outline"
                 colorScheme="orange"
+                loading={isClosing}
+                disabled={isClosing}
               >
                 Mark as In Progress
               </Button>
@@ -188,6 +223,8 @@ function ViewTestPlan() {
                 onClick={handleMarkComplete}
                 size="xs"
                 colorScheme="green"
+                loading={isClosing}
+                disabled={isClosing}
               >
                 Mark as Complete
               </Button>

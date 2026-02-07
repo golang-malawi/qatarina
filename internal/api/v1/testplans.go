@@ -355,8 +355,8 @@ func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logge
 
 		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to close test plan", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			logger.Error(loggedmodule.ApiTestPlans, "failed to close test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to close test plan")
 		}
 		return c.JSON(fiber.Map{
 			"message": "Test plan closed successfully",
