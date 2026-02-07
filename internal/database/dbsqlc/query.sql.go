@@ -81,6 +81,18 @@ func (q *Queries) CloseTestPlan(ctx context.Context, arg CloseTestPlanParams) (i
 	return result.RowsAffected()
 }
 
+const closeTestRun = `-- name: CloseTestRun :exec
+UPDATE test_runs
+SET is_closed = TRUE,
+updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) CloseTestRun(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, closeTestRun, id)
+	return err
+}
+
 const commitTestRunResult = `-- name: CommitTestRunResult :one
 UPDATE test_runs SET
     tested_by_id = $2,

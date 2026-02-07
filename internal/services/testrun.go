@@ -34,6 +34,7 @@ type TestRunService interface {
 	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
+	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
 }
 
 type testRunService struct {
@@ -237,4 +238,25 @@ func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (b
 		return false, nil
 	}
 	return true, nil
+}
+
+func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error) {
+	id := uuid.MustParse(testRunID)
+	tr, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test run: %w", err)
+	}
+	if tr.IsClosed.Valid && tr.IsClosed.Bool {
+		return &tr, nil
+	}
+	err = t.queries.CloseTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to close test run: %w", err)
+	}
+
+	closedRun, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
+	}
+	return &closedRun, nil
 }

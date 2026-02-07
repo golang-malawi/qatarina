@@ -2962,6 +2962,44 @@ paths:
       summary: Update a Test Run
       tags:
       - test-runs
+  /v1/test-runs/{testRunID}/close:
+    post:
+      description: Close a Test Run
+      operationId: CloseTestRun
+      parameters:
+      - description: Test Run ID
+        in: path
+        name: testRunID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestRunResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Close a Test Run
+      tags:
+      - test-runs
   /v1/test-runs/{testRunID}/commit:
     post:
       description: Mark a Test Run as committed

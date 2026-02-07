@@ -1183,6 +1183,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-runs/{testRunID}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a Test Run
+         * @description Close a Test Run
+         */
+        post: operations["CloseTestRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-runs/{testRunID}/commit": {
         parameters: {
             query?: never;
@@ -4139,6 +4159,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CloseTestRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run ID */
+                testRunID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestRunResponse"];
                 };
             };
             /** @description Bad Request */
