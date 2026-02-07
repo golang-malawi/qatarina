@@ -77,6 +77,28 @@ export async function assignTestersToTestPlan(
   );
 }
 
+export async function closeTestPlan(testPlanID: number) {
+  const response = await apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/close",
+    {
+      params: { path: { testPlanID } },
+    }
+  );
+
+  // Check if the request failed
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to close test plan");
+  }
+
+  return response.data;
+}
+
+export function useCloseTestPlanMutation() {
+  return $api.useMutation("post", "/v1/test-plans/{testPlanID}/close");
+}
+
 // export async function removeTestersFromTestPlan(
 //   testPlanID: string,
 //   userIDs: string[]
