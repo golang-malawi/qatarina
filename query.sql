@@ -507,6 +507,12 @@ tested_on = NOW(),
 updated_at = NOW()
 WHERE id = $1;
 
+-- name: CloseTestRun :exec
+UPDATE test_runs
+SET is_closed = TRUE,
+updated_at = NOW()
+WHERE id = $1;
+
 -- name: IsTestPlanActive :one
 SELECT closed_at, is_complete
 FROM test_plans

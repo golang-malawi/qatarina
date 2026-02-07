@@ -126,6 +126,7 @@ func (api *API) routes() {
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/execute", apiv1.ExecuteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
