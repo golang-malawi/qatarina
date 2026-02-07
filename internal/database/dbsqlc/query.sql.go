@@ -1367,6 +1367,35 @@ func (q *Queries) GetTestPlanCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getTestPlanRunStats = `-- name: GetTestPlanRunStats :one
+SELECT
+    COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
+    COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
+    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+FROM test_runs
+WHERE test_plan_id = $1
+`
+
+type GetTestPlanRunStatsRow struct {
+	PassedCount          int64
+	FailedCount          int64
+	PendingCount         int64
+	AssignedTestersCount int64
+}
+
+func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID int32) (GetTestPlanRunStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getTestPlanRunStats, testPlanID)
+	var i GetTestPlanRunStatsRow
+	err := row.Scan(
+		&i.PassedCount,
+		&i.FailedCount,
+		&i.PendingCount,
+		&i.AssignedTestersCount,
+	)
+	return i, err
+}
+
 const getTestPlanStatusRatio = `-- name: GetTestPlanStatusRatio :one
 SELECT
 COUNT(*) FILTER (WHERE is_complete = true) AS closed,

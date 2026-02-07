@@ -32,24 +32,28 @@ type AssignTestsToPlanRequest struct {
 }
 
 type TestPlanResponseItem struct {
-	ID             int64                  `json:"id"`
-	ProjectID      int32                  `json:"project_id"`
-	AssignedToID   int32                  `json:"assigned_to_id"`
-	CreatedByID    int32                  `json:"created_by_id"`
-	UpdatedByID    int32                  `json:"updated_by_id"`
-	Kind           string                 `json:"kind"`
-	Description    string                 `json:"description"`
-	StartAt        string                 `json:"start_at"`
-	ClosedAt       string                 `json:"closed_at"`
-	ScheduledEndAt string                 `json:"scheduled_end_at"`
-	NumTestCases   int32                  `json:"num_test_cases"`
-	NumFailures    int32                  `json:"num_failures"`
-	IsComplete     bool                   `json:"is_complete"`
-	IsLocked       bool                   `json:"is_locked"`
-	HasReport      bool                   `json:"has_report"`
-	CreatedAt      string                 `json:"created_at"`
-	UpdatedAt      string                 `json:"updated_at"`
-	TestCases      []TestCaseResponseItem `json:"test_cases"`
+	ID               int64                  `json:"id"`
+	ProjectID        int32                  `json:"project_id"`
+	AssignedToID     int32                  `json:"assigned_to_id"`
+	CreatedByID      int32                  `json:"created_by_id"`
+	UpdatedByID      int32                  `json:"updated_by_id"`
+	Kind             string                 `json:"kind"`
+	Description      string                 `json:"description"`
+	StartAt          string                 `json:"start_at"`
+	ClosedAt         string                 `json:"closed_at"`
+	ScheduledEndAt   string                 `json:"scheduled_end_at"`
+	NumTestCases     int32                  `json:"num_test_cases"`
+	NumFailures      int32                  `json:"num_failures"`
+	PassedCount      int64                  `json:"passed_count"`
+	FailedCount      int64                  `json:"failed_count"`
+	PendingCount     int64                  `json:"pending_count"`
+	AssignedTesters  int64                  `json:"assigned_testers"`
+	IsComplete       bool                   `json:"is_complete"`
+	IsLocked         bool                   `json:"is_locked"`
+	HasReport        bool                   `json:"has_report"`
+	CreatedAt        string                 `json:"created_at"`
+	UpdatedAt        string                 `json:"updated_at"`
+	TestCases        []TestCaseResponseItem `json:"test_cases"`
 }
 
 func NewTestPlanListResponse(items []dbsqlc.TestPlan) []TestPlanResponseItem {

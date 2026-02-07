@@ -183,25 +183,35 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
 	}
 
+	// Get test run statistics
+	runStats, err := t.queries.GetTestPlanRunStats(ctx, int32(id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
+	}
+
 	response := schema.TestPlanResponseItem{
-		ID:             plan.ID,
-		ProjectID:      plan.ProjectID,
-		AssignedToID:   plan.AssignedToID,
-		CreatedByID:    plan.CreatedByID,
-		UpdatedByID:    plan.UpdatedByID,
-		Kind:           string(plan.Kind),
-		Description:    plan.Description.String,
-		StartAt:        plan.StartAt.Time.Format(time.DateTime),
-		ClosedAt:       plan.ClosedAt.Time.Format(time.DateTime),
-		ScheduledEndAt: plan.ScheduledEndAt.Time.Format(time.DateTime),
-		NumTestCases:   int32(plan.NumTestCases),
-		NumFailures:    plan.NumFailures,
-		IsComplete:     plan.IsComplete.Bool,
-		IsLocked:       plan.IsLocked.Bool,
-		HasReport:      plan.HasReport.Bool,
-		CreatedAt:      plan.CreatedAt.Time.Format(time.DateTime),
-		UpdatedAt:      plan.UpdatedAt.Time.Format(time.DateTime),
-		TestCases:      []schema.TestCaseResponseItem{},
+		ID:              plan.ID,
+		ProjectID:       plan.ProjectID,
+		AssignedToID:    plan.AssignedToID,
+		CreatedByID:     plan.CreatedByID,
+		UpdatedByID:     plan.UpdatedByID,
+		Kind:            string(plan.Kind),
+		Description:     plan.Description.String,
+		StartAt:         plan.StartAt.Time.Format(time.DateTime),
+		ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
+		ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+		NumTestCases:    int32(plan.NumTestCases),
+		NumFailures:     plan.NumFailures,
+		PassedCount:     runStats.PassedCount,
+		FailedCount:     runStats.FailedCount,
+		PendingCount:    runStats.PendingCount,
+		AssignedTesters: runStats.AssignedTestersCount,
+		IsComplete:      plan.IsComplete.Bool,
+		IsLocked:        plan.IsLocked.Bool,
+		HasReport:       plan.HasReport.Bool,
+		CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
+		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
 	for _, tc := range cases {
