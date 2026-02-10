@@ -113,6 +113,7 @@ type Invite struct {
 	ReceiverEmail string
 	Token         string
 	ExpiresAt     sql.NullTime
+	TestCaseID    uuid.NullUUID
 }
 
 type Module struct {

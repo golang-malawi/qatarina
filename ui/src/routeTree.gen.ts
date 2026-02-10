@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as appIndexRouteImport } from './routes/(app)/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as UiDynamicFormDemoIndexRouteImport } from './routes/ui/dynamic-form-demo/index'
 import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
@@ -61,6 +62,11 @@ const appIndexRoute = appIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => appRouteRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UiDynamicFormDemoIndexRoute = UiDynamicFormDemoIndexRouteImport.update({
   id: '/ui/dynamic-form-demo/',
@@ -292,6 +298,7 @@ const projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/invite/$token': typeof InviteTokenRoute
   '/': typeof appIndexRoute
   '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
   '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
@@ -336,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-plans/$testPlanID/testers': typeof projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRoute
 }
 export interface FileRoutesByTo {
+  '/invite/$token': typeof InviteTokenRoute
   '/': typeof appIndexRoute
   '/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
   '/testers/invite': typeof appTestersInviteRoute
@@ -381,6 +389,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(app)': typeof appRouteRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/(app)/': typeof appIndexRoute
   '/(app)/test-cases/inbox': typeof appTestCasesInboxRouteRouteWithChildren
   '/(project)/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
@@ -427,6 +436,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/invite/$token'
     | '/'
     | '/test-cases/inbox'
     | '/projects/$projectId'
@@ -471,6 +481,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans/$testPlanID/testers'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/invite/$token'
     | '/'
     | '/test-cases/inbox'
     | '/testers/invite'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/(app)'
+    | '/invite/$token'
     | '/(app)/'
     | '/(app)/test-cases/inbox'
     | '/(project)/projects/$projectId'
@@ -561,6 +573,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   appRouteRoute: typeof appRouteRouteWithChildren
+  InviteTokenRoute: typeof InviteTokenRoute
   projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
   authLoginIndexRoute: typeof authLoginIndexRoute
   authLogoutIndexRoute: typeof authLogoutIndexRoute
@@ -582,6 +595,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof appIndexRouteImport
       parentRoute: typeof appRouteRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/ui/dynamic-form-demo/': {
       id: '/ui/dynamic-form-demo/'
@@ -1017,6 +1037,7 @@ const projectProjectsProjectIdRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   appRouteRoute: appRouteRouteWithChildren,
+  InviteTokenRoute: InviteTokenRoute,
   projectProjectsProjectIdRouteRoute:
     projectProjectsProjectIdRouteRouteWithChildren,
   authLoginIndexRoute: authLoginIndexRoute,

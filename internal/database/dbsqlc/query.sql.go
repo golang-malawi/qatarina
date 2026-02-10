@@ -683,6 +683,35 @@ func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) 
 	return err
 }
 
+const findByInviteToken = `-- name: FindByInviteToken :one
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id
+FROM test_cases tc
+INNER JOIN invites i ON i.test_case_id = tc.id
+WHERE i.token = $1
+LIMIT 1
+`
+
+func (q *Queries) FindByInviteToken(ctx context.Context, token string) (TestCase, error) {
+	row := q.db.QueryRowContext(ctx, findByInviteToken, token)
+	var i TestCase
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Code,
+		&i.FeatureOrModule,
+		&i.Title,
+		&i.Description,
+		&i.ParentTestCaseID,
+		&i.IsDraft,
+		pq.Array(&i.Tags),
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+	)
+	return i, err
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `
