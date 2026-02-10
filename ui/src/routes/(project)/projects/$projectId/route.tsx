@@ -14,7 +14,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/app-sidebar";
-import { ColorModeButton } from "@/components/ui/color-mode";
 import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
@@ -133,7 +132,6 @@ function RouteComponent() {
             <Flex alignItems="center" gap="2" flex="1">
               <SidebarTrigger />
             </Flex>
-            <ColorModeButton />
           </Box>
           <Box
             flex="1"
