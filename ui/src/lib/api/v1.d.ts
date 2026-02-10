@@ -1099,8 +1099,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all test cases of a test plan
-         * @description List all test cases of a test plan
+         * List all test runs of a test plan
+         * @description List all test runs of a test plan
          */
         get: operations["GetTestPlanTestRuns"];
         put?: never;
@@ -1746,18 +1746,19 @@ export interface components {
         };
         "schema.TestRunResponse": {
             actual_result?: string;
-            assigned_to_id?: number;
             code?: string;
+            executed_by?: string;
             expected_result?: string;
             id?: string;
             is_closed?: boolean;
             notes?: string;
-            owner_id?: number;
             project_id?: number;
             result_state?: string;
             test_case_id?: string;
+            test_case_title?: string;
             test_plan_id?: number;
             tested_by_id?: number;
+            tested_on?: string;
         };
         "schema.Tester": {
             created_at?: string;
@@ -3876,7 +3877,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testplanID: string;
+                testPlanID: string;
             };
             cookie?: never;
         };
@@ -3892,7 +3893,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TestRunListResponse"];
                 };
             };
             /** @description Bad Request */

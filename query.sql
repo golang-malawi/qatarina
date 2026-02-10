@@ -304,7 +304,30 @@ RETURNING id;
 SELECT * FROM test_runs ORDER BY created_at DESC;
 
 -- name: ListTestRunsByPlan :many
-SELECT * FROM test_runs WHERE test_plan_id = $1;
+SELECT
+    tr.id,
+    tr.project_id,
+    tr.test_plan_id,
+    tr.test_case_id,
+    tr.owner_id,
+    tr.tested_by_id,
+    tr.assigned_to_id,
+    tr.code,
+    tr.result_state,
+    tr.is_closed,
+    tr.notes,
+    tr.actual_result,
+    tr.expected_result,
+    tr.tested_on,
+    tr.created_at,
+    tr.updated_at,
+    tc.title AS test_case_title,
+    u.display_name AS executed_by
+FROM test_runs tr
+JOIN test_cases tc ON tr.test_case_id = tc.id
+JOIN users u ON tr.tested_by_id = u.id
+WHERE tr.test_plan_id = $1
+ORDER BY tr.created_at DESC;
 
 -- name: ListTestRunsAssignedToUser :many
 SELECT * FROM test_runs WHERE assigned_to_id = $1;

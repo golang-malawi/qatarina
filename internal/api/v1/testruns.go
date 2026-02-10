@@ -330,7 +330,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		}
 
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponse(executed),
+			"test_run": schema.NewTestRunResponseFromEntity(executed),
 		})
 	}
 }
@@ -360,7 +360,7 @@ func CloseTestRun(testRunService services.TestRunService, logger logging.Logger)
 			return problemdetail.ServerErrorProblem(c, "failed to close test run")
 		}
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponse(tr),
+			"test_run": schema.NewTestRunResponseFromEntity(tr),
 		})
 	}
 }
