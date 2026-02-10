@@ -86,10 +86,8 @@ const SidebarHeader = ({
       alignItems="center"
       px={isCollapsed ? "2" : "3"}
       justifyContent="space-between"
-      borderBottom="sm"
-      borderColor="border.subtle"
     >
-      <TeamSwitcher
+      <ProjectSwitcher
         collapsed={isCollapsed}
         projects={projects}
         projectsLoading={projectsLoading}
@@ -108,7 +106,7 @@ const SidebarHeader = ({
   );
 };
 
-const TeamSwitcher = ({
+const ProjectSwitcher = ({
   collapsed,
   projects,
   projectsLoading,
@@ -147,18 +145,15 @@ const TeamSwitcher = ({
   return (
     <Menu.Root positioning={positioning as any}>
       <Menu.Trigger asChild>
-        <Button
-          variant="ghost"
-          size={collapsed ? "sm" : "md"}
+        <Box
+          as="button"
+          cursor="pointer"
+          w="full"
+          textAlign="left"
           px={collapsed ? "2" : "3"}
-          py={collapsed ? "2" : "2.5"}
-          justifyContent="flex-start"
-          w={collapsed ? "auto" : "full"}
-          bg={collapsed ? "transparent" : "bg.subtle"}
-          border={collapsed ? "none" : "sm"}
-          borderColor="border.subtle"
-          borderRadius="lg"
-          _hover={{ bg: collapsed ? "bg.subtle" : "bg.muted" }}
+          py="2"
+          borderRadius="md"
+          role="group"
         >
           <HStack gap={collapsed ? "0" : "3"} w="full">
             <Logo size="sm" />
@@ -187,7 +182,7 @@ const TeamSwitcher = ({
             )}
             {!collapsed && <Icon as={LuChevronsUpDown} color="fg.subtle" />}
           </HStack>
-        </Button>
+        </Box>
       </Menu.Trigger>
       <Portal>
         <Menu.Positioner zIndex="3000">
@@ -208,17 +203,17 @@ const TeamSwitcher = ({
               pt="1"
               pb="2"
             >
-              Teams
+              Projects
             </Text>
             <Stack gap="1">
               {projectsLoading && (
                 <Menu.Item value="loading" disabled>
-                  Loading teams...
+                  Loading projects...
                 </Menu.Item>
               )}
               {!projectsLoading && teamList.length === 0 && (
                 <Menu.Item value="empty" disabled>
-                  No teams yet
+                  No projects yet
                 </Menu.Item>
               )}
               {!projectsLoading &&
@@ -228,7 +223,7 @@ const TeamSwitcher = ({
                   return (
                     <Menu.Item
                       key={project.id}
-                      value={`team-${project.id}`}
+                      value={`project-${project.id}`}
                       onClick={() =>
                         navigate({ to: `/projects/${project.id}` })
                       }

@@ -15,12 +15,12 @@ import {
 import { ThemeProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes"
 import * as React from "react"
-import { LuFlame, LuMoon, LuSun } from "react-icons/lu"
+import { LuMonitor, LuMoon, LuSun } from "react-icons/lu"
 
 export const THEME_OPTIONS = [
-  { value: "light", label: "Quartz", icon: LuSun },
-  { value: "dark", label: "Carbon", icon: LuMoon },
-  { value: "dusk", label: "Ember", icon: LuFlame },
+  { value: "light", label: "Light", icon: LuSun },
+  { value: "dark", label: "Dark", icon: LuMoon },
+  { value: "system", label: "System", icon: LuMonitor },
 ] as const
 
 type ThemeValue = (typeof THEME_OPTIONS)[number]["value"]
@@ -32,8 +32,9 @@ export function ColorModeProvider(props: ColorModeProviderProps) {
     <ThemeProvider
       attribute="class"
       disableTransitionOnChange
-      defaultTheme="light"
-      themes={THEME_OPTIONS.map((theme) => theme.value)}
+      defaultTheme="system"
+      enableSystem
+      themes={["light", "dark"]}
       {...props}
     />
   )
@@ -48,9 +49,8 @@ export interface UseColorModeReturn {
 }
 
 export function useColorMode(): UseColorModeReturn {
-  const { resolvedTheme, setTheme, forcedTheme } = useTheme()
-  const colorMode =
-    (forcedTheme || resolvedTheme || THEME_OPTIONS[0].value) as ColorMode
+  const { theme, setTheme, forcedTheme } = useTheme()
+  const colorMode = (forcedTheme || theme || "system") as ColorMode
   const toggleColorMode = () => {
     const currentIndex = THEME_OPTIONS.findIndex(
       (theme) => theme.value === colorMode,
@@ -67,14 +67,15 @@ export function useColorMode(): UseColorModeReturn {
 }
 
 export function useColorModeValue<T>(light: T, dark: T) {
-  const { colorMode } = useColorMode()
-  return colorMode === "dark" || colorMode === "dusk" ? dark : light
+  const { theme, resolvedTheme } = useTheme()
+  const activeTheme = theme === "system" ? resolvedTheme : theme
+  return activeTheme === "dark" ? dark : light
 }
 
 export function ColorModeIcon() {
-  const { colorMode } = useColorMode()
+  const { theme } = useTheme()
   const activeTheme =
-    THEME_OPTIONS.find((theme) => theme.value === colorMode) ??
+    THEME_OPTIONS.find((option) => option.value === (theme ?? "system")) ??
     THEME_OPTIONS[0]
   const Icon = activeTheme.icon
   return <Icon />
