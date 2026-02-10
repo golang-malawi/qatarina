@@ -26,7 +26,6 @@ export const Route = createFileRoute("/(app)")({
   errorComponent: ({ error }) => <ErrorComponent error={error} />,
 });
 
-
 function BaseLayout() {
   return (
     <SidebarProvider>
@@ -75,9 +74,7 @@ function BaseLayout() {
             px={{ base: "4", md: "6" }}
             py={{ base: "6", md: "8" }}
           >
-            <Box w="full" maxW="6xl" mr="auto">
-              <Outlet />
-            </Box>
+            <Outlet />
           </Box>
         </Box>
       </SidebarInset>

@@ -13,18 +13,23 @@ import (
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // TestCaseService contains functionality to manage services
 type TestCaseService interface {
 	// FindAll retrieves all test cases in the database
 	FindAll(context.Context) ([]dbsqlc.TestCase, error)
+	// FindAllPaged retrieves test cases with pagination, sorting, and filtering
+	FindAllPaged(context.Context, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
 	// FindAllByID retrieves all test cases in the database by Project ID
 	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
 
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
+	// FindAllByProjectIDPaged retrieves test cases by Project ID with pagination, sorting, and filtering
+	FindAllByProjectIDPaged(context.Context, int64, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
 	// FindAllByTestPlanID retrieves all test cases in the database by Test Plan ID
 	FindAllByTestPlanID(context.Context, int64) ([]schema.TestCaseResponseItem, error)
@@ -63,6 +68,16 @@ type TestCaseService interface {
 	UnMarkAsDraft(ctx context.Context, testCaseID string) error
 	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
 	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
+}
+
+type TestCaseQueryParams struct {
+	Page      int
+	PageSize  int
+	SortBy    string
+	SortOrder string
+	Search    string
+	Kind      string
+	IsDraft   *bool
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -265,6 +280,116 @@ func (t *testCaseServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.TestCase, e
 	return t.queries.ListTestCases(ctx)
 }
 
+// FindAllPaged implements TestCaseService.
+func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error) {
+	page := params.Page
+	pageSize := params.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+	}
+	sortColumn, ok := sortMap[sortKey]
+	if !ok || sortColumn == "" {
+		sortColumn = "created_at"
+	}
+	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	conditions := []string{"1=1"}
+	args := []interface{}{}
+	argPos := 1
+
+	search := strings.TrimSpace(params.Search)
+	if search != "" {
+		conditions = append(conditions, fmt.Sprintf("(code ILIKE $%d OR title ILIKE $%d OR description ILIKE $%d OR feature_or_module ILIKE $%d)", argPos, argPos, argPos, argPos))
+		args = append(args, "%"+search+"%")
+		argPos++
+	}
+
+	if params.Kind != "" {
+		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
+		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.IsDraft != nil {
+		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
+		args = append(args, *params.IsDraft)
+		argPos++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	var total int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM test_cases WHERE %s", whereClause)
+	if err := t.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limit := pageSize
+	offset := (page - 1) * pageSize
+	args = append(args, limit, offset)
+	limitPos := argPos
+	offsetPos := argPos + 1
+
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
+
+	rows, err := t.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	items := []dbsqlc.TestCase{}
+	for rows.Next() {
+		var item dbsqlc.TestCase
+		if err := rows.Scan(
+			&item.ID,
+			&item.Kind,
+			&item.Code,
+			&item.FeatureOrModule,
+			&item.Title,
+			&item.Description,
+			&item.ParentTestCaseID,
+			&item.IsDraft,
+			pq.Array(&item.Tags),
+			&item.CreatedByID,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&item.ProjectID,
+		); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
 // FindAllByID implements TestCaseService.
 func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
 	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
@@ -274,6 +399,116 @@ func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.
 // FindAllByProjectID implements TestCaseService.
 func (t *testCaseServiceImpl) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error) {
 	return t.queries.ListTestCasesByProject(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
+}
+
+// FindAllByProjectIDPaged implements TestCaseService.
+func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, projectID int64, params TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error) {
+	page := params.Page
+	pageSize := params.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+	}
+	sortColumn, ok := sortMap[sortKey]
+	if !ok || sortColumn == "" {
+		sortColumn = "created_at"
+	}
+	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	conditions := []string{"project_id = $1"}
+	args := []interface{}{int32(projectID)}
+	argPos := 2
+
+	search := strings.TrimSpace(params.Search)
+	if search != "" {
+		conditions = append(conditions, fmt.Sprintf("(code ILIKE $%d OR title ILIKE $%d OR description ILIKE $%d OR feature_or_module ILIKE $%d)", argPos, argPos, argPos, argPos))
+		args = append(args, "%"+search+"%")
+		argPos++
+	}
+
+	if params.Kind != "" {
+		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
+		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.IsDraft != nil {
+		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
+		args = append(args, *params.IsDraft)
+		argPos++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	var total int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM test_cases WHERE %s", whereClause)
+	if err := t.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limit := pageSize
+	offset := (page - 1) * pageSize
+	args = append(args, limit, offset)
+	limitPos := argPos
+	offsetPos := argPos + 1
+
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
+
+	rows, err := t.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	items := []dbsqlc.TestCase{}
+	for rows.Next() {
+		var item dbsqlc.TestCase
+		if err := rows.Scan(
+			&item.ID,
+			&item.Kind,
+			&item.Code,
+			&item.FeatureOrModule,
+			&item.Title,
+			&item.Description,
+			&item.ParentTestCaseID,
+			&item.IsDraft,
+			pq.Array(&item.Tags),
+			&item.CreatedByID,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&item.ProjectID,
+		); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
 }
 
 // FindAllByProjectID implements TestCaseService.
