@@ -3,21 +3,43 @@
 "use client"
 
 import type { IconButtonProps, SpanProps } from "@chakra-ui/react"
-import { ClientOnly, IconButton, Skeleton, Span } from "@chakra-ui/react"
+import {
+  ClientOnly,
+  IconButton,
+  Menu,
+  Skeleton,
+  Span,
+  Stack,
+  Text,
+} from "@chakra-ui/react"
 import { ThemeProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes"
 import * as React from "react"
-import { LuMoon, LuSun } from "react-icons/lu"
+import { LuFlame, LuMoon, LuSun } from "react-icons/lu"
+
+const THEME_OPTIONS = [
+  { value: "light", label: "Quartz", icon: LuSun },
+  { value: "dark", label: "Carbon", icon: LuMoon },
+  { value: "dusk", label: "Ember", icon: LuFlame },
+] as const
+
+type ThemeValue = (typeof THEME_OPTIONS)[number]["value"]
 
 export interface ColorModeProviderProps extends ThemeProviderProps {}
 
 export function ColorModeProvider(props: ColorModeProviderProps) {
   return (
-    <ThemeProvider attribute="class" disableTransitionOnChange {...props} />
+    <ThemeProvider
+      attribute="class"
+      disableTransitionOnChange
+      defaultTheme="light"
+      themes={THEME_OPTIONS.map((theme) => theme.value)}
+      {...props}
+    />
   )
 }
 
-export type ColorMode = "light" | "dark"
+export type ColorMode = ThemeValue
 
 export interface UseColorModeReturn {
   colorMode: ColorMode
@@ -27,9 +49,15 @@ export interface UseColorModeReturn {
 
 export function useColorMode(): UseColorModeReturn {
   const { resolvedTheme, setTheme, forcedTheme } = useTheme()
-  const colorMode = forcedTheme || resolvedTheme
+  const colorMode =
+    (forcedTheme || resolvedTheme || THEME_OPTIONS[0].value) as ColorMode
   const toggleColorMode = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark")
+    const currentIndex = THEME_OPTIONS.findIndex(
+      (theme) => theme.value === colorMode,
+    )
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % THEME_OPTIONS.length : 0
+    setTheme(THEME_OPTIONS[nextIndex].value)
   }
   return {
     colorMode: colorMode as ColorMode,
@@ -40,12 +68,16 @@ export function useColorMode(): UseColorModeReturn {
 
 export function useColorModeValue<T>(light: T, dark: T) {
   const { colorMode } = useColorMode()
-  return colorMode === "dark" ? dark : light
+  return colorMode === "dark" || colorMode === "dusk" ? dark : light
 }
 
 export function ColorModeIcon() {
   const { colorMode } = useColorMode()
-  return colorMode === "dark" ? <LuMoon /> : <LuSun />
+  const activeTheme =
+    THEME_OPTIONS.find((theme) => theme.value === colorMode) ??
+    THEME_OPTIONS[0]
+  const Icon = activeTheme.icon
+  return <Icon />
 }
 
 interface ColorModeButtonProps extends Omit<IconButtonProps, "aria-label"> {}
@@ -54,25 +86,60 @@ export const ColorModeButton = React.forwardRef<
   HTMLButtonElement,
   ColorModeButtonProps
 >(function ColorModeButton(props, ref) {
-  const { toggleColorMode } = useColorMode()
+  const { colorMode, setColorMode } = useColorMode()
+  const activeTheme =
+    THEME_OPTIONS.find((theme) => theme.value === colorMode) ??
+    THEME_OPTIONS[0]
   return (
     <ClientOnly fallback={<Skeleton boxSize="9" />}>
-      <IconButton
-        onClick={toggleColorMode}
-        variant="ghost"
-        aria-label="Toggle color mode"
-        size="sm"
-        ref={ref}
-        {...props}
-        css={{
-          _icon: {
-            width: "5",
-            height: "5",
-          },
-        }}
-      >
-        <ColorModeIcon />
-      </IconButton>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <IconButton
+            variant="ghost"
+            aria-label="Change theme"
+            size="sm"
+            ref={ref}
+            {...props}
+            css={{
+              _icon: {
+                width: "5",
+                height: "5",
+              },
+            }}
+          >
+            <ColorModeIcon />
+          </IconButton>
+        </Menu.Trigger>
+        <Menu.Content
+          zIndex={100}
+          minW="44"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+        >
+          {THEME_OPTIONS.map((theme) => {
+            const Icon = theme.icon
+            const isActive = theme.value === activeTheme.value
+            return (
+              <Menu.Item
+                key={theme.value}
+                value={theme.value}
+                onClick={() => setColorMode(theme.value)}
+              >
+                <Stack direction="row" align="center" gap="3">
+                  <Icon />
+                  <Text fontSize="sm">{theme.label}</Text>
+                  {isActive && (
+                    <Text fontSize="xs" color="fg.muted">
+                      Active
+                    </Text>
+                  )}
+                </Stack>
+              </Menu.Item>
+            )
+          })}
+        </Menu.Content>
+      </Menu.Root>
     </ClientOnly>
   )
 })

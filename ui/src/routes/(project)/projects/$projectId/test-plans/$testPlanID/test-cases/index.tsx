@@ -19,6 +19,7 @@ import {
   CloseButton,
   Checkbox,
   CheckboxGroup,
+  Spinner,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -69,14 +70,14 @@ function AssignTesterDialog({
       onOpenChange={(e) => setIsDialogOpen(e.open)}
     >
       <Dialog.Trigger asChild>
-        <Button colorScheme="teal" size="sm" variant={buttonVariant}>
+        <Button colorPalette="brand" size="sm" variant={buttonVariant}>
           {buttonText}
         </Button>
       </Dialog.Trigger>
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle">
             <Dialog.Header>
               <Dialog.Title>Select Testers</Dialog.Title>
               <Dialog.CloseTrigger asChild>
@@ -88,7 +89,7 @@ function AssignTesterDialog({
                 value={selectedUsers}
                 onValueChange={setSelectedUsers}
               >
-                <Stack gap={3} maxH="300px" overflowY="auto">
+                <Stack gap={3} maxH="72" overflowY="auto">
                   {users.map((user) => (
                     <Checkbox.Root
                       key={user.ID ?? user.id}
@@ -103,7 +104,7 @@ function AssignTesterDialog({
                               (`${user.FirstName ?? ""} ${user.LastName ?? ""}`.trim() ||
                                 user.username)}
                           </Text>
-                          <Text fontSize="xs" color="gray.500">
+                          <Text fontSize="xs" color="fg.subtle">
                             {user.Email}
                           </Text>
                         </Box>
@@ -114,7 +115,7 @@ function AssignTesterDialog({
               </CheckboxGroup>
               <Button
                 mt={5}
-                colorScheme="teal"
+                colorPalette="brand"
                 width="full"
                 loading={isSubmitting}
                 disabled={selectedUsers.length === 0}
@@ -192,13 +193,18 @@ function RouteComponent() {
     }
   };
 
-  if (isLoadingCases || usersQuery.isLoading)
-    return <Box p={10}>Loading...</Box>;
+  if (isLoadingCases || usersQuery.isLoading) {
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
+  }
 
   return (
     <Box p={4}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading>Tests In this Plan</Heading>
+        <Heading color="fg.heading">Tests In this Plan</Heading>
 
         {/* TOP BUTTON: Passes all test cases to the function */}
         <AssignTesterDialog
@@ -212,6 +218,7 @@ function RouteComponent() {
         name="searchTestCase"
         placeholder="Search for test cases..."
         mb={6}
+        focusRingColor="brand.focusRing"
       />
 
       <Stack gap={4}>
@@ -223,18 +230,26 @@ function RouteComponent() {
             })) ?? [];
 
           return (
-            <Box key={run.id} p={4} borderWidth="1px" rounded="md" shadow="sm">
+            <Box
+              key={run.id}
+              p={4}
+              border="sm"
+              borderColor="border.subtle"
+              rounded="lg"
+              shadow="sm"
+              bg="bg.surface"
+            >
               <Flex justify="space-between" align="flex-start">
                 <Box flex="1">
                   <Flex gap={1} wrap="wrap">
-                    <Badge>
+                    <Badge colorPalette="info" variant="subtle">
                       <strong>Code:</strong> {run.code ?? "—"}
                     </Badge>
-                    <Badge>
+                    <Badge colorPalette="info" variant="subtle">
                       <strong>Module:</strong> {run.feature_or_module ?? "—"}
                     </Badge>
                   </Flex>
-                  <Text mt={2}>
+                  <Text mt={2} color="fg.muted">
                     <strong>Title:</strong> {run.title || "—"}
                   </Text>
                 </Box>
@@ -248,8 +263,8 @@ function RouteComponent() {
                 />
               </Flex>
 
-              <Box mt={3} pt={3} borderTopWidth="1px">
-                <Text fontSize="sm" fontWeight="bold" color="gray.600">
+              <Box mt={3} pt={3} borderTop="sm" borderColor="border.subtle">
+                <Text fontSize="sm" fontWeight="bold" color="fg.muted">
                   Assigned:
                 </Text>
                 {assignedNames.length ? (
@@ -257,7 +272,7 @@ function RouteComponent() {
                     {assignedNames.map((t: any) => (
                       <Badge
                         key={`${run.id}-${t.id}`}
-                        colorScheme="purple"
+                        colorPalette="brand"
                         variant="subtle"
                       >
                         {t.name}
@@ -265,7 +280,7 @@ function RouteComponent() {
                     ))}
                   </Flex>
                 ) : (
-                  <Text fontSize="xs" color="gray.400">
+                  <Text fontSize="xs" color="fg.subtle">
                     None assigned
                   </Text>
                 )}

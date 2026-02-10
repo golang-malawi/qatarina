@@ -40,7 +40,9 @@ function ListTesters() {
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Testers</Heading>
+        <Heading size="lg" color="fg.heading">
+          Testers
+        </Heading>
         {/* We have to think about this since adding a tester requires a project id which at this level we dont have
         <Link to="/testers/invite">
           <Button colorScheme="teal">+ Add New Tester</Button>
@@ -49,7 +51,7 @@ function ListTesters() {
 
       {isPending ? (
         <Flex justify="center" py={10}>
-          <Spinner size="lg" />
+          <Spinner size="lg" color="brand.solid" />
         </Flex>
       ) : isError ? (
         <ErrorAlert message={`Failed to load testers: ${(error as Error).message}`} />
@@ -74,13 +76,13 @@ function ListTesters() {
                   <Table.Cell>{tester.role || "N/A"}</Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
-                      <Button>
+                      <Button variant="outline" colorPalette="brand" size="sm">
                         <Link to={`/testers/view/$testerId`} params={{  testerId: `${tester.user_id!}` }}>
                           View
                         </Link>
                       </Button>
                       <Button
-                        colorScheme="red"
+                        colorPalette="danger"
                         onClick={() => handleDelete(tester.user_id!)}
                         size="sm"
                       >

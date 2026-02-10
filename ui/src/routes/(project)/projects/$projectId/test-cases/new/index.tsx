@@ -50,8 +50,10 @@ function NewTestCases() {
   }
 
   return (
-    <Box>
-      <Heading size="3xl">Create Test Cases</Heading>
+    <Box p={6}>
+      <Heading size="3xl" color="fg.heading">
+        Create Test Cases
+      </Heading>
       <DynamicForm
         schema={testCaseCreationSchema}
         fields={createTestCaseFields(project_id)}

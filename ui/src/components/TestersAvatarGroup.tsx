@@ -12,7 +12,13 @@ export default function TestersAvatarGroup({
   const includedTesters = many ? testers.slice(0, 4) : testers;
   const avatars = includedTesters.map((t) => (
     <Link key={t.user_id} to={`/testers/view/$testerId`} params={{ testerId: `${t.user_id}` }}>
-      <Avatar shadow="2xl" bg="green.500" name={t.name} key={t.user_id} />
+      <Avatar
+        shadow="sm"
+        bg="brand.solid"
+        color="brand.contrast"
+        name={t.name}
+        key={t.user_id}
+      />
     </Link>
   ));
 
@@ -25,7 +31,7 @@ export default function TestersAvatarGroup({
       {avatars}
       {many && (
         <Link to="/testers">
-          <Avatar name="+" bg="black.500"></Avatar>
+          <Avatar name="+" bg="bg.inverted" color="fg.inverted" />
         </Link>
       )}
     </AvatarGroup>

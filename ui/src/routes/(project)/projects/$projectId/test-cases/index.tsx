@@ -103,11 +103,17 @@ export default function ListProjectTestCases() {
         <Table.Cell>
           <Menu.Root>
             <Menu.Trigger asChild>
-              <Button>
+              <Button size="sm" variant="outline" colorPalette="brand">
                 <IconChevronDown /> Actions
               </Button>
             </Menu.Trigger>
-            <Menu.Content zIndex={100} position="absolute">
+            <Menu.Content
+              zIndex={100}
+              position="absolute"
+              bg="bg.surface"
+              border="sm"
+              borderColor="border.subtle"
+            >
               <Menu.Item value="view">
                 <Link
                   to={"/projects/$projectId/test-cases/$testCaseId"}
@@ -121,7 +127,7 @@ export default function ListProjectTestCases() {
                 Mark as Draft
                 </Menu.Item>
               <Menu.Item value="use">Use in Test Session</Menu.Item>
-              <Menu.Item color="red" value="delete">
+              <Menu.Item color="fg.error" value="delete">
                 Delete
               </Menu.Item>
             </Menu.Content>
@@ -134,7 +140,7 @@ export default function ListProjectTestCases() {
   return (
     <div>
       <Toaster />
-      <Heading as="h6" size="xl">
+      <Heading as="h6" size="xl" color="fg.heading">
         Test Cases
       </Heading>
 
@@ -151,11 +157,11 @@ export default function ListProjectTestCases() {
           to={"/projects/$projectId/test-cases/new"}
           params={{ projectId: projectId }}
         >
-          <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          <Button variant={"outline"} colorPalette="brand" size={"sm"}>
             Add Test Cases
           </Button>
         </Link>
-        <Button colorScheme="green" size="sm" onClick={handleImportClick}>
+        <Button colorPalette="success" size="sm" onClick={handleImportClick}>
           Import from Excel
         </Button>
 
@@ -167,23 +173,23 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
-        <Button bg="green" color="white" size={"sm"}>
+        <Button colorPalette="success" size={"sm"}>
           Import from Google Sheets
         </Button>
 
         <ButtonGroup>
           <IconButton
             aria-label="Add to friends"
-            bgColor={"grey"}
-            color={"white"}
+            bg="bg.subtle"
+            color="fg.muted"
             size={"sm"}
           >
             <IconListDetails />
           </IconButton>
           <IconButton
             aria-label="Add to friends"
-            bgColor={"gray.300"}
-            color={"black"}
+            bg="bg.emphasized"
+            color="fg"
             size={"sm"}
           >
             <IconTable />
@@ -201,15 +207,15 @@ export default function ListProjectTestCases() {
             <IconList />
             &nbsp; All Test Cases
           </Tabs.Trigger>
-          <Tabs.Trigger color={"green"} value="completed">
+          <Tabs.Trigger color={"fg.success"} value="completed">
             <IconListCheck />
             &nbsp;Completed / Closed
           </Tabs.Trigger>
-          <Tabs.Trigger color={"red"} value="failing">
+          <Tabs.Trigger color={"fg.error"} value="failing">
             <IconAlertTriangle />
             &nbsp;Failing
           </Tabs.Trigger>
-          <Tabs.Trigger color={"orange"} value="scheduled">
+          <Tabs.Trigger color={"fg.warning"} value="scheduled">
             <IconClock />
             &nbsp;Scheduled
           </Tabs.Trigger>

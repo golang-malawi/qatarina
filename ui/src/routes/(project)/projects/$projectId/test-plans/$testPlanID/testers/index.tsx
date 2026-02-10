@@ -61,7 +61,7 @@ function TestPlanTesters() {
   ) {
     return (
       <Flex justify="center" align="center" h="full" p={10}>
-        <Spinner size="xl" color="teal.500" />
+        <Spinner size="xl" color="brand.solid" />
       </Flex>
     );
   }
@@ -103,10 +103,12 @@ function TestPlanTesters() {
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Testers Assigned to this Plan</Heading>
+        <Heading size="lg" color="fg.heading">
+          Testers Assigned to this Plan
+        </Heading>
       </Flex>
 
-      <Text mb={4} color="gray.600">
+      <Text mb={4} color="fg.muted">
         Total Testers: <strong>{testers.length}</strong>
       </Text>
 
@@ -144,7 +146,7 @@ function TestPlanTesters() {
                       aria-label="Delete tester"
                       variant="ghost"
                       size="sm"
-                      colorPalette="red"
+                      colorPalette="danger"
                       onClick={() => handleDelete(tester.id)}
                     >
                       <LuTrash />
@@ -159,7 +161,7 @@ function TestPlanTesters() {
                 colSpan={5}
                 textAlign="center"
                 py={10}
-                color="gray.500"
+                color="fg.subtle"
               >
                 No testers assigned to this plan yet.
               </Table.Cell>

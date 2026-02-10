@@ -6,6 +6,7 @@ import {
   Button,
   Stack,
   Spinner,
+  Image,
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGetUserQuery, deleteUserByID  } from "@/services/UserService";
@@ -36,7 +37,7 @@ function ViewUserProfile() {
   if (isPending) {
     return (
       <Flex justify="center" align="center" p={6}>
-        <Spinner size="lg" color="teal.500" />
+        <Spinner size="lg" color="brand.solid" />
       </Flex>
     );
   }
@@ -59,7 +60,7 @@ function ViewUserProfile() {
 
   return (
     <Box p={6}>
-      <Heading size="lg" mb={4}>
+      <Heading size="lg" mb={4} color="fg.heading">
         View Profile: {displayName}
       </Heading>
 
@@ -67,40 +68,40 @@ function ViewUserProfile() {
         direction="column"
         align="center"
         p={6}
-        border="1px solid #ddd"
-        borderRadius="md"
-        maxW="400px"
+        border="sm"
+        borderColor="border.subtle"
+        borderRadius="xl"
+        maxW="md"
         mx="auto"
-        boxShadow="md"
-        bg="gray.50"
+        shadow="card"
+        bg="bg.surface"
       >
-        <img
+        <Image
           src={avatarUrl}
           alt={displayName}
-          style={{
-            borderRadius: "50%",
-            width: "100px",
-            height: "100px",
-            marginBottom: "1rem",
-          }}
+          borderRadius="full"
+          boxSize="24"
+          mb="4"
         />
-        <Heading size="md">{displayName}</Heading>
-        <Text color="gray.600">{email}</Text>
-        <Text color="gray.500" mt={1}>
+        <Heading size="md" color="fg.heading">
+          {displayName}
+        </Heading>
+        <Text color="fg.muted">{email}</Text>
+        <Text color="fg.subtle" mt={1}>
           Role: {role}
         </Text>
-        <Text fontSize="sm" color="gray.400" mt={2}>
+        <Text fontSize="sm" color="fg.subtle" mt={2}>
           Joined on: {joinedAt}
         </Text>
 
-        <Box my={4} w="100%" h="1px" bg="gray.300" />
+        <Box my={4} w="100%" borderTop="sm" borderColor="border.muted" />
 
         <Stack direction="row" gap={3}>
-          <Button colorScheme="blue" onClick={() => console.log("Edit", user.ID)}>
+          <Button colorPalette="brand" onClick={() => console.log("Edit", user.ID)}>
             Edit Profile
           </Button>
           <Button
-            colorScheme="red"
+            colorPalette="danger"
             variant="outline"
             onClick={handleDeactivate}
           >

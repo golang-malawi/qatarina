@@ -20,8 +20,8 @@ function EditTesterPage(){
 
     const {data: testerData,isPending, isError} = useTesterQuery(testerId);
 
-    if (isPending) return <Spinner size="lg" />
-    if (isError) return <Text color="red.500">Failed to load tester</Text>
+    if (isPending) return <Spinner size="lg" color="brand.solid" />
+    if (isError) return <Text color="fg.error">Failed to load tester</Text>
 
     const schema = z.object({
         role: z.enum([
@@ -71,7 +71,7 @@ function EditTesterPage(){
 
     return (
         <Box p={6}>
-            <Heading size="lg" mb={4}>
+            <Heading size="lg" mb={4} color="fg.heading">
                 Edit Tester Role
             </Heading>
             <DynamicForm 

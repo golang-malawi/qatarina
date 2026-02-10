@@ -2,9 +2,11 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Badge,
   Container,
   Heading,
   Menu,
+  Text,
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
@@ -120,15 +122,17 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
-      <Heading size="lg">{tc.description}</Heading>
+      <Heading size="lg" color="fg.heading">
+        {tc.description}
+      </Heading>
       <Menu.Root>
         <Menu.Trigger asChild>
-          <Button>
+          <Button size="sm" variant="outline" colorPalette="brand">
             <IconChevronDown />
             Actions
           </Button>
         </Menu.Trigger>
-        <Menu.Content>
+        <Menu.Content bg="bg.surface" border="sm" borderColor="border.subtle">
           <Menu.Item value="">View</Menu.Item>
           <Menu.Item value="">Create a Copy</Menu.Item>
           <Menu.Item
@@ -140,38 +144,36 @@ function TestCaseInboxItem() {
           </Menu.Item>
 
           <Menu.Item value="">Use in Test Plan</Menu.Item>
-          <Menu.Item value="" color="red">
+          <Menu.Item value="" color="fg.error">
             Delete
           </Menu.Item>
         </Menu.Content>
       </Menu.Root>
 
       <Container my="4">
-        <Heading size="lg">{tc.title}</Heading>
-        <p>
+        <Heading size="lg" color="fg.heading">
+          {tc.title}
+        </Heading>
+        <Text color="fg.muted">
           <strong>Code:</strong> {tc.code}
-        </p>
-        <p>
+        </Text>
+        <Text color="fg.muted">
           <strong>Description:</strong> {tc.description}
-        </p>
-        <p>
+        </Text>
+        <Text color="fg.muted">
           <strong>Kind:</strong> {tc.kind}
-        </p>
+        </Text>
         {isDraft && (
-          <Box
-            as="span"
-            fontSize="sm"
-            bg="orange.100"
-            color="orange.700"
-            borderRadius="md"
-          >
+          <Badge colorPalette="warning" variant="subtle">
             Draft
-          </Box>
+          </Badge>
         )}
       </Container>
 
-      <Container p="4" border="1px solid #f3f3f3">
-        <Heading size="lg">Record a Test Result on this test case</Heading>
+      <Container p="4" border="sm" borderColor="border.subtle" bg="bg.surface">
+        <Heading size="lg" color="fg.heading">
+          Record a Test Result on this test case
+        </Heading>
         <Textarea
           placeholder="Observed behaviour (result)"
           value={resultText}
@@ -184,7 +186,7 @@ function TestCaseInboxItem() {
         <Button
           type="button"
           variant="outline"
-          colorScheme="blue"
+          colorPalette="success"
           onClick={() => {
             executeMutation.mutate({ status: "passed" });
           }}
@@ -197,7 +199,7 @@ function TestCaseInboxItem() {
         <Button
           type="button"
           variant="outline"
-          colorScheme="red"
+          colorPalette="danger"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
           disabled={isDraft || !testRunId}

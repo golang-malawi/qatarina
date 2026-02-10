@@ -23,7 +23,7 @@ function RouteComponent() {
   if (isPending) {
     return (
       <Flex justify="center" align="center" h="full" p={10}>
-        <Spinner size="xl" color="teal.500" />
+        <Spinner size="xl" color="brand.solid" />
       </Flex>
     );
   }
@@ -39,9 +39,11 @@ function RouteComponent() {
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={6}>
-        <Heading size="lg">Users</Heading>
+        <Heading size="lg" color="fg.heading">
+          Users
+        </Heading>
         <Link to={`/users/new`}>
-          <Button colorScheme="teal">+ Add New User</Button>
+          <Button colorPalette="brand">+ Add New User</Button>
         </Link>
       </Flex>
 
@@ -50,22 +52,25 @@ function RouteComponent() {
           <Box
             key={user.id}
             p={4}
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="md"
-            _hover={{ bg: "gray.50", shadow: "sm" }}
+            border="sm"
+            borderColor="border.subtle"
+            borderRadius="lg"
+            bg="bg.surface"
+            _hover={{ bg: "bg.subtle", shadow: "sm" }}
             transition="all 0.2s"
           >
             <Flex align="center" gap={3}>
-              <Icon as={IconUser} boxSize={6} color="teal.500" />
+              <Icon as={IconUser} boxSize={6} color="fg.accent" />
               <Box>
                 <Link to={`/users/view/$userID`} params={{ userID: user.id }}>
-                  <Heading size="md">{user.displayName}</Heading>
+                  <Heading size="md" color="fg.heading">
+                    {user.displayName}
+                  </Heading>
                 </Link>
-                <Text fontSize="sm" color="gray.600">
+                <Text fontSize="sm" color="fg.muted">
                   Username: {user.username}
                 </Text>
-                <Text fontSize="xs" color="gray.500">
+                <Text fontSize="xs" color="fg.subtle">
                   Registered At: {user.createdAt}
                 </Text>
               </Box>

@@ -57,8 +57,10 @@ function CreateNewUser() {
   };
 
   return (
-    <Box>
-      <Heading size="3xl">Add New User</Heading>
+    <Box p={6}>
+      <Heading size="3xl" color="fg.heading">
+        Add New User
+      </Heading>
       <DynamicForm
         schema={userCreationSchema}
         fields={userFields}
