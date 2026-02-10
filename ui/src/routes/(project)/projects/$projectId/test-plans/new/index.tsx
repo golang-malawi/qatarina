@@ -10,6 +10,8 @@ import {
   For,
   Heading,
   Portal,
+  Spinner,
+  Text,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster"
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -57,11 +59,15 @@ function CreateNewTestPlan() {
   } = useSuspenseQuery(testCasesByProjectIdQueryOptions(projectId));
 
   if (isPending) {
-    return "Loading Test Cases...";
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: error fetching test cases</div>;
+    return <Text color="fg.error">Error: error fetching test cases</Text>;
   }
 
   const testers = testersQuery.data?.testers ?? [];
@@ -144,8 +150,8 @@ function CreateNewTestPlan() {
     <div>
       <Toaster
       />
-      <Box>
-        <Heading>Create a Test Plan</Heading>
+      <Box p={6}>
+        <Heading color="fg.heading">Create a Test Plan</Heading>
         <DynamicForm
           schema={testPlanCreationSchema}
           fields={testPlanCreationFields}
@@ -154,12 +160,14 @@ function CreateNewTestPlan() {
           layout="vertical"
           spacing={4}
         />
-        <Heading>Select & Assign Test Cases</Heading>
+        <Heading color="fg.heading">Select & Assign Test Cases</Heading>
         <Flex
           mb={4}
           p={3}
-          borderWidth="1px"
-          borderRadius="md"
+          border="sm"
+          borderColor="border.subtle"
+          borderRadius="lg"
+          bg="bg.surface"
           align="center"
           justify="space-between"
         >
@@ -171,6 +179,7 @@ function CreateNewTestPlan() {
           <Button
             size="sm"
             variant="solid"
+            colorPalette="brand"
             disabled={selectedTestCases.length === 0}
             onClick={() => setBulkAssignOpen(true)}
           >
@@ -181,8 +190,10 @@ function CreateNewTestPlan() {
           return (
             <Box
               key={testCase.id}
-              borderWidth="1px"
-              borderRadius="md"
+              border="sm"
+              borderColor="border.subtle"
+              borderRadius="lg"
+              bg="bg.surface"
               p={4}
               mb={3}
             >
@@ -211,7 +222,12 @@ function CreateNewTestPlan() {
                   </Checkbox.Label>
                 </Checkbox.Root>
 
-                <Button size="sm" onClick={() => openAssignModal(Number(testCase.id!))}>
+                <Button
+                  size="sm"
+                  colorPalette="brand"
+                  variant="outline"
+                  onClick={() => openAssignModal(Number(testCase.id!))}
+                >
                   Assign testers
                 </Button>
               </Flex>
@@ -231,9 +247,10 @@ function CreateNewTestPlan() {
                           key={uid}
                           px={2}
                           py={1}
-                          bg="gray.100"
+                          bg="bg.muted"
                           borderRadius="md"
                           fontSize="sm"
+                          color="fg.muted"
                         >
                           {tester?.name}
                         </Box>
@@ -241,7 +258,7 @@ function CreateNewTestPlan() {
                     })}
                 </Flex>
               ) : (
-                <Box mt={2} fontSize="sm" color="gray.500">
+                <Box mt={2} fontSize="sm" color="fg.subtle">
                   No testers assigned
                 </Box>
               )}
@@ -257,7 +274,7 @@ function CreateNewTestPlan() {
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
-            <Dialog.Content>
+            <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle">
               <Dialog.Header>Assign testers to test case</Dialog.Header>
               <Dialog.Body>
                 <CheckboxGroup
@@ -296,7 +313,9 @@ function CreateNewTestPlan() {
               </Dialog.Body>
 
               <Dialog.Footer>
-                <Button onClick={() => setActiveTestCaseId(null)}>Done</Button>
+                <Button colorPalette="brand" onClick={() => setActiveTestCaseId(null)}>
+                  Done
+                </Button>
               </Dialog.Footer>
             </Dialog.Content>
           </Dialog.Positioner>
@@ -310,11 +329,11 @@ function CreateNewTestPlan() {
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
-            <Dialog.Content>
+            <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle">
               <Dialog.Header>Bulk assign testers</Dialog.Header>
 
               <Dialog.Body>
-                <Box fontSize="sm" mb={3} color="gray.600">
+                <Box fontSize="sm" mb={3} color="fg.muted">
                   Selected testers will be assigned to{" "}
                   <strong>{selectedTestCases.length}</strong> test cases.
                   Existing assignments will be kept.
@@ -356,6 +375,7 @@ function CreateNewTestPlan() {
                 </Button>
 
                 <Button
+                  colorPalette="brand"
                   disabled={bulkSelectedTesters.length === 0}
                   onClick={() => {
                     setSelectedTestCases((prev) =>

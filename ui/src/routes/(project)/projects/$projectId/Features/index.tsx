@@ -66,23 +66,25 @@ function RouteComponent() {
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Features / Modules / Components</Heading>
+        <Heading size="lg" color="fg.heading">
+          Features / Modules / Components
+        </Heading>
         <Link
           to="/projects/$projectId/Features/CreateFeatureModuleForm"
           params={{ projectId }}
         >
-          <Button colorScheme="teal">+ Create New</Button>
+          <Button colorPalette="brand">+ Create New</Button>
         </Link>
       </Flex>
 
       {loading ? (
         <Flex justify="center" py={10}>
-          <Spinner size="lg" />
+          <Spinner size="lg" color="brand.solid" />
         </Flex>
       ) : error ? (
-        <Text color="red.500">{error}</Text>
+        <Text color="fg.error">{error}</Text>
       ) : Array.isArray(features) && features.length === 0 ?(
-        <Text color="gray.500">No modules found for this project.</Text>
+        <Text color="fg.subtle">No modules found for this project.</Text>
       ): Array.isArray(features) ? (
         <Stack gap="6">
           <Table.Root size="md">
@@ -118,7 +120,7 @@ function RouteComponent() {
                       <IconButton
                         aria-label="Delete module"
                         onClick={() => handleDelete(item.id)}
-                        colorScheme="red"
+                        colorPalette="danger"
                         size="sm"
                       >
                         <LuTrash />
@@ -131,7 +133,7 @@ function RouteComponent() {
           </Table.Root>
         </Stack>
       ):(
-        <Text color="red.500">Failed to load modules.</Text>
+        <Text color="fg.error">Failed to load modules.</Text>
       )}
     </Box>
   );

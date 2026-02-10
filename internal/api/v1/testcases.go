@@ -6,6 +6,8 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -27,19 +29,61 @@ import (
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		json
+//	@Param			page		query		int		false	"Page number (1-based)"
+//	@Param			pageSize	query		int		false	"Page size"
+//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft)"
+//	@Param			sortOrder	query		string	false	"Sort order (asc, desc)"
+//	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
+//	@Param			kind		query		string	false	"Filter by kind"
+//	@Param			isDraft		query		bool	false	"Filter by draft state"
 //	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [get]
 func ListTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		testCases, err := testCasesService.FindAll(context.Background())
+		page, err := strconv.Atoi(c.Query("page", "1"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid page parameter")
+		}
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "10"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid pageSize parameter")
+		}
+		sortBy := c.Query("sortBy", "created_at")
+		sortOrder := c.Query("sortOrder", "desc")
+		search := strings.TrimSpace(c.Query("search", ""))
+		kind := strings.TrimSpace(c.Query("kind", ""))
+		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
+		var isDraft *bool
+		if isDraftParam != "" {
+			val, err := strconv.ParseBool(isDraftParam)
+			if err != nil {
+				return problemdetail.BadRequest(c, "invalid isDraft parameter")
+			}
+			isDraft = &val
+		}
+
+		testCases, total, err := testCasesService.FindAllPaged(context.Background(), services.TestCaseQueryParams{
+			Page:      page,
+			PageSize:  pageSize,
+			SortBy:    sortBy,
+			SortOrder: sortOrder,
+			Search:    search,
+			Kind:      kind,
+			IsDraft:   isDraft,
+		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test cases")
 		}
-		return c.JSON(fiber.Map{
-			"test_cases": schema.NewTestCaseResponseList(testCases),
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
+			Pagination: &schema.Pagination{
+				Total:    total,
+				Page:     page,
+				PageSize: pageSize,
+			},
 		})
 	}
 }
