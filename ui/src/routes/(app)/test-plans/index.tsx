@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Box, Heading } from "@chakra-ui/react";
+import { Box, Flex, Heading, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { findTestPlansAllQueryOptions } from "@/data/queries/test-plans";
@@ -18,18 +18,35 @@ function ListTestPlans() {
   } = useSuspenseQuery(findTestPlansAllQueryOptions);
 
   if (isPending) {
-    return "Loading Test Plans...";
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: error fetching</div>;
+    return <Text color="fg.error">Error: error fetching</Text>;
   }
-  const testPlanList = (testPlans?.data?.test_plans ?? []).map((t: any, i: number) => <p key={i}>{t.description}</p>);
+  const testPlanList = (testPlans?.data?.test_plans ?? []).map((t: any, i: number) => (
+    <Box
+      key={i}
+      p={4}
+      border="sm"
+      borderColor="border.subtle"
+      borderRadius="lg"
+      bg="bg.surface"
+      shadow="sm"
+    >
+      <Text color="fg.muted">{t.description}</Text>
+    </Box>
+  ));
   return (
-    <Box>
-      <Heading>List Test Plans</Heading>
-
-      {testPlanList}
+    <Box p={6}>
+      <Heading color="fg.heading">List Test Plans</Heading>
+      <Stack mt={4} gap={3}>
+        {testPlanList}
+      </Stack>
     </Box>
   );
 }

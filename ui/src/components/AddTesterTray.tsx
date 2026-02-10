@@ -14,10 +14,25 @@ export default function AddTesterTray() {
             transition={{ duration: 0.2, ease: 'easeIn'}}
             style={{ zIndex: 999 }}
         >
-            <Box background={'white'} position={'absolute'} bottom={0} border={'1px solid rgba(200,200,200,0.5)'} boxShadow={'0px 1px 2px rgba(100,100,100,0.3)'} overflow={'hidden'} height={'10rem'} width={"22rem"} px={'6'} py={'4'} rounded={'lg'}>
-                <Link href="/projects">Edit Associations</Link>
-                <Link href="/projects">Add Tester</Link>
-                <Link href="/projects">Remove Tester</Link>
+            <Box
+                bg={'bg.surface'}
+                position={'absolute'}
+                bottom={0}
+                border={'sm'}
+                borderColor={'border.subtle'}
+                boxShadow={'card'}
+                overflow={'hidden'}
+                height={'40'}
+                width={'sm'}
+                px={'6'}
+                py={'4'}
+                rounded={'lg'}
+                display={'grid'}
+                gap={'3'}
+            >
+                <Link href="/projects" color="fg.accent">Edit Associations</Link>
+                <Link href="/projects" color="fg.accent">Add Tester</Link>
+                <Link href="/projects" color="fg.accent">Remove Tester</Link>
             </Box>
         </motion.div>
         </>

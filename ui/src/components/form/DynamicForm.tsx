@@ -10,6 +10,7 @@ import {
   Checkbox,
   VStack,
   HStack,
+  NativeSelect,
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModule from "./SelectFeatureModule";
@@ -151,24 +152,20 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               )}
 
               {type === "select" && (
-                <select
-                  value={(field.state.value as string) || ""}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                  }}
-                >
-                  <option value="">{placeholder || "Select an option"}</option>
-                  {options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={(field.state.value as string) || ""}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder={placeholder || "Select an option"}
+                  >
+                    {options?.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                </NativeSelect.Root>
               )}
 
               {type === "checkbox" && (
@@ -257,6 +254,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
         <Button
           type="submit"
           variant="outline"
+          colorPalette="brand"
           loading={isSubmitting}
           disabled={isSubmitting}
         >

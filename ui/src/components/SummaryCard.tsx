@@ -5,13 +5,20 @@ interface SummaryCardProps {
     value: number | string;
 }
 
-export const SummaryCard = ({label, value}: SummaryCardProps) => (
-    <Box p={4} shadow="md" borderWidth="1px" borderRadius="md" bg="white">
-        <StatNamespace.Root>
-            <StatNamespace.Label>{label}</StatNamespace.Label>
-            <StatNamespace.ValueText>
-                {value !== undefined && value !== null ? String(value) : "N/A"}
-                </StatNamespace.ValueText>
-        </StatNamespace.Root>
-    </Box>
+export const SummaryCard = ({ label, value }: SummaryCardProps) => (
+  <Box
+    p={4}
+    shadow="card"
+    border="sm"
+    borderColor="border.subtle"
+    borderRadius="lg"
+    bg="bg.surface"
+  >
+    <StatNamespace.Root>
+      <StatNamespace.Label>{label}</StatNamespace.Label>
+      <StatNamespace.ValueText>
+        {value !== undefined && value !== null ? String(value) : "N/A"}
+      </StatNamespace.ValueText>
+    </StatNamespace.Root>
+  </Box>
 );

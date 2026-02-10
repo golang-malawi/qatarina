@@ -10,6 +10,7 @@ import {
   Button,
   Flex,
   Stat,
+  Spinner,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { toaster } from "@/components/ui/toaster";
@@ -154,8 +155,16 @@ function ViewTestPlan() {
   /**
    * Loading / Error guards
    */
-  if (isLoading) return <div>Loading...</div>;
-  if (error || !testPlan) return <div>Error loading test plan</div>;
+  if (isLoading) {
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
+  }
+  if (error || !testPlan) {
+    return <Text color="fg.error">Error loading test plan</Text>;
+  }
 
   const isComplete = testPlan.is_complete;
 
@@ -163,14 +172,16 @@ function ViewTestPlan() {
 
   return (
     <Box p={6}>
-      <Heading mb={4}>Test Plan Details</Heading>
+      <Heading mb={4} color="fg.heading">
+        Test Plan Details
+      </Heading>
 
       {/* Navigation */}
       <Flex
         gap="2"
-        borderBottom="1px solid"
-        borderColor="gray.200"
-        bg="gray.50"
+        borderBottom="sm"
+        borderColor="border.subtle"
+        bg="bg.surface"
         overflowX="auto"
         mb={4}
       >
@@ -180,7 +191,7 @@ function ViewTestPlan() {
             to={item.path}
             params={{ projectId, testPlanID }}
           >
-            <Button variant="ghost" colorScheme="teal" size="sm">
+            <Button variant="ghost" colorPalette="brand" size="sm">
               {item.label}
             </Button>
           </Link>
@@ -189,7 +200,7 @@ function ViewTestPlan() {
 
       <Flex gap={10} wrap="wrap">
         {/* LEFT COLUMN */}
-        <Stack gap={3} flex={1} minW="280px">
+        <Stack gap={3} flex={1} minW="72" color="fg.muted">
           <Text>
             <strong>ID:</strong> {testPlan.id}
           </Text>
@@ -207,7 +218,10 @@ function ViewTestPlan() {
           <Flex align="center" gap={3}>
             <Text>
               <strong>Status:</strong>{" "}
-              <Badge colorScheme={isComplete ? "green" : "orange"}>
+              <Badge
+                colorPalette={isComplete ? "success" : "warning"}
+                variant="subtle"
+              >
                 {isComplete ? "Complete" : "In Progress"}
               </Badge>
             </Text>
@@ -227,9 +241,9 @@ function ViewTestPlan() {
               <Button
                 onClick={handleMarkComplete}
                 size="xs"
-                colorScheme="green"
                 loading={isClosing}
                 disabled={isClosing}
+                colorPalette="success"
               >
                 Mark as Complete
               </Button>
@@ -238,24 +252,24 @@ function ViewTestPlan() {
 
           {/* Stats */}
           <Flex gap={6} wrap="wrap" mt={4}>
-            <Stat.Root maxW="200px">
+            <Stat.Root maxW="48">
               <Stat.Label>Total Test Cases</Stat.Label>
               <Stat.ValueText>{totalTestCases}</Stat.ValueText>
             </Stat.Root>
 
-            <Stat.Root maxW="200px">
+            <Stat.Root maxW="48">
               <Stat.Label>Passed Test Cases</Stat.Label>
               <Stat.ValueText>
                 {testPlan.passed_count}
               </Stat.ValueText>
             </Stat.Root>
 
-            <Stat.Root maxW="200px">
+            <Stat.Root maxW="48">
               <Stat.Label>Failed Test Cases</Stat.Label>
               <Stat.ValueText>{testPlan.failed_count}</Stat.ValueText>
             </Stat.Root>
 
-            <Stat.Root maxW="200px">
+            <Stat.Root maxW="48">
               <Stat.Label>Testers Assigned</Stat.Label>
               <Stat.ValueText>{testPlan.assigned_testers}</Stat.ValueText>
             </Stat.Root>
@@ -263,7 +277,7 @@ function ViewTestPlan() {
         </Stack>
 
         {/* RIGHT COLUMN */}
-        <Stack gap={3} flex={1} minW="280px">
+        <Stack gap={3} flex={1} minW="72" color="fg.muted">
           <Text>
             <strong>Start Date:</strong>{" "}
             {new Date(testPlan.start_at).toLocaleString()}

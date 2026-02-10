@@ -5,9 +5,9 @@ import { LuPanelLeft as PanelLeft } from "react-icons/lu";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
-const SIDEBAR_WIDTH_ICON = "3rem";
+const SIDEBAR_WIDTH = "var(--chakra-sizes-sidebar)";
+const SIDEBAR_WIDTH_MOBILE = "var(--chakra-sizes-sidebarMobile)";
+const SIDEBAR_WIDTH_ICON = "var(--chakra-sizes-sidebarIcon)";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarState = "expanded" | "collapsed";
@@ -228,7 +228,7 @@ const Sidebar = React.forwardRef<
           height: "100svh",
           transition: "left 200ms ease-linear, width 200ms ease-linear",
           flexDirection: "column",
-          padding: variant === "inset" ? "0.5rem" : "0",
+          padding: variant === "inset" ? "var(--chakra-space-2)" : "0",
         }}
       >
         <Box
@@ -237,7 +237,7 @@ const Sidebar = React.forwardRef<
           width="100%"
           flexDirection="column"
           bg={variant === "inset" ? "bg.subtle" : "bg.surface"}
-          borderRight="1px solid"
+          borderRight="sm"
           borderColor="border.subtle"
           {...(variant === "inset" && {
             borderRadius: "md",

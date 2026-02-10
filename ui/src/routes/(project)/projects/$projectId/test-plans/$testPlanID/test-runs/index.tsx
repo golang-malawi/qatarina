@@ -1,5 +1,6 @@
 import { getTestRunsByPlan, closeTestRun } from '@/services/TestRunService';
 import { Box, Button, Heading, Stack, Text, } from '@chakra-ui/react'
+import { Box, Flex, Heading, Spinner, Stack, Text } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router'
 
@@ -22,8 +23,15 @@ function RouteComponent() {
     queryFn: () => getTestRunsByPlan(testPlanID!),
   });
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error)return <div>Error loading test runs</div>;
+  if (isLoading) {
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
+  }
+  if (error)
+    return <Text color="fg.error">Error loading test runs</Text>;
 
   const testRuns = data?.test_runs || [];
 
@@ -33,36 +41,46 @@ function RouteComponent() {
   };
   return (
     <div>
-      <Heading size="md" mt={6}>
+      <Heading size="md" mt={6} color="fg.heading">
         Test Runs
       </Heading>
       {testRuns.length ? (
         <Stack gap={2} mt={3}>
-          {testRuns.map((run: any) => (
-            <Box key={run.id} p={3} borderWidth="1px" rounded="md">
-              <Text>
+          {(Array.isArray(testRuns) ? testRuns : testRuns?.data || []).map(
+            (run: any) => (
+              <Box
+                key={run.ID}
+                p={3}
+                border="sm"
+                borderColor="border.subtle"
+                rounded="lg"
+                bg="bg.surface"
+              >
+                 <Text>
                 <strong>Test Case:</strong> {run.test_case_title}
               </Text>
-              <Text>
-                <strong>Code:</strong> {run.code}
-              </Text>
-              <Text>
-                <strong>Status:</strong> {run.result_state}
-              </Text>
-              <Text>
-                <strong>Expected:</strong> {run.expected_result || "N/A"}
-              </Text>
-              <Text>
-                <strong>Actual:</strong> {run.actual_result || "N/A"}
-              </Text>
-              <Text>
-                <strong>Notes:</strong> {run.notes || "None"}
-              </Text>
-              <Text>
-                <strong>Tested On:</strong>{" "}
-                {run.tested_on ? new Date(run.tested_on).toLocaleString() : "_"}
-              </Text>
-              <Text>
+                <Text color="fg.muted">
+                  <strong>Code:</strong> {run.Code}
+                </Text>
+                <Text color="fg.muted">
+                  <strong>Status:</strong> {run.ResultState}
+                </Text>
+                <Text color="fg.muted">
+                  <strong>Expected:</strong>{" "}
+                  {run.ExpectedResult?.Valid ? run.ExpectedResult.String : "—"}
+                </Text>
+                <Text color="fg.muted">
+                  <strong>Actual:</strong>{" "}
+                  {run.ActualResult?.Valid ? run.ActualResult.String : "—"}
+                </Text>
+                <Text color="fg.muted">
+                  <strong>Notes:</strong> {run.Notes || "—"}
+                </Text>
+                <Text color="fg.muted">
+                  <strong>Tested On:</strong>{" "}
+                  {new Date(run.TestedOn).toLocaleString()}
+                </Text>
+                <Text>
                 <strong>Executed By:</strong> {run.executed_by || "_"}
               </Text>
               <Text>
@@ -73,11 +91,14 @@ function RouteComponent() {
                   Close Test Run
                 </Button>
               )}
-            </Box>
-          ))}
+              </Box>
+            )
+          )}
         </Stack>
       ) : (
-        <Text mt={2}>No test runs found.</Text>
+        <Text mt={2} color="fg.muted">
+          No test runs found.
+        </Text>
       )}
     </div>
   );

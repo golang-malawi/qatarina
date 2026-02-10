@@ -9,6 +9,9 @@ import {
   Table,
   TableCaption,
   Tabs,
+  Heading,
+  Spinner,
+  Text,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { useSuspenseQuery, useQueryClient, useMutation} from "@tanstack/react-query";
@@ -43,11 +46,15 @@ function TestCasePage() {
   });
 
   if (isPending) {
-    return "Loading Projects...";
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: error fetching</div>;
+    return <Text color="fg.error">Error: error fetching</Text>;
   }
 
   const testCaseRows = (testCases?.test_cases ?? []).map((tc: any, idx: number) => (
@@ -67,18 +74,18 @@ function TestCasePage() {
       <Table.Cell>
         <Menu.Root>
           <Menu.Trigger asChild>
-            <Button>
+            <Button size="sm" variant="outline" colorPalette="brand">
               <IconChevronDown /> Actions
             </Button>
           </Menu.Trigger>
-          <Menu.Content>
+          <Menu.Content bg="bg.surface" border="sm" borderColor="border.subtle">
             <Menu.Item value="">View</Menu.Item>
             <Menu.Item value="">Create a Copy</Menu.Item>
             <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate(tc.id)}>
               Mark as Draft
               </Menu.Item>
             <Menu.Item value="">Use in Test Plan</Menu.Item>
-            <Menu.Item value="" color="red">
+            <Menu.Item value="" color="fg.error">
               Delete
             </Menu.Item>
           </Menu.Content>
@@ -88,7 +95,7 @@ function TestCasePage() {
   ));
   return (
     <div>
-      <h1>Test Cases</h1>
+      <Heading color="fg.heading">Test Cases</Heading>
 
       <Flex
         align={"right"}
@@ -98,14 +105,14 @@ function TestCasePage() {
         className="actions"
       >
         <Link to="/test-cases/new">
-          <Button bg="black" color="white">
+          <Button colorPalette="brand">
             Create New
           </Button>
         </Link>
-        <Button bg="green" color="white">
+        <Button colorPalette="success">
           Import from Excel
         </Button>
-        <Button bg="green" color="white">
+        <Button colorPalette="success">
           Import from Google Sheets
         </Button>
       </Flex>
@@ -117,7 +124,9 @@ function TestCasePage() {
       <Tabs.Root defaultValue="all">
         <Tabs.List>
           <Tabs.Trigger value="all">All Test Cases</Tabs.Trigger>
-          <Tabs.Trigger value="failing">Failing</Tabs.Trigger>
+          <Tabs.Trigger value="failing" color="fg.error">
+            Failing
+          </Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="all">
           <Table.Root>
@@ -148,5 +157,3 @@ function TestCasePage() {
     </div>
   );
 }
-
-

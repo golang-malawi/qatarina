@@ -48,7 +48,7 @@ const SidebarHeader = () => {
       alignItems="center" 
       px={isCollapsed ? "2" : "4"} 
       justifyContent={isCollapsed ? "center" : "space-between"}
-      borderBottom="1px solid"
+      borderBottom="sm"
       borderColor="border.subtle"
     >
       <Link 
@@ -63,7 +63,13 @@ const SidebarHeader = () => {
       >
         <Logo size="sm" />
         {!isCollapsed && (
-          <Heading size="md" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+          <Heading
+            size="md"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+            color="fg.heading"
+          >
             {SiteConfig.name}
           </Heading>
         )}
@@ -217,4 +223,3 @@ const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
     </Box>
   );
 };
-

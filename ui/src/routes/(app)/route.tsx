@@ -40,7 +40,8 @@ function BaseLayout() {
           alignItems="center"
           gap="2"
           px="4"
-          borderBottom="1px solid"
+          bg="bg.surface"
+          borderBottom="sm"
           borderColor="border.subtle"
           transition="height 200ms ease-linear"
         >
@@ -55,11 +56,16 @@ function BaseLayout() {
           </Flex>
           <ColorModeButton />
         </Box>
-        <Box flex="1" display="flex" flexDirection="column" overflowY="auto">
+        <Box
+          flex="1"
+          display="flex"
+          flexDirection="column"
+          overflowY="auto"
+          bg="bg.canvas"
+        >
           <Outlet />
         </Box>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-

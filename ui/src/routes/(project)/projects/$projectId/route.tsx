@@ -78,11 +78,11 @@ function RouteComponent() {
   const { projectId } = Route.useParams();
   const { data: project, isLoading, error } = useProjectQuery(projectId!);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) return <Spinner color="brand.solid" />;
   if (error) {
     return (
       <Box>
-        <Alert.Root>
+        <Alert.Root colorPalette="danger" variant="outline">
           <Alert.Content>Failed to load Project information</Alert.Content>
         </Alert.Root>
       </Box>
@@ -96,9 +96,9 @@ function RouteComponent() {
         header={
           <Flex direction="column">
             <Link to={`/projects`} className="flex flex-row">
-              &lt; View All Projects
+              <Text color="fg.accent">&lt; View All Projects</Text>
             </Link>
-            <Text fontWeight="bold" textTransform="uppercase">
+            <Text fontWeight="bold" textTransform="uppercase" color="fg.heading">
               {project?.title}
             </Text>
           </Flex>
@@ -110,9 +110,13 @@ function RouteComponent() {
           <ColorModeButton />
         </Flex>
         <Container>
-          <VStack borderBottom="1px gray.500 solid">
-            <Heading size="3xl">{project?.title}</Heading>
-            <Text p={"2"}>{project?.description}</Text>
+          <VStack borderBottom="sm" borderColor="border.subtle">
+            <Heading size="3xl" color="fg.heading">
+              {project?.title}
+            </Heading>
+            <Text p={"2"} color="fg.muted">
+              {project?.description}
+            </Text>
           </VStack>
           <Outlet />
         </Container>

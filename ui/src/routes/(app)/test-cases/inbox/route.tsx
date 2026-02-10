@@ -47,14 +47,14 @@ function TestCasePageInbox() {
   if (isPendingInbox || isPendingSummary) {
     return (
       <Flex justify="center" align="center" minH="80vh">
-        <Spinner size="xl" color="teal.500" />
+        <Spinner size="xl" color="brand.solid" />
       </Flex>
     );
   }
 
   if (errorInbox || errorSummary) {
     return (
-      <Box p={6} textAlign="center" color="red.500">
+      <Box p={6} textAlign="center" color="fg.error">
         Error fetching test cases.
       </Box>
     );
@@ -85,10 +85,10 @@ function TestCasePageInbox() {
       <Box
         key={idx}
         p={4}
-        borderBottom="1px solid"
-        borderColor="gray.200"
+        borderBottom="sm"
+        borderColor="border.subtle"
         _hover={{
-          bg: "gray.50",
+          bg: "bg.subtle",
           cursor: "pointer",
         }}
         transition="background 0.2s"
@@ -102,16 +102,20 @@ function TestCasePageInbox() {
             <Text fontWeight="semibold" fontSize="md">
               {tc.title}
             </Text>
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color="fg.subtle">
               {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
             </Text>
           </Flex>
           <Stack direction="row" mt={2} gap={2}>
-            <Badge color="blue.700">
+            <Badge colorPalette="info" variant="subtle">
               {counts.usage_count} tests performed
             </Badge>
-            <Badge color="green">Success: {counts.success_count}</Badge>
-            <Badge color="red">Failed: {counts.failure_count}</Badge>
+            <Badge colorPalette="success" variant="subtle">
+              Success: {counts.success_count}
+            </Badge>
+            <Badge colorPalette="danger" variant="subtle">
+              Failed: {counts.failure_count}
+            </Badge>
           </Stack>
         </Link>
       </Box>
@@ -123,20 +127,21 @@ function TestCasePageInbox() {
     <Flex h="100vh">
       {/* Left Pane - Test Case List */}
       <Box
-        w={{ base: "full", md: "400px" }}
-        borderRight="1px solid"
-        borderColor="gray.200"
+        w={{ base: "full", md: "sm" }}
+        borderRight="sm"
+        borderColor="border.subtle"
+        bg="bg.surface"
         overflowY="auto"
       >
-        <Box p={6} borderBottom="1px solid" borderColor="gray.200">
-          <Heading size="lg" color="teal.600">
+        <Box p={6} borderBottom="sm" borderColor="border.subtle">
+          <Heading size="lg" color="fg.heading">
             Test Case Inbox
           </Heading>
           <Input
             placeholder="Search for Test Cases..."
             mt={4}
             variant="outline"
-            focusRingColor="teal.400"
+            focusRingColor="brand.focusRing"
           />
         </Box>
 
@@ -144,7 +149,7 @@ function TestCasePageInbox() {
       </Box>
 
       {/* Right Pane - Details */}
-      <Box flex="1" p={6} bg="gray.50">
+      <Box flex="1" p={6} bg="bg.canvas">
         <Outlet />
       </Box>
     </Flex>

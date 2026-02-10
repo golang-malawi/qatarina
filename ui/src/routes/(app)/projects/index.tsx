@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Alert, Box, Button, Flex, Heading, VStack} from "@chakra-ui/react";
+import {
+  Alert,
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Spinner,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -26,11 +35,15 @@ function ProjectsPage() {
   const deleteMutation = $api.useMutation("delete", "/v1/projects/{projectID}");
 
   if (isPending) {
-    return "Loading Projects...";
+    return (
+      <Flex justify="center" align="center" minH="40">
+        <Spinner size="xl" color="brand.solid" />
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className="error">Error: error fetching</div>;
+    return <Text color="fg.error">Error: error fetching</Text>;
   }
 
   const handleDelete = (projectID: number, title: string) => {
@@ -66,12 +79,26 @@ function ProjectsPage() {
   };
 
   const projectList = (projects ?? []).map((record) => (
-    <Box key={record.id} width={"100%"} p="4">
-      <Heading size="2xl">{record.title}</Heading>
+    <Box
+      key={record.id}
+      width={"100%"}
+      p="4"
+      bg="bg.surface"
+      border="sm"
+      borderColor="border.subtle"
+      borderRadius="lg"
+      shadow="sm"
+    >
+      <Heading size="2xl" color="fg.heading">
+        {record.title}
+      </Heading>
       {record.website_url && (
-        <p>
-          URL: <a href={record.website_url}>{record.website_url}</a>
-        </p>
+        <Text color="fg.subtle">
+          URL:{" "}
+          <Box as="a" href={record.website_url} color="fg.accent">
+            {record.website_url}
+          </Box>
+        </Text>
       )}
       <Flex gap="2">
         <Link
@@ -80,7 +107,7 @@ function ProjectsPage() {
             projectId: (record.id ?? "").toString(),
           }}
         >
-          <Button variant={"outline"} colorScheme="black" size={"sm"}>
+          <Button variant={"outline"} colorPalette="brand" size={"sm"}>
             Manage
           </Button>
         </Link>
@@ -90,7 +117,7 @@ function ProjectsPage() {
             projectId: (record.id ?? "").toString(),
           }}
         >
-          <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          <Button variant={"outline"} colorPalette="info" size={"sm"}>
             Add Test Cases
           </Button>
         </Link>
@@ -100,13 +127,13 @@ function ProjectsPage() {
             projectId: (record.id ?? "").toString(),
           }}
         >
-          <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          <Button variant={"outline"} colorPalette="info" size={"sm"}>
             New Test Plan
           </Button>
         </Link>
         <Button
          variant="outline" 
-         colorScheme="red"
+         colorPalette="danger"
          size={"sm"}
           loading={deleteMutation.isPending}
           onClick={() => handleDelete(record.id!, record.title!)}
@@ -119,13 +146,20 @@ function ProjectsPage() {
 
   return (
     <Box>
-      <Box paddingBottom={"2"} borderBottom={"1px solid #efefef"}>
-        <Heading size="3xl">Projects</Heading>
-        <Alert.Root m="2" variant="outline">
+      <Box
+        paddingBottom={"2"}
+        borderBottom={"sm"}
+        borderColor="border.subtle"
+        bg="bg.surface"
+      >
+        <Heading size="3xl" color="fg.heading">
+          Projects
+        </Heading>
+        <Alert.Root m="2" variant="outline" colorPalette="info">
           <Alert.Content>Manage Projects on QATARINA here.</Alert.Content>
         </Alert.Root>
         <Link to="/projects/new">
-          <Button>
+          <Button colorPalette="brand">
             <IconPlus /> Create Project
           </Button>
         </Link>

@@ -20,7 +20,7 @@ function ViewTesterPage() {
   if (isPending){
     return (
       <Box p={6}>
-        <Spinner size="lg" />
+        <Spinner size="lg" color="brand.solid" />
       </Box>
     );
   }
@@ -37,10 +37,10 @@ function ViewTesterPage() {
 
   return (
     <Box p={6}>
-      <Heading size="lg" mb={4}>
+      <Heading size="lg" mb={4} color="fg.heading">
         Tester Details
       </Heading>
-      <Stack gap={4}>
+      <Stack gap={4} color="fg.muted">
         <Text><strong>User ID:</strong> {tester.user_id}</Text>
         <Text><strong>Name:</strong> {tester.name}</Text>
         <Text><strong>Email:</strong> {tester.email}</Text>
@@ -50,7 +50,7 @@ function ViewTesterPage() {
         <Text><strong>Created At:</strong> {tester.created_at}</Text>
         <Text><strong>Updated At:</strong> {tester.updated_at}</Text>
       </Stack>
-      <Box borderTop="1px solid" borderColor="gray.200" mt={6} />
+      <Box borderTop="sm" borderColor="border.subtle" mt={6} />
     </Box>
   );
 }

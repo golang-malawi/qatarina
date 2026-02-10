@@ -102,20 +102,37 @@ function LoginPage() {
 
   return (
     <Flex minH="100vh" align="center" justify="center" p={4}>
-      <Stack mx="auto" maxW="lg" w={{ sm: "full", md: "450px" }} py={12} px={6}>
+      <Stack
+        mx="auto"
+        maxW="lg"
+        w={{ base: "full", md: "md" }}
+        py={12}
+        px={6}
+      >
         <Stack align="center">
           <Flex align="center" direction="row" gap={2}>
             <Logo />
-            <Heading fontSize="3xl" textAlign="center" fontWeight="bold">
+            <Heading
+              fontSize="3xl"
+              textAlign="center"
+              fontWeight="bold"
+              color="fg.heading"
+            >
               {SiteConfig.name}
             </Heading>
           </Flex>
-          <Text fontSize="md" color="gray.500" textAlign="center">
+          <Text fontSize="md" color="fg.muted" textAlign="center">
             {SiteConfig.subtitle}
           </Text>
         </Stack>
 
-        <Card.Root>
+        <Card.Root
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+          shadow="card"
+          borderRadius="xl"
+        >
           <Card.Header>
             <Card.Title>Welcome back</Card.Title>
             <Card.Description>
@@ -124,7 +141,7 @@ function LoginPage() {
           </Card.Header>
           <Card.Body>
             {loginError && (
-              <Text color="red.500" mb={2} textAlign="center">
+              <Text color="fg.error" mb={2} textAlign="center">
                 {loginError}
               </Text>
             )}
@@ -174,7 +191,7 @@ function LoginPage() {
                       </Field.Root>
                     )}
                   />
-                  <ChakraLink href="#" fontSize="sm" asChild>
+                  <ChakraLink href="#" fontSize="sm" color="fg.accent" asChild>
                     <Link to="/">Forgot password?</Link>
                   </ChakraLink>
                 </Stack>
@@ -182,7 +199,7 @@ function LoginPage() {
                 <Button
                   mt={4}
                   w="full"
-                  colorScheme="teal"
+                  colorPalette="brand"
                   type="submit"
                   loading={isSubmitting || loginMutation.isPending}
                 >
@@ -195,7 +212,9 @@ function LoginPage() {
 
         <Stack pt={2} direction="row" justifyContent="center">
           <Text>New to {SiteConfig.name}?</Text>
-          <ChakraLink href="#">Create an account</ChakraLink>
+          <ChakraLink href="#" color="fg.accent">
+            Create an account
+          </ChakraLink>
         </Stack>
       </Stack>
     </Flex>
