@@ -189,7 +189,7 @@ const Sidebar = React.forwardRef<
       >
         <Drawer.Backdrop />
         <Drawer.Positioner>
-          <Drawer.Content>
+          <Drawer.Content bg="bg.canvas" border="none" boxShadow="none">
             {header}
             {children}
           </Drawer.Content>
@@ -229,24 +229,17 @@ const Sidebar = React.forwardRef<
           flexDirection: "column",
         }}
         p={isInset ? (isCollapsed ? "2" : "3") : "0"}
-        bg={isInset ? "bg.canvas" : "transparent"}
+        bg="transparent"
       >
         <Box
           display="flex"
           height="100%"
           width="100%"
           flexDirection="column"
-          bg="bg.surface"
-          borderColor="border.subtle"
-          {...(isInset
-            ? {
-                border: "sm",
-                borderRadius: "xl",
-                shadow: "sm",
-              }
-            : {
-                borderRight: "sm",
-              })}
+          bg="transparent"
+          border="none"
+          borderRadius="0"
+          shadow="none"
         >
           {header}
           {children}
