@@ -45,7 +45,7 @@ function NewTestCases() {
         type: "success",
         duration: 3000,
       });
-      redirect({ to: "/projects" });
+      redirect({ to: "/workspace/projects" });
     }
   }
 

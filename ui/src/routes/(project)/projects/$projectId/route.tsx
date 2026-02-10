@@ -1,17 +1,5 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import {
-  Alert,
-  Box,
-  Flex,
-  Spinner,
-  Text,
-} from "@chakra-ui/react";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import AppSidebar from "@/components/app-sidebar";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Alert, Box, Flex, Spinner, Text } from "@chakra-ui/react";
 import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
@@ -24,8 +12,13 @@ import {
 } from "react-icons/fi";
 import { MdInsights } from "react-icons/md";
 import { useProjectQuery } from "@/services/ProjectService";
+import { AppShell } from "@/components/app-shell";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { setLastProjectId } from "@/lib/last-project";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/(project)/projects/$projectId")({
+  beforeLoad: requireAuth,
   component: RouteComponent,
 });
 
@@ -74,6 +67,12 @@ function RouteComponent() {
   const { projectId } = Route.useParams();
   const { data: project, isLoading, error } = useProjectQuery(projectId!);
 
+  useEffect(() => {
+    if (projectId) {
+      setLastProjectId(projectId);
+    }
+  }, [projectId]);
+
   if (isLoading) return <Spinner color="brand.solid" />;
   if (error) {
     return (
@@ -86,69 +85,20 @@ function RouteComponent() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar
-        items={createProjectNavItems(projectId)}
-        variant="inset"
-        header={
-          <Flex direction="column" gap="1">
-            <Link to="/projects">
-              <Text fontSize="xs" color="fg.subtle">
-                &lt; Back to projects
-              </Text>
-            </Link>
-            <Text
-              fontSize="sm"
-              fontWeight="semibold"
-              color="fg.heading"
-              noOfLines={1}
-            >
-              {project?.title}
-            </Text>
-          </Flex>
-        }
-      />
-      <SidebarInset variant="inset">
-        <Box
-          display="flex"
-          flexDirection="column"
-          flex="1"
-          minH="full"
-          bg="bg.surface"
-          border="sm"
-          borderColor="border.subtle"
-          borderRadius="xl"
-          shadow="sm"
-          overflow="hidden"
-        >
-          <Box
-            as="header"
-            h="16"
-            display="flex"
-            alignItems="center"
-            gap="2"
-            px={{ base: "4", md: "6" }}
-            bg="bg.surface"
-            borderBottom="sm"
-            borderColor="border.subtle"
+    <AppShell
+      sidebarItems={createProjectNavItems(projectId)}
+      sidebarHeader={
+        <Flex direction="column" gap="1">
+          <Text
+            fontSize="sm"
+            fontWeight="semibold"
+            color="fg.heading"
+            noOfLines={1}
           >
-            <Flex alignItems="center" gap="2" flex="1">
-              <SidebarTrigger />
-            </Flex>
-          </Box>
-          <Box
-            flex="1"
-            display="flex"
-            flexDirection="column"
-            overflowY="auto"
-            bg="bg.canvas"
-            px={{ base: "4", md: "6" }}
-            py={{ base: "6", md: "8" }}
-          >
-            <Outlet />
-          </Box>
-        </Box>
-      </SidebarInset>
-    </SidebarProvider>
+            {project?.title}
+          </Text>
+        </Flex>
+      }
+    />
   );
 }

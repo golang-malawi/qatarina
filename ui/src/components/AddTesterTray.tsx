@@ -30,9 +30,9 @@ export default function AddTesterTray() {
                 display={'grid'}
                 gap={'3'}
             >
-                <Link href="/projects" color="fg.accent">Edit Associations</Link>
-                <Link href="/projects" color="fg.accent">Add Tester</Link>
-                <Link href="/projects" color="fg.accent">Remove Tester</Link>
+                <Link href="/workspace/projects" color="fg.accent">Edit Associations</Link>
+                <Link href="/workspace/projects" color="fg.accent">Add Tester</Link>
+                <Link href="/workspace/projects" color="fg.accent">Remove Tester</Link>
             </Box>
         </motion.div>
         </>

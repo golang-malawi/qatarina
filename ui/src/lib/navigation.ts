@@ -1,6 +1,5 @@
 import {
   FiHome,
-  FiInbox,
   FiFolder,
   FiUsers,
   FiUser,
@@ -17,11 +16,10 @@ export interface NavItem {
 }
 
 export const MainLinkItems: NavItem[] = [
-  { path: "/dashboard", name: "Dashboard", icon: FiHome },
-  { path: "/test-cases/inbox", name: "Inbox", icon: FiInbox },
-  { path: "/projects", name: "Projects", icon: FiFolder },
-  { path: "/testers", name: "Testers", icon: FiUsers },
-  { path: "/users", name: "Users", icon: FiUser },
-  { path: "/settings", name: "Settings", icon: FiSettings },
+  { path: "/workspace/dashboard", name: "Dashboard", icon: FiHome },
+  { path: "/workspace/projects", name: "Projects", icon: FiFolder },
+  { path: "/workspace/testers", name: "Testers", icon: FiUsers },
+  { path: "/workspace/users", name: "Users", icon: FiUser },
+  { path: "/workspace/settings", name: "Settings", icon: FiSettings },
   { path: "/logout", name: "Logout", icon: FiLogOut },
 ];

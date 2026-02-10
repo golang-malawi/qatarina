@@ -20,7 +20,7 @@ import { Logo } from "./logo";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { SiteConfig } from "@/lib/config/site";
 import React, { ReactNode, useMemo, useState } from "react";
-import { FiChevronDown, FiChevronUp, FiMoreHorizontal } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiHome } from "react-icons/fi";
 import { LuChevronsUpDown, LuPlus, LuX } from "react-icons/lu";
 import { NavItem } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -35,9 +35,13 @@ interface NavLinkProps {
   depth?: number;
 }
 
-const PLATFORM_PATHS = new Set(["/dashboard", "/test-cases/inbox"]);
-const WORKSPACE_PATHS = new Set(["/projects", "/testers", "/users"]);
-const SYSTEM_PATHS = new Set(["/settings"]);
+const PLATFORM_PATHS = new Set(["/workspace/dashboard"]);
+const WORKSPACE_PATHS = new Set([
+  "/workspace/projects",
+  "/workspace/testers",
+  "/workspace/users",
+]);
+const SYSTEM_PATHS = new Set(["/workspace/settings"]);
 const HIDDEN_PATHS = new Set(["/logout"]);
 
 export default function AppSidebar({
@@ -64,8 +68,6 @@ export default function AppSidebar({
       <SidebarContent
         items={items}
         header={header}
-        projects={projects}
-        projectsLoading={projectsLoading}
       />
     </Sidebar>
   );
@@ -87,7 +89,7 @@ const SidebarHeader = ({
       px={isCollapsed ? "2" : "3"}
       justifyContent="space-between"
     >
-      <ProjectSwitcher
+      <ContextSwitcher
         collapsed={isCollapsed}
         projects={projects}
         projectsLoading={projectsLoading}
@@ -106,7 +108,7 @@ const SidebarHeader = ({
   );
 };
 
-const ProjectSwitcher = ({
+const ContextSwitcher = ({
   collapsed,
   projects,
   projectsLoading,
@@ -119,9 +121,11 @@ const ProjectSwitcher = ({
   const location = useLocation();
   const { isMobile } = useSidebar();
   const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
-  const activeProject = projectMatch
-    ? projects.find((project) => String(project.id) === projectMatch[1])
+  const activeProjectId = projectMatch?.[1];
+  const activeProject = activeProjectId
+    ? projects.find((project) => String(project.id) === activeProjectId)
     : undefined;
+  const isWorkspaceActive = !activeProjectId;
   const title = activeProject?.title ?? SiteConfig.name;
   const subtitle = activeProject ? "Team" : SiteConfig.subtitle;
   const teamList = projects.slice(0, 8);
@@ -203,6 +207,53 @@ const ProjectSwitcher = ({
               pt="1"
               pb="2"
             >
+              Workspace
+            </Text>
+            <Stack gap="1">
+              <Menu.Item
+                value="workspace-home"
+                onClick={() => navigate({ to: "/workspace/dashboard" })}
+                borderRadius="md"
+                bg={isWorkspaceActive ? "bg.subtle" : "transparent"}
+              >
+                <HStack w="full" justify="space-between" gap="4" minW="0">
+                  <HStack gap="3" minW="0">
+                    <Box
+                      w="7"
+                      h="7"
+                      borderRadius="md"
+                      bg="bg.subtle"
+                      border="sm"
+                      borderColor="border.subtle"
+                      display="grid"
+                      placeItems="center"
+                    >
+                      <Icon as={FiHome} fontSize="16" color="fg.subtle" />
+                    </Box>
+                    <Text
+                      fontSize="sm"
+                      fontWeight={isWorkspaceActive ? "semibold" : "medium"}
+                      color="fg.heading"
+                      whiteSpace="nowrap"
+                      overflow="hidden"
+                      textOverflow="ellipsis"
+                    >
+                      Workspace home
+                    </Text>
+                  </HStack>
+                </HStack>
+              </Menu.Item>
+            </Stack>
+            <Box borderTop="sm" borderColor="border.subtle" my="2" />
+            <Text
+              fontSize="xs"
+              letterSpacing="wide"
+              textTransform="uppercase"
+              color="fg.subtle"
+              px="2"
+              pt="1"
+              pb="2"
+            >
               Projects
             </Text>
             <Stack gap="1">
@@ -272,11 +323,11 @@ const ProjectSwitcher = ({
             <Box borderTop="sm" borderColor="border.subtle" my="2" />
             <Menu.Item
               value="add-team"
-              onClick={() => navigate({ to: "/projects" })}
+              onClick={() => navigate({ to: "/workspace/projects" })}
             >
               <HStack gap="2">
                 <Icon as={LuPlus} color="fg.subtle" />
-                <Text fontSize="sm">Add team</Text>
+                <Text fontSize="sm">Manage projects</Text>
               </HStack>
             </Menu.Item>
           </Menu.Content>
@@ -389,15 +440,11 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
 interface SidebarProps extends BoxProps {
   items: NavItem[];
   header?: ReactNode;
-  projects: Array<{ id: number | string; title: string }>;
-  projectsLoading: boolean;
 }
 
 const SidebarContent = ({
   items,
   header,
-  projects,
-  projectsLoading,
   ...rest
 }: SidebarProps) => {
   const { isCollapsed } = useSidebar();
@@ -435,7 +482,7 @@ const SidebarContent = ({
       isProjectContext,
     };
   }, [visibleItems]);
-  const topProjects = projects.slice(0, 4);
+  // Projects list intentionally removed from sidebar navigation
 
   return (
     <Box
@@ -511,36 +558,6 @@ const SidebarContent = ({
             </SidebarSection>
           )}
 
-          {!isCollapsed && !groupedItems.isProjectContext && (
-            <SidebarSection label="Projects" collapsed={isCollapsed}>
-              {projectsLoading && (
-                <Text fontSize="xs" color="fg.subtle">
-                  Loading projects...
-                </Text>
-              )}
-              {!projectsLoading && topProjects.length === 0 && (
-                <Text fontSize="xs" color="fg.subtle">
-                  No projects yet.
-                </Text>
-              )}
-              {topProjects.map((project) => (
-                <ProjectRow
-                  key={project.id}
-                  name={project.title}
-                  href={`/projects/${project.id}`}
-                />
-              ))}
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                justifyContent="flex-start"
-                color="fg.subtle"
-              >
-                <Link to="/projects">View all projects</Link>
-              </Button>
-            </SidebarSection>
-          )}
         </Stack>
       </Box>
 
@@ -601,43 +618,7 @@ const SidebarSection = ({
   );
 };
 
-const ProjectRow = ({ name, href }: { name: string; href: string }) => {
-  return (
-    <Flex
-      align="center"
-      justify="space-between"
-      px="2"
-      py="1.5"
-      borderRadius="md"
-      role="group"
-      _hover={{ bg: "bg.subtle" }}
-    >
-      <HStack asChild gap="2" flex="1" minW="0">
-        <Link to={href}>
-          <Box w="2" h="2" borderRadius="full" bg="brand.solid" />
-          <Text
-            fontSize="sm"
-            color="fg.muted"
-            whiteSpace="nowrap"
-            overflow="hidden"
-            textOverflow="ellipsis"
-          >
-            {name}
-          </Text>
-        </Link>
-      </HStack>
-      <IconButton
-        aria-label="Project actions"
-        size="xs"
-        variant="ghost"
-        opacity={0}
-        _groupHover={{ opacity: 1 }}
-      >
-        <FiMoreHorizontal />
-      </IconButton>
-    </Flex>
-  );
-};
+// ProjectRow removed with sidebar projects list
 
 const SidebarUser = ({ collapsed }: { collapsed: boolean }) => {
   const { isMobile } = useSidebar();
