@@ -17,7 +17,7 @@ import type { ThemeProviderProps } from "next-themes"
 import * as React from "react"
 import { LuFlame, LuMoon, LuSun } from "react-icons/lu"
 
-const THEME_OPTIONS = [
+export const THEME_OPTIONS = [
   { value: "light", label: "Quartz", icon: LuSun },
   { value: "dark", label: "Carbon", icon: LuMoon },
   { value: "dusk", label: "Ember", icon: LuFlame },

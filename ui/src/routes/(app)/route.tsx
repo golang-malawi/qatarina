@@ -6,7 +6,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/app-sidebar";
-import { ColorModeButton } from "@/components/ui/color-mode";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { MainLinkItems } from "@/lib/navigation";
 import { ErrorComponent } from "@tanstack/react-router";
@@ -66,7 +65,6 @@ function BaseLayout() {
               />
               <Breadcrumb />
             </Flex>
-            <ColorModeButton />
           </Box>
           <Box
             flex="1"

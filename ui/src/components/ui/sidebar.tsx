@@ -122,10 +122,10 @@ const SidebarProvider = React.forwardRef<
     // This makes it easier to style the sidebar with Tailwind classes.
     // On desktop, collapsed state controls icon-only mode
     // On mobile, open controls visibility
-    const state: SidebarState = isMobile 
-      ? (open ? "expanded" : "collapsed")
+    const state: SidebarState = isMobile
+      ? (openMobile ? "expanded" : "collapsed")
       : (collapsed ? "collapsed" : "expanded");
-    const isCollapsed = isMobile ? !open : collapsed;
+    const isCollapsed = isMobile ? !openMobile : collapsed;
 
     const contextValue = React.useMemo<SidebarContext>(
       () => ({
