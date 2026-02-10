@@ -177,7 +177,8 @@ const Sidebar = React.forwardRef<
     variant?: "default" | "inset";
   }
 >(({ className, children, style, header, variant = "default", ...props }, ref) => {
-  const { isMobile, open, openMobile, toggleSidebar, isCollapsed } = useSidebar();
+  const { isMobile, openMobile, toggleSidebar, isCollapsed } = useSidebar();
+  const isInset = variant === "inset";
   if (isMobile) {
     return (
       <Drawer.Root
@@ -196,13 +197,9 @@ const Sidebar = React.forwardRef<
       </Drawer.Root>
     );
   }
-  // On desktop, sidebar is always visible (open), but can be collapsed to icons
-  // On mobile, sidebar visibility is controlled by openMobile
-  const width = isMobile 
-    ? (open ? SIDEBAR_WIDTH_MOBILE : "0")
-    : (isCollapsed ? SIDEBAR_WIDTH_ICON : SIDEBAR_WIDTH);
-  
-  const isVisible = isMobile ? openMobile : true;
+  // On desktop, sidebar can be fully collapsed (hidden).
+  const width = SIDEBAR_WIDTH;
+  const isVisible = !isCollapsed;
   
   return (
     <Box
@@ -221,28 +218,35 @@ const Sidebar = React.forwardRef<
       <Box
         style={{
           width: width,
-          left: !isVisible ? `calc(${width} * -1)` : undefined,
           position: "fixed",
-          inset: "0 auto 0 0",
+          top: 0,
+          bottom: 0,
+          left: isVisible ? 0 : `calc(0px - ${width})`,
+          right: "auto",
           zIndex: 10,
           height: "100svh",
           transition: "left 200ms ease-linear, width 200ms ease-linear",
           flexDirection: "column",
-          padding: variant === "inset" ? "var(--chakra-space-2)" : "0",
         }}
+        p={isInset ? (isCollapsed ? "2" : "3") : "0"}
+        bg={isInset ? "bg.canvas" : "transparent"}
       >
         <Box
           display="flex"
           height="100%"
           width="100%"
           flexDirection="column"
-          bg={variant === "inset" ? "bg.subtle" : "bg.surface"}
-          borderRight="sm"
+          bg="bg.surface"
           borderColor="border.subtle"
-          {...(variant === "inset" && {
-            borderRadius: "md",
-            margin: "2",
-          })}
+          {...(isInset
+            ? {
+                border: "sm",
+                borderRadius: "xl",
+                shadow: "sm",
+              }
+            : {
+                borderRight: "sm",
+              })}
         >
           {header}
           {children}
@@ -254,12 +258,13 @@ const Sidebar = React.forwardRef<
 
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"main">
->(({ className, ...props }, ref) => {
-  const { isCollapsed, openMobile, isMobile } = useSidebar();
-  const sidebarWidth = isMobile 
-    ? (openMobile ? SIDEBAR_WIDTH_MOBILE : "0")
-    : (isCollapsed ? SIDEBAR_WIDTH_ICON : SIDEBAR_WIDTH);
+  React.ComponentProps<"main"> & {
+    variant?: "default" | "inset";
+  }
+>(({ className, variant = "default", ...props }, ref) => {
+  const { isCollapsed, isMobile } = useSidebar();
+  const isInset = variant === "inset";
+  const insetPadding = isInset && !isMobile ? (isCollapsed ? "2" : "3") : "0";
   
   return (
     <Box
@@ -267,15 +272,14 @@ const SidebarInset = React.forwardRef<
       as="main"
       className={className}
       {...props}
+      p={insetPadding}
+      bg={isInset ? "bg.canvas" : "initial"}
       style={{
         position: "relative",
         display: "flex",
         width: "100%",
         flex: 1,
         flexDirection: "column",
-        background: "initial",
-        transition: "margin-left 200ms ease-linear",
-        marginLeft: sidebarWidth,
         minHeight: "100svh",
       }}
     />
