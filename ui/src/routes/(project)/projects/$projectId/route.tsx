@@ -3,10 +3,8 @@ import {
   Alert,
   Box,
   Flex,
-  Heading,
   Spinner,
   Text,
-  VStack,
 } from "@chakra-ui/react";
 import {
   SidebarInset,
@@ -99,7 +97,12 @@ function RouteComponent() {
                 &lt; Back to projects
               </Text>
             </Link>
-            <Text fontSize="sm" fontWeight="semibold" color="fg.heading" noOfLines={1}>
+            <Text
+              fontSize="sm"
+              fontWeight="semibold"
+              color="fg.heading"
+              noOfLines={1}
+            >
               {project?.title}
             </Text>
           </Flex>
@@ -142,17 +145,7 @@ function RouteComponent() {
             px={{ base: "4", md: "6" }}
             py={{ base: "6", md: "8" }}
           >
-            <Box w="full" maxW="6xl" mr="auto">
-              <VStack borderBottom="sm" borderColor="border.subtle">
-                <Heading size="3xl" color="fg.heading">
-                  {project?.title}
-                </Heading>
-                <Text p="2" color="fg.muted">
-                  {project?.description}
-                </Text>
-              </VStack>
-              <Outlet />
-            </Box>
+            <Outlet />
           </Box>
         </Box>
       </SidebarInset>

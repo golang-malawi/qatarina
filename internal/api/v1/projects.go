@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -114,6 +115,13 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
+//	@Param			page		query		int		false	"Page number (1-based)"
+//	@Param			pageSize	query		int		false	"Page size"
+//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft)"
+//	@Param			sortOrder	query		string	false	"Sort order (asc, desc)"
+//	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
+//	@Param			kind		query		string	false	"Filter by kind"
+//	@Param			isDraft		query		bool	false	"Filter by draft state"
 //	@Success		200			{object}	schema.TestCaseListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
@@ -124,14 +132,50 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 		if err != nil {
 			return problemdetail.BadRequest(c, "invalid parameter for projectID")
 		}
-		testCases, err := testCaseService.FindAllByProjectID(context.Background(), projectID)
+
+		page, err := strconv.Atoi(c.Query("page", "1"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid page parameter")
+		}
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "10"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid pageSize parameter")
+		}
+		sortBy := c.Query("sortBy", "created_at")
+		sortOrder := c.Query("sortOrder", "desc")
+		search := strings.TrimSpace(c.Query("search", ""))
+		kind := strings.TrimSpace(c.Query("kind", ""))
+		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
+		var isDraft *bool
+		if isDraftParam != "" {
+			val, err := strconv.ParseBool(isDraftParam)
+			if err != nil {
+				return problemdetail.BadRequest(c, "invalid isDraft parameter")
+			}
+			isDraft = &val
+		}
+
+		testCases, total, err := testCaseService.FindAllByProjectIDPaged(context.Background(), projectID, services.TestCaseQueryParams{
+			Page:      page,
+			PageSize:  pageSize,
+			SortBy:    sortBy,
+			SortOrder: sortOrder,
+			Search:    search,
+			Kind:      kind,
+			IsDraft:   isDraft,
+		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(fiber.Map{
-			"test_cases": schema.NewTestCaseResponseList(testCases),
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
+			Pagination: &schema.Pagination{
+				Total:    total,
+				Page:     page,
+				PageSize: pageSize,
+			},
 		})
 	}
 }

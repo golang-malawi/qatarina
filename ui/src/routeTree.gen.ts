@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as appIndexRouteImport } from './routes/(app)/index'
+import { Route as UiTableDemoIndexRouteImport } from './routes/ui/table-demo/index'
 import { Route as UiDynamicFormDemoIndexRouteImport } from './routes/ui/dynamic-form-demo/index'
 import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
@@ -61,6 +62,11 @@ const appIndexRoute = appIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => appRouteRoute,
+} as any)
+const UiTableDemoIndexRoute = UiTableDemoIndexRouteImport.update({
+  id: '/ui/table-demo/',
+  path: '/ui/table-demo/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UiDynamicFormDemoIndexRoute = UiDynamicFormDemoIndexRouteImport.update({
   id: '/ui/dynamic-form-demo/',
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
+  '/ui/table-demo': typeof UiTableDemoIndexRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
+  '/ui/table-demo': typeof UiTableDemoIndexRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/(auth)/login/': typeof authLoginIndexRoute
   '/(auth)/logout/': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
+  '/ui/table-demo/': typeof UiTableDemoIndexRoute
   '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
   '/(app)/projects/new/': typeof appProjectsNewIndexRoute
   '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/ui/dynamic-form-demo'
+    | '/ui/table-demo'
     | '/users/view/$userID'
     | '/projects/new'
     | '/test-cases/new'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/ui/dynamic-form-demo'
+    | '/ui/table-demo'
     | '/users/view/$userID'
     | '/projects/new'
     | '/test-cases/new'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/(auth)/login/'
     | '/(auth)/logout/'
     | '/ui/dynamic-form-demo/'
+    | '/ui/table-demo/'
     | '/(app)/users/view/$userID'
     | '/(app)/projects/new/'
     | '/(app)/test-cases/new/'
@@ -565,6 +577,7 @@ export interface RootRouteChildren {
   authLoginIndexRoute: typeof authLoginIndexRoute
   authLogoutIndexRoute: typeof authLogoutIndexRoute
   UiDynamicFormDemoIndexRoute: typeof UiDynamicFormDemoIndexRoute
+  UiTableDemoIndexRoute: typeof UiTableDemoIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -582,6 +595,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof appIndexRouteImport
       parentRoute: typeof appRouteRoute
+    }
+    '/ui/table-demo/': {
+      id: '/ui/table-demo/'
+      path: '/ui/table-demo'
+      fullPath: '/ui/table-demo'
+      preLoaderRoute: typeof UiTableDemoIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/ui/dynamic-form-demo/': {
       id: '/ui/dynamic-form-demo/'
@@ -1022,6 +1042,7 @@ const rootRouteChildren: RootRouteChildren = {
   authLoginIndexRoute: authLoginIndexRoute,
   authLogoutIndexRoute: authLogoutIndexRoute,
   UiDynamicFormDemoIndexRoute: UiDynamicFormDemoIndexRoute,
+  UiTableDemoIndexRoute: UiTableDemoIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
