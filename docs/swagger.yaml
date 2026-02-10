@@ -668,9 +668,9 @@ components:
       properties:
         actual_result:
           type: string
-        assigned_to_id:
-          type: integer
         code:
+          type: string
+        executed_by:
           type: string
         expected_result:
           type: string
@@ -680,18 +680,20 @@ components:
           type: boolean
         notes:
           type: string
-        owner_id:
-          type: integer
         project_id:
           type: integer
         result_state:
           type: string
         test_case_id:
           type: string
+        test_case_title:
+          type: string
         test_plan_id:
           type: integer
         tested_by_id:
           type: integer
+        tested_on:
+          type: string
       type: object
     schema.Tester:
       properties:
@@ -2711,12 +2713,12 @@ paths:
       - test-plans
   /v1/test-plans/{testPlanID}/test-runs:
     get:
-      description: List all test cases of a test plan
+      description: List all test runs of a test plan
       operationId: GetTestPlanTestRuns
       parameters:
       - description: Test Plan ID
         in: path
-        name: testplanID
+        name: testPlanID
         required: true
         schema:
           type: string
@@ -2730,7 +2732,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestRunListResponse'
           description: OK
         "400":
           content:
@@ -2744,9 +2746,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: List all test cases of a test plan
+      summary: List all test runs of a test plan
       tags:
       - test-plans
+      - test-runs
   /v1/test-plans/query:
     get:
       description: Search test plans

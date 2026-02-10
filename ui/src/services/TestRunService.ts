@@ -9,3 +9,17 @@ export async function executeTestRun(testRunID: string, payload: ExecuteTestRunP
         body: payload,
     });
 }
+
+export async function getTestRunsByPlan(testPlanID: string) {
+    const res = await apiClient.request("get", "/v1/test-plans/{testPlanID}/test-runs", {
+        params: { path: { testPlanID: testPlanID } },
+    });
+    return res.data;
+}
+
+export async function closeTestRun(testRunID: string) {
+    return apiClient.request("post", "/v1/test-runs/{testRunID}/close", {
+        params: { path: { testRunID } },
+    });
+}
+
