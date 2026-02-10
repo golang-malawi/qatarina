@@ -27,8 +27,16 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
 import { useAuth } from "@/hooks/isLoggedIn";
+import { getLastProjectPath } from "@/lib/last-project";
 
-const fallback = "/dashboard" as const;
+const fallback = "/" as const;
+
+const resolvePostLoginRedirect = (redirectTo?: string) => {
+  const lastProjectPath = getLastProjectPath();
+  if (lastProjectPath) return lastProjectPath;
+  if (redirectTo) return redirectTo;
+  return fallback;
+};
 
 export const Route = createFileRoute("/(auth)/login/")({
   validateSearch: z.object({
@@ -36,7 +44,9 @@ export const Route = createFileRoute("/(auth)/login/")({
   }),
   beforeLoad: ({ context, search }) => {
     if (context.auth.isAuthenticated) {
-      throw redirect({ to: search.redirect || fallback });
+      throw redirect({
+        to: resolvePostLoginRedirect(search.redirect || undefined),
+      });
     }
   },
   component: LoginPage,
@@ -75,7 +85,10 @@ function LoginPage() {
       // TODO: 🥲 dies without this sleep because the context state is not refresing in time
       await sleep(1);
 
-      await navigate({ to: search.redirect || fallback, replace: true });
+      await navigate({
+        to: resolvePostLoginRedirect(search.redirect || undefined),
+        replace: true,
+      });
     },
     onSuccess: (data) => {
       console.log("Login successful", data);
