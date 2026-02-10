@@ -2,7 +2,6 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
   Alert,
   Box,
-  Container,
   Flex,
   Heading,
   Spinner,
@@ -93,33 +92,71 @@ function RouteComponent() {
     <SidebarProvider>
       <AppSidebar
         items={createProjectNavItems(projectId)}
+        variant="inset"
         header={
-          <Flex direction="column">
-            <Link to={`/projects`} className="flex flex-row">
-              <Text color="fg.accent">&lt; View All Projects</Text>
+          <Flex direction="column" gap="1">
+            <Link to="/projects">
+              <Text fontSize="xs" color="fg.subtle">
+                &lt; Back to projects
+              </Text>
             </Link>
-            <Text fontWeight="bold" textTransform="uppercase" color="fg.heading">
+            <Text fontSize="sm" fontWeight="semibold" color="fg.heading" noOfLines={1}>
               {project?.title}
             </Text>
           </Flex>
         }
       />
-      <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
-        <Flex width={"100%"} padding={4} justifyContent="space-between">
-          <SidebarTrigger />
-          <ColorModeButton />
-        </Flex>
-        <Container>
-          <VStack borderBottom="sm" borderColor="border.subtle">
-            <Heading size="3xl" color="fg.heading">
-              {project?.title}
-            </Heading>
-            <Text p={"2"} color="fg.muted">
-              {project?.description}
-            </Text>
-          </VStack>
-          <Outlet />
-        </Container>
+      <SidebarInset variant="inset">
+        <Box
+          display="flex"
+          flexDirection="column"
+          flex="1"
+          minH="full"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+          borderRadius="xl"
+          shadow="sm"
+          overflow="hidden"
+        >
+          <Box
+            as="header"
+            h="16"
+            display="flex"
+            alignItems="center"
+            gap="2"
+            px={{ base: "4", md: "6" }}
+            bg="bg.surface"
+            borderBottom="sm"
+            borderColor="border.subtle"
+          >
+            <Flex alignItems="center" gap="2" flex="1">
+              <SidebarTrigger />
+            </Flex>
+            <ColorModeButton />
+          </Box>
+          <Box
+            flex="1"
+            display="flex"
+            flexDirection="column"
+            overflowY="auto"
+            bg="bg.canvas"
+            px={{ base: "4", md: "6" }}
+            py={{ base: "6", md: "8" }}
+          >
+            <Box w="full" maxW="6xl" mr="auto">
+              <VStack borderBottom="sm" borderColor="border.subtle">
+                <Heading size="3xl" color="fg.heading">
+                  {project?.title}
+                </Heading>
+                <Text p="2" color="fg.muted">
+                  {project?.description}
+                </Text>
+              </VStack>
+              <Outlet />
+            </Box>
+          </Box>
+        </Box>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -18,8 +18,8 @@ export const Route = createFileRoute("/(app)/")({
 
 function Home() {
   return (
-    <Box minH="100vh" bg="bg.canvas" p={10}>
-      <Stack gap={8} align="center" mb={10}>
+    <Box w="full">
+      <Stack gap={8} align="center" mb={10} textAlign="center">
         <Heading size="2xl" textAlign="center" color="fg.heading">
           Welcome to the Future of Software Quality Assurance 
         </Heading>

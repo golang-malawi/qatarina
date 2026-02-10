@@ -31,39 +31,56 @@ export const Route = createFileRoute("/(app)")({
 function BaseLayout() {
   return (
     <SidebarProvider>
-      <AppSidebar items={MainLinkItems}/>
-      <SidebarInset>
+      <AppSidebar items={MainLinkItems} variant="inset" />
+      <SidebarInset variant="inset">
         <Box
-          as="header"
-          h="16"
-          display="flex"
-          alignItems="center"
-          gap="2"
-          px="4"
-          bg="bg.surface"
-          borderBottom="sm"
-          borderColor="border.subtle"
-          transition="height 200ms ease-linear"
-        >
-          <Flex alignItems="center" gap="2" flex="1">
-            <SidebarTrigger />
-            <Separator
-              orientation="vertical"
-              h="4"
-              display={{ base: "none", md: "block" }}
-            />
-            <Breadcrumb />
-          </Flex>
-          <ColorModeButton />
-        </Box>
-        <Box
-          flex="1"
           display="flex"
           flexDirection="column"
-          overflowY="auto"
-          bg="bg.canvas"
+          flex="1"
+          minH="full"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+          borderRadius="xl"
+          shadow="sm"
+          overflow="hidden"
         >
-          <Outlet />
+          <Box
+            as="header"
+            h="16"
+            display="flex"
+            alignItems="center"
+            gap="2"
+            px={{ base: "4", md: "6" }}
+            bg="bg.surface"
+            borderBottom="sm"
+            borderColor="border.subtle"
+            transition="height 200ms ease-linear"
+          >
+            <Flex alignItems="center" gap="2" flex="1">
+              <SidebarTrigger />
+              <Separator
+                orientation="vertical"
+                h="4"
+                display={{ base: "none", md: "block" }}
+              />
+              <Breadcrumb />
+            </Flex>
+            <ColorModeButton />
+          </Box>
+          <Box
+            flex="1"
+            display="flex"
+            flexDirection="column"
+            overflowY="auto"
+            bg="bg.canvas"
+            px={{ base: "4", md: "6" }}
+            py={{ base: "6", md: "8" }}
+          >
+            <Box w="full" maxW="6xl" mr="auto">
+              <Outlet />
+            </Box>
+          </Box>
         </Box>
       </SidebarInset>
     </SidebarProvider>
