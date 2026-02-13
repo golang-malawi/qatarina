@@ -8,7 +8,7 @@ RUN npm ci
 COPY ui/ ./
 COPY docs/ ../docs/
 
-RUN npm run build
+RUN npx vite build
 
 # Stage 2: Build the Go Binary (Backend)
 FROM golang:1.25.1-alpine AS go-builder
