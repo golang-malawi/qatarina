@@ -1,3 +1,16 @@
+# Stage 1: Build the UI (Frontend)
+FROM node:20-alpine AS ui-builder
+WORKDIR /app/ui
+
+COPY ui/package.json ui/package-lock.json* ./
+RUN npm ci
+
+COPY ui/ ./
+COPY docs/ ../docs/
+
+RUN npm run build
+
+# Stage 2: Build the Go Binary (Backend)
 FROM golang:1.25.1-alpine AS go-builder
 RUN apk add --no-cache git
 
@@ -7,6 +20,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+
+COPY --from=ui-builder /app/ui/dist ./ui/dist
 
 ENV CGO_ENABLED=0
 RUN go build -o /bin/qatarina ./main.go
