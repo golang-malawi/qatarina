@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/gobuffalo/nulls v0.4.2
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/jwt/v2 v2.2.7
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/go-github/v62 v62.0.0
