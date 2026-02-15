@@ -66,6 +66,7 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 		ProjectID: int32(projectID),
 		UserID:    int32(userID),
 		Role:      role,
+		IsActive:  true,
 	})
 	if err != nil {
 		s.logger.Error("tester-service", "failed to assign tester to project", "error", err, "project_id", projectID, "user_id", userID)
