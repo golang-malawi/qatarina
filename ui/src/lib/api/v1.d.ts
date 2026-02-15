@@ -1099,8 +1099,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all test cases of a test plan
-         * @description List all test cases of a test plan
+         * List all test runs of a test plan
+         * @description List all test runs of a test plan
          */
         get: operations["GetTestPlanTestRuns"];
         put?: never;
@@ -1178,6 +1178,26 @@ export interface paths {
          * @description Delete a Test Run
          */
         delete: operations["DeleteTestRun"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-runs/{testRunID}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a Test Run
+         * @description Close a Test Run
+         */
+        post: operations["CloseTestRun"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1726,18 +1746,19 @@ export interface components {
         };
         "schema.TestRunResponse": {
             actual_result?: string;
-            assigned_to_id?: number;
             code?: string;
+            executed_by?: string;
             expected_result?: string;
             id?: string;
             is_closed?: boolean;
             notes?: string;
-            owner_id?: number;
             project_id?: number;
             result_state?: string;
             test_case_id?: string;
+            test_case_title?: string;
             test_plan_id?: number;
             tested_by_id?: number;
+            tested_on?: string;
         };
         "schema.Tester": {
             created_at?: string;
@@ -3856,7 +3877,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testplanID: string;
+                testPlanID: string;
             };
             cookie?: never;
         };
@@ -3872,7 +3893,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TestRunListResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4139,6 +4160,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CloseTestRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run ID */
+                testRunID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestRunResponse"];
                 };
             };
             /** @description Bad Request */

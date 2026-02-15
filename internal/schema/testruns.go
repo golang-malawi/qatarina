@@ -99,31 +99,51 @@ type TestRunResponse struct {
 	ProjectID      int64  `json:"project_id"`
 	TestPlanID     int64  `json:"test_plan_id"`
 	TestCaseID     string `json:"test_case_id"`
-	OwnerID        int32  `json:"owner_id"`
 	TestedByID     int32  `json:"tested_by_id"`
-	AssignedToID   int32  `json:"assigned_to_id"`
 	Code           string `json:"code"`
 	ResultState    string `json:"result_state"`
 	IsClosed       bool   `json:"is_closed"`
 	Notes          string `json:"notes"`
 	ActualResult   string `json:"actual_result"`
 	ExpectedResult string `json:"expected_result"`
+	TestedOn       string `json:"tested_on"`
+	TestCaseTitle  string `json:"test_case_title"`
+	ExecutedBy     string `json:"executed_by"`
 }
 
-func NewTestRunResponse(tr *dbsqlc.TestRun) TestRunResponse {
+func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse {
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
 		TestPlanID:     int64(tr.TestPlanID),
 		TestCaseID:     tr.TestCaseID.String(),
-		OwnerID:        tr.OwnerID,
 		TestedByID:     tr.TestedByID,
-		AssignedToID:   tr.AssignedToID,
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),
 		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
 		Notes:          tr.Notes,
 		ActualResult:   tr.ActualResult.String,
 		ExpectedResult: tr.ExpectedResult.String,
+		TestedOn:       tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:  tr.TestCaseTitle,
+		ExecutedBy:     tr.ExecutedBy.String,
+	}
+}
+
+func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
+	return TestRunResponse{
+		ID:             tr.ID.String(),
+		ProjectID:      int64(tr.ProjectID),
+		TestPlanID:     int64(tr.TestPlanID),
+		TestCaseID:     tr.TestCaseID.String(),
+		Code:           tr.Code,
+		ResultState:    string(tr.ResultState),
+		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
+		Notes:          tr.Notes,
+		ActualResult:   tr.ActualResult.String,
+		ExpectedResult: tr.ExpectedResult.String,
+		TestedOn:       tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:  "",
+		ExecutedBy:     "",
 	}
 }

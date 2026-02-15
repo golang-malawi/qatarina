@@ -330,7 +330,37 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		}
 
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponse(executed),
+			"test_run": schema.NewTestRunResponseFromEntity(executed),
+		})
+	}
+}
+
+// CloseTestRun godoc
+//
+//	@ID				CloseTestRun
+//	@Summary		Close a Test Run
+//	@Description	Close a Test Run
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string	true	"Test Run ID"
+//	@Success		200			{object}	schema.TestRunResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-runs/{testRunID}/close [post]
+func CloseTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testRunID := c.Params("testRunID", "")
+		if testRunID == "" {
+			return problemdetail.BadRequest(c, "missing testRunID")
+		}
+		tr, err := testRunService.CloseTestRun(c.Context(), testRunID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to close test run", "testRunID", testRunID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to close test run")
+		}
+		return c.JSON(fiber.Map{
+			"test_run": schema.NewTestRunResponseFromEntity(tr),
 		})
 	}
 }

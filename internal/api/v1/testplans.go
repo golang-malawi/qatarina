@@ -111,13 +111,13 @@ func GetOneTestPlan(testPlanService services.TestPlanService, logger logging.Log
 // GetTestPlanTestRuns godoc
 //
 //	@ID				GetTestPlanTestRuns
-//	@Summary		List all test cases of a test plan
-//	@Description	List all test cases of a test plan
-//	@Tags			test-plans
+//	@Summary		List all test runs of a test plan
+//	@Description	List all test runs of a test plan
+//	@Tags			test-plans, test-runs
 //	@Accept			json
 //	@Produce		json
-//	@Param			testplanID	path		string	true	"Test Plan ID"
-//	@Success		200			{object}	interface{}
+//	@Param			testPlanID	path		string	true	"Test Plan ID"
+//	@Success		200			{object}	schema.TestRunListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID}/test-runs [get]
@@ -137,7 +137,13 @@ func GetTestPlanTestRuns(testPlanService services.TestPlanService, logger loggin
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(testRuns)
+		responses := make([]schema.TestRunResponse, 0, len(testRuns))
+		for _, tr := range testRuns {
+			responses = append(responses, schema.NewTestRunResponseFromRow(tr))
+		}
+		return c.JSON(schema.TestRunListResponse{
+			TestRuns: responses,
+		})
 	}
 }
 

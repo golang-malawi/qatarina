@@ -81,6 +81,18 @@ func (q *Queries) CloseTestPlan(ctx context.Context, arg CloseTestPlanParams) (i
 	return result.RowsAffected()
 }
 
+const closeTestRun = `-- name: CloseTestRun :exec
+UPDATE test_runs
+SET is_closed = TRUE,
+updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) CloseTestRun(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, closeTestRun, id)
+	return err
+}
+
 const commitTestRunResult = `-- name: CommitTestRunResult :one
 UPDATE test_runs SET
     tested_by_id = $2,
@@ -2335,18 +2347,62 @@ func (q *Queries) ListTestRunsByOwner(ctx context.Context, ownerID int32) ([]Tes
 }
 
 const listTestRunsByPlan = `-- name: ListTestRunsByPlan :many
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE test_plan_id = $1
+SELECT
+    tr.id,
+    tr.project_id,
+    tr.test_plan_id,
+    tr.test_case_id,
+    tr.owner_id,
+    tr.tested_by_id,
+    tr.assigned_to_id,
+    tr.code,
+    tr.result_state,
+    tr.is_closed,
+    tr.notes,
+    tr.actual_result,
+    tr.expected_result,
+    tr.tested_on,
+    tr.created_at,
+    tr.updated_at,
+    tc.title AS test_case_title,
+    u.display_name AS executed_by
+FROM test_runs tr
+JOIN test_cases tc ON tr.test_case_id = tc.id
+JOIN users u ON tr.tested_by_id = u.id
+WHERE tr.test_plan_id = $1
+ORDER BY tr.created_at DESC
 `
 
-func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]TestRun, error) {
+type ListTestRunsByPlanRow struct {
+	ID             uuid.UUID
+	ProjectID      int32
+	TestPlanID     int32
+	TestCaseID     uuid.UUID
+	OwnerID        int32
+	TestedByID     int32
+	AssignedToID   int32
+	Code           string
+	ResultState    TestRunState
+	IsClosed       sql.NullBool
+	Notes          string
+	ActualResult   sql.NullString
+	ExpectedResult sql.NullString
+	TestedOn       time.Time
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+	TestCaseTitle  string
+	ExecutedBy     sql.NullString
+}
+
+func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]ListTestRunsByPlanRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTestRunsByPlan, testPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TestRun
+	var items []ListTestRunsByPlanRow
 	for rows.Next() {
-		var i TestRun
+		var i ListTestRunsByPlanRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProjectID,
@@ -2355,18 +2411,17 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]T
 			&i.OwnerID,
 			&i.TestedByID,
 			&i.AssignedToID,
-			&i.AssigneeCanChangeCode,
 			&i.Code,
-			&i.ExternalIssueID,
 			&i.ResultState,
 			&i.IsClosed,
 			&i.Notes,
 			&i.ActualResult,
 			&i.ExpectedResult,
-			&i.Reactions,
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TestCaseTitle,
+			&i.ExecutedBy,
 		); err != nil {
 			return nil, err
 		}
