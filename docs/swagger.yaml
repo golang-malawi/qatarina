@@ -609,6 +609,8 @@ components:
       type: object
     schema.TestPlanResponseItem:
       properties:
+        assigned_testers:
+          type: integer
         assigned_to_id:
           type: integer
         closed_at:
@@ -619,6 +621,8 @@ components:
           type: integer
         description:
           type: string
+        failed_count:
+          type: integer
         has_report:
           type: boolean
         id:
@@ -632,6 +636,10 @@ components:
         num_failures:
           type: integer
         num_test_cases:
+          type: integer
+        passed_count:
+          type: integer
+        pending_count:
           type: integer
         project_id:
           type: integer
@@ -840,6 +848,41 @@ components:
       - first_name
       - last_name
       - org_id
+      type: object
+    schema.User:
+      properties:
+        address:
+          type: string
+        city:
+          type: string
+        country_iso:
+          type: string
+        created_at:
+          type: string
+        display_name:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        id:
+          type: integer
+        is_activated:
+          type: boolean
+        is_reviewed:
+          type: boolean
+        is_super_admin:
+          type: boolean
+        is_verified:
+          type: boolean
+        last_name:
+          type: string
+        org_id:
+          type: integer
+        phone:
+          type: string
+        updated_at:
+          type: string
       type: object
     schema.UserCompact:
       properties:
@@ -3452,7 +3495,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.User'
           description: OK
         "400":
           content:

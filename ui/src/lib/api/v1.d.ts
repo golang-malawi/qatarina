@@ -1718,11 +1718,13 @@ export interface components {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
         };
         "schema.TestPlanResponseItem": {
+            assigned_testers?: number;
             assigned_to_id?: number;
             closed_at?: string;
             created_at?: string;
             created_by_id?: number;
             description?: string;
+            failed_count?: number;
             has_report?: boolean;
             id?: number;
             is_complete?: boolean;
@@ -1730,6 +1732,8 @@ export interface components {
             kind?: string;
             num_failures?: number;
             num_test_cases?: number;
+            passed_count?: number;
+            pending_count?: number;
             project_id?: number;
             scheduled_end_at?: string;
             start_at?: string;
@@ -1817,6 +1821,24 @@ export interface components {
             last_name: string;
             org_id: number;
             phone?: string;
+        };
+        "schema.User": {
+            address?: string;
+            city?: string;
+            country_iso?: string;
+            created_at?: string;
+            display_name?: string;
+            email?: string;
+            first_name?: string;
+            id?: number;
+            is_activated?: boolean;
+            is_reviewed?: boolean;
+            is_super_admin?: boolean;
+            is_verified?: boolean;
+            last_name?: string;
+            org_id?: number;
+            phone?: string;
+            updated_at?: string;
         };
         "schema.UserCompact": {
             createdAt?: string;
@@ -4734,7 +4756,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.User"];
                 };
             };
             /** @description Bad Request */

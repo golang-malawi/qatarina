@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
 import type { components } from "@/lib/api/v1";
 
+export type User = components["schemas"]["schema.User"];
 
 export function useCreateUserMutation() {
   return $api.useMutation("post", "/v1/users");

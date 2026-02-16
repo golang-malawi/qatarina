@@ -47,13 +47,11 @@ function ViewUserProfile() {
     );
   }
 
-  const displayName = user.DisplayName ? user.DisplayName : "N/A";
-  const email = user.Email ?? "N/A";
-  const role = user.IsSuperAdmin && user.IsSuperAdmin
-    ? "Super Admin"
-    : "User";
-  const joinedAt = user.CreatedAt
-    ? new Date(user.CreatedAt).toLocaleDateString()
+  const displayName = user.display_name ?? "N/A";
+  const email = user.email ?? "N/A";
+  const role = user.is_super_admin ? "Super Admin" : "User";  
+  const joinedAt = user.created_at
+    ? new Date(user.created_at).toLocaleDateString()
     : "Unknown";
   const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
 
@@ -96,7 +94,7 @@ function ViewUserProfile() {
         <Box my={4} w="100%" h="1px" bg="gray.300" />
 
         <Stack direction="row" gap={3}>
-          <Button colorScheme="blue" onClick={() => console.log("Edit", user.ID)}>
+          <Button colorScheme="blue" onClick={() => console.log("Edit", user.id)}>
             Edit Profile
           </Button>
           <Button
