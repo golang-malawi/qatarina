@@ -73,3 +73,22 @@ type RefreshTokenRequest struct {
 
 type RefreshTokenResponse struct {
 }
+
+type User struct {
+	ID           int64  `json:"id"`
+	FirstName    string `json:"first_name"`
+	LastName     string `json:"last_name"`
+	DisplayName  string `json:"display_name"`
+	Email        string `json:"email"`
+	Phone        string `json:"phone,omitempty"`
+	OrgID        int32  `json:"org_id,omitempty"`
+	CountryIso   string `json:"country_iso,omitempty"`
+	City         string `json:"city,omitempty"`
+	Address      string `json:"address,omitempty"`
+	IsActivated  bool   `json:"is_activated"`
+	IsReviewed   bool   `json:"is_reviewed"`
+	IsSuperAdmin bool   `json:"is_super_admin"`
+	IsVerified   bool   `json:"is_verified"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+}

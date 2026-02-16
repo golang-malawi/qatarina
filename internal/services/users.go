@@ -30,7 +30,7 @@ type UserService interface {
 	// provided that the user's email is not already in use and that the information is valid
 	Create(context.Context, *schema.NewUserRequest) (*dbsqlc.User, error)
 	// GetOne retrives one user from system
-	GetOne(ctx context.Context, id int32) (dbsqlc.User, error)
+	GetOne(ctx context.Context, id int32) (schema.User, error)
 	// SearchUser searches the user in the system based on typed keywords
 	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
 	//Update updates the user
@@ -121,13 +121,30 @@ func (s *userServiceImpl) Create(ctx context.Context, request *schema.NewUserReq
 	return &user, nil
 }
 
-func (u *userServiceImpl) GetOne(ctx context.Context, id int32) (dbsqlc.User, error) {
+func (u *userServiceImpl) GetOne(ctx context.Context, id int32) (schema.User, error) {
 	user, err := u.queries.GetUser(ctx, id)
 	if err != nil {
 		u.logger.Error("failed to find the user", "error", err)
-		return dbsqlc.User{}, err
+		return schema.User{}, err
 	}
-	return user, nil
+	return schema.User{
+		ID:           int64(user.ID),
+		FirstName:    user.FirstName,
+		LastName:     user.LastName,
+		DisplayName:  user.DisplayName.String,
+		Email:        user.Email,
+		Phone:        user.Phone,
+		OrgID:        user.OrgID.Int32,
+		CountryIso:   user.CountryIso,
+		City:         user.City.String,
+		Address:      user.Address,
+		IsActivated:  user.IsActivated.Bool,
+		IsReviewed:   user.IsReviewed.Bool,
+		IsSuperAdmin: user.IsSuperAdmin.Bool,
+		IsVerified:   user.IsVerified.Bool,
+		CreatedAt:    user.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:    user.UpdatedAt.Time.Format(time.DateTime),
+	}, nil
 }
 
 func (u *userServiceImpl) Search(ctx context.Context, keyword string) ([]dbsqlc.User, error) {
