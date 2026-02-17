@@ -94,7 +94,9 @@ function ViewUserProfile() {
         <Box my={4} w="100%" h="1px" bg="gray.300" />
 
         <Stack direction="row" gap={3}>
-          <Button colorScheme="blue" onClick={() => console.log("Edit", user.id)}>
+          <Button colorScheme="blue" 
+          onClick={() => navigate({to: "/users/$userID/edit", params: { userID }})}
+          >
             Edit Profile
           </Button>
           <Button

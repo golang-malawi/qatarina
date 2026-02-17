@@ -31,6 +31,7 @@ import { Route as appUsersNewIndexRouteImport } from './routes/(app)/users/new/i
 import { Route as appTestCasesNewIndexRouteImport } from './routes/(app)/test-cases/new/index'
 import { Route as appProjectsNewIndexRouteImport } from './routes/(app)/projects/new/index'
 import { Route as appUsersViewUserIDRouteImport } from './routes/(app)/users/view/$userID'
+import { Route as appUsersUserIDEditRouteImport } from './routes/(app)/users/$userID/edit'
 import { Route as projectProjectsProjectIdTestersIndexRouteImport } from './routes/(project)/projects/$projectId/testers/index'
 import { Route as projectProjectsProjectIdTestPlansIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/index'
 import { Route as projectProjectsProjectIdTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/index'
@@ -162,6 +163,11 @@ const appProjectsNewIndexRoute = appProjectsNewIndexRouteImport.update({
 const appUsersViewUserIDRoute = appUsersViewUserIDRouteImport.update({
   id: '/users/view/$userID',
   path: '/users/view/$userID',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appUsersUserIDEditRoute = appUsersUserIDEditRouteImport.update({
+  id: '/users/$userID/edit',
+  path: '/users/$userID/edit',
   getParentRoute: () => appRouteRoute,
 } as any)
 const projectProjectsProjectIdTestersIndexRoute =
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/login/': typeof authLoginIndexRoute
   '/logout/': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
+  '/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new/': typeof appProjectsNewIndexRoute
   '/test-cases/new/': typeof appTestCasesNewIndexRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
+  '/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/(auth)/login/': typeof authLoginIndexRoute
   '/(auth)/logout/': typeof authLogoutIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
+  '/(app)/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
   '/(app)/projects/new/': typeof appProjectsNewIndexRoute
   '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/login/'
     | '/logout/'
     | '/ui/dynamic-form-demo/'
+    | '/users/$userID/edit'
     | '/users/view/$userID'
     | '/projects/new/'
     | '/test-cases/new/'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/ui/dynamic-form-demo'
+    | '/users/$userID/edit'
     | '/users/view/$userID'
     | '/projects/new'
     | '/test-cases/new'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/(auth)/login/'
     | '/(auth)/logout/'
     | '/ui/dynamic-form-demo/'
+    | '/(app)/users/$userID/edit'
     | '/(app)/users/view/$userID'
     | '/(app)/projects/new/'
     | '/(app)/test-cases/new/'
@@ -723,6 +735,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appUsersViewUserIDRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/users/$userID/edit': {
+      id: '/(app)/users/$userID/edit'
+      path: '/users/$userID/edit'
+      fullPath: '/users/$userID/edit'
+      preLoaderRoute: typeof appUsersUserIDEditRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(project)/projects/$projectId/testers/': {
       id: '/(project)/projects/$projectId/testers/'
       path: '/testers'
@@ -901,6 +920,7 @@ interface appRouteRouteChildren {
   appTestPlansIndexRoute: typeof appTestPlansIndexRoute
   appTestersIndexRoute: typeof appTestersIndexRoute
   appUsersIndexRoute: typeof appUsersIndexRoute
+  appUsersUserIDEditRoute: typeof appUsersUserIDEditRoute
   appUsersViewUserIDRoute: typeof appUsersViewUserIDRoute
   appProjectsNewIndexRoute: typeof appProjectsNewIndexRoute
   appTestCasesNewIndexRoute: typeof appTestCasesNewIndexRoute
@@ -921,6 +941,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appTestPlansIndexRoute: appTestPlansIndexRoute,
   appTestersIndexRoute: appTestersIndexRoute,
   appUsersIndexRoute: appUsersIndexRoute,
+  appUsersUserIDEditRoute: appUsersUserIDEditRoute,
   appUsersViewUserIDRoute: appUsersViewUserIDRoute,
   appProjectsNewIndexRoute: appProjectsNewIndexRoute,
   appTestCasesNewIndexRoute: appTestCasesNewIndexRoute,
