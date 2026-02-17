@@ -22,15 +22,13 @@ function ViewUserProfile() {
   const { user: loggedInUser } = useAuth();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
-  const { data: loggedInUserProfile } = loggedInUser?.user_id 
-    ? useGetUserQuery(loggedInUser.user_id.toString()) 
-    : { data: null };
+  const { data: loggedInUserProfile } = useGetUserQuery(loggedInUser?.user_id?.toString() || "");
 
   // Check if the logged-in user is the same as the user being viewed
   const isOwnProfile = loggedInUser?.user_id === Number(userID);
   
   // Can deactivate only if it's own profile OR user is super admin
-  const canDeactivate = isOwnProfile || (loggedInUserProfile && loggedInUserProfile.is_super_admin);
+  const canDeactivate = isOwnProfile || (loggedInUserProfile?.is_super_admin === true);
 
   const handleDeactivate = async () => {
     const confirm = window.confirm("Are you sure you want to deactivate this user?");
