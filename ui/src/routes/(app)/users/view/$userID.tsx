@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGetUserQuery, deleteUserByID  } from "@/services/UserService";
+import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
 
 export const Route = createFileRoute("/(app)/users/view/$userID")({
@@ -18,8 +19,18 @@ export const Route = createFileRoute("/(app)/users/view/$userID")({
 function ViewUserProfile() {
   const { userID } = Route.useParams();
   const navigate = useNavigate();
+  const { user: loggedInUser } = useAuth();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
+  const { data: loggedInUserProfile } = loggedInUser?.user_id 
+    ? useGetUserQuery(loggedInUser.user_id.toString()) 
+    : { data: null };
+
+  // Check if the logged-in user is the same as the user being viewed
+  const isOwnProfile = loggedInUser?.user_id === Number(userID);
+  
+  // Can deactivate only if it's own profile OR user is super admin
+  const canDeactivate = isOwnProfile || (loggedInUserProfile && loggedInUserProfile.is_super_admin);
 
   const handleDeactivate = async () => {
     const confirm = window.confirm("Are you sure you want to deactivate this user?");
@@ -94,18 +105,23 @@ function ViewUserProfile() {
         <Box my={4} w="100%" h="1px" bg="gray.300" />
 
         <Stack direction="row" gap={3}>
-          <Button colorScheme="blue" 
-          onClick={() => navigate({to: "/users/$userID/edit", params: { userID }})}
-          >
-            Edit Profile
-          </Button>
-          <Button
-            colorScheme="red"
-            variant="outline"
-            onClick={handleDeactivate}
-          >
-            Deactivate User
-          </Button>
+          {isOwnProfile && (
+            <Button 
+              colorScheme="blue" 
+              onClick={() => navigate({to: "/users/$userID/edit", params: { userID }})}
+            >
+              Edit Profile
+            </Button>
+          )}
+          {canDeactivate && (
+            <Button
+              colorScheme="red"
+              variant="outline"
+              onClick={handleDeactivate}
+            >
+              Deactivate User
+            </Button>
+          )}
         </Stack>
       </Flex>
     </Box>
