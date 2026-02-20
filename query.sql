@@ -24,9 +24,7 @@ UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_a
 -- name: UpdateUser :exec
 UPDATE users SET
     first_name = $2, last_name = $3, display_name = $4, phone = $5,
-    org_id = $6, country_iso = $7, city = $8, address = $9,
-    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
-    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
+    org_id = $6, country_iso = $7, city = $8, address = $9, updated_at = $10
 WHERE id = $1;
 
 -- name: ChangeUserPassword :exec

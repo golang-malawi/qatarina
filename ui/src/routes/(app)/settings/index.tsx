@@ -1,8 +1,9 @@
 import { Box, Button, Heading, VStack} from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DynamicForm, FieldConfig } from "@/components/form";
 import { toaster } from "@/components/ui/toaster";
 import { useChangePasswordMutation } from "@/data/queries/AuthQueries";
+import { useAuth } from "@/hooks/isLoggedIn";
 import { z } from "zod";
 import {useState} from "react"
 
@@ -27,6 +28,8 @@ const changePasswordFields: FieldConfig[] = [
 
 function RouteComponent() {
   const mutation = useChangePasswordMutation();
+  const navigate = useNavigate();
+  const { user: loggedInUser } = useAuth();
   const [activeSetting, setActiveSetting] = useState<string | null>(null);
 
   const handleSubmit = async (values: any) => {
@@ -93,6 +96,12 @@ function RouteComponent() {
       </Heading>
       {!activeSetting && (
         <VStack align="start" gap={4}>
+          <Button 
+            variant="outline" 
+            onClick={() => loggedInUser?.user_id && navigate({to: "/users/$userID/edit", params: { userID: loggedInUser.user_id.toString() }})}
+          >
+            Edit Profile
+          </Button>
           <Button variant="outline" onClick={() => setActiveSetting("change-password")}>
             Change Password
           </Button>

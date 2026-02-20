@@ -24,8 +24,8 @@ export function useGetUserQuery(userID: string) {
   return $api.useQuery("get", `/v1/users/{userID}`, { params: { path: { userID } } });
 }
 
-export function useUpdateUserMutation(userID: string, userData: components["schemas"]["schema.UpdateUserRequest"]) {
-  return apiClient.request("post", `/v1/users/{userID}`,  { params: { path:  { userID } }, body: userData });
+export function useUpdateUserMutation() {
+  return $api.useMutation("post", `/v1/users/{userID}`);
 }
 
 export function useInviteUserMutation(email: string) {
