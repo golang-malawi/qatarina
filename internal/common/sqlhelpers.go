@@ -36,6 +36,23 @@ func NullTime(t time.Time) sql.NullTime {
 	}
 }
 
+// FormatSqlDateTime converts time.Time or sql.NullTime into RFC3339 string
+func FormatSqlDateTime(t interface{}) string {
+	switch v := t.(type) {
+	case time.Time:
+		return v.Format(time.RFC3339)
+	case sql.NullTime:
+		if v.Valid {
+			return v.Time.Format(time.RFC3339)
+		}
+	case *time.Time:
+		if v != nil {
+			return v.Format(time.RFC3339)
+		}
+	}
+	return ""
+}
+
 // func ParseDate(dateStr string) sql.NullTime {
 // 	t, err := time.Parse("2006-01-02", dateStr)
 // 	if err != nil {

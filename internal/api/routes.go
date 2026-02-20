@@ -139,6 +139,15 @@ func (api *API) routes() {
 		testersV1.Delete("/:testerID", apiv1.DeleteTester(api.TesterService, api.logger))
 	}
 
+	orgsV1 := router.Group("/v1/orgs", authenticationMiddleware)
+	{
+		orgsV1.Get("", apiv1.ListOrgs(api.OrgService, api.logger))
+		orgsV1.Post("", apiv1.CreateOrg(api.OrgService, api.logger))
+		orgsV1.Get("/:orgID", apiv1.GetOrg(api.OrgService, api.logger))
+		orgsV1.Put("/:orgID", apiv1.UpdateOrg(api.OrgService, api.logger))
+		orgsV1.Delete("/:orgID", apiv1.DeleteOrg(api.OrgService, api.logger))
+	}
+
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
 	{
 		settingsApi.Get("", apiv1.GetSettings(api.Config))
