@@ -558,3 +558,25 @@ FROM test_run_results trr
 INNER JOIN test_runs tr ON tr.id = trr.test_run_id
 WHERE trr.executed_by = $1
 GROUP BY tr.test_case_id;
+
+-- name: CreateOrg :one
+INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at;
+
+-- name: GetOrgByID :one
+SELECT id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+FROM orgs
+WHERE id = $1;
+
+-- name: ListOrgs :many
+SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
+FROM orgs
+ORDER BY name;
+
+-- name: UpdateOrg :exec
+UPDATE orgs SET name = $2, address = $3, country = $4, github_url = $5, website_url = $6, updated_at = now()
+WHERE id = $1;
+
+-- name: DeleteOrg :exec
+DELETE FROM orgs WHERE id = $1;
