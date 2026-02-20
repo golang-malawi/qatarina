@@ -170,6 +170,7 @@ func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserR
 		CountryIso:  request.CountryIso,
 		City:        common.NullString(request.City),
 		Address:     request.Address,
+		UpdatedAt:   common.NewNullTime(time.Now()),
 	})
 	if err != nil {
 		u.logger.Error("failed to update user", "error", err)
