@@ -214,6 +214,45 @@ func (q *Queries) CreateNewTestRun(ctx context.Context, arg CreateNewTestRunPara
 	return id, err
 }
 
+const createOrg = `-- name: CreateOrg :one
+INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+`
+
+type CreateOrgParams struct {
+	Name        string
+	Address     sql.NullString
+	Country     sql.NullString
+	GithubUrl   sql.NullString
+	WebsiteUrl  sql.NullString
+	CreatedByID int32
+}
+
+func (q *Queries) CreateOrg(ctx context.Context, arg CreateOrgParams) (Org, error) {
+	row := q.db.QueryRowContext(ctx, createOrg,
+		arg.Name,
+		arg.Address,
+		arg.Country,
+		arg.GithubUrl,
+		arg.WebsiteUrl,
+		arg.CreatedByID,
+	)
+	var i Org
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Country,
+		&i.GithubUrl,
+		&i.WebsiteUrl,
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createPage = `-- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING id, parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
@@ -564,6 +603,15 @@ func (q *Queries) DeleteAllTestRunsInProject(ctx context.Context, projectID int3
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const deleteOrg = `-- name: DeleteOrg :exec
+DELETE FROM orgs WHERE id = $1
+`
+
+func (q *Queries) DeleteOrg(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteOrg, id)
+	return err
 }
 
 const deletePage = `-- name: DeletePage :execrows
@@ -919,6 +967,29 @@ func (q *Queries) GetOneModule(ctx context.Context, id int32) (Module, error) {
 		&i.Priority,
 		&i.Type,
 		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrgByID = `-- name: GetOrgByID :one
+SELECT id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+FROM orgs
+WHERE id = $1
+`
+
+func (q *Queries) GetOrgByID(ctx context.Context, id int32) (Org, error) {
+	row := q.db.QueryRowContext(ctx, getOrgByID, id)
+	var i Org
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Country,
+		&i.GithubUrl,
+		&i.WebsiteUrl,
+		&i.CreatedByID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1772,6 +1843,45 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	var i IsTestPlanActiveRow
 	err := row.Scan(&i.ClosedAt, &i.IsComplete)
 	return i, err
+}
+
+const listOrgs = `-- name: ListOrgs :many
+SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
+FROM orgs
+ORDER BY name
+`
+
+func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
+	rows, err := q.db.QueryContext(ctx, listOrgs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Org
+	for rows.Next() {
+		var i Org
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.Country,
+			&i.GithubUrl,
+			&i.WebsiteUrl,
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many
@@ -2737,6 +2847,32 @@ type SetTestCaseDraftStatusParams struct {
 
 func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDraftStatusParams) error {
 	_, err := q.db.ExecContext(ctx, setTestCaseDraftStatus, arg.ID, arg.IsDraft)
+	return err
+}
+
+const updateOrg = `-- name: UpdateOrg :exec
+UPDATE orgs SET name = $2, address = $3, country = $4, github_url = $5, website_url = $6, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateOrgParams struct {
+	ID         int32
+	Name       string
+	Address    sql.NullString
+	Country    sql.NullString
+	GithubUrl  sql.NullString
+	WebsiteUrl sql.NullString
+}
+
+func (q *Queries) UpdateOrg(ctx context.Context, arg UpdateOrgParams) error {
+	_, err := q.db.ExecContext(ctx, updateOrg,
+		arg.ID,
+		arg.Name,
+		arg.Address,
+		arg.Country,
+		arg.GithubUrl,
+		arg.WebsiteUrl,
+	)
 	return err
 }
 
