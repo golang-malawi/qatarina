@@ -55,6 +55,20 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 		s.logger.Error(s.name, "failed to create project", "error", err)
 		return nil, err
 	}
+
+	// Seed default test environment for the project
+	envs := []string{"development", "staging", "production"}
+	for _, envName := range envs {
+		_, err := s.db.CreateEnvironment(ctx, dbsqlc.CreateEnvironmentParams{
+			ProjectID: common.NewNullInt32(int32(projectID)),
+			Name:      envName,
+			BaseUrl:   common.NullString(""),
+		})
+		if err != nil {
+			s.logger.Error(s.name, "failed to create environment", "error", err)
+			return nil, err
+		}
+	}
 	project, err := s.db.GetProject(context.Background(), projectID)
 	return &project, err
 }

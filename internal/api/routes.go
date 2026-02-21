@@ -59,6 +59,7 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
+		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
