@@ -580,3 +580,13 @@ WHERE id = $1;
 
 -- name: DeleteOrg :exec
 DELETE FROM orgs WHERE id = $1;
+
+-- name: CreateEnvironment :one
+INSERT INTO environments (
+    project_id, name, base_url, created_at, updated_at
+) VALUES (
+    $1, $2, $3, now(), now()
+) RETURNING id;
+
+-- name: ListEnvironmentsByProject :many
+SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
