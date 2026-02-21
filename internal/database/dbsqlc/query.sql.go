@@ -149,6 +149,27 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 	return count, err
 }
 
+const createEnvironment = `-- name: CreateEnvironment :one
+INSERT INTO environments (
+    project_id, name, base_url, created_at, updated_at
+) VALUES (
+    $1, $2, $3, now(), now()
+) RETURNING id
+`
+
+type CreateEnvironmentParams struct {
+	ProjectID sql.NullInt32
+	Name      string
+	BaseUrl   sql.NullString
+}
+
+func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, createEnvironment, arg.ProjectID, arg.Name, arg.BaseUrl)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createInvite = `-- name: CreateInvite :exec
 INSERT INTO invites (sender_email, receiver_email, token, expires_at)
 VALUES ($1, $2, $3, $4)
@@ -1774,6 +1795,40 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	return i, err
 }
 
+const listEnvironmentsByProject = `-- name: ListEnvironmentsByProject :many
+SELECT id, project_id, name, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
+`
+
+func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.NullInt32) ([]Environment, error) {
+	rows, err := q.db.QueryContext(ctx, listEnvironmentsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Environment
+	for rows.Next() {
+		var i Environment
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.BaseUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjects = `-- name: ListProjects :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code FROM projects ORDER BY created_at DESC
 `
@@ -2116,7 +2171,7 @@ func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.Null
 }
 
 const listTestPlans = `-- name: ListTestPlans :many
-SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at FROM test_plans ORDER BY created_at DESC
+SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at, environment_id FROM test_plans ORDER BY created_at DESC
 `
 
 func (q *Queries) ListTestPlans(ctx context.Context) ([]TestPlan, error) {
@@ -2146,6 +2201,7 @@ func (q *Queries) ListTestPlans(ctx context.Context) ([]TestPlan, error) {
 			&i.HasReport,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -2161,7 +2217,7 @@ func (q *Queries) ListTestPlans(ctx context.Context) ([]TestPlan, error) {
 }
 
 const listTestPlansByProject = `-- name: ListTestPlansByProject :many
-SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at FROM test_plans WHERE project_id = $1
+SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at, environment_id FROM test_plans WHERE project_id = $1
 `
 
 func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) ([]TestPlan, error) {
@@ -2191,6 +2247,7 @@ func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) (
 			&i.HasReport,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
