@@ -83,7 +83,7 @@ func ListOrgs(orgService services.OrgService, logger logging.Logger) fiber.Handl
 //	@Tags			organizations
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path string	true	"Organization ID"
+//	@Param			orgID	path string	true	"Organization ID"
 //	@Success		200			{object}	schema.Org
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
@@ -111,6 +111,7 @@ func GetOrg(orgService services.OrgService, logger logging.Logger) fiber.Handler
 //	@Tags			organizations
 //	@Accept			json
 //	@Produce		json
+//	@Param			orgID	path		string	true	"Organization ID"
 //	@Param			request	body		schema.UpdateOrgRequest	true	"Organization data"
 //	@Success		200			{object}	map[string]string
 //	@Failure		400			{object}	problemdetail.ProblemDetail
@@ -151,7 +152,7 @@ func UpdateOrg(orgService services.OrgService, logger logging.Logger) fiber.Hand
 //	@Tags			organizations
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		string	true	"Organization ID"
+//	@Param			orgID	path		string	true	"Organization ID"
 //	@Success		200			{object}	map[string]string
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
