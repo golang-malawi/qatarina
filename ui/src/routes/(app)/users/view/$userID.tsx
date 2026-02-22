@@ -8,7 +8,7 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useGetUserQuery, deleteUserByID  } from "@/services/UserService";
+import { useGetUserQuery, deleteUserByID } from "@/services/UserService";
 import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
 
@@ -22,16 +22,23 @@ function ViewUserProfile() {
   const { user: loggedInUser } = useAuth();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
-  const { data: loggedInUserProfile } = useGetUserQuery(loggedInUser?.user_id?.toString() || "");
+  const { data: loggedInUserProfile } = useGetUserQuery(
+    loggedInUser?.user_id?.toString() || "",
+  );
 
   // Check if the logged-in user is the same as the user being viewed
   const isOwnProfile = loggedInUser?.user_id === Number(userID);
-  
+
   // Can deactivate only if it's own profile OR user is super admin
-  const canDeactivate = isOwnProfile || (loggedInUserProfile?.is_super_admin === true);
+  const canEditUser =
+    isOwnProfile || loggedInUserProfile?.is_super_admin === true;
+  const canDeactivate =
+    isOwnProfile || loggedInUserProfile?.is_super_admin === true;
 
   const handleDeactivate = async () => {
-    const confirm = window.confirm("Are you sure you want to deactivate this user?");
+    const confirm = window.confirm(
+      "Are you sure you want to deactivate this user?",
+    );
     if (!confirm) return;
 
     try {
@@ -52,13 +59,15 @@ function ViewUserProfile() {
 
   if (isError || !user) {
     return (
-      <ErrorAlert message={`Failed to fetch user details: ${(error as Error)?.message || "Unknown error"}`} />
+      <ErrorAlert
+        message={`Failed to fetch user details: ${(error as Error)?.message || "Unknown error"}`}
+      />
     );
   }
 
   const displayName = user.display_name ?? "N/A";
   const email = user.email ?? "N/A";
-  const role = user.is_super_admin ? "Super Admin" : "User";  
+  const role = user.is_super_admin ? "Super Admin" : "User";
   const joinedAt = user.created_at
     ? new Date(user.created_at).toLocaleDateString()
     : "Unknown";
@@ -103,10 +112,12 @@ function ViewUserProfile() {
         <Box my={4} w="100%" h="1px" bg="gray.300" />
 
         <Stack direction="row" gap={3}>
-          {isOwnProfile && (
-            <Button 
-              colorScheme="blue" 
-              onClick={() => navigate({to: "/users/$userID/edit", params: { userID }})}
+          {canEditUser && (
+            <Button
+              colorScheme="blue"
+              onClick={() =>
+                navigate({ to: "/users/$userID/edit", params: { userID } })
+              }
             >
               Edit Profile
             </Button>
