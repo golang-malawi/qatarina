@@ -2958,31 +2958,21 @@ func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) 
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users SET
     first_name = $2, last_name = $3, display_name = $4, phone = $5,
-    org_id = $6, country_iso = $7, city = $8, address = $9,
-    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
-    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
+    org_id = $6, country_iso = $7, city = $8, address = $9, updated_at = $10
 WHERE id = $1
 `
 
 type UpdateUserParams struct {
-	ID               int32
-	FirstName        string
-	LastName         string
-	DisplayName      sql.NullString
-	Phone            string
-	OrgID            sql.NullInt32
-	CountryIso       string
-	City             sql.NullString
-	Address          string
-	IsActivated      sql.NullBool
-	IsReviewed       sql.NullBool
-	IsSuperAdmin     sql.NullBool
-	IsVerified       sql.NullBool
-	LastLoginAt      sql.NullTime
-	EmailConfirmedAt sql.NullTime
-	CreatedAt        sql.NullTime
-	UpdatedAt        sql.NullTime
-	DeletedAt        sql.NullTime
+	ID          int32
+	FirstName   string
+	LastName    string
+	DisplayName sql.NullString
+	Phone       string
+	OrgID       sql.NullInt32
+	CountryIso  string
+	City        sql.NullString
+	Address     string
+	UpdatedAt   sql.NullTime
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -2996,15 +2986,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 		arg.CountryIso,
 		arg.City,
 		arg.Address,
-		arg.IsActivated,
-		arg.IsReviewed,
-		arg.IsSuperAdmin,
-		arg.IsVerified,
-		arg.LastLoginAt,
-		arg.EmailConfirmedAt,
-		arg.CreatedAt,
 		arg.UpdatedAt,
-		arg.DeletedAt,
 	)
 	return err
 }

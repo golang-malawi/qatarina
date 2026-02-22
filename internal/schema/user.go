@@ -3,7 +3,7 @@ package schema
 type UserCompact struct {
 	ID          int64  `json:"id"`
 	DisplayName string `json:"displayName"`
-	Email       string `json:"username"`
+	Email       string `json:"email"`
 	CreatedAt   string `json:"createdAt"`
 }
 
