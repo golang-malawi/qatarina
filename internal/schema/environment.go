@@ -1,7 +1,6 @@
 package schema
 
 type EnvironmentRequest struct {
-	ProjectID   int64  `json:"project_id" validate:"required"`
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description,omitempty"`
 	BaseURL     string `json:"base_url,omitempty" validate:"omitempty,url"`
