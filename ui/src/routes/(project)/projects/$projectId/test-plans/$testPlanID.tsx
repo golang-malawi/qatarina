@@ -4,9 +4,7 @@ import {
   Box,
   Button,
   Card,
-  Flex,
   Grid,
-  Heading,
   HStack,
   Icon,
   Separator,
@@ -16,13 +14,18 @@ import {
 import {
   IconCheck,
   IconClock,
+  IconListCheck,
   IconLock,
   IconPlayerPlay,
+  IconUsers,
+  IconX,
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { closeTestPlan, useTestPlanQuery } from "@/services/TestPlanService";
+import { MetricCard } from "@/components/ui/metric-card";
 import { toaster } from "@/components/ui/toaster";
 import { ErrorState, LoadingState } from "@/components/ui/page-states";
+import { PageHeaderCard } from "@/components/ui/page-header-card";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
@@ -118,71 +121,59 @@ function ViewTestPlan() {
 
   return (
     <Box w="full">
-      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
-        <Card.Body p={{ base: 5, md: 7 }}>
-          <Flex
-            direction={{ base: "column", lg: "row" }}
-            justify="space-between"
-            align={{ base: "start", lg: "center" }}
-            gap={5}
-          >
-            <Stack gap={2} maxW="3xl">
-              <Heading color="fg.heading">
-                {testPlan.description?.trim() || `Test Plan #${testPlan.id}`}
-              </Heading>
-              <Text color="fg.subtle">
-                Plan ID: {testPlan.id ?? "N/A"} · Kind: {kindLabel}
-              </Text>
-              <HStack gap={2} flexWrap="wrap">
-                <Badge
-                  colorPalette={testPlan.is_complete ? "green" : "orange"}
-                  variant="subtle"
-                >
-                  <Icon as={testPlan.is_complete ? IconCheck : IconClock} />
-                  {testPlan.is_complete ? "Completed" : "In Progress"}
-                </Badge>
-                <Badge
-                  colorPalette={testPlan.is_locked ? "red" : "gray"}
-                  variant="subtle"
-                >
-                  <Icon as={IconLock} />
-                  {testPlan.is_locked ? "Locked" : "Open"}
-                </Badge>
-                <Badge colorPalette={testPlan.has_report ? "blue" : "gray"} variant="subtle">
-                  {testPlan.has_report ? "Report available" : "No report yet"}
-                </Badge>
-              </HStack>
-            </Stack>
-
-            <HStack gap={2} flexWrap="wrap">
-              <Link
-                to="/projects/$projectId/test-plans/$testPlanID/execute"
-                params={{ projectId, testPlanID }}
+      <PageHeaderCard
+        title={testPlan.description?.trim() || `Test Plan #${testPlan.id}`}
+        description={`Plan ID: ${testPlan.id ?? "N/A"} · Kind: ${kindLabel}`}
+        badges={
+          <>
+            <Badge
+              colorPalette={testPlan.is_complete ? "green" : "orange"}
+              variant="subtle"
+            >
+              <Icon as={testPlan.is_complete ? IconCheck : IconClock} />
+              {testPlan.is_complete ? "Completed" : "In Progress"}
+            </Badge>
+            <Badge
+              colorPalette={testPlan.is_locked ? "red" : "gray"}
+              variant="subtle"
+            >
+              <Icon as={IconLock} />
+              {testPlan.is_locked ? "Locked" : "Open"}
+            </Badge>
+            <Badge colorPalette={testPlan.has_report ? "blue" : "gray"} variant="subtle">
+              {testPlan.has_report ? "Report available" : "No report yet"}
+            </Badge>
+          </>
+        }
+        actions={
+          <HStack gap={2} flexWrap="wrap">
+            <Link
+              to="/projects/$projectId/test-plans/$testPlanID/execute"
+              params={{ projectId, testPlanID }}
+            >
+              <Button colorPalette="brand" variant="outline">
+                <IconPlayerPlay />
+                Execute
+              </Button>
+            </Link>
+            {testPlan.is_complete ? (
+              <Button colorPalette="green" variant="subtle" disabled>
+                <IconCheck />
+                Plan Closed
+              </Button>
+            ) : (
+              <Button
+                colorPalette="green"
+                loading={isClosing}
+                disabled={isClosing}
+                onClick={handleMarkComplete}
               >
-                <Button colorPalette="brand" variant="outline">
-                  <IconPlayerPlay />
-                  Execute
-                </Button>
-              </Link>
-              {testPlan.is_complete ? (
-                <Button colorPalette="green" variant="subtle" disabled>
-                  <IconCheck />
-                  Plan Closed
-                </Button>
-              ) : (
-                <Button
-                  colorPalette="green"
-                  loading={isClosing}
-                  disabled={isClosing}
-                  onClick={handleMarkComplete}
-                >
-                  Mark as Complete
-                </Button>
-              )}
-            </HStack>
-          </Flex>
-        </Card.Body>
-      </Card.Root>
+                Mark as Complete
+              </Button>
+            )}
+          </HStack>
+        }
+      />
 
       <Grid
         templateColumns={{
@@ -192,11 +183,45 @@ function ViewTestPlan() {
         gap={3}
         mb={6}
       >
-        <MetricCard label="Total Cases" value={totalCases} />
-        <MetricCard label="Passed" value={passedCases} />
-        <MetricCard label="Failed" value={failedCases} />
-        <MetricCard label="Pending" value={pendingCases} />
-        <MetricCard label="Assigned Testers" value={assignedTesters} />
+        <MetricCard
+          label="Total Cases"
+          value={totalCases}
+          icon={IconListCheck}
+          tone="brand"
+          variant="emphasis"
+          helperText="Cases scoped"
+        />
+        <MetricCard
+          label="Passed"
+          value={passedCases}
+          icon={IconCheck}
+          tone="success"
+          variant="subtle"
+          helperText="Successful validations"
+        />
+        <MetricCard
+          label="Failed"
+          value={failedCases}
+          icon={IconX}
+          tone="danger"
+          variant="subtle"
+          helperText="Requires fixes"
+        />
+        <MetricCard
+          label="Pending"
+          value={pendingCases}
+          icon={IconClock}
+          tone="warning"
+          variant="subtle"
+          helperText="Awaiting execution"
+        />
+        <MetricCard
+          label="Assigned Testers"
+          value={assignedTesters}
+          icon={IconUsers}
+          tone="info"
+          helperText="People on this plan"
+        />
       </Grid>
 
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
@@ -277,20 +302,5 @@ function DetailItem({ label, value }: { label: string; value: string }) {
         {value}
       </Text>
     </Stack>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
-      <Card.Body p={4}>
-        <Text fontSize="xs" color="fg.subtle">
-          {label}
-        </Text>
-        <Heading size="lg" color="fg.heading">
-          {value}
-        </Heading>
-      </Card.Body>
-    </Card.Root>
   );
 }

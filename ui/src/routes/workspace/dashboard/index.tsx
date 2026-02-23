@@ -24,8 +24,8 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { MetricCard } from "@/components/ui/metric-card";
 import $api from "@/lib/api/query";
-import { SummaryCard } from "../../../components/SummaryCard";
 
 type QuickAction = {
   title: string;
@@ -106,6 +106,18 @@ function DashboardPage() {
         ? "Healthy throughput"
         : "Needs attention"
       : "No data yet";
+  const ratioDirection =
+    typeof closed_to_open_ratio !== "number"
+      ? "flat"
+      : closed_to_open_ratio >= 1
+        ? "up"
+        : "down";
+  const ratioTone =
+    typeof closed_to_open_ratio !== "number"
+      ? "neutral"
+      : closed_to_open_ratio >= 1
+        ? "success"
+        : "warning";
 
   return (
     <Box w="full">
@@ -172,25 +184,45 @@ function DashboardPage() {
         gap={4}
         mb={6}
       >
-        <SummaryCard label="Projects" value={project_count} />
-        <SummaryCard label="Testers" value={tester_count} />
-        <SummaryCard label="Test Cases" value={test_case_count} />
-        <SummaryCard label="Test Plans" value={test_plan_count} />
-        <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
-          <Card.Body p={4}>
-            <Stack gap={1}>
-              <Text fontSize="sm" color="fg.subtle">
-                Closed/Open Ratio
-              </Text>
-              <Heading size="lg" color="fg.heading">
-                {ratioValue}
-              </Heading>
-              <Text fontSize="sm" color="fg.muted">
-                {ratioHealth}
-              </Text>
-            </Stack>
-          </Card.Body>
-        </Card.Root>
+        <MetricCard
+          label="Projects"
+          value={formatValue(project_count)}
+          icon={IconTable}
+          tone="brand"
+          variant="emphasis"
+          helperText="Tracked workspaces"
+        />
+        <MetricCard
+          label="Testers"
+          value={formatValue(tester_count)}
+          icon={IconUser}
+          tone="info"
+          variant="subtle"
+          helperText="Active collaborators"
+        />
+        <MetricCard
+          label="Test Cases"
+          value={formatValue(test_case_count)}
+          icon={IconListCheck}
+          tone="warning"
+          variant="subtle"
+          helperText="Coverage inventory"
+        />
+        <MetricCard
+          label="Test Plans"
+          value={formatValue(test_plan_count)}
+          icon={IconDashboard}
+          tone="brand"
+          helperText="Execution roadmaps"
+        />
+        <MetricCard
+          label="Closed/Open Ratio"
+          value={ratioValue}
+          tone={ratioTone}
+          variant="emphasis"
+          helperText={ratioHealth}
+          trend={{ value: ratioHealth, direction: ratioDirection }}
+        />
       </Grid>
 
       <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap={6}>

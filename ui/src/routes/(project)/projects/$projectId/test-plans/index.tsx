@@ -16,19 +16,26 @@ import {
   Text,
 } from "@chakra-ui/react";
 import {
+  IconCheck,
+  IconClock,
   IconListCheck,
   IconLock,
   IconPlayerPlay,
   IconPlus,
   IconSearch,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { MetricCard } from "@/components/ui/metric-card";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/ui/page-states";
+import { PageHeaderCard } from "@/components/ui/page-header-card";
+import { PageToolbarCard } from "@/components/ui/page-toolbar-card";
 import {
   useDeleteTestPlanMutation,
   useProjectTestPlansQuery,
@@ -81,73 +88,53 @@ function ListProjectTestPlans() {
   if (error) return <ErrorState title="Error loading test plans" />;
 
   const handleDelete = async (testPlanID: string) => {
-    if (!window.confirm("Are you sure you want to delete this test plan?"))
-      return;
-
-    try {
-      await deleteMutation.mutateAsync({
-        params: { path: { testPlanID } },
-      });
-      toaster.success({ title: "Test plan deleted successfully" });
-      refetch();
-    } catch (err) {
-      console.error("Failed to delete test plan", err);
-      toaster.error({ title: "Failed to delete test plan" });
-    }
+    await deleteMutation.mutateAsync({
+      params: { path: { testPlanID } },
+    });
+    toaster.success({ title: "Test plan deleted successfully" });
+    await refetch();
   };
 
   return (
     <Box w="full">
-      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
-        <Card.Body p={{ base: 4, md: 6 }}>
-          <Flex
-            direction={{ base: "column", md: "row" }}
-            justify="space-between"
-            align={{ base: "start", md: "center" }}
-            gap={4}
+      <PageHeaderCard
+        title="Test Plans"
+        description="Track progress, execute runs, and manage plan lifecycle for this project."
+        badges={
+          <>
+            <Badge colorPalette="brand" variant="subtle">
+              {plans.length} total
+            </Badge>
+            <Badge colorPalette="green" variant="subtle">
+              {completedCount} completed
+            </Badge>
+            <Badge colorPalette="orange" variant="subtle">
+              {activeCount} active
+            </Badge>
+          </>
+        }
+        actions={
+          <Link
+            to="/projects/$projectId/test-plans/new"
+            params={{ projectId: `${projectId}` }}
           >
-            <Stack gap={1}>
-              <Heading color="fg.heading">Test Plans</Heading>
-              <Text color="fg.subtle">
-                Track progress, execute runs, and manage plan lifecycle for this
-                project.
-              </Text>
-              <HStack gap={2}>
-                <Badge colorPalette="brand" variant="subtle">
-                  {plans.length} total
-                </Badge>
-                <Badge colorPalette="green" variant="subtle">
-                  {completedCount} completed
-                </Badge>
-                <Badge colorPalette="orange" variant="subtle">
-                  {activeCount} active
-                </Badge>
-              </HStack>
-            </Stack>
-            <Link
-              to="/projects/$projectId/test-plans/new"
-              params={{ projectId: `${projectId}` }}
-            >
-              <Button colorPalette="brand">
-                <IconPlus />
-                New Test Plan
-              </Button>
-            </Link>
-          </Flex>
-        </Card.Body>
-      </Card.Root>
+            <Button colorPalette="brand">
+              <IconPlus />
+              New Test Plan
+            </Button>
+          </Link>
+        }
+      />
 
-      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
-        <Card.Body p={4}>
-          <InputGroup startElement={<IconSearch size={16} />}>
-            <Input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by ID, description, or kind"
-            />
-          </InputGroup>
-        </Card.Body>
-      </Card.Root>
+      <PageToolbarCard>
+        <InputGroup startElement={<IconSearch size={16} />}>
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search by ID, description, or kind"
+          />
+        </InputGroup>
+      </PageToolbarCard>
 
       {filteredPlans.length === 0 ? (
         <EmptyState
@@ -227,10 +214,38 @@ function ListProjectTestPlans() {
                       }}
                       gap={3}
                     >
-                      <MetricCard label="Total Cases" value={total} />
-                      <MetricCard label="Passed" value={passed} />
-                      <MetricCard label="Failed" value={failed} />
-                      <MetricCard label="Pending" value={pending} />
+                      <MetricCard
+                        label="Total Cases"
+                        value={total}
+                        icon={IconListCheck}
+                        tone="brand"
+                        variant="emphasis"
+                        helperText="Cases in this plan"
+                      />
+                      <MetricCard
+                        label="Passed"
+                        value={passed}
+                        icon={IconCheck}
+                        tone="success"
+                        variant="subtle"
+                        helperText="Validated outcomes"
+                      />
+                      <MetricCard
+                        label="Failed"
+                        value={failed}
+                        icon={IconX}
+                        tone="danger"
+                        variant="subtle"
+                        helperText="Needs triage"
+                      />
+                      <MetricCard
+                        label="Pending"
+                        value={pending}
+                        icon={IconClock}
+                        tone="warning"
+                        variant="subtle"
+                        helperText="Awaiting execution"
+                      />
                     </Grid>
 
                     <Separator />
@@ -280,17 +295,24 @@ function ListProjectTestPlans() {
                         </Button>
                       )}
 
-                      <Button
-                        variant="outline"
-                        colorPalette="danger"
-                        size="sm"
-                        loading={deleteMutation.isPending}
-                        onClick={() => hasId && handleDelete(testPlanID)}
-                        disabled={!hasId}
-                      >
-                        <IconTrash />
-                        Delete
-                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button
+                            variant="outline"
+                            colorPalette="danger"
+                            size="sm"
+                            loading={deleteMutation.isPending}
+                            disabled={!hasId}
+                          >
+                            <IconTrash />
+                            Delete
+                          </Button>
+                        }
+                        title="Delete test plan?"
+                        description="This action cannot be undone."
+                        confirmLabel="Delete"
+                        onConfirm={() => handleDelete(testPlanID)}
+                      />
                     </Flex>
                   </Stack>
                 </Card.Body>
@@ -299,19 +321,6 @@ function ListProjectTestPlans() {
           })}
         </Stack>
       )}
-    </Box>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Box p={3} border="sm" borderColor="border.subtle" borderRadius="lg">
-      <Text fontSize="xs" color="fg.subtle">
-        {label}
-      </Text>
-      <Text fontSize="xl" fontWeight="bold" color="fg.heading">
-        {value}
-      </Text>
     </Box>
   );
 }
