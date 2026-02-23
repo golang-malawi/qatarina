@@ -583,9 +583,9 @@ DELETE FROM orgs WHERE id = $1;
 
 -- name: CreateEnvironment :one
 INSERT INTO environments (
-    project_id, name, base_url, created_at, updated_at
+    project_id, name, description, base_url, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, now(), now()
+    $1, $2, $3, $4, now(), now()
 ) RETURNING id;
 
 -- name: ListEnvironmentsByProject :many
