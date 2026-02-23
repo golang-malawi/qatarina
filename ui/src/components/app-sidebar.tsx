@@ -80,7 +80,7 @@ const SidebarHeader = ({
   projects: Array<{ id: number | string; title: string }>;
   projectsLoading: boolean;
 }) => {
-  const { isMobile, isCollapsed, toggleSidebar } = useSidebar();
+  const { isMobile, isCollapsed, setOpenMobile } = useSidebar();
 
   return (
     <Flex
@@ -99,7 +99,7 @@ const SidebarHeader = ({
           aria-label="Close sidebar"
           variant="ghost"
           size="sm"
-          onClick={() => toggleSidebar()}
+          onClick={() => setOpenMobile(false)}
         >
           <LuX />
         </IconButton>

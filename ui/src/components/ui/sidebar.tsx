@@ -177,13 +177,13 @@ const Sidebar = React.forwardRef<
     variant?: "default" | "inset";
   }
 >(({ className, children, style, header, variant = "default", ...props }, ref) => {
-  const { isMobile, openMobile, toggleSidebar, isCollapsed } = useSidebar();
+  const { isMobile, openMobile, setOpenMobile, isCollapsed } = useSidebar();
   const isInset = variant === "inset";
   if (isMobile) {
     return (
       <Drawer.Root
         open={openMobile}
-        onOpenChange={toggleSidebar}
+        onOpenChange={(details) => setOpenMobile(details.open)}
         size="xl"
         placement="start"
       >
