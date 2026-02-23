@@ -9,7 +9,7 @@ import (
 )
 
 type EnvironmentService interface {
-	FindByProjectID(ctx context.Context, projectID int64) (schema.EnvironmentListResponse, error)
+	FindByProjectID(ctx context.Context, projectID int64) (*schema.EnvironmentListResponse, error)
 }
 
 type environmentServiceImpl struct {
@@ -22,10 +22,10 @@ func NewEnvironmentService(db *dbsqlc.Queries) EnvironmentService {
 	}
 }
 
-func (s *environmentServiceImpl) FindByProjectID(ctx context.Context, projectID int64) (schema.EnvironmentListResponse, error) {
+func (s *environmentServiceImpl) FindByProjectID(ctx context.Context, projectID int64) (*schema.EnvironmentListResponse, error) {
 	envs, err := s.queries.ListEnvironmentsByProject(ctx, common.NewNullInt32(int32(projectID)))
 	if err != nil {
-		return schema.EnvironmentListResponse{}, err
+		return nil, err
 	}
 
 	response := make([]schema.EnvironmentResponse, 0, len(envs))
@@ -40,5 +40,5 @@ func (s *environmentServiceImpl) FindByProjectID(ctx context.Context, projectID 
 		})
 	}
 
-	return schema.EnvironmentListResponse{Environments: response}, nil
+	return &schema.EnvironmentListResponse{Environments: response}, nil
 }
