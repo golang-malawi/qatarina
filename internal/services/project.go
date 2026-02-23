@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -59,9 +61,14 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 	// Seed default test environment for the project
 	envs := []string{"development", "staging", "production"}
 	for _, envName := range envs {
+		sanitized := sanitizeEnvName(envName)
+		if sanitized == "" {
+			continue
+		}
+
 		_, err := s.db.CreateEnvironment(ctx, dbsqlc.CreateEnvironmentParams{
 			ProjectID: common.NewNullInt32(int32(projectID)),
-			Name:      envName,
+			Name:      sanitized,
 			BaseUrl:   common.NullString(""),
 		})
 		if err != nil {
@@ -133,4 +140,16 @@ func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsq
 	}
 
 	return projects, nil
+}
+
+func sanitizeEnvName(name string) string {
+	n := strings.TrimSpace(name)
+	n = strings.ToLower(n)
+	n = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, n)
+	return n
 }
