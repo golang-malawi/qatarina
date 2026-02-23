@@ -1,46 +1,13 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { Container, Flex } from "@chakra-ui/react";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import AppSidebar from "@/components/app-sidebar";
-import { ColorModeButton } from "@/components/ui/color-mode";
-import { MainLinkItems } from "@/lib/navigation";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ErrorComponent } from "@tanstack/react-router";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 export const Route = createFileRoute("/(app)")({
-  beforeLoad: ({ context, location }) => {
-    console.log("beforeLoad auth context:", context.auth);
-    if (!context.auth?.isAuthenticated) {
-      throw redirect({
-        to: "/login",
-        search: {
-          redirect: location.href,
-        },
-      });
-    }
-  },
-  component: BaseLayout,
+  beforeLoad: requireAuth,
+  component: AppLayout,
   errorComponent: ({ error }) => <ErrorComponent error={error} />,
 });
 
-
-function BaseLayout() {
-  return (
-    <SidebarProvider>
-      <AppSidebar items={MainLinkItems}/>
-      <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
-        <Flex width={"100%"} padding={4} justifyContent="space-between">
-          <SidebarTrigger />
-          <ColorModeButton />
-        </Flex>
-        <Container>
-          <Outlet />
-        </Container>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+function AppLayout() {
+  return <Outlet />;
 }
-

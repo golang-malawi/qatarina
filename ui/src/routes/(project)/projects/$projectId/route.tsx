@@ -1,21 +1,5 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import {
-  Alert,
-  Box,
-  Container,
-  Flex,
-  Heading,
-  Spinner,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import AppSidebar from "@/components/app-sidebar";
-import { ColorModeButton } from "@/components/ui/color-mode";
+import { createFileRoute } from "@tanstack/react-router";
+import { Alert, Box, Flex, Spinner, Text } from "@chakra-ui/react";
 import { NavItem } from "@/lib/navigation";
 import {
   FiBarChart2,
@@ -28,8 +12,13 @@ import {
 } from "react-icons/fi";
 import { MdInsights } from "react-icons/md";
 import { useProjectQuery } from "@/services/ProjectService";
+import { AppShell } from "@/components/app-shell";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { setLastProjectId } from "@/lib/last-project";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/(project)/projects/$projectId")({
+  beforeLoad: requireAuth,
   component: RouteComponent,
 });
 
@@ -78,11 +67,17 @@ function RouteComponent() {
   const { projectId } = Route.useParams();
   const { data: project, isLoading, error } = useProjectQuery(projectId!);
 
-  if (isLoading) return <Spinner />;
+  useEffect(() => {
+    if (projectId) {
+      setLastProjectId(projectId);
+    }
+  }, [projectId]);
+
+  if (isLoading) return <Spinner color="brand.solid" />;
   if (error) {
     return (
       <Box>
-        <Alert.Root>
+        <Alert.Root colorPalette="danger" variant="outline">
           <Alert.Content>Failed to load Project information</Alert.Content>
         </Alert.Root>
       </Box>
@@ -90,33 +85,20 @@ function RouteComponent() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar
-        items={createProjectNavItems(projectId)}
-        header={
-          <Flex direction="column">
-            <Link to={`/projects`} className="flex flex-row">
-              &lt; View All Projects
-            </Link>
-            <Text fontWeight="bold" textTransform="uppercase">
-              {project?.title}
-            </Text>
-          </Flex>
-        }
-      />
-      <SidebarInset className="flex min-h-screen flex-col items-center justify-between p-24">
-        <Flex width={"100%"} padding={4} justifyContent="space-between">
-          <SidebarTrigger />
-          <ColorModeButton />
+    <AppShell
+      sidebarItems={createProjectNavItems(projectId)}
+      sidebarHeader={
+        <Flex direction="column" gap="1">
+          <Text
+            fontSize="sm"
+            fontWeight="semibold"
+            color="fg.heading"
+            noOfLines={1}
+          >
+            {project?.title}
+          </Text>
         </Flex>
-        <Container>
-          <VStack borderBottom="1px gray.500 solid">
-            <Heading size="3xl">{project?.title}</Heading>
-            <Text p={"2"}>{project?.description}</Text>
-          </VStack>
-          <Outlet />
-        </Container>
-      </SidebarInset>
-    </SidebarProvider>
+      }
+    />
   );
 }

@@ -22,8 +22,8 @@ function AddTesterPage() {
 
     const {data: usersData, isPending, isError} = useUsersQuery();
 
-    if (isPending) return <Spinner size="lg" />;
-    if (isError) return <Text color="red.500">Failed to load users</Text>;
+    if (isPending) return <Spinner size="lg" color="brand.solid" />;
+    if (isError) return <Text color="fg.error">Failed to load users</Text>;
 
     const users = usersData?.users ?? [];
     const userOptions = users.map((u: any) => ({
@@ -94,7 +94,7 @@ function AddTesterPage() {
 
     return (
         <Box p={6}>
-            <Heading size="lg" mb={4}>
+            <Heading size="lg" mb={4} color="fg.heading">
                 Assign New Tester To This Project
             </Heading>
             <DynamicForm 

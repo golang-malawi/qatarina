@@ -87,7 +87,14 @@ type ImportFromGithubRequest struct {
 }
 
 type TestCaseListResponse struct {
-	TestCases []TestCaseResponse `json:"test_cases"`
+	TestCases  []TestCaseResponse `json:"test_cases"`
+	Pagination *Pagination        `json:"pagination,omitempty"`
+}
+
+type Pagination struct {
+	Total    int64 `json:"total"`
+	Page     int   `json:"page"`
+	PageSize int   `json:"pageSize"`
 }
 
 type AssignedTestCaseListResponse struct {

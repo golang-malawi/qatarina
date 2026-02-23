@@ -41,7 +41,10 @@ function RouteComponent() {
         duration: 3000,
       });
 
-      navigate({ to: `/projects/${params.projectId}` });
+      navigate({
+        to: "/projects/$projectId/Features",
+        params: { projectId: params.projectId },
+      });
     } catch (err) {
       console.error(err);
       toaster.create({

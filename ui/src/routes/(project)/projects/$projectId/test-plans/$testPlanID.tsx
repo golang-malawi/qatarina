@@ -1,49 +1,46 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { useTestPlanQuery } from "@/services/TestPlanService";
-import { closeTestPlan } from "@/services/TestPlanService";
+import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import {
-  Box,
-  Heading,
-  Text,
-  Stack,
   Badge,
+  Box,
   Button,
-  Flex,
-  Stat,
+  Card,
+  Grid,
+  HStack,
+  Icon,
+  Separator,
+  Stack,
+  Text,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import {
+  IconCheck,
+  IconClock,
+  IconListCheck,
+  IconLock,
+  IconPlayerPlay,
+  IconUsers,
+  IconX,
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { closeTestPlan, useTestPlanQuery } from "@/services/TestPlanService";
+import { MetricCard } from "@/components/ui/metric-card";
 import { toaster } from "@/components/ui/toaster";
+import { ErrorState, LoadingState } from "@/components/ui/page-states";
+import { PageHeaderCard } from "@/components/ui/page-header-card";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
-/**
- * Test plan type – MATCHES API RESPONSE EXACTLY
- */
-type TestPlanData = {
-  id: number;
-  project_id: number;
-  assigned_to_id: number;
-  created_by_id: number;
-  updated_by_id: number;
-  kind: string;
-  description: string;
-  start_at: string;
-  closed_at: string;
-  scheduled_end_at: string;
-  num_test_cases: number;
-  num_failures: number;
-  passed_count: number;
-  failed_count: number;
-  pending_count: number;
-  assigned_testers: number;
-  is_complete: boolean;
-  is_locked: boolean;
-  has_report: boolean;
-  created_at: string;
-  updated_at: string;
-  test_cases: {
-    id: string;
-    title: string;
-    assigned_tester_ids: number[];
-  }[];
+import type { components } from "@/lib/api/v1";
+import { formatHumanDateTime } from "@/lib/date-time";
+
+type TestPlanData = components["schemas"]["schema.TestPlanResponseItem"];
+
+type NavItem = {
+  label: string;
+  path:
+    | "/projects/$projectId/test-plans/$testPlanID"
+    | "/projects/$projectId/test-plans/$testPlanID/execute"
+    | "/projects/$projectId/test-plans/$testPlanID/test-cases"
+    | "/projects/$projectId/test-plans/$testPlanID/test-runs"
+    | "/projects/$projectId/test-plans/$testPlanID/testers";
+  exact?: boolean;
 };
 
 export const Route = createFileRoute(
@@ -54,12 +51,11 @@ export const Route = createFileRoute(
 
 function ViewTestPlan() {
   const { projectId, testPlanID } = Route.useParams();
+  const [isClosing, setIsClosing] = useState(false);
+  const matchRoute = useMatchRoute();
 
-  /**
-   * Fetch test plan
-   */
   const {
-    data: initialTestPlan,
+    data: testPlan,
     isLoading,
     error,
     refetch,
@@ -67,76 +63,19 @@ function ViewTestPlan() {
     data: TestPlanData | undefined;
     isLoading: boolean;
     error: unknown;
-    refetch: () => void;
+    refetch: () => Promise<unknown>;
   };
 
-  /**
-   * Local state synced from query
-   */
-  const [testPlan, setTestPlan] = useState<TestPlanData | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-
-  useEffect(() => {
-    if (initialTestPlan) {
-      setTestPlan(initialTestPlan);
-    }
-  }, [initialTestPlan]);
-
-  /**
-   * Close test plan via API
-   */
-  const handleMarkComplete = async () => {
-    if (!testPlan) return;
-
-    try {
-      setIsClosing(true);
-      await closeTestPlan(testPlan.id);
-
-      // Force refetch to get latest data from server
-      await refetch();
-      
-      toaster.success({
-        title: "Test plan closed successfully",
-      });
-    } catch (error: any) {
-      console.error("Failed to close test plan:", error);
-      
-      toaster.error({
-        title: "Failed to close test plan",
-      });
-    } finally {
-      setIsClosing(false);
-    }
-  };
-
-  /**
-   * Mark test plan as in progress
-   */
-  const handleMarkInProgress = async () => {
-    if (!testPlan) return;
-
-    try {
-      setIsClosing(true);
-      // Note: You may need to add an API endpoint for this too if it doesn't exist
-      // For now, assuming the UI just manages this locally
-      setTestPlan({
-        ...testPlan,
-        is_complete: false,
-        closed_at: "",
-        updated_at: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Failed to mark as in progress:", error);
-      alert("Failed to mark as in progress. Please try again.");
-    } finally {
-      setIsClosing(false);
-    }
-  };
-
-  /**
-   * Navigation tabs
-   */
-  const navItems = [
+  const navItems: NavItem[] = [
+    {
+      label: "Overview",
+      path: "/projects/$projectId/test-plans/$testPlanID",
+      exact: true,
+    },
+    {
+      label: "Execute",
+      path: "/projects/$projectId/test-plans/$testPlanID/execute",
+    },
     {
       label: "Test Cases",
       path: "/projects/$projectId/test-plans/$testPlanID/test-cases",
@@ -151,142 +90,217 @@ function ViewTestPlan() {
     },
   ];
 
-  /**
-   * Loading / Error guards
-   */
-  if (isLoading) return <div>Loading...</div>;
-  if (error || !testPlan) return <div>Error loading test plan</div>;
+  if (isLoading) return <LoadingState label="Loading test plan..." />;
+  if (error || !testPlan) return <ErrorState title="Error loading test plan" />;
 
-  const isComplete = testPlan.is_complete;
+  const handleMarkComplete = async () => {
+    if (!testPlan.id) return;
 
-  const totalTestCases = testPlan.num_test_cases ?? 0;
+    try {
+      setIsClosing(true);
+      await closeTestPlan(testPlan.id);
+      await refetch();
+      toaster.success({ title: "Test plan closed successfully" });
+    } catch (closeError) {
+      console.error("Failed to close test plan:", closeError);
+      toaster.error({ title: "Failed to close test plan" });
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  const kindLabel =
+    (TEST_PLAN_KINDS[testPlan.kind as keyof typeof TEST_PLAN_KINDS] as string) ??
+    testPlan.kind ??
+    "N/A";
+  const totalCases = testPlan.num_test_cases ?? 0;
+  const passedCases = testPlan.passed_count ?? 0;
+  const failedCases = testPlan.failed_count ?? 0;
+  const pendingCases = testPlan.pending_count ?? 0;
+  const assignedTesters = testPlan.assigned_testers ?? 0;
 
   return (
-    <Box p={6}>
-      <Heading mb={4}>Test Plan Details</Heading>
-
-      {/* Navigation */}
-      <Flex
-        gap="2"
-        borderBottom="1px solid"
-        borderColor="gray.200"
-        bg="gray.50"
-        overflowX="auto"
-        mb={4}
-      >
-        {navItems.map((item) => (
-          <Link
-            key={item.label}
-            to={item.path}
-            params={{ projectId, testPlanID }}
-          >
-            <Button variant="ghost" colorScheme="teal" size="sm">
-              {item.label}
-            </Button>
-          </Link>
-        ))}
-      </Flex>
-
-      <Flex gap={10} wrap="wrap">
-        {/* LEFT COLUMN */}
-        <Stack gap={3} flex={1} minW="280px">
-          <Text>
-            <strong>ID:</strong> {testPlan.id}
-          </Text>
-
-          <Text>
-            <strong>Kind:</strong>{" "}
-            {(TEST_PLAN_KINDS[testPlan.kind as keyof typeof TEST_PLAN_KINDS] as string) ?? testPlan.kind}
-          </Text>
-
-          <Text>
-            <strong>Description:</strong> {testPlan.description}
-          </Text>
-
-          {/* Status + Actions */}
-          <Flex align="center" gap={3}>
-            <Text>
-              <strong>Status:</strong>{" "}
-              <Badge colorScheme={isComplete ? "green" : "orange"}>
-                {isComplete ? "Complete" : "In Progress"}
-              </Badge>
-            </Text>
-
-            {isComplete ? (
-              <Button
-                onClick={handleMarkInProgress}
-                size="xs"
-                variant="outline"
-                colorScheme="orange"
-                loading={isClosing}
-                disabled={isClosing}
-              >
-                Mark as In Progress
+    <Box w="full">
+      <PageHeaderCard
+        title={testPlan.description?.trim() || `Test Plan #${testPlan.id}`}
+        description={`Plan ID: ${testPlan.id ?? "N/A"} · Kind: ${kindLabel}`}
+        badges={
+          <>
+            <Badge
+              colorPalette={testPlan.is_complete ? "green" : "orange"}
+              variant="subtle"
+            >
+              <Icon as={testPlan.is_complete ? IconCheck : IconClock} />
+              {testPlan.is_complete ? "Completed" : "In Progress"}
+            </Badge>
+            <Badge
+              colorPalette={testPlan.is_locked ? "red" : "gray"}
+              variant="subtle"
+            >
+              <Icon as={IconLock} />
+              {testPlan.is_locked ? "Locked" : "Open"}
+            </Badge>
+            <Badge colorPalette={testPlan.has_report ? "blue" : "gray"} variant="subtle">
+              {testPlan.has_report ? "Report available" : "No report yet"}
+            </Badge>
+          </>
+        }
+        actions={
+          <HStack gap={2} flexWrap="wrap">
+            <Link
+              to="/projects/$projectId/test-plans/$testPlanID/execute"
+              params={{ projectId, testPlanID }}
+            >
+              <Button colorPalette="brand" variant="outline">
+                <IconPlayerPlay />
+                Execute
+              </Button>
+            </Link>
+            {testPlan.is_complete ? (
+              <Button colorPalette="green" variant="subtle" disabled>
+                <IconCheck />
+                Plan Closed
               </Button>
             ) : (
               <Button
-                onClick={handleMarkComplete}
-                size="xs"
-                colorScheme="green"
+                colorPalette="green"
                 loading={isClosing}
                 disabled={isClosing}
+                onClick={handleMarkComplete}
               >
                 Mark as Complete
               </Button>
             )}
-          </Flex>
+          </HStack>
+        }
+      />
 
-          {/* Stats */}
-          <Flex gap={6} wrap="wrap" mt={4}>
-            <Stat.Root maxW="200px">
-              <Stat.Label>Total Test Cases</Stat.Label>
-              <Stat.ValueText>{totalTestCases}</Stat.ValueText>
-            </Stat.Root>
+      <Grid
+        templateColumns={{
+          base: "repeat(2, minmax(0, 1fr))",
+          lg: "repeat(5, minmax(0, 1fr))",
+        }}
+        gap={3}
+        mb={6}
+      >
+        <MetricCard
+          label="Total Cases"
+          value={totalCases}
+          icon={IconListCheck}
+          tone="brand"
+          variant="emphasis"
+          helperText="Cases scoped"
+        />
+        <MetricCard
+          label="Passed"
+          value={passedCases}
+          icon={IconCheck}
+          tone="success"
+          variant="subtle"
+          helperText="Successful validations"
+        />
+        <MetricCard
+          label="Failed"
+          value={failedCases}
+          icon={IconX}
+          tone="danger"
+          variant="subtle"
+          helperText="Requires fixes"
+        />
+        <MetricCard
+          label="Pending"
+          value={pendingCases}
+          icon={IconClock}
+          tone="warning"
+          variant="subtle"
+          helperText="Awaiting execution"
+        />
+        <MetricCard
+          label="Assigned Testers"
+          value={assignedTesters}
+          icon={IconUsers}
+          tone="info"
+          helperText="People on this plan"
+        />
+      </Grid>
 
-            <Stat.Root maxW="200px">
-              <Stat.Label>Passed Test Cases</Stat.Label>
-              <Stat.ValueText>
-                {testPlan.passed_count}
-              </Stat.ValueText>
-            </Stat.Root>
+      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
+        <Card.Body p={{ base: 4, md: 5 }}>
+          <Grid
+            templateColumns={{
+              base: "1fr",
+              md: "repeat(2, minmax(0, 1fr))",
+              xl: "repeat(4, minmax(0, 1fr))",
+            }}
+            gap={4}
+          >
+            <DetailItem
+              label="Start Date"
+              value={formatHumanDateTime(testPlan.start_at)}
+            />
+            <DetailItem
+              label="Scheduled End"
+              value={formatHumanDateTime(testPlan.scheduled_end_at)}
+            />
+            <DetailItem
+              label="Closed At"
+              value={formatHumanDateTime(testPlan.closed_at)}
+            />
+            <DetailItem
+              label="Updated At"
+              value={formatHumanDateTime(testPlan.updated_at)}
+            />
+          </Grid>
+        </Card.Body>
+      </Card.Root>
 
-            <Stat.Root maxW="200px">
-              <Stat.Label>Failed Test Cases</Stat.Label>
-              <Stat.ValueText>{testPlan.failed_count}</Stat.ValueText>
-            </Stat.Root>
+      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
+        <Card.Body p={{ base: 3, md: 4 }}>
+          <HStack gap={2} overflowX="auto" align="stretch">
+            {navItems.map((item) => {
+              const isActive = Boolean(
+                matchRoute({
+                  to: item.path as any,
+                  params: { projectId, testPlanID },
+                  fuzzy: item.exact ? false : true,
+                })
+              );
 
-            <Stat.Root maxW="200px">
-              <Stat.Label>Testers Assigned</Stat.Label>
-              <Stat.ValueText>{testPlan.assigned_testers}</Stat.ValueText>
-            </Stat.Root>
-          </Flex>
-        </Stack>
+              return (
+                <Link
+                  key={item.label}
+                  to={item.path}
+                  params={{ projectId, testPlanID }}
+                >
+                  <Button
+                    variant={isActive ? "solid" : "ghost"}
+                    colorPalette={isActive ? "brand" : "gray"}
+                    size="sm"
+                  >
+                    {item.label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </HStack>
+          <Separator mt={4} />
+        </Card.Body>
+      </Card.Root>
 
-        {/* RIGHT COLUMN */}
-        <Stack gap={3} flex={1} minW="280px">
-          <Text>
-            <strong>Start Date:</strong>{" "}
-            {new Date(testPlan.start_at).toLocaleString()}
-          </Text>
-
-          <Text>
-            <strong>Scheduled End:</strong>{" "}
-            {new Date(testPlan.scheduled_end_at).toLocaleString()}
-          </Text>
-
-          <Text>
-            <strong>Locked:</strong> {testPlan.is_locked ? "Yes" : "No"}
-          </Text>
-
-          <Text>
-            <strong>Has Report:</strong> {testPlan.has_report ? "Yes" : "No"}
-          </Text>
-        </Stack>
-      </Flex>
-
-      <Box mt={6}>
-        <Outlet />
-      </Box>
+      <Outlet />
     </Box>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack gap={1}>
+      <Text fontSize="xs" color="fg.subtle">
+        {label}
+      </Text>
+      <Text fontWeight="medium" color="fg.default">
+        {value}
+      </Text>
+    </Stack>
   );
 }

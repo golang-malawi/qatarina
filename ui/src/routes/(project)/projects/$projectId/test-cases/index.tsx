@@ -1,61 +1,120 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  AvatarGroup,
   Button,
   ButtonGroup,
   Flex,
   Heading,
   IconButton,
-  Input,
-  TableCaption,
   Tabs,
-  Table,
-  Menu,
 } from "@chakra-ui/react";
-import { Toaster, toaster } from "@/components/ui/toaster"
 import {
   IconAlertTriangle,
-  IconChevronDown,
   IconClock,
   IconList,
   IconListCheck,
   IconListDetails,
   IconTable,
 } from "@tabler/icons-react";
-import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import TestersAvatarGroup from "@/components/TestersAvatarGroup";
-import { importTestCasesFromFile } from "@/services/TestCaseService";
-import { markTestCaseAsDraft } from "@/services/TestCaseService";
+import React, { useRef } from "react";
+import type { components } from "@/lib/api/v1";
+import { Toaster, toaster } from "@/components/ui/toaster";
+import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import {
+  TestCaseListQueryParams,
+  testCasesByProjectIdQueryOptions,
+} from "@/data/queries/test-cases";
+import {
+  importTestCasesFromFile,
+  markTestCaseAsDraft,
+} from "@/services/TestCaseService";
+import { LuEye, LuPencil } from "react-icons/lu";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/"
 )({
-  loader: ({ context: { queryClient }, params: { projectId } }) =>
-    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: ListProjectTestCases,
 });
+
+type TestCase = components["schemas"]["schema.TestCaseResponse"];
+
+type TestCaseListResponse =
+  components["schemas"]["schema.TestCaseListResponse"];
+
+const columns: AppTableColumn<TestCase>[] = [
+  { key: "code", header: "Code", sortKey: "code" },
+  { key: "title", header: "Title", sortKey: "title" },
+  { key: "kind", header: "Kind", sortKey: "kind" },
+  {
+    key: "is_draft",
+    header: "Draft",
+    type: "enum",
+    sortKey: "is_draft",
+    enumOptions: {
+      map: {
+        true: { label: "Draft", colorPalette: "orange" },
+        false: { label: "Active", colorPalette: "green" },
+      },
+    },
+    align: "center",
+    width: "120px",
+  },
+  {
+    key: "created_at",
+    header: "Created",
+    type: "date",
+    sortKey: "created_at",
+    align: "end",
+    width: "140px",
+  },
+];
 
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+
   const markDraftMutation = useMutation({
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
     onSuccess: () => {
-      toaster.create({title: "Success", description: "Marked as draft", type: "success"});
-      queryClient.invalidateQueries({queryKey: testCasesByProjectIdQueryOptions(projectId)}.queryKey);
+      toaster.create({
+        title: "Success",
+        description: "Marked as draft",
+        type: "success",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+      });
     },
     onError: () => {
-      toaster.create({title: "Error", description: "Failed to mark as draft", type: "error"});
+      toaster.create({
+        title: "Error",
+        description: "Failed to mark as draft",
+        type: "error",
+      });
     },
   });
-  const { data: testCases } = useSuspenseQuery(
-    testCasesByProjectIdQueryOptions(projectId)
+
+  const queryFactory = React.useCallback(
+    ({
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      search,
+    }: TestCaseListQueryParams) => ({
+      ...testCasesByProjectIdQueryOptions(projectId, {
+        page,
+        pageSize,
+        sortBy,
+        sortOrder,
+        search,
+      }),
+      enabled: !!projectId,
+    }),
+    [projectId]
   );
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -73,12 +132,10 @@ export default function ListProjectTestCases() {
         type: "success",
       });
 
-      // Refresh test cases list
       await queryClient.invalidateQueries({
-        queryKey: testCasesByProjectIdQueryOptions(projectId).queryKey,
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
       });
 
-      // reset input so same file can be re-uploaded
       e.target.value = "";
     } catch (err: any) {
       toaster.create({
@@ -89,52 +146,10 @@ export default function ListProjectTestCases() {
     }
   };
 
-  const testCaseRows = (testCases?.test_cases ?? []).map(
-    (tc: any, idx: number) => (
-      <Table.Row key={idx}>
-        <Table.Cell>{tc.code}</Table.Cell>
-        <Table.Cell>{tc.description}</Table.Cell>
-        <Table.Cell>{tc.usage_count}</Table.Cell>
-        <Table.Cell>
-          <AvatarGroup size="md">
-            <TestersAvatarGroup testers={[]} />
-          </AvatarGroup>
-        </Table.Cell>
-        <Table.Cell>
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <Button>
-                <IconChevronDown /> Actions
-              </Button>
-            </Menu.Trigger>
-            <Menu.Content zIndex={100} position="absolute">
-              <Menu.Item value="view">
-                <Link
-                  to={"/projects/$projectId/test-cases/$testCaseId"}
-                  params={{ projectId: projectId, testCaseId: tc.id }}
-                >
-                  View
-                </Link>
-              </Menu.Item>
-              <Menu.Item value="create-copy">Create a Copy</Menu.Item>
-              <Menu.Item value="mark-draft" onClick={() => markDraftMutation.mutate}>
-                Mark as Draft
-                </Menu.Item>
-              <Menu.Item value="use">Use in Test Session</Menu.Item>
-              <Menu.Item color="red" value="delete">
-                Delete
-              </Menu.Item>
-            </Menu.Content>
-          </Menu.Root>
-        </Table.Cell>
-      </Table.Row>
-    )
-  );
-
   return (
     <div>
       <Toaster />
-      <Heading as="h6" size="xl">
+      <Heading as="h6" size="xl" color="fg.heading">
         Test Cases
       </Heading>
 
@@ -151,11 +166,11 @@ export default function ListProjectTestCases() {
           to={"/projects/$projectId/test-cases/new"}
           params={{ projectId: projectId }}
         >
-          <Button variant={"outline"} colorScheme="blue" size={"sm"}>
+          <Button variant={"outline"} colorPalette="brand" size={"sm"}>
             Add Test Cases
           </Button>
         </Link>
-        <Button colorScheme="green" size="sm" onClick={handleImportClick}>
+        <Button colorPalette="success" size="sm" onClick={handleImportClick}>
           Import from Excel
         </Button>
 
@@ -167,23 +182,23 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
-        <Button bg="green" color="white" size={"sm"}>
+        <Button colorPalette="success" size={"sm"}>
           Import from Google Sheets
         </Button>
 
         <ButtonGroup>
           <IconButton
-            aria-label="Add to friends"
-            bgColor={"grey"}
-            color={"white"}
+            aria-label="List view"
+            bg="bg.subtle"
+            color="fg.muted"
             size={"sm"}
           >
             <IconListDetails />
           </IconButton>
           <IconButton
-            aria-label="Add to friends"
-            bgColor={"gray.300"}
-            color={"black"}
+            aria-label="Table view"
+            bg="bg.emphasized"
+            color="fg"
             size={"sm"}
           >
             <IconTable />
@@ -191,53 +206,52 @@ export default function ListProjectTestCases() {
         </ButtonGroup>
       </Flex>
 
-      <div className="search">
-        <Input placeholder="Search for Test Cases " />
-      </div>
-
       <Tabs.Root defaultValue="all">
         <Tabs.List>
           <Tabs.Trigger value="all">
             <IconList />
             &nbsp; All Test Cases
           </Tabs.Trigger>
-          <Tabs.Trigger color={"green"} value="completed">
+          <Tabs.Trigger color={"fg.success"} value="completed">
             <IconListCheck />
             &nbsp;Completed / Closed
           </Tabs.Trigger>
-          <Tabs.Trigger color={"red"} value="failing">
+          <Tabs.Trigger color={"fg.error"} value="failing">
             <IconAlertTriangle />
             &nbsp;Failing
           </Tabs.Trigger>
-          <Tabs.Trigger color={"orange"} value="scheduled">
+          <Tabs.Trigger color={"fg.warning"} value="scheduled">
             <IconClock />
             &nbsp;Scheduled
           </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="all">
-          <Table.Root>
-            <TableCaption>Imperial to metric conversion factors</TableCaption>
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>Code</Table.ColumnHeader>
-                <Table.ColumnHeader>Test Case</Table.ColumnHeader>
-                <Table.ColumnHeader>Times Used/Referenced</Table.ColumnHeader>
-                <Table.ColumnHeader>Tested By</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>{testCaseRows}</Table.Body>
-            {/* <Tfoot>
-              <Table.Row>
-                <Table.ColumnHeader>Code</Table.ColumnHeader>
-                <Table.ColumnHeader>Test Case</Table.ColumnHeader>
-                <Th isNumeric>Times Used/Referenced</Table.ColumnHeader>
-                <Table.ColumnHeader>Tested By</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
-               </Table.Row>
-            </Tfoot> */}
-          </Table.Root>
+          <AppDataTable<TestCase, TestCaseListResponse>
+            query={queryFactory}
+            columns={columns}
+            defaultSort={{ key: "created_at", desc: true }}
+            showGlobalFilter
+            filterPlaceholder="Search test cases"
+            rowActions={[
+              {
+                name: "view",
+                label: "View",
+                icon: LuEye,
+                link: (row) =>
+                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
+              },
+              { name: "edit", label: "Edit", icon: LuPencil },
+              {
+                name: "mark-draft",
+                label: "Mark as Draft",
+                onClick: (row) =>
+                  row.id && markDraftMutation.mutate(String(row.id)),
+              },
+              { name: "use", label: "Use in Test Session" },
+              { name: "delete", label: "Delete", color: "fg.error" },
+            ]}
+          />
         </Tabs.Content>
         <Tabs.Content value="completed">
           Completed and Closed Test Cases

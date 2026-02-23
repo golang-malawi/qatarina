@@ -1,25 +1,25 @@
 import $api from "@/lib/api/query";
-import {
-  getTestCases,
-  getTestCaseById,
-  getInboxTestCases,
-} from "@/services/TestCaseService";
+import { getTestCaseById, getInboxTestCases } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
 import { components} from "@/lib/api/v1";
-import { _includes } from "zod/v4/core";
 
-type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type AssignedTestCaseListResponse = components["schemas"]["schema.AssignedTestCaseListResponse"];
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 
-export const findTestCaseAllQueryOptions = queryOptions({
-  queryKey: ["testCases"],
-  queryFn: async (): Promise<TestCaseListResponse> => {
-    const res = await getTestCases();
-    // unwrap if your service returns { data }
-    return (res?.data ?? res) as TestCaseListResponse;
-  },
-});
+export type TestCaseListQueryParams = {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+  kind?: string;
+  isDraft?: boolean;
+};
+
+export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
+  $api.queryOptions("get", "/v1/test-cases", {
+    params: { query: params },
+  });
 
 export const findTestCaseInboxQueryOptions = queryOptions({
   queryKey: ["testCases", "inbox"],
@@ -53,9 +53,12 @@ export const findTestCaseByIdQueryOptions = (id: string) =>
     },
   });
 
-export const testCasesByProjectIdQueryOptions = (projectID: string) =>
+export const testCasesByProjectIdQueryOptions = (
+  projectID: string,
+  params?: TestCaseListQueryParams
+) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
-    params: { path: { projectID } },
+    params: { path: { projectID }, query: params },
   });
 
 export const findTestCaseSummaryQueryOptions = $api.queryOptions(

@@ -437,6 +437,15 @@ components:
       type: object
     schema.PageRequest:
       type: object
+    schema.Pagination:
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+      type: object
     schema.ProjectListResponse:
       properties:
         projects:
@@ -539,6 +548,8 @@ components:
       type: object
     schema.TestCaseListResponse:
       properties:
+        pagination:
+          $ref: '#/components/schemas/schema.Pagination'
         test_cases:
           items:
             $ref: '#/components/schemas/schema.TestCaseResponse'
@@ -890,10 +901,10 @@ components:
           type: string
         displayName:
           type: string
+        email:
+          type: string
         id:
           type: integer
-        username:
-          type: string
       type: object
 externalDocs:
   description: ""
@@ -1752,6 +1763,41 @@ paths:
         required: true
         schema:
           type: string
+      - description: Page number (1-based)
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Sort field (created_at, updated_at, code, title, kind, is_draft)
+        in: query
+        name: sortBy
+        schema:
+          type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: sortOrder
+        schema:
+          type: string
+      - description: Search query (matches code, title, description, feature_or_module)
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Filter by kind
+        in: query
+        name: kind
+        schema:
+          type: string
+      - description: Filter by draft state
+        in: query
+        name: isDraft
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:
@@ -2072,6 +2118,42 @@ paths:
     get:
       description: List Test Cases
       operationId: ListTestCases
+      parameters:
+      - description: Page number (1-based)
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Sort field (created_at, updated_at, code, title, kind, is_draft)
+        in: query
+        name: sortBy
+        schema:
+          type: string
+      - description: Sort order (asc, desc)
+        in: query
+        name: sortOrder
+        schema:
+          type: string
+      - description: Search query (matches code, title, description, feature_or_module)
+        in: query
+        name: search
+        schema:
+          type: string
+      - description: Filter by kind
+        in: query
+        name: kind
+        schema:
+          type: string
+      - description: Filter by draft state
+        in: query
+        name: isDraft
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:

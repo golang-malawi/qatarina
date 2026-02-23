@@ -38,14 +38,14 @@ function ProjectTestersPage() {
   if (isPending) {
     return(
       <Flex justify="center" py={10}>
-        <Spinner size="lg" />
+        <Spinner size="lg" color="brand.solid" />
       </Flex>
     );
   }
 
   if (isError) {
     return(
-      <Text color="red.500">
+      <Text color="fg.error">
         Failed to load testers: {error?.detail ?? error?.title ?? "Unknown error"}
       </Text>
     ); 
@@ -85,8 +85,10 @@ function ProjectTestersPage() {
     <Box p={6}>
       {/* Header */}
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Project Testers</Heading>
-        <Button colorScheme="teal"
+        <Heading size="lg" color="fg.heading">
+          Project Testers
+        </Heading>
+        <Button colorPalette="brand"
         onClick={() =>
           navigate({
             to: "/projects/$projectId/testers/new",
@@ -99,7 +101,7 @@ function ProjectTestersPage() {
       </Flex>
 
       {/* Total Testers */}
-      <Text mb={4} color="gray.600">
+      <Text mb={4} color="fg.muted">
         Total Testers: <strong>{testers.length}</strong>
       </Text>
 
@@ -127,14 +129,14 @@ function ProjectTestersPage() {
                       <IconButton
                         aria-label="Edit tester"
                         onClick={() => handleEdit(tester.id)}
-                        colorScheme="blue"
+                        colorPalette="info"
                         size="sm"
                         children={<LuPencil />}
                       />
                       <IconButton
                         aria-label="Delete tester"
                         onClick={() => handleDelete(tester.id)}
-                        colorScheme="red"
+                        colorPalette="danger"
                         size="sm"
                         children={<LuTrash />}
                       />

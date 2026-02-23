@@ -45,13 +45,18 @@ function NewTestCases() {
         type: "success",
         duration: 3000,
       });
-      redirect({ to: "/projects" });
+      redirect({
+        to: "/projects/$projectId/test-cases",
+        params: { projectId: `${project_id}` },
+      });
     }
   }
 
   return (
-    <Box>
-      <Heading size="3xl">Create Test Cases</Heading>
+    <Box p={6}>
+      <Heading size="3xl" color="fg.heading">
+        Create Test Cases
+      </Heading>
       <DynamicForm
         schema={testCaseCreationSchema}
         fields={createTestCaseFields(project_id)}

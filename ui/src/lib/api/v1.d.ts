@@ -1639,6 +1639,11 @@ export interface components {
             password: string;
         };
         "schema.PageRequest": Record<string, never>;
+        "schema.Pagination": {
+            page?: number;
+            pageSize?: number;
+            total?: number;
+        };
         "schema.ProjectListResponse": {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
@@ -1687,6 +1692,7 @@ export interface components {
             usage_count?: number;
         };
         "schema.TestCaseListResponse": {
+            pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.TestCaseResponse"][];
         };
         "schema.TestCaseResponse": {
@@ -1843,8 +1849,8 @@ export interface components {
         "schema.UserCompact": {
             createdAt?: string;
             displayName?: string;
+            email?: string;
             id?: number;
-            username?: string;
         };
     };
     responses: never;
@@ -2738,7 +2744,22 @@ export interface operations {
     };
     GetProjectTestCases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft) */
+                sortBy?: string;
+                /** @description Sort order (asc, desc) */
+                sortOrder?: string;
+                /** @description Search query (matches code, title, description, feature_or_module) */
+                search?: string;
+                /** @description Filter by kind */
+                kind?: string;
+                /** @description Filter by draft state */
+                isDraft?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Project ID */
@@ -3051,7 +3072,22 @@ export interface operations {
     };
     ListTestCases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft) */
+                sortBy?: string;
+                /** @description Sort order (asc, desc) */
+                sortOrder?: string;
+                /** @description Search query (matches code, title, description, feature_or_module) */
+                search?: string;
+                /** @description Filter by kind */
+                kind?: string;
+                /** @description Filter by draft state */
+                isDraft?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
