@@ -1849,8 +1849,8 @@ export interface components {
         "schema.UserCompact": {
             createdAt?: string;
             displayName?: string;
+            email?: string;
             id?: number;
-            username?: string;
         };
     };
     responses: never;

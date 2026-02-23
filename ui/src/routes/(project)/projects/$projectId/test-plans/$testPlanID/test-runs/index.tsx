@@ -1,14 +1,13 @@
-import { getTestRunsByPlan, closeTestRun } from '@/services/TestRunService';
-import { Box, Button, Heading, Stack, Text, } from '@chakra-ui/react'
-import { Box, Flex, Heading, Spinner, Stack, Text } from '@chakra-ui/react'
-import { useQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router'
+import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
+import { Box, Button, Flex, Heading, Spinner, Stack, Text } from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
-  '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/',
+  "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/",
 )({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
   const { testPlanID } = Route.useParams();
@@ -17,7 +16,7 @@ function RouteComponent() {
     data,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: ["testRuns", testPlanID],
     queryFn: () => getTestRunsByPlan(testPlanID!),
@@ -46,7 +45,7 @@ function RouteComponent() {
       </Heading>
       {testRuns.length ? (
         <Stack gap={2} mt={3}>
-          {(Array.isArray(testRuns) ? testRuns : testRuns?.data || []).map(
+          {(Array.isArray(testRuns) ? testRuns : testRuns || []).map(
             (run: any) => (
               <Box
                 key={run.ID}
@@ -56,9 +55,9 @@ function RouteComponent() {
                 rounded="lg"
                 bg="bg.surface"
               >
-                 <Text>
-                <strong>Test Case:</strong> {run.test_case_title}
-              </Text>
+                <Text>
+                  <strong>Test Case:</strong> {run.test_case_title}
+                </Text>
                 <Text color="fg.muted">
                   <strong>Code:</strong> {run.Code}
                 </Text>
@@ -81,16 +80,16 @@ function RouteComponent() {
                   {new Date(run.TestedOn).toLocaleString()}
                 </Text>
                 <Text>
-                <strong>Executed By:</strong> {run.executed_by || "_"}
-              </Text>
-              <Text>
-                <strong>Closed:</strong> {run.is_closed ? "Yes" : "No"}
-              </Text>
-              {!run.is_closed && (
-                <Button size="sm" mt={2} onClick={() => handleClose(run.id)}>
-                  Close Test Run
-                </Button>
-              )}
+                  <strong>Executed By:</strong> {run.executed_by || "_"}
+                </Text>
+                <Text>
+                  <strong>Closed:</strong> {run.is_closed ? "Yes" : "No"}
+                </Text>
+                {!run.is_closed && (
+                  <Button size="sm" mt={2} onClick={() => handleClose(run.id)}>
+                    Close Test Run
+                  </Button>
+                )}
               </Box>
             )
           )}

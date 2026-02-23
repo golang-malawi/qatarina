@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button, Container, Flex, Heading } from "@chakra-ui/react";
 import {
   useProjectTestPlansQuery,
   useDeleteTestPlanMutation,
@@ -12,7 +11,6 @@ import {
   Spinner,
   Text,
 } from "@chakra-ui/react";
-import { useProjectTestPlansQuery } from "@/services/TestPlanService";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
 
@@ -24,6 +22,7 @@ export const Route = createFileRoute(
 
 function ListProjectTestPlans() {
   const { projectId } = Route.useParams();
+  const deleteMutation = useDeleteTestPlanMutation();
   const {
     data: testPlans,
     isLoading,

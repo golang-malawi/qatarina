@@ -113,16 +113,25 @@ function ViewUserProfile() {
         <Box my={4} w="100%" borderTop="sm" borderColor="border.muted" />
 
         <Stack direction="row" gap={3}>
-          <Button colorPalette="brand" onClick={() => navigate({ to: "/users/$userID/edit", params: { userID } })}>
-            Edit Profile
-          </Button>
-          <Button
-            colorPalette="danger"
-            variant="outline"
-            onClick={handleDeactivate}
-          >
-            Deactivate User
-          </Button>
+          {canEditUser && (
+            <Button
+              colorPalette="brand"
+              onClick={() =>
+                navigate({ to: "/users/$userID/edit", params: { userID } })
+              }
+            >
+              Edit Profile
+            </Button>
+          )}
+          {canDeactivate && (
+            <Button
+              colorPalette="danger"
+              variant="outline"
+              onClick={handleDeactivate}
+            >
+              Deactivate User
+            </Button>
+          )}
         </Stack>
       </Flex>
     </Box>

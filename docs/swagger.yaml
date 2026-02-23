@@ -901,10 +901,10 @@ components:
           type: string
         displayName:
           type: string
+        email:
+          type: string
         id:
           type: integer
-        username:
-          type: string
       type: object
 externalDocs:
   description: ""

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Alert, Box, Flex, Spinner, Text } from "@chakra-ui/react";
 import { NavItem } from "@/lib/navigation";
 import {
