@@ -41,6 +41,7 @@ import { Route as projectProjectsProjectIdTestCasesIndexRouteImport } from './ro
 import { Route as projectProjectsProjectIdSettingsIndexRouteImport } from './routes/(project)/projects/$projectId/settings/index'
 import { Route as projectProjectsProjectIdReportsIndexRouteImport } from './routes/(project)/projects/$projectId/reports/index'
 import { Route as projectProjectsProjectIdInsightsIndexRouteImport } from './routes/(project)/projects/$projectId/insights/index'
+import { Route as projectProjectsProjectIdEnvironmentsIndexRouteImport } from './routes/(project)/projects/$projectId/environments/index'
 import { Route as projectProjectsProjectIdFeaturesIndexRouteImport } from './routes/(project)/projects/$projectId/Features/index'
 import { Route as appTestersViewTesterIdIndexRouteImport } from './routes/(app)/testers/view/$testerId/index'
 import { Route as appTestCasesInboxTestCaseIdIndexRouteImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
@@ -225,6 +226,12 @@ const projectProjectsProjectIdInsightsIndexRoute =
     path: '/insights/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
+const projectProjectsProjectIdEnvironmentsIndexRoute =
+  projectProjectsProjectIdEnvironmentsIndexRouteImport.update({
+    id: '/environments/',
+    path: '/environments/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
 const projectProjectsProjectIdFeaturesIndexRoute =
   projectProjectsProjectIdFeaturesIndexRouteImport.update({
     id: '/Features/',
@@ -355,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/environments/': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -403,6 +411,7 @@ export interface FileRoutesByTo {
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/environments': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -454,6 +463,7 @@ export interface FileRoutesById {
   '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/(project)/projects/$projectId/environments/': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/(project)/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
   '/(project)/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
   '/(project)/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/test-cases/inbox/$testCaseId/'
     | '/testers/view/$testerId/'
     | '/projects/$projectId/Features/'
+    | '/projects/$projectId/environments/'
     | '/projects/$projectId/insights/'
     | '/projects/$projectId/reports/'
     | '/projects/$projectId/settings/'
@@ -553,6 +564,7 @@ export interface FileRouteTypes {
     | '/test-cases/inbox/$testCaseId'
     | '/testers/view/$testerId'
     | '/projects/$projectId/Features'
+    | '/projects/$projectId/environments'
     | '/projects/$projectId/insights'
     | '/projects/$projectId/reports'
     | '/projects/$projectId/settings'
@@ -603,6 +615,7 @@ export interface FileRouteTypes {
     | '/(app)/test-cases/inbox/$testCaseId/'
     | '/(app)/testers/view/$testerId/'
     | '/(project)/projects/$projectId/Features/'
+    | '/(project)/projects/$projectId/environments/'
     | '/(project)/projects/$projectId/insights/'
     | '/(project)/projects/$projectId/reports/'
     | '/(project)/projects/$projectId/settings/'
@@ -853,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof projectProjectsProjectIdInsightsIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
+    '/(project)/projects/$projectId/environments/': {
+      id: '/(project)/projects/$projectId/environments/'
+      path: '/environments'
+      fullPath: '/projects/$projectId/environments/'
+      preLoaderRoute: typeof projectProjectsProjectIdEnvironmentsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
     '/(project)/projects/$projectId/Features/': {
       id: '/(project)/projects/$projectId/Features/'
       path: '/Features'
@@ -1068,6 +1088,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdTestPlansTestPlanIDRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   projectProjectsProjectIdTestersNewRoute: typeof projectProjectsProjectIdTestersNewRoute
   projectProjectsProjectIdFeaturesIndexRoute: typeof projectProjectsProjectIdFeaturesIndexRoute
+  projectProjectsProjectIdEnvironmentsIndexRoute: typeof projectProjectsProjectIdEnvironmentsIndexRoute
   projectProjectsProjectIdInsightsIndexRoute: typeof projectProjectsProjectIdInsightsIndexRoute
   projectProjectsProjectIdReportsIndexRoute: typeof projectProjectsProjectIdReportsIndexRoute
   projectProjectsProjectIdSettingsIndexRoute: typeof projectProjectsProjectIdSettingsIndexRoute
@@ -1093,6 +1114,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdTestersNewRoute,
     projectProjectsProjectIdFeaturesIndexRoute:
       projectProjectsProjectIdFeaturesIndexRoute,
+    projectProjectsProjectIdEnvironmentsIndexRoute:
+      projectProjectsProjectIdEnvironmentsIndexRoute,
     projectProjectsProjectIdInsightsIndexRoute:
       projectProjectsProjectIdInsightsIndexRoute,
     projectProjectsProjectIdReportsIndexRoute:
