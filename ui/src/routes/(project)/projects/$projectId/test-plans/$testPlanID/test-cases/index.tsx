@@ -11,8 +11,6 @@ import {
   Card,
   Checkbox,
   CheckboxGroup,
-  CloseButton,
-  Dialog,
   Flex,
   Grid,
   Heading,
@@ -20,7 +18,6 @@ import {
   Icon,
   Input,
   InputGroup,
-  Portal,
   Separator,
   Stack,
   Text,
@@ -29,6 +26,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { IconSearch, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { type ElementType, useMemo, useState } from "react";
+import { AppDialog } from "@/components/ui/app-dialog";
 import {
   EmptyState,
   ErrorState,
@@ -383,11 +381,16 @@ function AssignTesterDialog({
   };
 
   return (
-    <Dialog.Root
+    <AppDialog
       open={isDialogOpen}
-      onOpenChange={(event) => setIsDialogOpen(event.open)}
-    >
-      <Dialog.Trigger asChild>
+      onOpenChange={(event) => {
+        setIsDialogOpen(event.open);
+        if (!event.open) setSelectedUsers([]);
+      }}
+      title="Select testers"
+      showCloseTrigger
+      onClose={() => setSelectedUsers([])}
+      trigger={
         <Button
           colorPalette="brand"
           size="sm"
@@ -397,65 +400,50 @@ function AssignTesterDialog({
           {buttonIcon && <Icon as={buttonIcon} />}
           {buttonText}
         </Button>
-      </Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle">
-            <Dialog.Header>
-              <Dialog.Title>Select testers</Dialog.Title>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton onClick={() => setSelectedUsers([])} />
-              </Dialog.CloseTrigger>
-            </Dialog.Header>
-            <Dialog.Body>
-              {users.length === 0 ? (
-                <Text color="fg.subtle" fontSize="sm">
-                  No users available to assign.
-                </Text>
-              ) : (
-                <CheckboxGroup value={selectedUsers} onValueChange={setSelectedUsers}>
-                  <Stack gap={3} maxH="72" overflowY="auto">
-                    {users.map((user) => {
-                      const userId = String(user.ID ?? user.id ?? "");
-                      if (!userId) return null;
+      }
+      footer={
+        <Button
+          colorPalette="brand"
+          loading={isSubmitting}
+          disabled={selectedUsers.length === 0 || users.length === 0}
+          onClick={handleConfirm}
+        >
+          Confirm Assignment
+        </Button>
+      }
+    >
+      {users.length === 0 ? (
+        <Text color="fg.subtle" fontSize="sm">
+          No users available to assign.
+        </Text>
+      ) : (
+        <CheckboxGroup value={selectedUsers} onValueChange={setSelectedUsers}>
+          <Stack gap={3} maxH="72" overflowY="auto">
+            {users.map((user) => {
+              const userId = String(user.ID ?? user.id ?? "");
+              if (!userId) return null;
 
-                      return (
-                        <Checkbox.Root key={userId} value={userId}>
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                          <Checkbox.Label>
-                            <Box ml={2}>
-                              <Text fontWeight="medium">
-                                {getUserLabel(user, Number(userId))}
-                              </Text>
-                              <Text fontSize="xs" color="fg.subtle">
-                                {user.Email ?? user.email ?? "No email"}
-                              </Text>
-                            </Box>
-                          </Checkbox.Label>
-                        </Checkbox.Root>
-                      );
-                    })}
-                  </Stack>
-                </CheckboxGroup>
-              )}
-
-              <Button
-                mt={5}
-                colorPalette="brand"
-                width="full"
-                loading={isSubmitting}
-                disabled={selectedUsers.length === 0 || users.length === 0}
-                onClick={handleConfirm}
-              >
-                Confirm Assignment
-              </Button>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+              return (
+                <Checkbox.Root key={userId} value={userId}>
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>
+                    <Box ml={2}>
+                      <Text fontWeight="medium">
+                        {getUserLabel(user, Number(userId))}
+                      </Text>
+                      <Text fontSize="xs" color="fg.subtle">
+                        {user.Email ?? user.email ?? "No email"}
+                      </Text>
+                    </Box>
+                  </Checkbox.Label>
+                </Checkbox.Root>
+              );
+            })}
+          </Stack>
+        </CheckboxGroup>
+      )}
+    </AppDialog>
   );
 }
 

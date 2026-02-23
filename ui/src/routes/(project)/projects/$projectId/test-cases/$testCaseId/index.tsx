@@ -5,16 +5,15 @@ import {
   Button,
   Checkbox,
   CheckboxGroup,
-  Dialog,
   Fieldset,
   Heading,
-  Portal,
   Text,
   Flex,
   Alert,
   Stack,
   Spinner,
 } from "@chakra-ui/react";
+import { AppDialog } from "@/components/ui/app-dialog";
 
 import { useTestCaseQuery } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
@@ -293,92 +292,80 @@ function ViewTestCase() {
           </Stack>
 
           {/* ===================== ASSIGN TESTERS DIALOG ===================== */}
-          <Dialog.Root
+          <AppDialog
             open={assignOpen}
             onOpenChange={() => setAssignOpen(false)}
+            title="Assign testers"
+            footer={
+              <>
+                <Button variant="outline" onClick={() => setAssignOpen(false)}>
+                  Cancel
+                </Button>
+
+                <Button
+                  colorPalette="brand"
+                  disabled={selectedTesters.length === 0}
+                  onClick={async () => {
+                    if (!effectivePlanId) return;
+
+                    const payload = {
+                      project_id: Number(projectId),
+                      test_plan_id: Number(effectivePlanId),
+                      planned_tests: [
+                        {
+                          test_case_id: testCaseId,
+                          user_ids: selectedTesters.map((id) => Number(id)),
+                        },
+                      ],
+                    };
+
+                    try {
+                      await assignTestersToTestPlan(
+                        effectivePlanId,
+                        payload,
+                      );
+
+                      setOptimisticAssignment({
+                        test_plan_id: effectivePlanId,
+                        testers: selectedTesters,
+                      });
+
+                      setAssignOpen(false);
+                    } catch (err) {
+                      console.error("Failed to assign test case:", err);
+                      alert("Failed to assign test case to test plan.");
+                    }
+                  }}
+                >
+                  Confirm assignment
+                </Button>
+              </>
+            }
           >
-            <Portal>
-              <Dialog.Backdrop />
-              <Dialog.Positioner>
-                <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle">
-                  <Dialog.Header>Assign testers</Dialog.Header>
+            <CheckboxGroup
+              value={selectedTesters}
+              onValueChange={setSelectedTesters}
+            >
+              <Fieldset.Root>
+                <Fieldset.Legend fontSize="sm">
+                  Select at least one tester
+                </Fieldset.Legend>
 
-                  <Dialog.Body>
-                    <CheckboxGroup
-                      value={selectedTesters}
-                      onValueChange={setSelectedTesters}
+                <Fieldset.Content>
+                  {testersQuery.data?.testers?.map((tester: any) => (
+                    <Checkbox.Root
+                      key={tester.user_id}
+                      value={tester.user_id.toString()}
                     >
-                      <Fieldset.Root>
-                        <Fieldset.Legend fontSize="sm">
-                          Select at least one tester
-                        </Fieldset.Legend>
-
-                        <Fieldset.Content>
-                          {testersQuery.data?.testers?.map((tester: any) => (
-                            <Checkbox.Root
-                              key={tester.user_id}
-                              value={tester.user_id.toString()}
-                            >
-                              <Checkbox.HiddenInput />
-                              <Checkbox.Control />
-                              <Checkbox.Label>{tester.name}</Checkbox.Label>
-                            </Checkbox.Root>
-                          ))}
-                        </Fieldset.Content>
-                      </Fieldset.Root>
-                    </CheckboxGroup>
-                  </Dialog.Body>
-
-                  <Dialog.Footer>
-                    <Button
-                      variant="outline"
-                      onClick={() => setAssignOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-
-                    <Button
-                      colorPalette="brand"
-                      disabled={selectedTesters.length === 0}
-                      onClick={async () => {
-                        if (!effectivePlanId) return;
-
-                        const payload = {
-                          project_id: Number(projectId),
-                          test_plan_id: Number(effectivePlanId),
-                          planned_tests: [
-                            {
-                              test_case_id: testCaseId,
-                              user_ids: selectedTesters.map((id) => Number(id)),
-                            },
-                          ],
-                        };
-
-                        try {
-                          await assignTestersToTestPlan(
-                            effectivePlanId,
-                            payload,
-                          );
-
-                          setOptimisticAssignment({
-                            test_plan_id: effectivePlanId,
-                            testers: selectedTesters,
-                          });
-
-                          setAssignOpen(false);
-                        } catch (err) {
-                          console.error("Failed to assign test case:", err);
-                          alert("Failed to assign test case to test plan.");
-                        }
-                      }}
-                    >
-                      Confirm assignment
-                    </Button>
-                  </Dialog.Footer>
-                </Dialog.Content>
-              </Dialog.Positioner>
-            </Portal>
-          </Dialog.Root>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{tester.name}</Checkbox.Label>
+                    </Checkbox.Root>
+                  ))}
+                </Fieldset.Content>
+              </Fieldset.Root>
+            </CheckboxGroup>
+          </AppDialog>
         </Tabs.Content>
       </Tabs.Root>
     </Box>
