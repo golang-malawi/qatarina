@@ -1,15 +1,14 @@
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { ReactNode } from "react";
+import { ReactNode, ChangeEvent } from "react";
 import {
   Box,
   Button,
-  Field,
   Input,
   Textarea,
-  Checkbox,
   VStack,
   HStack,
+  Text,
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModule from "./SelectFeatureModule";
@@ -30,25 +29,26 @@ export type FieldType =
   | "test-kind"
   | "feature-module"
   | "feature-module-type"
-  | "custom";
+  | "custom"
+  | "array";
 
-  export interface FieldConfig {
+export interface FieldConfig {
   name: string;
   label: string;
   type: FieldType;
   placeholder?: string;
   helperText?: string;
   required?: boolean;
-  options?: { value: string; label: string }[]; // For select fields
-  validation?: z.ZodTypeAny; // Custom validation for this field
+  options?: { value: string; label: string }[];
+  validation?: z.ZodTypeAny;
   defaultValue?: unknown;
   customComponent?: (props: {
     value: unknown;
     onChange: (value: unknown) => void;
     onBlur: () => void;
-  }) => ReactNode; // For custom field components
-  // Props specific to certain field types
-  projectId?: string; // For feature-module type
+  }) => ReactNode;
+  projectId?: string;
+  fields?: FieldConfig[]; // for array type
 }
 
 export interface FormConfig<T extends z.ZodTypeAny> {
@@ -105,9 +105,99 @@ export function DynamicForm<T extends z.ZodTypeAny>({
             field.state.meta.errors &&
             field.state.meta.errors.length > 0;
 
+          if (type === "array" && fieldConfig.fields) {
+            return (
+              <Box key={name}>
+                  <Text fontWeight="semibold">{label}</Text>
+                <VStack align="stretch" gap={2}>
+                  {(field.state.value as any[] || []).map((_, index) => (
+                    <Box
+                      key={index}
+                      border="1px solid #ccc"
+                      p={2}
+                      borderRadius="md"
+                    >
+                      {fieldConfig.fields!.map((subField) => (
+                        <form.Field
+                          key={`${name}[${index}].${subField.name}`}
+                          name={`${name}[${index}].${subField.name}`}
+                        >
+                          {(sub) => {
+                            const subErrors =
+                              sub.state.meta.isTouched &&
+                              sub.state.meta.errors &&
+                              sub.state.meta.errors.length > 0;
+
+                              return (
+                                <Box>
+                                  <Text fontWeight="semibold">{subField.label}</Text>
+                                  <Input
+                                    type={subField.type as any}
+                                    value={(sub.state.value as string) || ""}
+                                    onBlur={sub.handleBlur}
+                                    onChange={(e) =>
+                                      sub.handleChange(e.target.value)
+                                    }
+                                    placeholder={subField.placeholder}
+                                  />
+                                  {subField.helperText && (
+                                    <Text color="gray.500" fontSize="sm">
+                                      {subField.helperText}
+                                    </Text>
+                                  )}
+                                  {subErrors && (
+                                    <Text color="red.500" fontSize="sm">
+                                      {sub.state.meta.errors!
+                                        .map((error) =>
+                                          typeof error === "string"
+                                            ? error
+                                            : ((error as any)?.message ??
+                                                "Validation error")
+                                        )
+                                        .join(", ")}
+                                    </Text>
+                                  )}
+                                </Box>
+                              );
+                          }}
+                        </form.Field>
+                      ))}
+                      <Button
+                        size="sm"
+                        mt={2}
+                        onClick={() => {
+                          const newVal = [
+                            ...(field.state.value as any[] || []),
+                          ];
+                          newVal.splice(index, 1); // remove current item
+                          field.handleChange(newVal);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  ))}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const newVal = [...(field.state.value as any[] || [])];
+                      newVal.push({}); // add new empty item
+                      field.handleChange(newVal);
+                    }}
+                  >
+                    + Add {label}
+                  </Button>
+                </VStack>
+                {helperText && (
+                  <Text color="gray.500" fontSize="sm">{helperText}</Text>
+                )}
+              </Box>
+            );
+          }
+
           return (
-            <Field.Root invalid={showErrors}>
-              <Field.Label>{label}</Field.Label>
+            <Box>
+              <Text fontWeight="semibold">{label}</Text>
 
               {type === "test-kind" && (
                 <SelectTestKind
@@ -154,7 +244,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 <select
                   value={(field.state.value as string) || ""}
                   onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                    field.handleChange(e.target.value)
+                  }
                   style={{
                     width: "100%",
                     padding: "8px",
@@ -172,14 +264,16 @@ export function DynamicForm<T extends z.ZodTypeAny>({
               )}
 
               {type === "checkbox" && (
-                <Checkbox.Root
-                  checked={(field.state.value as boolean) || false}
-                  onCheckedChange={({ checked }) => field.handleChange(checked)}
-                >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>{label}</Checkbox.Label>
-                </Checkbox.Root>
+                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={(field.state.value as boolean) || false}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      field.handleChange(e.target.checked)
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
               )}
 
               {[
@@ -201,19 +295,21 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
-              {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
+              {helperText && (
+                <Text color="gray.500" fontSize="sm">{helperText}</Text>
+              )}
               {showErrors && (
-                <Field.ErrorText>
-                  {field.state.meta
-                    .errors!.map((error) =>
+                <Text color="red.500" fontSize="sm">
+                  {field.state.meta.errors!
+                    .map((error) =>
                       typeof error === "string"
                         ? error
                         : ((error as any)?.message ?? "Validation error")
                     )
                     .join(", ")}
-                </Field.ErrorText>
+                </Text>
               )}
-            </Field.Root>
+            </Box>
           );
         }}
       </form.Field>
@@ -222,7 +318,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
   const renderFields = () => {
     if (layout === "horizontal") {
-      // Render fields in a grid layout for horizontal
       const chunks = [];
       for (let i = 0; i < fields.length; i += 2) {
         chunks.push(fields.slice(i, i + 2));
@@ -239,7 +334,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
       ));
     }
 
-    // Vertical layout
     return fields.map(renderField);
   };
 
