@@ -108,12 +108,13 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 }
 
 type Environment struct {
-	ID        int32
-	ProjectID sql.NullInt32
-	Name      string
-	BaseUrl   sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          int32
+	ProjectID   sql.NullInt32
+	Name        string
+	Description sql.NullString
+	BaseUrl     sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type Invite struct {

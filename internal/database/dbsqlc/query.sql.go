@@ -151,20 +151,26 @@ func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, 
 
 const createEnvironment = `-- name: CreateEnvironment :one
 INSERT INTO environments (
-    project_id, name, base_url, created_at, updated_at
+    project_id, name, description, base_url, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, now(), now()
+    $1, $2, $3, $4, now(), now()
 ) RETURNING id
 `
 
 type CreateEnvironmentParams struct {
-	ProjectID sql.NullInt32
-	Name      string
-	BaseUrl   sql.NullString
+	ProjectID   sql.NullInt32
+	Name        string
+	Description sql.NullString
+	BaseUrl     sql.NullString
 }
 
 func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (int32, error) {
-	row := q.db.QueryRowContext(ctx, createEnvironment, arg.ProjectID, arg.Name, arg.BaseUrl)
+	row := q.db.QueryRowContext(ctx, createEnvironment,
+		arg.ProjectID,
+		arg.Name,
+		arg.Description,
+		arg.BaseUrl,
+	)
 	var id int32
 	err := row.Scan(&id)
 	return id, err
@@ -1796,7 +1802,7 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 }
 
 const listEnvironmentsByProject = `-- name: ListEnvironmentsByProject :many
-SELECT id, project_id, name, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
+SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
 `
 
 func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.NullInt32) ([]Environment, error) {
@@ -1812,6 +1818,7 @@ func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.N
 			&i.ID,
 			&i.ProjectID,
 			&i.Name,
+			&i.Description,
 			&i.BaseUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
