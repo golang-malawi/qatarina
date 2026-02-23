@@ -10,7 +10,6 @@ import {
   HStack,
   Icon,
   Separator,
-  Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -23,6 +22,7 @@ import {
 import { useState } from "react";
 import { closeTestPlan, useTestPlanQuery } from "@/services/TestPlanService";
 import { toaster } from "@/components/ui/toaster";
+import { ErrorState, LoadingState } from "@/components/ui/page-states";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
@@ -87,17 +87,8 @@ function ViewTestPlan() {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <Flex justify="center" align="center" minH="40">
-        <Spinner size="xl" color="brand.solid" />
-      </Flex>
-    );
-  }
-
-  if (error || !testPlan) {
-    return <Text color="fg.error">Error loading test plan</Text>;
-  }
+  if (isLoading) return <LoadingState label="Loading test plan..." />;
+  if (error || !testPlan) return <ErrorState title="Error loading test plan" />;
 
   const handleMarkComplete = async () => {
     if (!testPlan.id) return;

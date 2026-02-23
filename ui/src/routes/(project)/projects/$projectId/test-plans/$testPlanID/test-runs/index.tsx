@@ -11,7 +11,6 @@ import {
   Input,
   InputGroup,
   Separator,
-  Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -19,6 +18,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
@@ -79,17 +83,8 @@ function TestPlanTestRunsPage() {
   const passedRuns = allRuns.filter((run) => getResultState(run.result_state) === "passed").length;
   const failedRuns = allRuns.filter((run) => getResultState(run.result_state) === "failed").length;
 
-  if (isLoading) {
-    return (
-      <Flex justify="center" align="center" minH="40">
-        <Spinner size="xl" color="brand.solid" />
-      </Flex>
-    );
-  }
-
-  if (error) {
-    return <Text color="fg.error">Error loading test runs</Text>;
-  }
+  if (isLoading) return <LoadingState label="Loading test runs..." />;
+  if (error) return <ErrorState title="Error loading test runs" />;
 
   const handleClose = async (runId: string) => {
     try {
@@ -170,12 +165,12 @@ function TestPlanTestRunsPage() {
       </Card.Root>
 
       {allRuns.length === 0 ? (
-        <EmptyCard
+        <EmptyState
           title="No test runs found"
           description="Execute this test plan to start generating runs."
         />
       ) : filteredRuns.length === 0 ? (
-        <EmptyCard
+        <EmptyState
           title="No matching test runs"
           description="Adjust the filters or search term to see run activity."
         />
@@ -311,20 +306,5 @@ function DetailItem({ label, value }: { label: string; value?: string }) {
       </Text>
       <Text color="fg.default">{value?.trim() || "N/A"}</Text>
     </Stack>
-  );
-}
-
-function EmptyCard({ title, description }: { title: string; description: string }) {
-  return (
-    <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
-      <Card.Body p={{ base: 6, md: 8 }}>
-        <Stack align="center" textAlign="center" gap={2}>
-          <Heading size="md" color="fg.heading">
-            {title}
-          </Heading>
-          <Text color="fg.subtle">{description}</Text>
-        </Stack>
-      </Card.Body>
-    </Card.Root>
   );
 }

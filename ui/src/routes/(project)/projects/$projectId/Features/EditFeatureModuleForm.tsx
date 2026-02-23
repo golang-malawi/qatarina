@@ -88,7 +88,10 @@ function EditFeatureModuleForm() {
         duration: 3000,
       });
 
-      navigate({ to: `/projects/${projectId}/Features/` });
+      navigate({
+        to: "/projects/$projectId/Features",
+        params: { projectId },
+      });
     } catch (err) {
       console.error(err);
       toaster.create({

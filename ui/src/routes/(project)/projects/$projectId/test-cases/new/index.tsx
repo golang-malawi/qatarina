@@ -45,7 +45,10 @@ function NewTestCases() {
         type: "success",
         duration: 3000,
       });
-      redirect({ to: "/workspace/projects" });
+      redirect({
+        to: "/projects/$projectId/test-cases",
+        params: { projectId: `${project_id}` },
+      });
     }
   }
 

@@ -22,7 +22,6 @@ import {
   InputGroup,
   Portal,
   Separator,
-  Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -30,6 +29,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { IconSearch, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { type ElementType, useMemo, useState } from "react";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 
@@ -153,15 +157,10 @@ function TestPlanTestCasesPage() {
   };
 
   if (isLoadingCases || usersQuery.isLoading || testPlanQuery.isLoading) {
-    return (
-      <Flex justify="center" align="center" minH="40">
-        <Spinner size="xl" color="brand.solid" />
-      </Flex>
-    );
+    return <LoadingState label="Loading test cases..." />;
   }
-
   if (testCasesError || testPlanQuery.error) {
-    return <Text color="fg.error">Error loading test cases for this plan</Text>;
+    return <ErrorState title="Error loading test cases for this plan" />;
   }
 
   return (
@@ -222,12 +221,12 @@ function TestPlanTestCasesPage() {
       </Card.Root>
 
       {allCases.length === 0 ? (
-        <EmptyCard
+        <EmptyState
           title="No test cases in this plan yet"
           description="Add test cases to this plan first, then assign testers."
         />
       ) : filteredCases.length === 0 ? (
-        <EmptyCard
+        <EmptyState
           title="No matching test cases"
           description="Try a different search term to find the case you need."
         />
@@ -496,20 +495,5 @@ function getUserLabel(user: UserRecord, fallbackId: number) {
     user.Email ||
     user.email ||
     `User ${fallbackId}`
-  );
-}
-
-function EmptyCard({ title, description }: { title: string; description: string }) {
-  return (
-    <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
-      <Card.Body p={{ base: 6, md: 8 }}>
-        <Stack align="center" textAlign="center" gap={2}>
-          <Heading size="md" color="fg.heading">
-            {title}
-          </Heading>
-          <Text color="fg.subtle">{description}</Text>
-        </Stack>
-      </Card.Body>
-    </Card.Root>
   );
 }

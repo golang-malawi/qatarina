@@ -12,7 +12,6 @@ import {
   Input,
   InputGroup,
   Separator,
-  Spinner,
   Stack,
   Text,
 } from "@chakra-ui/react";
@@ -25,6 +24,11 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/ui/page-states";
 import {
   useDeleteTestPlanMutation,
   useProjectTestPlansQuery,
@@ -73,14 +77,8 @@ function ListProjectTestPlans() {
   const completedCount = plans.filter((plan) => plan.is_complete).length;
   const activeCount = plans.length - completedCount;
 
-  if (isLoading) {
-    return (
-      <Flex justify="center" align="center" minH="40">
-        <Spinner size="xl" color="brand.solid" />
-      </Flex>
-    );
-  }
-  if (error) return <Text color="fg.error">Error loading test plans</Text>;
+  if (isLoading) return <LoadingState label="Loading test plans..." />;
+  if (error) return <ErrorState title="Error loading test plans" />;
 
   const handleDelete = async (testPlanID: string) => {
     if (!window.confirm("Are you sure you want to delete this test plan?"))
@@ -152,18 +150,10 @@ function ListProjectTestPlans() {
       </Card.Root>
 
       {filteredPlans.length === 0 ? (
-        <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
-          <Card.Body p={{ base: 6, md: 8 }}>
-            <Stack align="center" gap={3}>
-              <Heading size="md" color="fg.heading">
-                No test plans found
-              </Heading>
-              <Text color="fg.subtle">
-                Create a plan or adjust the search filter.
-              </Text>
-            </Stack>
-          </Card.Body>
-        </Card.Root>
+        <EmptyState
+          title="No test plans found"
+          description="Create a plan or adjust the search filter."
+        />
       ) : (
         <Stack gap={4}>
           {filteredPlans.map((entry, index) => {
