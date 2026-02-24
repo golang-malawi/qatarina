@@ -570,3 +570,6 @@ INSERT INTO environments (
 
 -- name: ListEnvironmentsByProject :many
 SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
+
+-- name: GetEnvironment :one
+SELECT * FROM environments WHERE id = $1;

@@ -895,6 +895,25 @@ func (q *Queries) GetAllProjectTesters(ctx context.Context) ([]GetAllProjectTest
 	return items, nil
 }
 
+const getEnvironment = `-- name: GetEnvironment :one
+SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE id = $1
+`
+
+func (q *Queries) GetEnvironment(ctx context.Context, id int32) (Environment, error) {
+	row := q.db.QueryRowContext(ctx, getEnvironment, id)
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.BaseUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'

@@ -12,3 +12,9 @@ export async function getProjectEnvironments(projectID: string) {
     params: { path: { projectID } },
   });
 }
+
+export async function getEnvironment(envID: string) {
+  return apiClient.request("get", "/v1/environments/{envID}", {
+    params: { path: { envID } },
+  });
+}

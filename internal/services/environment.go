@@ -10,6 +10,7 @@ import (
 
 type EnvironmentService interface {
 	FindByProjectID(ctx context.Context, projectID int64) (*schema.EnvironmentListResponse, error)
+	FindByID(ctx context.Context, envID int64) (*schema.EnvironmentResponse, error)
 }
 
 type environmentServiceImpl struct {
@@ -41,4 +42,21 @@ func (s *environmentServiceImpl) FindByProjectID(ctx context.Context, projectID 
 	}
 
 	return &schema.EnvironmentListResponse{Environments: response}, nil
+}
+
+func (s *environmentServiceImpl) FindByID(ctx context.Context, envID int64) (*schema.EnvironmentResponse, error) {
+	env, err := s.queries.GetEnvironment(ctx, int32(envID))
+	if err != nil {
+		return nil, err
+	}
+
+	response := schema.EnvironmentResponse{
+		ID:        int64(env.ID),
+		ProjectID: int64(env.ProjectID.Int32),
+		Name:      env.Name,
+		BaseURL:   env.BaseUrl.String,
+		CreatedAt: env.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		UpdatedAt: env.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	return &response, nil
 }

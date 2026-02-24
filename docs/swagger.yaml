@@ -1147,6 +1147,44 @@ paths:
       summary: Get dashboard summary
       tags:
       - dashboard
+  /v1/environments/{envID}:
+    get:
+      description: Get details of a single environment by ID
+      operationId: GetEnvironment
+      parameters:
+      - description: Environment ID
+        in: path
+        name: envID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.EnvironmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get details of a single environment by ID
+      tags:
+      - environements
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
