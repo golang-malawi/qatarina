@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Box,
+  Button,
   Heading,
   Spinner,
   Text,
+  Flex,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getProjectEnvironments } from "@/services/EnvironmentService";
@@ -41,9 +43,20 @@ function EnvironmentsPage() {
             p={3}
             borderRadius="md"
           >
-            <Text fontWeight="bold">{env.name}</Text>
-            {env.description && <Text>{env.description}</Text>}
-            {env.base_url && <Text color="blue.500">{env.base_url}</Text>}
+            <Flex justify="space-between" align="center">
+              <Box>
+                <Text fontWeight="bold">{env.name}</Text>
+                {env.description && <Text>{env.description}</Text>}
+                {env.base_url && <Text color="blue.500">{env.base_url}</Text>}
+              </Box>
+
+            <Link
+            to="/projects/$projectId/environments/$environmentId"
+            params={{ projectId, environmentId: String(env.id) }}
+            >
+              <Button size="sm" mt={2}>View</Button>
+             </Link>     
+            </Flex>       
           </List.Item>
         ))}
       </List.Root>

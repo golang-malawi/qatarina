@@ -943,6 +943,25 @@ func (q *Queries) GetAllProjectTesters(ctx context.Context) ([]GetAllProjectTest
 	return items, nil
 }
 
+const getEnvironment = `-- name: GetEnvironment :one
+SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE id = $1
+`
+
+func (q *Queries) GetEnvironment(ctx context.Context, id int32) (Environment, error) {
+	row := q.db.QueryRowContext(ctx, getEnvironment, id)
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.BaseUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
@@ -1872,6 +1891,41 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	return i, err
 }
 
+const listEnvironmentsByProject = `-- name: ListEnvironmentsByProject :many
+SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
+`
+
+func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.NullInt32) ([]Environment, error) {
+	rows, err := q.db.QueryContext(ctx, listEnvironmentsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Environment
+	for rows.Next() {
+		var i Environment
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.BaseUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrgs = `-- name: ListOrgs :many
 SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
 FROM orgs
@@ -1895,41 +1949,6 @@ func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
 			&i.GithubUrl,
 			&i.WebsiteUrl,
 			&i.CreatedByID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listEnvironmentsByProject = `-- name: ListEnvironmentsByProject :many
-SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
-`
-
-func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.NullInt32) ([]Environment, error) {
-	rows, err := q.db.QueryContext(ctx, listEnvironmentsByProject, projectID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Environment
-	for rows.Next() {
-		var i Environment
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProjectID,
-			&i.Name,
-			&i.Description,
-			&i.BaseUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

@@ -165,6 +165,11 @@ func (api *API) routes() {
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
 	}
 
+	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+	{
+		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
+	}
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),
