@@ -20,8 +20,11 @@ export function useSearchUsersQuery(params: Record<string, any>) {
   return $api.useQuery("get", "/v1/users/query", { params });
 }
 
-export function useGetUserQuery(userID: string) {
-  return $api.useQuery("get", `/v1/users/{userID}`, { params: { path: { userID } } });
+export function useGetUserQuery(userID?: string, options?: { enabled?: boolean }) {
+  return $api.useQuery("get", `/v1/users/{userID}`, { 
+    params: { path: { userID: userID ?? "" } },
+     ...options,
+     });
 }
 
 export function useUpdateUserMutation() {

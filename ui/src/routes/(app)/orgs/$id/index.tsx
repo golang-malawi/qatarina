@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { useParams } from '@tanstack/react-router';
 import { useGetOrgQuery } from "@/services/OrgsService";
+import { useGetUserQuery } from '@/services/UserService';
 
 export const Route = createFileRoute("/(app)/orgs/$id/")({
   component: OrgDetailPage,
@@ -16,11 +17,13 @@ export const Route = createFileRoute("/(app)/orgs/$id/")({
 
 function OrgDetailPage() {
   const { id } = useParams({ from: "/(app)/orgs/$id/" });
-  const { data, isLoading } = useGetOrgQuery(id);
+  const { data: org, isLoading } = useGetOrgQuery(id);
 
+  const userId = org?.created_by ? String(org.created_by) : undefined;
+  const {data: creator} = useGetUserQuery(userId,{
+    enabled: !!userId,
+  });
   if (isLoading) return <Spinner />;
-
-  const org = data;
 
   const DetailField = ({ label, value }: { label: string; value?: string | number }) => (
     <Box>
@@ -40,7 +43,7 @@ function OrgDetailPage() {
         <DetailField label="Country" value={org?.country} />
         <DetailField label="Website URL" value={org?.website_url} />
         <DetailField label="GitHub URL" value={org?.github_url} />
-        <DetailField label="Created By (User ID)" value={org?.created_by} />
+        <DetailField label="Created By (User)" value={creator?.display_name ?? org?.created_by} />
         <DetailField label="Created At" value={org?.created_at} />
         <DetailField label="Updated At" value={org?.updated_at} />
       </Grid>
