@@ -11,7 +11,6 @@ import {
   Text,
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
-import SelectFeatureModule from "./SelectFeatureModule";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
 
 export type FieldType =
@@ -47,7 +46,6 @@ export interface FieldConfig {
     onChange: (value: unknown) => void;
     onBlur: () => void;
   }) => ReactNode;
-  projectId?: string;
   fields?: FieldConfig[]; // for array type
 }
 
@@ -94,7 +92,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
       helperText,
       options,
       customComponent,
-      projectId,
     } = fieldConfig;
 
     return (
@@ -206,9 +203,8 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
-              {type === "feature-module" && projectId && (
-                <SelectFeatureModule
-                  projectId={projectId}
+              {type === "feature-module" && (
+                <SelectFeatureModuleType        
                   value={field.state.value as string}
                   onChange={(val) => field.handleChange(val)}
                 />
