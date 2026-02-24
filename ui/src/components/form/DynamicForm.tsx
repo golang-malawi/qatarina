@@ -5,10 +5,10 @@ import {
   Box,
   Button,
   Input,
+  Field,
   Textarea,
   VStack,
   HStack,
-  Text,
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
@@ -104,8 +104,8 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
           if (type === "array" && fieldConfig.fields) {
             return (
-              <Box key={name}>
-                  <Text fontWeight="semibold">{label}</Text>
+              <Field.Root invalid={showErrors}>
+                  <Field.Label fontWeight="semibold">{label}</Field.Label>
                 <VStack align="stretch" gap={2}>
                   {(field.state.value as any[] || []).map((_, index) => (
                     <Box
@@ -126,8 +126,8 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                               sub.state.meta.errors.length > 0;
 
                               return (
-                                <Box>
-                                  <Text fontWeight="semibold">{subField.label}</Text>
+                                <Field.Root invalid={subErrors}>
+                                  <Field.Label fontWeight="semibold">{subField.label}</Field.Label>
                                   <Input
                                     type={subField.type as any}
                                     value={(sub.state.value as string) || ""}
@@ -138,12 +138,10 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                                     placeholder={subField.placeholder}
                                   />
                                   {subField.helperText && (
-                                    <Text color="gray.500" fontSize="sm">
-                                      {subField.helperText}
-                                    </Text>
+                                   <Field.HelperText>{subField.helperText}</Field.HelperText>
                                   )}
                                   {subErrors && (
-                                    <Text color="red.500" fontSize="sm">
+                                    <Field.ErrorText>
                                       {sub.state.meta.errors!
                                         .map((error) =>
                                           typeof error === "string"
@@ -152,9 +150,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                                                 "Validation error")
                                         )
                                         .join(", ")}
-                                    </Text>
+                                    </Field.ErrorText>
                                   )}
-                                </Box>
+                                </Field.Root>
                               );
                           }}
                         </form.Field>
@@ -185,16 +183,14 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                     + Add {label}
                   </Button>
                 </VStack>
-                {helperText && (
-                  <Text color="gray.500" fontSize="sm">{helperText}</Text>
-                )}
-              </Box>
+                {helperText && <Field.HelperText>{helperText}</Field.HelperText>}                
+              </Field.Root>
             );
           }
 
           return (
-            <Box>
-              <Text fontWeight="semibold">{label}</Text>
+            <Field.Root invalid={showErrors}>
+              <Field.Label fontWeight="semibold">{label}</Field.Label>
 
               {type === "test-kind" && (
                 <SelectTestKind
@@ -291,11 +287,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
-              {helperText && (
-                <Text color="gray.500" fontSize="sm">{helperText}</Text>
-              )}
+             {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
               {showErrors && (
-                <Text color="red.500" fontSize="sm">
+                <Field.ErrorText>
                   {field.state.meta.errors!
                     .map((error) =>
                       typeof error === "string"
@@ -303,9 +297,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                         : ((error as any)?.message ?? "Validation error")
                     )
                     .join(", ")}
-                </Text>
+                </Field.ErrorText>
               )}
-            </Box>
+            </Field.Root>
           );
         }}
       </form.Field>
