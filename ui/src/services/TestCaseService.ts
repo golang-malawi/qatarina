@@ -101,3 +101,9 @@ export async function unmarkTestCaseAsDraft(testCaseID:string) {
   });
   
 }
+
+export function useClosedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/closed", {
+    params: {path: {projectID}}
+  })
+}
