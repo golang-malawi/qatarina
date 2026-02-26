@@ -107,3 +107,15 @@ export function useClosedTestCasesQuery(projectID: string) {
     params: {path: {projectID}}
   })
 }
+
+export function useFailingTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/failing", {
+    params: { path: { projectID } },
+  });
+}
+
+export function useScheduledTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/scheduled", {
+    params: { path: { projectID } },
+  });
+}
