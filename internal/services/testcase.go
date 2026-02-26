@@ -63,6 +63,8 @@ type TestCaseService interface {
 	UnMarkAsDraft(ctx context.Context, testCaseID string) error
 	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
 	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
+	// FindAllClosed used to list closed test cases by project ID
+	FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -469,4 +471,35 @@ func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, use
 		})
 	}
 	return summaries, nil
+}
+
+func (s *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	rows, err := s.queries.FindClosedCasesByProjectID(ctx, common.NewNullInt32(int32(projectID)))
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, schema.TestCaseResponse{
+			ID:              row.ID.String(),
+			ProjectID:       int64(row.ProjectID.Int32),
+			CreatedByID:     int64(row.CreatedByID),
+			Kind:            string(row.Kind),
+			Code:            row.Code,
+			FeatureOrModule: row.FeatureOrModule.String,
+			Title:           row.Title,
+			Description:     row.Description,
+			IsDraft:         row.IsDraft.Bool,
+			Tags:            row.Tags,
+			CreatedAt:       common.FormatNullTime(row.CreatedAt),
+			UpdatedAt:       common.FormatNullTime(row.UpdatedAt),
+			Status:          row.Status,
+			Result:          string(row.ResultState),
+			ExecutedBy:      int64(row.TestedByID),
+			Notes:           row.Notes,
+		})
+	}
+
+	return responses, nil
 }

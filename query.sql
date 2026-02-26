@@ -244,6 +244,19 @@ UPDATE test_cases
 SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
+-- name: FindClosedCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+    tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags, 
+    tc.created_at, tc.updated_at,
+    CASE
+        WHEN tr.is_closed THEN 'closed' ELSE 'open'
+    END AS status,
+    tr.id AS run_id, tr.result_state, tr.is_closed, 
+    tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.is_closed = true AND tc.project_id = $1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 

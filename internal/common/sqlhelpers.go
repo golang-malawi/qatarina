@@ -36,6 +36,13 @@ func NullTime(t time.Time) sql.NullTime {
 	}
 }
 
+func FormatNullTime(t sql.NullTime) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.Format(time.RFC3339)
+}
+
 // func ParseDate(dateStr string) sql.NullTime {
 // 	t, err := time.Parse("2006-01-02", dateStr)
 // 	if err != nil {

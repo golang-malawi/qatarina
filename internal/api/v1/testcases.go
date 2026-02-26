@@ -364,3 +364,33 @@ func GetExecutionSummary(testCasesService services.TestCaseService, logger loggi
 		return c.JSON(summaries)
 	}
 }
+
+// ListClosedTestCases godoc
+//
+//	@ID				ListClosedTestCases
+//	@Summary		List Completed/Closed Test Cases
+//	@Description	List Completed/Closed Test Cases
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	schema.TestCaseListResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-cases/closed [get]
+func ListClosedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil || projectID == 0 {
+			return problemdetail.BadRequest(c, "missing projectID")
+		}
+
+		testCases, err := testCasesService.FindAllClosed(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch closed test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch closed test cases")
+		}
+
+		return c.JSON(schema.TestCaseListResponse{TestCases: testCases})
+	}
+}
