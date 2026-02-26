@@ -772,6 +772,156 @@ func (q *Queries) FindClosedCasesByProjectID(ctx context.Context, projectID sql.
 	return items, nil
 }
 
+const findFailingCasesByProjectID = `-- name: FindFailingCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
+       tc.created_at, tc.updated_at,
+       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+       tr.id AS run_id, tr.result_state, tr.is_closed,
+       tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.result_state = 'failed' AND tc.project_id = $1
+`
+
+type FindFailingCasesByProjectIDRow struct {
+	ID              uuid.UUID
+	ProjectID       sql.NullInt32
+	CreatedByID     int32
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	Status          string
+	RunID           uuid.UUID
+	ResultState     TestRunState
+	IsClosed        sql.NullBool
+	TestedByID      int32
+	Notes           string
+}
+
+func (q *Queries) FindFailingCasesByProjectID(ctx context.Context, projectID sql.NullInt32) ([]FindFailingCasesByProjectIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, findFailingCasesByProjectID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindFailingCasesByProjectIDRow
+	for rows.Next() {
+		var i FindFailingCasesByProjectIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.CreatedByID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.RunID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.TestedByID,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findScheduledCasesByProjectID = `-- name: FindScheduledCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
+       tc.created_at, tc.updated_at,
+       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+       tr.id AS run_id, tr.result_state, tr.is_closed,
+       tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tr.is_closed = false AND tc.project_id = $1
+`
+
+type FindScheduledCasesByProjectIDRow struct {
+	ID              uuid.UUID
+	ProjectID       sql.NullInt32
+	CreatedByID     int32
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	Status          string
+	RunID           uuid.UUID
+	ResultState     TestRunState
+	IsClosed        sql.NullBool
+	TestedByID      int32
+	Notes           string
+}
+
+func (q *Queries) FindScheduledCasesByProjectID(ctx context.Context, projectID sql.NullInt32) ([]FindScheduledCasesByProjectIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, findScheduledCasesByProjectID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindScheduledCasesByProjectIDRow
+	for rows.Next() {
+		var i FindScheduledCasesByProjectIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.CreatedByID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.RunID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.TestedByID,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL
 `
