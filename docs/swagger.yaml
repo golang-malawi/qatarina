@@ -954,10 +954,10 @@ components:
           type: string
         displayName:
           type: string
+        email:
+          type: string
         id:
           type: integer
-        username:
-          type: string
       type: object
 externalDocs:
   description: ""
@@ -2024,6 +2024,120 @@ paths:
       summary: Get a single Project's test cases
       tags:
       - projects
+  /v1/projects/{projectID}/test-cases/closed:
+    get:
+      description: List Completed/Closed Test Cases
+      operationId: ListClosedTestCases
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List Completed/Closed Test Cases
+      tags:
+      - test-cases
+  /v1/projects/{projectID}/test-cases/failing:
+    get:
+      description: List Failing Test Cases
+      operationId: ListFailingTestCases
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List Failing Test Cases
+      tags:
+      - test-cases
+  /v1/projects/{projectID}/test-cases/scheduled:
+    get:
+      description: List all test cases scheduled for execution
+      operationId: ListScheduledTestCases
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List Scheduled Test Cases
+      tags:
+      - test-cases
   /v1/projects/{projectID}/test-plans:
     get:
       description: Get a single Project's test plans
