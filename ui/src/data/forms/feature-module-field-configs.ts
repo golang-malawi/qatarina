@@ -18,7 +18,7 @@ export const featureModuleCreationFields: FieldConfig[] = [
   },
   {
     name: "description",
-    label: "Description (optional)",
+    label: "Description",
     type: "text",
     placeholder: "Short description",
     helperText: "Summary of the feature/module",

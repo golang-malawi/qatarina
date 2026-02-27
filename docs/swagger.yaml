@@ -207,6 +207,21 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.CreateOrgRequest:
+      properties:
+        address:
+          type: string
+        country:
+          type: string
+        github_url:
+          type: string
+        name:
+          type: string
+        website_url:
+          type: string
+      required:
+      - name
+      type: object
     schema.CreateProjectModuleRequest:
       properties:
         code:
@@ -434,6 +449,37 @@ components:
       - first_name
       - last_name
       - password
+      type: object
+    schema.Org:
+      properties:
+        address:
+          type: string
+        country:
+          type: string
+        created_at:
+          type: string
+        created_by:
+          type: integer
+        github_url:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        updated_at:
+          type: string
+        website_url:
+          type: string
+      type: object
+    schema.OrgListResponse:
+      properties:
+        orgs:
+          items:
+            $ref: '#/components/schemas/schema.Org'
+          type: array
+          uniqueItems: false
+        total:
+          type: integer
       type: object
     schema.PageRequest:
       type: object
@@ -731,6 +777,24 @@ components:
             $ref: '#/components/schemas/schema.Tester'
           type: array
           uniqueItems: false
+      type: object
+    schema.UpdateOrgRequest:
+      properties:
+        address:
+          type: string
+        country:
+          type: string
+        github_url:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        website_url:
+          type: string
+      required:
+      - id
+      - name
       type: object
     schema.UpdatePageRequest:
       type: object
@@ -1347,6 +1411,187 @@ paths:
       summary: Update a Module
       tags:
       - modules
+  /v1/orgs:
+    get:
+      description: List All organizations
+      operationId: ListOrgs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.OrgListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List All organizations
+      tags:
+      - organizations
+    post:
+      description: Create a new organization
+      operationId: CreateOrg
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateOrgRequest'
+        description: Organization data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.Org'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Create a new organization
+      tags:
+      - organizations
+  /v1/orgs/{orgID}:
+    delete:
+      description: Delete organization
+      operationId: DeleteOrg
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete organization
+      tags:
+      - organizations
+    get:
+      description: Get organization by ID
+      operationId: GetOrg
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.Org'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get organization by ID
+      tags:
+      - organizations
+    put:
+      description: Update organization
+      operationId: UpdateOrg
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateOrgRequest'
+        description: Organization data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update organization
+      tags:
+      - organizations
   /v1/pages:
     get:
       description: Get all pages

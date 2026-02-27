@@ -441,6 +441,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All organizations
+         * @description List All organizations
+         */
+        get: operations["ListOrgs"];
+        put?: never;
+        /**
+         * Create a new organization
+         * @description Create a new organization
+         */
+        post: operations["CreateOrg"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{orgID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get organization by ID
+         * @description Get organization by ID
+         */
+        get: operations["GetOrg"];
+        /**
+         * Update organization
+         * @description Update organization
+         */
+        put: operations["UpdateOrg"];
+        post?: never;
+        /**
+         * Delete organization
+         * @description Delete organization
+         */
+        delete: operations["DeleteOrg"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pages": {
         parameters: {
             query?: never;
@@ -1601,6 +1653,13 @@ export interface components {
             total?: number;
             users?: components["schemas"]["schema.UserCompact"][];
         };
+        "schema.CreateOrgRequest": {
+            address?: string;
+            country?: string;
+            github_url?: string;
+            name: string;
+            website_url?: string;
+        };
         "schema.CreateProjectModuleRequest": {
             code: string;
             description: string;
@@ -1697,6 +1756,21 @@ export interface components {
             last_name: string;
             organization_id?: number;
             password: string;
+        };
+        "schema.Org": {
+            address?: string;
+            country?: string;
+            created_at?: string;
+            created_by?: number;
+            github_url?: string;
+            id?: number;
+            name?: string;
+            updated_at?: string;
+            website_url?: string;
+        };
+        "schema.OrgListResponse": {
+            orgs?: components["schemas"]["schema.Org"][];
+            total?: number;
         };
         "schema.PageRequest": Record<string, never>;
         "schema.ProjectListResponse": {
@@ -1837,6 +1911,14 @@ export interface components {
         };
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
+        };
+        "schema.UpdateOrgRequest": {
+            address?: string;
+            country?: string;
+            github_url?: string;
+            id: number;
+            name: string;
+            website_url?: string;
         };
         "schema.UpdatePageRequest": Record<string, never>;
         "schema.UpdateProjectModuleRequest": {
@@ -2285,6 +2367,231 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListOrgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.OrgListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Organization data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.Org"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.Org"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Organization data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */

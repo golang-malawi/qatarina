@@ -26,6 +26,7 @@ type API struct {
 	PageService           services.PageService
 	DashboardService      services.DashboardService
 	TestCaseImportService services.TestCaseImportService
+	OrgService            services.OrgService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -51,6 +52,7 @@ func NewAPI(config *config.Config) *API {
 		PageService:           services.NewPageService(dbConn),
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
+		OrgService:            services.NewOrgService(dbConn, logger),
 	}
 }
 
