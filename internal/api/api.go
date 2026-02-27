@@ -27,6 +27,7 @@ type API struct {
 	DashboardService      services.DashboardService
 	TestCaseImportService services.TestCaseImportService
 	OrgService            services.OrgService
+	EnvironmentService    services.EnvironmentService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -36,6 +37,7 @@ func NewAPI(config *config.Config) *API {
 	logger := logging.NewFromConfig(&config.Logging)
 
 	projectService := services.NewProjectService(dbConn, logger)
+	environmentService := services.NewEnvironmentService(dbConn)
 
 	return &API{
 		logger:                logger,
@@ -53,6 +55,7 @@ func NewAPI(config *config.Config) *API {
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
 		OrgService:            services.NewOrgService(dbConn, logger),
+		EnvironmentService:    environmentService,
 	}
 }
 

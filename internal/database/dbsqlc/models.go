@@ -107,6 +107,16 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 	return string(ns.TestRunState), nil
 }
 
+type Environment struct {
+	ID          int32
+	ProjectID   sql.NullInt32
+	Name        string
+	Description sql.NullString
+	BaseUrl     sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Invite struct {
 	ID            int32
 	SenderEmail   string
@@ -294,9 +304,10 @@ type TestPlan struct {
 	// Whether test plan is locked or not
 	IsLocked sql.NullBool
 	// Whether the test plan has a report generated for it
-	HasReport sql.NullBool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	HasReport     sql.NullBool
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	EnvironmentID sql.NullInt32
 }
 
 type TestPlansCase struct {

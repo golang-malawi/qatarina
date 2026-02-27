@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -54,6 +56,24 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 	if err != nil {
 		s.logger.Error(s.name, "failed to create project", "error", err)
 		return nil, err
+	}
+
+	for _, envReq := range request.Environments {
+		sanitized := sanitizeEnvName(envReq.Name)
+		if sanitized == "" {
+			continue
+		}
+
+		_, err := s.db.CreateEnvironment(ctx, dbsqlc.CreateEnvironmentParams{
+			ProjectID:   common.NewNullInt32(int32(projectID)),
+			Name:        sanitized,
+			Description: common.NullString(envReq.Description),
+			BaseUrl:     common.NullString(envReq.BaseURL),
+		})
+		if err != nil {
+			s.logger.Error(s.name, "failed to create environment", "error", err)
+			return nil, err
+		}
 	}
 	project, err := s.db.GetProject(context.Background(), projectID)
 	return &project, err
@@ -119,4 +139,16 @@ func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsq
 	}
 
 	return projects, nil
+}
+
+func sanitizeEnvName(name string) string {
+	n := strings.TrimSpace(name)
+	n = strings.ToLower(n)
+	n = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, n)
+	return n
 }

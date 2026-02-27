@@ -59,6 +59,7 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
+		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -162,6 +163,11 @@ func (api *API) routes() {
 	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
 	{
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
+	}
+
+	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+	{
+		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"

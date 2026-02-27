@@ -331,6 +331,42 @@ components:
         tester_count:
           type: integer
       type: object
+    schema.EnvironmentListResponse:
+      properties:
+        environments:
+          items:
+            $ref: '#/components/schemas/schema.EnvironmentResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.EnvironmentRequest:
+      properties:
+        base_url:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+      required:
+      - name
+      type: object
+    schema.EnvironmentResponse:
+      properties:
+        base_url:
+          type: string
+        created_at:
+          type: string
+        description:
+          type: string
+        id:
+          type: integer
+        name:
+          type: string
+        project_id:
+          type: integer
+        updated_at:
+          type: string
+      type: object
     schema.ExecuteTestRunRequest:
       properties:
         expected_result:
@@ -410,6 +446,11 @@ components:
           type: string
         description:
           type: string
+        environments:
+          items:
+            $ref: '#/components/schemas/schema.EnvironmentRequest'
+          type: array
+          uniqueItems: false
         github_url:
           type: string
         name:
@@ -954,10 +995,10 @@ components:
           type: string
         displayName:
           type: string
+        email:
+          type: string
         id:
           type: integer
-        username:
-          type: string
       type: object
 externalDocs:
   description: ""
@@ -1170,6 +1211,44 @@ paths:
       summary: Get dashboard summary
       tags:
       - dashboard
+  /v1/environments/{envID}:
+    get:
+      description: Get details of a single environment by ID
+      operationId: GetEnvironment
+      parameters:
+      - description: Environment ID
+        in: path
+        name: envID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.EnvironmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get details of a single environment by ID
+      tags:
+      - environements
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
@@ -1948,6 +2027,44 @@ paths:
       summary: Update a Project
       tags:
       - projects
+  /v1/projects/{projectID}/environments:
+    get:
+      description: List environments for a project
+      operationId: ListEnvironments
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.EnvironmentListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List environments for a project
+      tags:
+      - environments
   /v1/projects/{projectID}/modules:
     get:
       description: Get a Modules by project
