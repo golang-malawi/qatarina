@@ -12,7 +12,7 @@ Currently the test cases in Qatarina are created manually, disconnected from the
 
 ## 3. Goals
 *   Provide a UI button(**"import from GitHub"**) within each Qatarina Project.
-*   Allow users to link a GitHub repository(e.g kwachakonverters) to a Qatarina project.
+*   Allow users to link a GitHub repository(e.g qatarina itself) to a Qatarina project.
 *   Enable importing of PRs and issues from the linked repository.
 *   Automatically generate test cases in Qatarina based on the PRs/issues
 *   Support multiple projects in Qatarina, each linked to a different GitHub repository
@@ -20,7 +20,7 @@ Currently the test cases in Qatarina are created manually, disconnected from the
 ## 4. Functional Requirements
 
 ### 4.1 Project Setup
-*   User creates a project in Qatarina(e.g kwachakonverters)
+*   User creates a project in Qatarina
 *   User defines modules to test within the project
 
 ### 4.2 GitHub Integration
@@ -45,7 +45,7 @@ Currently the test cases in Qatarina are created manually, disconnected from the
 
 ### 4.4 Multi-Project Support
 *   Each Qatarina project can be linked to a different GitHub repository.
-*   Users can manage multiple repositories simultaneously(e.g kwachakonverters, helpaside).
+*   Users can manage multiple repositories simultaneously
 *   Imported PRs/issues are scoped to their respective Qatarina project.
 
 ## 5. Non-Functional Requirements 
@@ -54,14 +54,14 @@ Currently the test cases in Qatarina are created manually, disconnected from the
 *   **Scalability:** Support multiple projects and repositories without conflict.
 *   **Maintainability:** Modular integration code, easy to extend for future enhancements.
 
-## 6. User Flow Example (kwachakonverters)
-1. User creates a project in Qatarina named kwachakonverters.
-2. User defines modules (Login, Create Sale).
+## 6. User Flow Example (qatarina)
+1. User creates a project in Qatarina named qatarina.
+2. User defines modules (Login, Organizations).
 3. User clicks Import from GitHub.
-4. Qatarina connects to the kwachakonverters GitHub repository.
+4. Qatarina connects to the qatarina GitHub repository.
 5. PRs and issues are fetched:
-    *   Issue #12 "Login with valid credentials" becomes a test case *in Login module*.
-    *   PR #45 "Create Sale Request" -> becomes a test case *in Create Sale module*.
+    *   Issue  "Login with valid credentials" becomes a test case *in Login module*.
+    *   PR #124 "Create organizations" -> becomes a test case *in Organizations*.
 6. Test cases are now visible in Qatarina, linked back to their GitHub source.
 
 ## 7. Dependencies
