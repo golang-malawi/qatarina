@@ -5,6 +5,7 @@ import { DynamicForm, FieldConfig } from "@/components/form";
 import { Box, Heading } from "@chakra-ui/react";
 import {toaster} from "@/components/ui/toaster";
 import { useState } from "react"; 
+import { useOrgsQuery } from "@/services/OrgsService";
 
 export const Route = createFileRoute("/(app)/users/$userID/edit")({
   component: EditUserProfile,
@@ -26,6 +27,7 @@ function EditUserProfile() {
   const { userID } = Route.useParams();
   const navigate = useNavigate();
   const {data: user} = useGetUserQuery(userID);
+  const { data: orgsResponse} = useOrgsQuery();
   const updateUserMutation = useUpdateUserMutation();
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,7 +39,14 @@ function EditUserProfile() {
         { name: "city", label: "City", type: "text" },
         { name: "address", label: "Address", type: "text" },
         { name: "country_iso", label: "Country ISO (Optional)", type: "text", placeholder: "e.g. MW, US, GB" },
-        { name: "org_id", label: "Organization ID", type: "number" },
+        { name: "org_id", 
+          label: "Organization", 
+          type: "select",
+          options: orgsResponse?.orgs?.map((org: any) => ({ 
+            label: org.name, 
+            value: org.id,
+           })) ?? [],
+        },
     ];
 
     const defaultValues = {

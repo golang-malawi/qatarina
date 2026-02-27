@@ -21,6 +21,7 @@ import { Route as appTestCasesIndexRouteImport } from './routes/(app)/test-cases
 import { Route as appSettingsIndexRouteImport } from './routes/(app)/settings/index'
 import { Route as appReportsIndexRouteImport } from './routes/(app)/reports/index'
 import { Route as appProjectsIndexRouteImport } from './routes/(app)/projects/index'
+import { Route as appOrgsIndexRouteImport } from './routes/(app)/orgs/index'
 import { Route as appIntegrationsIndexRouteImport } from './routes/(app)/integrations/index'
 import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
 import { Route as appTestersInviteRouteImport } from './routes/(app)/testers/invite'
@@ -30,6 +31,8 @@ import { Route as projectProjectsProjectIdIndexRouteImport } from './routes/(pro
 import { Route as appUsersNewIndexRouteImport } from './routes/(app)/users/new/index'
 import { Route as appTestCasesNewIndexRouteImport } from './routes/(app)/test-cases/new/index'
 import { Route as appProjectsNewIndexRouteImport } from './routes/(app)/projects/new/index'
+import { Route as appOrgsNewIndexRouteImport } from './routes/(app)/orgs/new/index'
+import { Route as appOrgsIdIndexRouteImport } from './routes/(app)/orgs/$id/index'
 import { Route as appUsersViewUserIDRouteImport } from './routes/(app)/users/view/$userID'
 import { Route as appUsersUserIDEditRouteImport } from './routes/(app)/users/$userID/edit'
 import { Route as projectProjectsProjectIdTestersIndexRouteImport } from './routes/(project)/projects/$projectId/testers/index'
@@ -41,6 +44,7 @@ import { Route as projectProjectsProjectIdInsightsIndexRouteImport } from './rou
 import { Route as projectProjectsProjectIdFeaturesIndexRouteImport } from './routes/(project)/projects/$projectId/Features/index'
 import { Route as appTestersViewTesterIdIndexRouteImport } from './routes/(app)/testers/view/$testerId/index'
 import { Route as appTestCasesInboxTestCaseIdIndexRouteImport } from './routes/(app)/test-cases/inbox/$testCaseId/index'
+import { Route as appOrgsIdEditIndexRouteImport } from './routes/(app)/orgs/$id/edit/index'
 import { Route as projectProjectsProjectIdTestersNewRouteImport } from './routes/(project)/projects/$projectId/testers/new'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID'
 import { Route as projectProjectsProjectIdFeaturesEditFeatureModuleFormRouteImport } from './routes/(project)/projects/$projectId/Features/EditFeatureModuleForm'
@@ -113,6 +117,11 @@ const appProjectsIndexRoute = appProjectsIndexRouteImport.update({
   path: '/projects/',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appOrgsIndexRoute = appOrgsIndexRouteImport.update({
+  id: '/orgs/',
+  path: '/orgs/',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appIntegrationsIndexRoute = appIntegrationsIndexRouteImport.update({
   id: '/integrations/',
   path: '/integrations/',
@@ -158,6 +167,16 @@ const appTestCasesNewIndexRoute = appTestCasesNewIndexRouteImport.update({
 const appProjectsNewIndexRoute = appProjectsNewIndexRouteImport.update({
   id: '/projects/new/',
   path: '/projects/new/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appOrgsNewIndexRoute = appOrgsNewIndexRouteImport.update({
+  id: '/orgs/new/',
+  path: '/orgs/new/',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appOrgsIdIndexRoute = appOrgsIdIndexRouteImport.update({
+  id: '/orgs/$id/',
+  path: '/orgs/$id/',
   getParentRoute: () => appRouteRoute,
 } as any)
 const appUsersViewUserIDRoute = appUsersViewUserIDRouteImport.update({
@@ -224,6 +243,11 @@ const appTestCasesInboxTestCaseIdIndexRoute =
     path: '/$testCaseId/',
     getParentRoute: () => appTestCasesInboxRouteRoute,
   } as any)
+const appOrgsIdEditIndexRoute = appOrgsIdEditIndexRouteImport.update({
+  id: '/orgs/$id/edit/',
+  path: '/orgs/$id/edit/',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const projectProjectsProjectIdTestersNewRoute =
   projectProjectsProjectIdTestersNewRouteImport.update({
     id: '/testers/new',
@@ -304,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/testers/invite': typeof appTestersInviteRoute
   '/dashboard/': typeof appDashboardIndexRoute
   '/integrations/': typeof appIntegrationsIndexRoute
+  '/orgs/': typeof appOrgsIndexRoute
   '/projects/': typeof appProjectsIndexRoute
   '/reports/': typeof appReportsIndexRoute
   '/settings/': typeof appSettingsIndexRoute
@@ -316,6 +341,8 @@ export interface FileRoutesByFullPath {
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/orgs/$id/': typeof appOrgsIdIndexRoute
+  '/orgs/new/': typeof appOrgsNewIndexRoute
   '/projects/new/': typeof appProjectsNewIndexRoute
   '/test-cases/new/': typeof appTestCasesNewIndexRoute
   '/users/new/': typeof appUsersNewIndexRoute
@@ -324,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
+  '/orgs/$id/edit/': typeof appOrgsIdEditIndexRoute
   '/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -348,6 +376,7 @@ export interface FileRoutesByTo {
   '/testers/invite': typeof appTestersInviteRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/integrations': typeof appIntegrationsIndexRoute
+  '/orgs': typeof appOrgsIndexRoute
   '/projects': typeof appProjectsIndexRoute
   '/reports': typeof appReportsIndexRoute
   '/settings': typeof appSettingsIndexRoute
@@ -360,6 +389,8 @@ export interface FileRoutesByTo {
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
   '/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/orgs/$id': typeof appOrgsIdIndexRoute
+  '/orgs/new': typeof appOrgsNewIndexRoute
   '/projects/new': typeof appProjectsNewIndexRoute
   '/test-cases/new': typeof appTestCasesNewIndexRoute
   '/users/new': typeof appUsersNewIndexRoute
@@ -368,6 +399,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
+  '/orgs/$id/edit': typeof appOrgsIdEditIndexRoute
   '/test-cases/inbox/$testCaseId': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/testers/view/$testerId': typeof appTestersViewTesterIdIndexRoute
   '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -395,6 +427,7 @@ export interface FileRoutesById {
   '/(app)/testers/invite': typeof appTestersInviteRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
   '/(app)/integrations/': typeof appIntegrationsIndexRoute
+  '/(app)/orgs/': typeof appOrgsIndexRoute
   '/(app)/projects/': typeof appProjectsIndexRoute
   '/(app)/reports/': typeof appReportsIndexRoute
   '/(app)/settings/': typeof appSettingsIndexRoute
@@ -407,6 +440,8 @@ export interface FileRoutesById {
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/(app)/users/$userID/edit': typeof appUsersUserIDEditRoute
   '/(app)/users/view/$userID': typeof appUsersViewUserIDRoute
+  '/(app)/orgs/$id/': typeof appOrgsIdIndexRoute
+  '/(app)/orgs/new/': typeof appOrgsNewIndexRoute
   '/(app)/projects/new/': typeof appProjectsNewIndexRoute
   '/(app)/test-cases/new/': typeof appTestCasesNewIndexRoute
   '/(app)/users/new/': typeof appUsersNewIndexRoute
@@ -415,6 +450,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/Features/EditFeatureModuleForm': typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   '/(project)/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/(project)/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
+  '/(app)/orgs/$id/edit/': typeof appOrgsIdEditIndexRoute
   '/(app)/test-cases/inbox/$testCaseId/': typeof appTestCasesInboxTestCaseIdIndexRoute
   '/(app)/testers/view/$testerId/': typeof appTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
@@ -442,6 +478,7 @@ export interface FileRouteTypes {
     | '/testers/invite'
     | '/dashboard/'
     | '/integrations/'
+    | '/orgs/'
     | '/projects/'
     | '/reports/'
     | '/settings/'
@@ -454,6 +491,8 @@ export interface FileRouteTypes {
     | '/ui/dynamic-form-demo/'
     | '/users/$userID/edit'
     | '/users/view/$userID'
+    | '/orgs/$id/'
+    | '/orgs/new/'
     | '/projects/new/'
     | '/test-cases/new/'
     | '/users/new/'
@@ -462,6 +501,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/Features/EditFeatureModuleForm'
     | '/projects/$projectId/test-plans/$testPlanID'
     | '/projects/$projectId/testers/new'
+    | '/orgs/$id/edit/'
     | '/test-cases/inbox/$testCaseId/'
     | '/testers/view/$testerId/'
     | '/projects/$projectId/Features/'
@@ -486,6 +526,7 @@ export interface FileRouteTypes {
     | '/testers/invite'
     | '/dashboard'
     | '/integrations'
+    | '/orgs'
     | '/projects'
     | '/reports'
     | '/settings'
@@ -498,6 +539,8 @@ export interface FileRouteTypes {
     | '/ui/dynamic-form-demo'
     | '/users/$userID/edit'
     | '/users/view/$userID'
+    | '/orgs/$id'
+    | '/orgs/new'
     | '/projects/new'
     | '/test-cases/new'
     | '/users/new'
@@ -506,6 +549,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/Features/EditFeatureModuleForm'
     | '/projects/$projectId/test-plans/$testPlanID'
     | '/projects/$projectId/testers/new'
+    | '/orgs/$id/edit'
     | '/test-cases/inbox/$testCaseId'
     | '/testers/view/$testerId'
     | '/projects/$projectId/Features'
@@ -532,6 +576,7 @@ export interface FileRouteTypes {
     | '/(app)/testers/invite'
     | '/(app)/dashboard/'
     | '/(app)/integrations/'
+    | '/(app)/orgs/'
     | '/(app)/projects/'
     | '/(app)/reports/'
     | '/(app)/settings/'
@@ -544,6 +589,8 @@ export interface FileRouteTypes {
     | '/ui/dynamic-form-demo/'
     | '/(app)/users/$userID/edit'
     | '/(app)/users/view/$userID'
+    | '/(app)/orgs/$id/'
+    | '/(app)/orgs/new/'
     | '/(app)/projects/new/'
     | '/(app)/test-cases/new/'
     | '/(app)/users/new/'
@@ -552,6 +599,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/Features/EditFeatureModuleForm'
     | '/(project)/projects/$projectId/test-plans/$testPlanID'
     | '/(project)/projects/$projectId/testers/new'
+    | '/(app)/orgs/$id/edit/'
     | '/(app)/test-cases/inbox/$testCaseId/'
     | '/(app)/testers/view/$testerId/'
     | '/(project)/projects/$projectId/Features/'
@@ -665,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appProjectsIndexRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/orgs/': {
+      id: '/(app)/orgs/'
+      path: '/orgs'
+      fullPath: '/orgs/'
+      preLoaderRoute: typeof appOrgsIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/integrations/': {
       id: '/(app)/integrations/'
       path: '/integrations'
@@ -726,6 +781,20 @@ declare module '@tanstack/react-router' {
       path: '/projects/new'
       fullPath: '/projects/new/'
       preLoaderRoute: typeof appProjectsNewIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/orgs/new/': {
+      id: '/(app)/orgs/new/'
+      path: '/orgs/new'
+      fullPath: '/orgs/new/'
+      preLoaderRoute: typeof appOrgsNewIndexRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/orgs/$id/': {
+      id: '/(app)/orgs/$id/'
+      path: '/orgs/$id'
+      fullPath: '/orgs/$id/'
+      preLoaderRoute: typeof appOrgsIdIndexRouteImport
       parentRoute: typeof appRouteRoute
     }
     '/(app)/users/view/$userID': {
@@ -804,6 +873,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/test-cases/inbox/$testCaseId/'
       preLoaderRoute: typeof appTestCasesInboxTestCaseIdIndexRouteImport
       parentRoute: typeof appTestCasesInboxRouteRoute
+    }
+    '/(app)/orgs/$id/edit/': {
+      id: '/(app)/orgs/$id/edit/'
+      path: '/orgs/$id/edit'
+      fullPath: '/orgs/$id/edit/'
+      preLoaderRoute: typeof appOrgsIdEditIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(project)/projects/$projectId/testers/new': {
       id: '/(project)/projects/$projectId/testers/new'
@@ -913,6 +989,7 @@ interface appRouteRouteChildren {
   appTestersInviteRoute: typeof appTestersInviteRoute
   appDashboardIndexRoute: typeof appDashboardIndexRoute
   appIntegrationsIndexRoute: typeof appIntegrationsIndexRoute
+  appOrgsIndexRoute: typeof appOrgsIndexRoute
   appProjectsIndexRoute: typeof appProjectsIndexRoute
   appReportsIndexRoute: typeof appReportsIndexRoute
   appSettingsIndexRoute: typeof appSettingsIndexRoute
@@ -922,9 +999,12 @@ interface appRouteRouteChildren {
   appUsersIndexRoute: typeof appUsersIndexRoute
   appUsersUserIDEditRoute: typeof appUsersUserIDEditRoute
   appUsersViewUserIDRoute: typeof appUsersViewUserIDRoute
+  appOrgsIdIndexRoute: typeof appOrgsIdIndexRoute
+  appOrgsNewIndexRoute: typeof appOrgsNewIndexRoute
   appProjectsNewIndexRoute: typeof appProjectsNewIndexRoute
   appTestCasesNewIndexRoute: typeof appTestCasesNewIndexRoute
   appUsersNewIndexRoute: typeof appUsersNewIndexRoute
+  appOrgsIdEditIndexRoute: typeof appOrgsIdEditIndexRoute
   appTestersViewTesterIdIndexRoute: typeof appTestersViewTesterIdIndexRoute
 }
 
@@ -934,6 +1014,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appTestersInviteRoute: appTestersInviteRoute,
   appDashboardIndexRoute: appDashboardIndexRoute,
   appIntegrationsIndexRoute: appIntegrationsIndexRoute,
+  appOrgsIndexRoute: appOrgsIndexRoute,
   appProjectsIndexRoute: appProjectsIndexRoute,
   appReportsIndexRoute: appReportsIndexRoute,
   appSettingsIndexRoute: appSettingsIndexRoute,
@@ -943,9 +1024,12 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appUsersIndexRoute: appUsersIndexRoute,
   appUsersUserIDEditRoute: appUsersUserIDEditRoute,
   appUsersViewUserIDRoute: appUsersViewUserIDRoute,
+  appOrgsIdIndexRoute: appOrgsIdIndexRoute,
+  appOrgsNewIndexRoute: appOrgsNewIndexRoute,
   appProjectsNewIndexRoute: appProjectsNewIndexRoute,
   appTestCasesNewIndexRoute: appTestCasesNewIndexRoute,
   appUsersNewIndexRoute: appUsersNewIndexRoute,
+  appOrgsIdEditIndexRoute: appOrgsIdEditIndexRoute,
   appTestersViewTesterIdIndexRoute: appTestersViewTesterIdIndexRoute,
 }
 
