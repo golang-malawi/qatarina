@@ -28,8 +28,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import TestersAvatarGroup from "@/components/TestersAvatarGroup";
-import { importTestCasesFromFile } from "@/services/TestCaseService";
-import { markTestCaseAsDraft, useClosedTestCasesQuery, useFailingTestCasesQuery, useScheduledTestCasesQuery } from "@/services/TestCaseService";
+import { markTestCaseAsDraft, useClosedTestCasesQuery, useFailingTestCasesQuery, useScheduledTestCasesQuery, importTestCasesFromFile, useBlockedTestCasesQuery } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
 
 export const Route = createFileRoute(
@@ -219,6 +218,10 @@ export default function ListProjectTestCases() {
             <IconClock />
             &nbsp;Scheduled
           </Tabs.Trigger>
+          <Tabs.Trigger color={"purple"} value="blocked">
+            <IconAlertTriangle /> 
+            &nbsp;Blocked
+          </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="all">
@@ -253,6 +256,9 @@ export default function ListProjectTestCases() {
           </Tabs.Content>
         <Tabs.Content value="scheduled">
           <ScheduledTestCasesTab projectID={projectId} userMap={userMap} />
+          </Tabs.Content>
+        <Tabs.Content value="blocked">
+          <BlockedTestCasesTab projectID={projectId} userMap={userMap} />
           </Tabs.Content>
       </Tabs.Root>
     </div>
@@ -312,6 +318,23 @@ userMap,
 
     />
   );
+}
+
+function BlockedTestCasesTab({
+  projectID,
+  userMap,
+}: {projectID: string; userMap: Record<number, string>}){
+  const {data, isLoading, error} = useBlockedTestCasesQuery(projectID);
+  return (
+    <TestCasesTable
+      testCases={data?.test_cases ?? []}
+      isLoading={isLoading}
+      error={error}
+      loadingMessage="Loading blocked cases..."
+      errorMessage="Failed to load blocked test cases"
+      userMap={userMap}
+    />
+  )
 }
 
 type TestCasesTableProps = {

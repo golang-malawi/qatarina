@@ -119,3 +119,9 @@ export function useScheduledTestCasesQuery(projectID: string) {
     params: { path: { projectID } },
   });
 }
+
+export function useBlockedTestCasesQuery(projectID: string){
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/blocked", {
+    params: {path: {projectID}},
+  });
+}

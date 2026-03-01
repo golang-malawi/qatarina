@@ -69,6 +69,8 @@ type TestCaseService interface {
 	FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 	// FindAllScheduled used to list scheduled test cases by project ID
 	FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllBlocked is used to list bloked test cases by project ID
+	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -477,13 +479,13 @@ func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, use
 	return summaries, nil
 }
 
-func (s *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+func (t *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
 	params := dbsqlc.FindTestCasesByProjectIDParams{
 		ProjectID:    common.NewNullInt32(int32(projectID)),
 		IsClosed:     common.TrueNullBool(),
 		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePassed},
 	}
-	rows, err := s.queries.FindTestCasesByProjectID(ctx, params)
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -494,13 +496,13 @@ func (s *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64
 	return responses, nil
 }
 
-func (s *testCaseServiceImpl) FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+func (t *testCaseServiceImpl) FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
 	params := dbsqlc.FindTestCasesByProjectIDParams{
 		ProjectID:    common.NewNullInt32(int32(projectID)),
 		IsClosed:     common.TrueNullBool(),
 		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateFailed},
 	}
-	rows, err := s.queries.FindTestCasesByProjectID(ctx, params)
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -511,13 +513,13 @@ func (s *testCaseServiceImpl) FindAllFailing(ctx context.Context, projectID int6
 	return responses, nil
 }
 
-func (s *testCaseServiceImpl) FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+func (t *testCaseServiceImpl) FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
 	params := dbsqlc.FindTestCasesByProjectIDParams{
 		ProjectID:    common.NewNullInt32(int32(projectID)),
 		IsClosed:     common.FalseNullBool(),
 		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePending},
 	}
-	rows, err := s.queries.FindTestCasesByProjectID(ctx, params)
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -526,6 +528,26 @@ func (s *testCaseServiceImpl) FindAllScheduled(ctx context.Context, projectID in
 		responses = append(responses, toTestCaseResponse(row))
 	}
 	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateBlocked},
+	}
+
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+
 }
 
 func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseResponse {

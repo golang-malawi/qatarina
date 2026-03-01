@@ -454,3 +454,33 @@ func ListScheduledTestCases(testCasesService services.TestCaseService, logger lo
 		return c.JSON(schema.TestCaseListResponse{TestCases: testCases})
 	}
 }
+
+// ListBlockedTestCases godoc
+//
+//	@ID				ListBlockedTestCases
+//	@Summary		List all test cases that are currently blocked
+//	@Description	List all test cases that are currently blocked
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	schema.TestCaseListResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-cases/blocked [get]
+func ListBlockedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil || projectID == 0 {
+			return problemdetail.BadRequest(c, "missing projectID")
+		}
+
+		testCases, err := testCasesService.FindAllBlocked(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch blocked test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch blocked test cases")
+		}
+
+		return c.JSON(schema.TestCaseListResponse{TestCases: testCases})
+	}
+}
