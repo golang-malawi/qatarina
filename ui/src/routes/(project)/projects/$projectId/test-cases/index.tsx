@@ -30,6 +30,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import TestersAvatarGroup from "@/components/TestersAvatarGroup";
 import { importTestCasesFromFile } from "@/services/TestCaseService";
 import { markTestCaseAsDraft, useClosedTestCasesQuery, useFailingTestCasesQuery, useScheduledTestCasesQuery } from "@/services/TestCaseService";
+import { useUsersQuery } from "@/services/UserService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/"
@@ -53,6 +54,11 @@ export default function ListProjectTestCases() {
       toaster.create({title: "Error", description: "Failed to mark as draft", type: "error"});
     },
   });
+  const {data: usersData} = useUsersQuery();
+  const userMap = Object.fromEntries(
+    (usersData?.users ?? []).map((u: any) => [u.id, u.displayName])
+  );
+
   const { data: testCases } = useSuspenseQuery(
     testCasesByProjectIdQueryOptions(projectId)
   );
@@ -240,20 +246,23 @@ export default function ListProjectTestCases() {
           </Table.Root>
         </Tabs.Content>
         <Tabs.Content value="completed">
-          <ClosedTestCasesTab projectID={projectId} />
+          <ClosedTestCasesTab projectID={projectId} userMap={userMap}/>
         </Tabs.Content>
         <Tabs.Content value="failing">
-          <FailingTestCasesTab projectID={projectId} />
+          <FailingTestCasesTab projectID={projectId} userMap={userMap}/>
           </Tabs.Content>
         <Tabs.Content value="scheduled">
-          <ScheduledTestCasesTab projectID={projectId} />
+          <ScheduledTestCasesTab projectID={projectId} userMap={userMap} />
           </Tabs.Content>
       </Tabs.Root>
     </div>
   );
 }
 
-function ClosedTestCasesTab({projectID}: {projectID: string}){
+function ClosedTestCasesTab({
+  projectID,
+userMap,
+}: {projectID: string; userMap: Record<number, string>}){
   const {data, isLoading, error} = useClosedTestCasesQuery(projectID);
   return (
     <TestCasesTable
@@ -262,12 +271,17 @@ function ClosedTestCasesTab({projectID}: {projectID: string}){
       error={error}
       loadingMessage="Loading closed cases..."
       errorMessage="Failed to load closed test cases"
+      userMap={userMap}
+
       />
     
   );
 }
 
-function FailingTestCasesTab({ projectID }: { projectID: string }) {
+function FailingTestCasesTab({ 
+  projectID,
+userMap,
+ }: { projectID: string; userMap: Record<number, string> }) {
   const { data, isLoading, error } = useFailingTestCasesQuery(projectID);
   return (
    <TestCasesTable
@@ -276,11 +290,16 @@ function FailingTestCasesTab({ projectID }: { projectID: string }) {
       error={error}
       loadingMessage="Loading failing cases..."
       errorMessage="Failed to load failing test cases"
+      userMap={userMap}
+
    />
   );
 }
 
-function ScheduledTestCasesTab({ projectID }: { projectID: string }) {
+function ScheduledTestCasesTab({ 
+  projectID,
+userMap,
+ }: { projectID: string; userMap: Record<number, string> }) {
   const { data, isLoading, error } = useScheduledTestCasesQuery(projectID);
   return (
     <TestCasesTable 
@@ -289,6 +308,8 @@ function ScheduledTestCasesTab({ projectID }: { projectID: string }) {
       error={error}
       loadingMessage="Loading scheduled cases..."
       errorMessage="Failed to load scheduled test cases"
+      userMap={userMap}
+
     />
   );
 }
@@ -299,6 +320,7 @@ type TestCasesTableProps = {
   error: any;
   loadingMessage: string;
   errorMessage: string;
+  userMap: Record<number, string>;
 };
 
 function TestCasesTable({
@@ -307,6 +329,7 @@ function TestCasesTable({
   error,
   loadingMessage,
   errorMessage,
+  userMap
 }: TestCasesTableProps) {
   if (isLoading) return <p>{loadingMessage}</p>;
   if (error) return <p>{errorMessage}</p>;
@@ -330,7 +353,7 @@ function TestCasesTable({
             <Table.Cell>{tc.title}</Table.Cell>
             <Table.Cell>{tc.status}</Table.Cell>
             <Table.Cell>{tc.result}</Table.Cell>
-            <Table.Cell>{tc.executed_by}</Table.Cell>
+            <Table.Cell>{userMap[tc.executed_by] ?? tc.executed_by}</Table.Cell>
             <Table.Cell>{tc.notes}</Table.Cell>
           </Table.Row>
         ))}
