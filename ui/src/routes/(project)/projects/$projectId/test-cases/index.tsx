@@ -255,83 +255,61 @@ export default function ListProjectTestCases() {
 
 function ClosedTestCasesTab({projectID}: {projectID: string}){
   const {data, isLoading, error} = useClosedTestCasesQuery(projectID);
-
-  if (isLoading) return <p>Loading closed cases...</p>;
-  if (error) return <p>Failed to load test cases</p>;
-
-  const testCases = data?.test_cases ?? [];
-
   return (
-    <Table.Root>
-      <Table.Header>
-        <Table.Row>
-          <Table.ColumnHeader>Code</Table.ColumnHeader>
-          <Table.ColumnHeader>Title</Table.ColumnHeader>
-          <Table.ColumnHeader>Status</Table.ColumnHeader>
-          <Table.ColumnHeader>Result</Table.ColumnHeader>
-          <Table.ColumnHeader>Executed By</Table.ColumnHeader>
-          <Table.ColumnHeader>Notes</Table.ColumnHeader>
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {testCases.map((tc: any) => (
-          <Table.Row key={tc.id}>
-            <Table.Cell>{tc.code}</Table.Cell>
-            <Table.Cell>{tc.title}</Table.Cell>
-            <Table.Cell>{tc.status}</Table.Cell>
-            <Table.Cell>{tc.result}</Table.Cell>
-            <Table.Cell>{tc.executed_by}</Table.Cell>
-            <Table.Cell>{tc.notes}</Table.Cell>
-          </Table.Row>
-        ))}
-      </Table.Body>
-    </Table.Root>
+    <TestCasesTable
+      testCases={data?.test_cases ?? []}
+      isLoading={isLoading}
+      error={error}
+      loadingMessage="Loading closed cases..."
+      errorMessage="Failed to load closed test cases"
+      />
+    
   );
 }
 
 function FailingTestCasesTab({ projectID }: { projectID: string }) {
   const { data, isLoading, error } = useFailingTestCasesQuery(projectID);
-
-  if (isLoading) return <p>Loading failing cases...</p>;
-  if (error) return <p>Failed to load failing test cases</p>;
-
-  const testCases = data?.test_cases ?? [];
-
   return (
-    <Table.Root>
-      <Table.Header>
-        <Table.Row>
-          <Table.ColumnHeader>Code</Table.ColumnHeader>
-          <Table.ColumnHeader>Title</Table.ColumnHeader>
-          <Table.ColumnHeader>Status</Table.ColumnHeader>
-          <Table.ColumnHeader>Result</Table.ColumnHeader>
-          <Table.ColumnHeader>Executed By</Table.ColumnHeader>
-          <Table.ColumnHeader>Notes</Table.ColumnHeader>
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {testCases.map((tc: any) => (
-          <Table.Row key={tc.id}>
-            <Table.Cell>{tc.code}</Table.Cell>
-            <Table.Cell>{tc.title}</Table.Cell>
-            <Table.Cell>{tc.status}</Table.Cell>
-            <Table.Cell>{tc.result}</Table.Cell>
-            <Table.Cell>{tc.executed_by}</Table.Cell>
-            <Table.Cell>{tc.notes}</Table.Cell>
-          </Table.Row>
-        ))}
-      </Table.Body>
-    </Table.Root>
+   <TestCasesTable
+      testCases={data?.test_cases ?? []}
+      isLoading={isLoading}
+      error={error}
+      loadingMessage="Loading failing cases..."
+      errorMessage="Failed to load failing test cases"
+   />
   );
 }
 
 function ScheduledTestCasesTab({ projectID }: { projectID: string }) {
   const { data, isLoading, error } = useScheduledTestCasesQuery(projectID);
+  return (
+    <TestCasesTable 
+      testCases={data?.test_cases ?? []}
+      isLoading={isLoading}
+      error={error}
+      loadingMessage="Loading scheduled cases..."
+      errorMessage="Failed to load scheduled test cases"
+    />
+  );
+}
 
-  if (isLoading) return <p>Loading scheduled cases...</p>;
-  if (error) return <p>Failed to load scheduled test cases</p>;
+type TestCasesTableProps = {
+  testCases: any[];
+  isLoading: boolean;
+  error: any;
+  loadingMessage: string;
+  errorMessage: string;
+};
 
-  const testCases = data?.test_cases ?? [];
+function TestCasesTable({
+  testCases,
+  isLoading,
+  error,
+  loadingMessage,
+  errorMessage,
+}: TestCasesTableProps) {
+  if (isLoading) return <p>{loadingMessage}</p>;
+  if (error) return <p>{errorMessage}</p>;
 
   return (
     <Table.Root>
