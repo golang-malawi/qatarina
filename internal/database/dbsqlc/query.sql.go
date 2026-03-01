@@ -743,84 +743,7 @@ func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) 
 	return err
 }
 
-const findClosedCasesByProjectID = `-- name: FindClosedCasesByProjectID :many
-SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
-    tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags, 
-    tc.created_at, tc.updated_at,
-    CASE
-        WHEN tr.is_closed THEN 'closed' ELSE 'open'
-    END AS status,
-    tr.id AS run_id, tr.result_state, tr.is_closed, 
-    tr.tested_by_id, tr.notes
-FROM test_cases tc
-JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.is_closed = true AND tc.project_id = $1
-`
-
-type FindClosedCasesByProjectIDRow struct {
-	ID              uuid.UUID
-	ProjectID       sql.NullInt32
-	CreatedByID     int32
-	Kind            TestKind
-	Code            string
-	FeatureOrModule sql.NullString
-	Title           string
-	Description     string
-	IsDraft         sql.NullBool
-	Tags            []string
-	CreatedAt       sql.NullTime
-	UpdatedAt       sql.NullTime
-	Status          string
-	RunID           uuid.UUID
-	ResultState     TestRunState
-	IsClosed        sql.NullBool
-	TestedByID      int32
-	Notes           string
-}
-
-func (q *Queries) FindClosedCasesByProjectID(ctx context.Context, projectID sql.NullInt32) ([]FindClosedCasesByProjectIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, findClosedCasesByProjectID, projectID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FindClosedCasesByProjectIDRow
-	for rows.Next() {
-		var i FindClosedCasesByProjectIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProjectID,
-			&i.CreatedByID,
-			&i.Kind,
-			&i.Code,
-			&i.FeatureOrModule,
-			&i.Title,
-			&i.Description,
-			&i.IsDraft,
-			pq.Array(&i.Tags),
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Status,
-			&i.RunID,
-			&i.ResultState,
-			&i.IsClosed,
-			&i.TestedByID,
-			&i.Notes,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const findFailingCasesByProjectID = `-- name: FindFailingCasesByProjectID :many
+const findTestCasesByProjectID = `-- name: FindTestCasesByProjectID :many
 SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
        tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
        tc.created_at, tc.updated_at,
@@ -829,10 +752,18 @@ SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
        tr.tested_by_id, tr.notes
 FROM test_cases tc
 JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.result_state = 'failed' AND tc.project_id = $1
+WHERE tc.project_id = $1
+  AND (tr.is_closed = $2 OR $2 IS NULL)
+  AND tr.result_state = ANY($3::test_run_state[])
 `
 
-type FindFailingCasesByProjectIDRow struct {
+type FindTestCasesByProjectIDParams struct {
+	ProjectID    sql.NullInt32
+	IsClosed     sql.NullBool
+	ResultStates []TestRunState
+}
+
+type FindTestCasesByProjectIDRow struct {
 	ID              uuid.UUID
 	ProjectID       sql.NullInt32
 	CreatedByID     int32
@@ -853,90 +784,15 @@ type FindFailingCasesByProjectIDRow struct {
 	Notes           string
 }
 
-func (q *Queries) FindFailingCasesByProjectID(ctx context.Context, projectID sql.NullInt32) ([]FindFailingCasesByProjectIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, findFailingCasesByProjectID, projectID)
+func (q *Queries) FindTestCasesByProjectID(ctx context.Context, arg FindTestCasesByProjectIDParams) ([]FindTestCasesByProjectIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, findTestCasesByProjectID, arg.ProjectID, arg.IsClosed, pq.Array(arg.ResultStates))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []FindFailingCasesByProjectIDRow
+	var items []FindTestCasesByProjectIDRow
 	for rows.Next() {
-		var i FindFailingCasesByProjectIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProjectID,
-			&i.CreatedByID,
-			&i.Kind,
-			&i.Code,
-			&i.FeatureOrModule,
-			&i.Title,
-			&i.Description,
-			&i.IsDraft,
-			pq.Array(&i.Tags),
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Status,
-			&i.RunID,
-			&i.ResultState,
-			&i.IsClosed,
-			&i.TestedByID,
-			&i.Notes,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const findScheduledCasesByProjectID = `-- name: FindScheduledCasesByProjectID :many
-SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
-       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
-       tc.created_at, tc.updated_at,
-       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
-       tr.id AS run_id, tr.result_state, tr.is_closed,
-       tr.tested_by_id, tr.notes
-FROM test_cases tc
-JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.is_closed = false AND tc.project_id = $1
-`
-
-type FindScheduledCasesByProjectIDRow struct {
-	ID              uuid.UUID
-	ProjectID       sql.NullInt32
-	CreatedByID     int32
-	Kind            TestKind
-	Code            string
-	FeatureOrModule sql.NullString
-	Title           string
-	Description     string
-	IsDraft         sql.NullBool
-	Tags            []string
-	CreatedAt       sql.NullTime
-	UpdatedAt       sql.NullTime
-	Status          string
-	RunID           uuid.UUID
-	ResultState     TestRunState
-	IsClosed        sql.NullBool
-	TestedByID      int32
-	Notes           string
-}
-
-func (q *Queries) FindScheduledCasesByProjectID(ctx context.Context, projectID sql.NullInt32) ([]FindScheduledCasesByProjectIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, findScheduledCasesByProjectID, projectID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FindScheduledCasesByProjectIDRow
-	for rows.Next() {
-		var i FindScheduledCasesByProjectIDRow
+		var i FindTestCasesByProjectIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProjectID,
