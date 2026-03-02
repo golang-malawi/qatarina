@@ -349,6 +349,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/environments/{envID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get details of a single environment by ID
+         * @description Get details of a single environment by ID
+         */
+        get: operations["GetEnvironment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox": {
         parameters: {
             query?: never;
@@ -592,6 +612,26 @@ export interface paths {
          * @description Delete a Project
          */
         delete: operations["DeleteProject"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/environments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List environments for a project
+         * @description List environments for a project
+         */
+        get: operations["ListEnvironments"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1644,6 +1684,23 @@ export interface components {
             test_plan_count?: number;
             tester_count?: number;
         };
+        "schema.EnvironmentListResponse": {
+            environments?: components["schemas"]["schema.EnvironmentResponse"][];
+        };
+        "schema.EnvironmentRequest": {
+            base_url?: string;
+            description?: string;
+            name: string;
+        };
+        "schema.EnvironmentResponse": {
+            base_url?: string;
+            created_at?: string;
+            description?: string;
+            id?: number;
+            name?: string;
+            project_id?: number;
+            updated_at?: string;
+        };
         "schema.ExecuteTestRunRequest": {
             expected_result?: string;
             id: string;
@@ -1682,6 +1739,7 @@ export interface components {
         "schema.NewProjectRequest": {
             code: string;
             description: string;
+            environments?: components["schemas"]["schema.EnvironmentRequest"][];
             github_url?: string;
             name: string;
             parent_project_id?: number;
@@ -1925,8 +1983,8 @@ export interface components {
         "schema.UserCompact": {
             createdAt?: string;
             displayName?: string;
+            email?: string;
             id?: number;
-            username?: string;
         };
     };
     responses: never;
@@ -2002,6 +2060,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.DashboardSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Environment ID */
+                envID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.EnvironmentResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2976,6 +3079,51 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListEnvironments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.EnvironmentListResponse"];
                 };
             };
             /** @description Bad Request */
