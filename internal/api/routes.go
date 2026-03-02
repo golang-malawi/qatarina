@@ -63,6 +63,7 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-cases/failing", apiv1.ListFailingTestCases(api.TestCasesService, api.logger))
 		projectsV1.Get("/:projectID/test-cases/scheduled", apiv1.ListScheduledTestCases(api.TestCasesService, api.logger))
 		projectsV1.Get("/:projectID/test-cases/blocked", apiv1.ListBlockedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -166,6 +167,11 @@ func (api *API) routes() {
 	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
 	{
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
+	}
+
+	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+	{
+		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"
