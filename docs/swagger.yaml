@@ -2027,6 +2027,46 @@ paths:
       summary: Update a Project
       tags:
       - projects
+  /v1/projects/{projectID}/environemnts:
+    post:
+      description: Create a new environment
+      operationId: CreateEnvironmnet
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.EnvironmentRequest'
+        description: Environment details
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Create a new environment
+      tags:
+      - environments
   /v1/projects/{projectID}/environments:
     get:
       description: List environments for a project
