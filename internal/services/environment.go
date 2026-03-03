@@ -2,11 +2,15 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 type EnvironmentService interface {
@@ -65,11 +69,24 @@ func (s *environmentServiceImpl) FindByID(ctx context.Context, envID int64) (*sc
 }
 
 func (s *environmentServiceImpl) Create(ctx context.Context, projectID int64, req *schema.EnvironmentRequest) (*schema.EnvironmentResponse, error) {
+	policy := bluemonday.StrictPolicy()
+
+	name := policy.Sanitize(strings.TrimSpace(req.Name))
+	description := policy.Sanitize(strings.TrimSpace(req.Description))
+
+	var baseURL string
+	if req.BaseURL != "" {
+		if _, err := url.ParseRequestURI(req.BaseURL); err != nil {
+			return nil, fmt.Errorf("invalid base URL: %w", err)
+		}
+		baseURL = policy.Sanitize(strings.TrimSpace(req.BaseURL))
+	}
+
 	env, err := s.queries.CreateEnvironment(ctx, dbsqlc.CreateEnvironmentParams{
 		ProjectID:   common.NewNullInt32(int32(projectID)),
-		Name:        req.Name,
-		Description: common.NullString(req.Description),
-		BaseUrl:     common.NullString(req.BaseURL),
+		Name:        name,
+		Description: common.NullString(description),
+		BaseUrl:     common.NullString(baseURL),
 	})
 	if err != nil {
 		return nil, err
