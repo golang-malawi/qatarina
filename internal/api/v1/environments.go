@@ -83,7 +83,7 @@ func GetEnvironment(environmentService services.EnvironmentService, logger loggi
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/projects/{projectID}/environemnts [post]
+//	@Router			/v1/projects/{projectID}/environments [post]
 func CreateEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID")

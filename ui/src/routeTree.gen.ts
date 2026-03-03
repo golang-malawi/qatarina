@@ -54,6 +54,7 @@ import { Route as projectProjectsProjectIdFeaturesCreateFeatureModuleFormRouteIm
 import { Route as projectProjectsProjectIdTestPlansNewIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/new/index'
 import { Route as projectProjectsProjectIdTestCasesNewIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/new/index'
 import { Route as projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/$testCaseId/index'
+import { Route as projectProjectsProjectIdEnvironmentsNewIndexRouteImport } from './routes/(project)/projects/$projectId/environments/new/index'
 import { Route as projectProjectsProjectIdTestersEditTesterIdRouteImport } from './routes/(project)/projects/$projectId/testers/edit/$testerId'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/testers/index'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/index'
@@ -304,6 +305,12 @@ const projectProjectsProjectIdTestCasesTestCaseIdIndexRoute =
     path: '/test-cases/$testCaseId/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
+const projectProjectsProjectIdEnvironmentsNewIndexRoute =
+  projectProjectsProjectIdEnvironmentsNewIndexRouteImport.update({
+    id: '/environments/new/',
+    path: '/environments/new/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
 const projectProjectsProjectIdTestersEditTesterIdRoute =
   projectProjectsProjectIdTestersEditTesterIdRouteImport.update({
     id: '/testers/edit/$testerId',
@@ -378,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
   '/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/projects/$projectId/environments/new/': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
@@ -428,6 +436,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
   '/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/projects/$projectId/environments/new': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
@@ -481,6 +490,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/(project)/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
   '/(project)/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/(project)/projects/$projectId/environments/new/': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/(project)/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/(project)/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/(project)/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans/'
     | '/projects/$projectId/testers/'
     | '/projects/$projectId/testers/edit/$testerId'
+    | '/projects/$projectId/environments/new/'
     | '/projects/$projectId/test-cases/$testCaseId/'
     | '/projects/$projectId/test-cases/new/'
     | '/projects/$projectId/test-plans/new/'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans'
     | '/projects/$projectId/testers'
     | '/projects/$projectId/testers/edit/$testerId'
+    | '/projects/$projectId/environments/new'
     | '/projects/$projectId/test-cases/$testCaseId'
     | '/projects/$projectId/test-cases/new'
     | '/projects/$projectId/test-plans/new'
@@ -636,6 +648,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/test-plans/'
     | '/(project)/projects/$projectId/testers/'
     | '/(project)/projects/$projectId/testers/edit/$testerId'
+    | '/(project)/projects/$projectId/environments/new/'
     | '/(project)/projects/$projectId/test-cases/$testCaseId/'
     | '/(project)/projects/$projectId/test-cases/new/'
     | '/(project)/projects/$projectId/test-plans/new/'
@@ -970,6 +983,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
+    '/(project)/projects/$projectId/environments/new/': {
+      id: '/(project)/projects/$projectId/environments/new/'
+      path: '/environments/new'
+      fullPath: '/projects/$projectId/environments/new/'
+      preLoaderRoute: typeof projectProjectsProjectIdEnvironmentsNewIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
     '/(project)/projects/$projectId/testers/edit/$testerId': {
       id: '/(project)/projects/$projectId/testers/edit/$testerId'
       path: '/testers/edit/$testerId'
@@ -1117,6 +1137,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdTestPlansIndexRoute: typeof projectProjectsProjectIdTestPlansIndexRoute
   projectProjectsProjectIdTestersIndexRoute: typeof projectProjectsProjectIdTestersIndexRoute
   projectProjectsProjectIdTestersEditTesterIdRoute: typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  projectProjectsProjectIdEnvironmentsNewIndexRoute: typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   projectProjectsProjectIdTestCasesTestCaseIdIndexRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   projectProjectsProjectIdTestCasesNewIndexRoute: typeof projectProjectsProjectIdTestCasesNewIndexRoute
   projectProjectsProjectIdTestPlansNewIndexRoute: typeof projectProjectsProjectIdTestPlansNewIndexRoute
@@ -1153,6 +1174,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdTestersIndexRoute,
     projectProjectsProjectIdTestersEditTesterIdRoute:
       projectProjectsProjectIdTestersEditTesterIdRoute,
+    projectProjectsProjectIdEnvironmentsNewIndexRoute:
+      projectProjectsProjectIdEnvironmentsNewIndexRoute,
     projectProjectsProjectIdTestCasesTestCaseIdIndexRoute:
       projectProjectsProjectIdTestCasesTestCaseIdIndexRoute,
     projectProjectsProjectIdTestCasesNewIndexRoute:
