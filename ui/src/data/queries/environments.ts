@@ -1,4 +1,3 @@
-import { queryOptions } from "@tanstack/react-query";
 import $api from "@/lib/api/query";
 
 export const findEnvironmentsByProjectQueryOptions = (projectId: string | number) =>
