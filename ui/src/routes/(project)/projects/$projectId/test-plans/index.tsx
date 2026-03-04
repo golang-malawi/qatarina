@@ -1,27 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button, Container, Flex, Heading } from "@chakra-ui/react";
-import { useProjectTestPlansQuery, useDeleteTestPlanMutation } from "@/services/TestPlanService";
+import { useDeleteTestPlanMutation } from "@/services/TestPlanService";
 import { IconRefreshDot, IconTrash } from "@tabler/icons-react";
 import {toaster} from "@/components/ui/toaster";
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { findProjectTestPlansQueryOptions } from "@/data/queries/test-plans";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/"
 )({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(findProjectTestPlansQueryOptions(projectId)),
   component: ListProjectTestPlans,
 });
 
 function ListProjectTestPlans() {
   const { projectId } = Route.useParams();
-  const {
-    data: testPlans,
-    isLoading,
-    error,
-    refetch,
-  } = useProjectTestPlansQuery(projectId!);
+  const queryClient = useQueryClient();
   const deleteMutation = useDeleteTestPlanMutation();
  
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error loading test plans</div>;
+  const testPlansQueryOptions = findProjectTestPlansQueryOptions(projectId);
+  const { data: testPlans } = useSuspenseQuery(testPlansQueryOptions);
 
   const handleDelete = async (testPlanID: string) => {
     if (!window.confirm("Are you sure you want to delete this test plan?")) return;
@@ -30,16 +29,23 @@ function ListProjectTestPlans() {
       await deleteMutation.mutateAsync({
         params: { path: { testPlanID } },
       });
-      toaster.success({title: "Test plan deleted successfully"});
-      refetch();  
+      toaster.create({
+        title: "Test plan deleted successfully",
+        type: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: testPlansQueryOptions.queryKey });
     }catch (err) {
       console.error("Failed to delete test plan", err);
-      toaster.error({title: "Failed to delete test plan"});
+      toaster.create({
+        title: "Failed to delete test plan",
+        type: "error",
+      });
     }
   };
   
-  const testPlanList = (testPlans?.test_plans ?? []).map((entry) => (
-    <Flex alignItems={"start"} gap="3" p="5" key={entry?.id}>
+  const testPlanList = (testPlans?.test_plans ?? []).map((entry) => {
+    return(
+      <Flex alignItems={"start"} gap="3" p="5" key={entry?.id}>
       <Link
         to={`/projects/$projectId/test-plans/$testPlanID/execute`}
         params={{
@@ -72,8 +78,10 @@ function ListProjectTestPlans() {
         <IconTrash color="red" />
         &nbsp;Delete
       </Button>
-    </Flex>
-  ));
+      </Flex>
+    );
+         
+});
   return (
     <Container>
       <Heading>Test Plans</Heading>

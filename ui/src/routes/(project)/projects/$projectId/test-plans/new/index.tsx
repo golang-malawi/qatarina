@@ -15,13 +15,14 @@ import { Toaster, toaster } from "@/components/ui/toaster"
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SelectAssignedTestCase, CreateTestPlan } from "@/common/models";
+import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { testPlanCreationSchema } from "@/data/forms/test-plan-schemas";
+import { testPlanCreationSchema, TestPlanCreationFormValues } from "@/data/forms/test-plan-schemas";
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
+import {findEnvironmentsByProjectQueryOptions} from "@/data/queries/environments";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
@@ -31,13 +32,18 @@ export const Route = createFileRoute(
   component: CreateNewTestPlan,
 });
 
-type CreateTestPlanForm = Omit<CreateTestPlan, "project_id">;
+type CreateTestPlanForm = TestPlanCreationFormValues;
 
 function CreateNewTestPlan() {
   const createTestPlanMutation = useCreateTestPlanMutation();
   const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
+  
+  const {data: envData} = useSuspenseQuery(
+    findEnvironmentsByProjectQueryOptions(projectId!)
+  );
+  const environments = envData?.environments ?? [];
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]
@@ -81,10 +87,19 @@ function CreateNewTestPlan() {
     return;
   }
 
+  if (!data.environment_id) {
+    toaster.create({
+      title: "Missing environment",
+      description: "Please select an environment before creating the test plan.",
+      type: "error",
+    });
+    return;
+  }
+
   const res = await createTestPlanMutation.mutateAsync({
     body: {
       project_id: parseInt(projectId!),
-      assigned_to_id: data.assigned_to_id,
+      environment_id: Number(data.environment_id),
       kind: data.kind,
       description: data.description,
       start_at: data.start_at,
@@ -146,9 +161,14 @@ function CreateNewTestPlan() {
       />
       <Box>
         <Heading>Create a Test Plan</Heading>
+        {/* build fields with environment options so select appears inside the DynamicForm */}
         <DynamicForm
           schema={testPlanCreationSchema}
-          fields={testPlanCreationFields}
+          fields={testPlanCreationFields.map((f) =>
+            f.name === "environment_id"
+              ? { ...f, options: environments.map((e: any) => ({ label: e.name, value: String(e.id) })) }
+              : f
+          )}
           onSubmit={handleSubmit}
           submitText="Create Plan"
           layout="vertical"

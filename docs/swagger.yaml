@@ -283,6 +283,8 @@ components:
           type: integer
         description:
           type: string
+        environment_id:
+          type: integer
         kind:
           type: string
         planned_tests:
@@ -300,6 +302,7 @@ components:
           type: integer
       required:
       - description
+      - environment_id
       - kind
       - project_id
       - start_at
@@ -708,6 +711,8 @@ components:
           type: integer
         description:
           type: string
+        environment_id:
+          type: integer
         failed_count:
           type: integer
         has_report:
