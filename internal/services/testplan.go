@@ -46,12 +46,13 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	// TODO: create the test plan
 	// TODO: create test-runs for the plan from assigned
 	testPlanParams := dbsqlc.CreateTestPlanParams{
-		ProjectID:    int32(request.ProjectID),
-		AssignedToID: int32(request.AssignedToID),
-		CreatedByID:  int32(request.CreatedByID),
-		UpdatedByID:  int32(request.UpdatedByID),
-		Kind:         dbsqlc.TestKind(request.Kind),
-		Description:  sql.NullString{String: request.Description, Valid: true},
+		ProjectID:     int32(request.ProjectID),
+		AssignedToID:  int32(request.AssignedToID),
+		CreatedByID:   int32(request.CreatedByID),
+		UpdatedByID:   int32(request.UpdatedByID),
+		Kind:          dbsqlc.TestKind(request.Kind),
+		Description:   sql.NullString{String: request.Description, Valid: true},
+		EnvironmentID: common.NewNullInt32(int32(request.EnvironmentID)),
 		// TODO: handle time fields
 		// StartAt:        sql.NullTime{Time: time.Now, Valid: true},
 		// ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
@@ -192,6 +193,7 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 	response := schema.TestPlanResponseItem{
 		ID:              plan.ID,
 		ProjectID:       plan.ProjectID,
+		EnvironmentID:   plan.EnvironmentID.Int32,
 		AssignedToID:    plan.AssignedToID,
 		CreatedByID:     plan.CreatedByID,
 		UpdatedByID:     plan.UpdatedByID,
@@ -235,6 +237,7 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 		ProjectID:      int32(request.ProjectID),
 		Kind:           dbsqlc.TestKind(request.Kind),
 		Description:    common.NullString(request.Description),
+		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
 		StartAt:        common.NullTime(request.StartAt),
 		ClosedAt:       common.NullTime(request.ClosedAt),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
