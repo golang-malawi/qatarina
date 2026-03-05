@@ -17,7 +17,7 @@ type CreateTestPlan struct {
 	AssignedToID   int64                `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64                `json:"created_by_id" validate:"-"`
 	UpdatedByID    int64                `json:"updated_by_id" validate:"-"`
-	EnvironmentID  int64                `json:"environment_id" validate:"required"`
+	EnvironmentID  int64                `json:"environment_id" validate:"-"`
 	PlannedTests   []TestCaseAssignment `json:"planned_tests"`
 }
 
@@ -100,7 +100,7 @@ type UpdateTestPlan struct {
 	AssignedToID   int64     `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64     `json:"created_by_id" validate:"-"`
 	UpdatedByID    int64     `json:"updated_by_id" validate:"-"`
-	EnvironmentID  int64     `json:"environment_id" validate:"required"`
+	EnvironmentID  int64     `json:"environment_id" validate:"-"`
 }
 
 type TestCaseResponseItem struct {
