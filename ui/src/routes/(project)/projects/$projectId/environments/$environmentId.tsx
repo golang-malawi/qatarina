@@ -27,15 +27,29 @@ function EnvironmentDetailPage() {
           <Heading size="lg" mb={4}>
             Environment Details
           </Heading>
+            <Text fontWeight="bold">Name:</Text>
+            <Text mb={2}>{env?.name}</Text>
+            
+              <Text fontWeight="bold">Description:</Text>
+              <Text mb={2}>
+                {env?.description && env.description.trim().length > 0
+                  ? env.description
+                  : "No description provided."}
+                  </Text>
+         
+            <Text fontWeight="bold">Base URL:</Text>
+            <Text mb={2} color="blue.500">
+              {env?.base_url && env.base_url.trim().length > 0
+              ? env.base_url
+              : "No base URL provided."}
+              </Text>
 
-            <Heading size="md">{env?.name}</Heading>
-            {env?.description && <Text>{env.description}</Text>}
-            {env?.base_url && <Text color="blue.500">{env.base_url}</Text>}
             <Text fontSize="sm" color="gray.500">
-                Created at: {env?.created_at}
-                </Text>
+              Created at: {env?.created_at}
+            </Text>
             <Text fontSize="sm" color="gray.500">
-                Updated at: {env?.updated_at}</Text>
+              Updated at: {env?.updated_at}
+            </Text>
         </Box>
     );    
 }

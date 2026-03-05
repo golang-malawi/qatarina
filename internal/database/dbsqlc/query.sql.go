@@ -154,7 +154,7 @@ INSERT INTO environments (
     project_id, name, description, base_url, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, now(), now()
-) RETURNING id
+) RETURNING id, project_id, name, description, base_url, created_at, updated_at
 `
 
 type CreateEnvironmentParams struct {
@@ -164,16 +164,24 @@ type CreateEnvironmentParams struct {
 	BaseUrl     sql.NullString
 }
 
-func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (int32, error) {
+func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
 	row := q.db.QueryRowContext(ctx, createEnvironment,
 		arg.ProjectID,
 		arg.Name,
 		arg.Description,
 		arg.BaseUrl,
 	)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.BaseUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const createInvite = `-- name: CreateInvite :exec

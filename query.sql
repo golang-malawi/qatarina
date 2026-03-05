@@ -586,7 +586,7 @@ INSERT INTO environments (
     project_id, name, description, base_url, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, now(), now()
-) RETURNING id;
+) RETURNING *;
 
 -- name: ListEnvironmentsByProject :many
 SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
