@@ -111,6 +111,29 @@ export function useCloseTestPlanMutation() {
   return $api.useMutation("post", "/v1/test-plans/{testPlanID}/close");
 }
 
+export async function changeTestPlanEnvironment(
+  testPlanID: number,
+  environmentID: number
+
+){
+  const response = await apiClient.request(
+    "post", 
+    "/v1/test-plans/{testPlanID}/environment",
+    {
+      params: {path: {testPlanID: String(testPlanID)}},
+      body: {environment_id: environmentID},
+    }
+  );
+
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to update test plan");
+    
+  }
+
+  return response.data;
+}
+
 // export async function removeTestersFromTestPlan(
 //   testPlanID: string,
 //   userIDs: string[]

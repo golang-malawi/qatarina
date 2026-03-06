@@ -1159,6 +1159,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/environment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change environment of a Test Plan
+         * @description Change environment of a Test Plan
+         */
+        post: operations["ChangeEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-cases": {
         parameters: {
             query?: never;
@@ -1613,6 +1633,9 @@ export interface components {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
         };
+        "schema.ChangeEnvironmentRequest": {
+            environment_id: number;
+        };
         "schema.ChangePasswordRequest": {
             confirm_password: string;
             new_password: string;
@@ -1664,7 +1687,7 @@ export interface components {
             closed_at?: string;
             created_by_id?: number;
             description: string;
-            environment_id: number;
+            environment_id?: number;
             kind: string;
             planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
@@ -4227,6 +4250,52 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ChangeEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Environment change payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ChangeEnvironmentRequest"];
             };
         };
         responses: {
