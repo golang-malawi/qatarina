@@ -63,3 +63,5 @@ TODO: to describe the contribution process
 ## LICENSE
 
 MIT LICENSE
+
+![[]](./docs/sponsored-by-nndi.png)

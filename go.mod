@@ -14,6 +14,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/lucasepe/homedir v0.0.0-20190526081923-f2b92ef978a0
+	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/pressly/goose/v3 v3.21.1
 	github.com/riverqueue/river v0.8.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.8.0
@@ -30,6 +31,7 @@ require (
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -41,6 +43,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

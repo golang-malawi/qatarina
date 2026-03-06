@@ -171,7 +171,7 @@ INSERT INTO environments (
     project_id, name, description, base_url, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, now(), now()
-) RETURNING id
+) RETURNING id, project_id, name, description, base_url, created_at, updated_at
 `
 
 type CreateEnvironmentParams struct {
@@ -181,16 +181,24 @@ type CreateEnvironmentParams struct {
 	BaseUrl     sql.NullString
 }
 
-func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (int32, error) {
+func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
 	row := q.db.QueryRowContext(ctx, createEnvironment,
 		arg.ProjectID,
 		arg.Name,
 		arg.Description,
 		arg.BaseUrl,
 	)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
+	var i Environment
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.BaseUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const createInvite = `-- name: CreateInvite :exec
@@ -789,6 +797,89 @@ func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) 
 		arg.ExpectedResult,
 	)
 	return err
+}
+
+const findTestCasesByProjectID = `-- name: FindTestCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
+       tc.created_at, tc.updated_at,
+       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+       tr.id AS run_id, tr.result_state, tr.is_closed,
+       tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = $1
+  AND (tr.is_closed = $2 OR $2 IS NULL)
+  AND tr.result_state = ANY($3::test_run_state[])
+`
+
+type FindTestCasesByProjectIDParams struct {
+	ProjectID    sql.NullInt32
+	IsClosed     sql.NullBool
+	ResultStates []TestRunState
+}
+
+type FindTestCasesByProjectIDRow struct {
+	ID              uuid.UUID
+	ProjectID       sql.NullInt32
+	CreatedByID     int32
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	Status          string
+	RunID           uuid.UUID
+	ResultState     TestRunState
+	IsClosed        sql.NullBool
+	TestedByID      int32
+	Notes           string
+}
+
+func (q *Queries) FindTestCasesByProjectID(ctx context.Context, arg FindTestCasesByProjectIDParams) ([]FindTestCasesByProjectIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, findTestCasesByProjectID, arg.ProjectID, arg.IsClosed, pq.Array(arg.ResultStates))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindTestCasesByProjectIDRow
+	for rows.Next() {
+		var i FindTestCasesByProjectIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.CreatedByID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.RunID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.TestedByID,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const findUserLoginByEmail = `-- name: FindUserLoginByEmail :one

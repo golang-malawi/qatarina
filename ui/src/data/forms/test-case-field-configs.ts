@@ -1,6 +1,6 @@
 import { FieldConfig } from "@/components/form/DynamicForm";
 
-export const createTestCaseFields = (projectId: string): FieldConfig[] => [
+export const createTestCaseFields = (): FieldConfig[] => [
   {
     name: "title",
     label: "Title",
@@ -23,7 +23,6 @@ export const createTestCaseFields = (projectId: string): FieldConfig[] => [
     type: "feature-module",
     helperText: "Test Case Feature or Module.",
     required: true,
-    projectId: projectId,
   },
   {
     name: "kind",

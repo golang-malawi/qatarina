@@ -4,7 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { testCaseCreationSchema, TestCaseCreationFormData } from "@/data/forms/test-case-schemas";
+import {
+  testCaseCreationSchema,
+  TestCaseCreationFormData,
+} from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 
 export const Route = createFileRoute(
@@ -21,9 +24,13 @@ function NewTestCases() {
 
   async function handleSubmit(values: TestCaseCreationFormData) {
     // Handle tags - if it's a string, split it, otherwise use as is
-    const tags = typeof values.tags === 'string'
-      ? values.tags.split(',').map(t => t.trim()).filter(Boolean)
-      : values.tags || [];
+    const tags =
+      typeof values.tags === "string"
+        ? values.tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : values.tags || [];
 
     const res = await createTestCaseMutation.mutateAsync({
       body: {
@@ -54,7 +61,7 @@ function NewTestCases() {
       <Heading size="3xl">Create Test Cases</Heading>
       <DynamicForm
         schema={testCaseCreationSchema}
-        fields={createTestCaseFields(project_id)}
+        fields={createTestCaseFields()}
         onSubmit={handleSubmit}
         submitText="Create Test Case"
         submitLoading={createTestCaseMutation.isPending}
