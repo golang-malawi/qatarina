@@ -115,3 +115,7 @@ type TestPlanSummary struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
+
+type ChangeEnvironmentRequest struct {
+	EnvironmentID int64 `json:"environment_id" validate:"required"`
+}

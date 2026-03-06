@@ -43,6 +43,23 @@ func (q *Queries) AssignTesterToProject(ctx context.Context, arg AssignTesterToP
 	return result.RowsAffected()
 }
 
+const changeEnvironment = `-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type ChangeEnvironmentParams struct {
+	ID            int64
+	EnvironmentID sql.NullInt32
+}
+
+func (q *Queries) ChangeEnvironment(ctx context.Context, arg ChangeEnvironmentParams) error {
+	_, err := q.db.ExecContext(ctx, changeEnvironment, arg.ID, arg.EnvironmentID)
+	return err
+}
+
 const changeUserPassword = `-- name: ChangeUserPassword :exec
 UPDATE users
 SET password = $2, updated_at = $3

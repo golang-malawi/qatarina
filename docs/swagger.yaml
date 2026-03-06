@@ -152,6 +152,13 @@ components:
       - project_id
       - test_cases
       type: object
+    schema.ChangeEnvironmentRequest:
+      properties:
+        environment_id:
+          type: integer
+      required:
+      - environment_id
+      type: object
     schema.ChangePasswordRequest:
       properties:
         confirm_password:
@@ -302,7 +309,6 @@ components:
           type: integer
       required:
       - description
-      - environment_id
       - kind
       - project_id
       - start_at
@@ -3041,6 +3047,46 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Close a Test Plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/environment:
+    post:
+      description: Change environment of a Test Plan
+      operationId: ChangeEnvironment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ChangeEnvironmentRequest'
+        description: Environment change payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Change environment of a Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/test-cases:

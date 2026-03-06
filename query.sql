@@ -282,6 +282,12 @@ closed_at = $2,
 updated_at = $2
 WHERE id = $1;
 
+-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: GetTestRunStatesForPlan :many
 SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
 
