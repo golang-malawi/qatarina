@@ -183,6 +183,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		Notes:          request.Notes,
 		ActualResult:   common.NullString(request.Result),
 		ExpectedResult: common.NullString(request.ExpectedResult),
+		EnvironmentID:  common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute test case: %w", err)

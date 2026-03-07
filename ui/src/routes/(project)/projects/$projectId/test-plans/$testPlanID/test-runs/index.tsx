@@ -1,3 +1,4 @@
+import $api from '@/lib/api/query';
 import { getTestRunsByPlan, closeTestRun } from '@/services/TestRunService';
 import { Box, Button, Heading, Stack, Text, } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +11,7 @@ export const Route = createFileRoute(
 })
 
 function RouteComponent() {
-  const { testPlanID } = Route.useParams();
+  const { projectId, testPlanID } = Route.useParams();
   // Fetch test runs (v5 object form)
   const {
     data,
@@ -21,6 +22,12 @@ function RouteComponent() {
     queryKey: ["testRuns", testPlanID],
     queryFn: () => getTestRunsByPlan(testPlanID!),
   });
+
+  const {data: {environments = []} = {} } = $api.useQuery(
+    "get",
+    "/v1/projects/{projectID}/environments",
+    {params: {path: {projectID: projectId}}}
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (error)return <div>Error loading test runs</div>;
@@ -38,8 +45,10 @@ function RouteComponent() {
       </Heading>
       {testRuns.length ? (
         <Stack gap={2} mt={3}>
-          {testRuns.map((run: any) => (
-            <Box key={run.id} p={3} borderWidth="1px" rounded="md">
+          {testRuns.map((run: any) => {
+            const env = environments.find((e: any) => e.id === run.environment_id);
+            return (
+              <Box key={run.id} p={3} borderWidth="1px" rounded="md">
               <Text>
                 <strong>Test Case:</strong> {run.test_case_title}
               </Text>
@@ -68,13 +77,15 @@ function RouteComponent() {
               <Text>
                 <strong>Closed:</strong> {run.is_closed ? "Yes" : "No"}
               </Text>
+              <Text><strong>Environment:</strong> {env ? env.name : "Not specified"}</Text>
               {!run.is_closed && (
                 <Button size="sm" mt={2} onClick={() => handleClose(run.id)}>
                   Close Test Run
                 </Button>
               )}
             </Box>
-          ))}
+            );
+          })}
         </Stack>
       ) : (
         <Text mt={2}>No test runs found.</Text>
