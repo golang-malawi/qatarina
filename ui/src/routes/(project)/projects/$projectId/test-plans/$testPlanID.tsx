@@ -1,6 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { useTestPlanQuery } from "@/services/TestPlanService";
-import { closeTestPlan } from "@/services/TestPlanService";
+import { useTestPlanQuery, closeTestPlan, changeTestPlanEnvironment } from "@/services/TestPlanService";
 import {
   Box,
   Heading,
@@ -10,16 +9,21 @@ import {
   Button,
   Flex,
   Stat,
+  Menu,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { toaster } from "@/components/ui/toaster";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
+
 /**
  * Test plan type – MATCHES API RESPONSE EXACTLY
  */
 type TestPlanData = {
   id: number;
   project_id: number;
+  environment_id: number;
   assigned_to_id: number;
   created_by_id: number;
   updated_by_id: number;
@@ -82,6 +86,12 @@ function ViewTestPlan() {
     }
   }, [initialTestPlan]);
 
+  const {data: envData} = useSuspenseQuery(
+    findEnvironmentsByProjectQueryOptions(projectId!)
+  );
+  const environments = envData?.environments ?? [];
+  const env = environments.find((e: any) => e.id === testPlan?.environment_id);
+  
   /**
    * Close test plan via API
    */
@@ -234,6 +244,51 @@ function ViewTestPlan() {
                 Mark as Complete
               </Button>
             )}
+          </Flex>
+
+          <Flex align="center" gap={2}>
+            <Text>
+            <strong>Environment:</strong> {env ? env.name : "Not Specified"}
+          </Text>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button
+                size="xs"
+                bg="black"
+                color="white"
+                _hover={{ bg: "gray.700" }}
+              >
+                Change
+              </Button>
+            </Menu.Trigger>
+            <Menu.Content>
+              {environments.map((env) => (
+                <Menu.Item
+                  key={env.id}
+                  value={String(env.id)}   
+                  onClick={async () =>{
+                    if (!testPlan || !env?.id) return;
+
+                    try {
+                      await changeTestPlanEnvironment(testPlan.id, env.id);
+
+                      setTestPlan((prev) =>
+                      prev ? { ...prev, environment_id: env.id! } : prev
+                    );
+
+                    await refetch();
+                    toaster.success({title: "Environment updated"});
+                    } catch (error) {
+                      console.error("Failed to update environemnt:", error);
+                      toaster.error({title: "Failed to update environment"});
+                    }
+                  }}
+                >
+                  {env.name}
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+            </Menu.Root>
           </Flex>
 
           {/* Stats */}

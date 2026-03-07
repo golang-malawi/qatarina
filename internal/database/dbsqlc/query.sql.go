@@ -43,6 +43,23 @@ func (q *Queries) AssignTesterToProject(ctx context.Context, arg AssignTesterToP
 	return result.RowsAffected()
 }
 
+const changeEnvironment = `-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type ChangeEnvironmentParams struct {
+	ID            int64
+	EnvironmentID sql.NullInt32
+}
+
+func (q *Queries) ChangeEnvironment(ctx context.Context, arg ChangeEnvironmentParams) error {
+	_, err := q.db.ExecContext(ctx, changeEnvironment, arg.ID, arg.EnvironmentID)
+	return err
+}
+
 const changeUserPassword = `-- name: ChangeUserPassword :exec
 UPDATE users
 SET password = $2, updated_at = $3
@@ -209,26 +226,27 @@ func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) erro
 const createNewTestRun = `-- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
-result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result
+result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
 )
 RETURNING id
 `
 
 type CreateNewTestRunParams struct {
-	ID           uuid.UUID
-	ProjectID    int32
-	TestPlanID   int32
-	TestCaseID   uuid.UUID
-	OwnerID      int32
-	TestedByID   int32
-	AssignedToID int32
-	Code         string
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
+	ID            uuid.UUID
+	ProjectID     int32
+	TestPlanID    int32
+	TestCaseID    uuid.UUID
+	OwnerID       int32
+	TestedByID    int32
+	AssignedToID  int32
+	Code          string
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	EnvironmentID sql.NullInt32
 }
 
 func (q *Queries) CreateNewTestRun(ctx context.Context, arg CreateNewTestRunParams) (uuid.UUID, error) {
@@ -243,6 +261,7 @@ func (q *Queries) CreateNewTestRun(ctx context.Context, arg CreateNewTestRunPara
 		arg.Code,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.EnvironmentID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -499,13 +518,13 @@ func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) 
 const createTestPlan = `-- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
-    kind, description, start_at, closed_at, scheduled_end_at,
+    kind, description, environment_id, start_at, closed_at, scheduled_end_at,
     num_test_cases, num_failures, is_complete, is_locked, has_report,
     created_at, updated_at
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 RETURNING id
 `
@@ -517,7 +536,9 @@ type CreateTestPlanParams struct {
 	UpdatedByID    int32
 	Kind           TestKind
 	Description    sql.NullString
+	EnvironmentID  sql.NullInt32
 	StartAt        sql.NullTime
+	ClosedAt       sql.NullTime
 	ScheduledEndAt sql.NullTime
 	NumTestCases   int32
 	NumFailures    int32
@@ -536,7 +557,9 @@ func (q *Queries) CreateTestPlan(ctx context.Context, arg CreateTestPlanParams) 
 		arg.UpdatedByID,
 		arg.Kind,
 		arg.Description,
+		arg.EnvironmentID,
 		arg.StartAt,
+		arg.ClosedAt,
 		arg.ScheduledEndAt,
 		arg.NumTestCases,
 		arg.NumFailures,
@@ -752,6 +775,7 @@ tested_by_id = $3,
 notes = $4,
 actual_result = $5,
 expected_result = $6,
+environment_id = $7,
 tested_on = NOW(),
 updated_at = NOW()
 WHERE id = $1
@@ -764,6 +788,7 @@ type ExecuteTestRunParams struct {
 	Notes          string
 	ActualResult   sql.NullString
 	ExpectedResult sql.NullString
+	EnvironmentID  sql.NullInt32
 }
 
 func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) error {
@@ -774,6 +799,7 @@ func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) 
 		arg.Notes,
 		arg.ActualResult,
 		arg.ExpectedResult,
+		arg.EnvironmentID,
 	)
 	return err
 }
@@ -1521,7 +1547,7 @@ func (q *Queries) GetTestCasesWithTestersByPlan(ctx context.Context, testPlanID 
 
 const getTestPlan = `-- name: GetTestPlan :one
 SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
-       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.kind, tp.description, tp.environment_id, tp.start_at, tp.closed_at, tp.scheduled_end_at,
        tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
        tp.created_at, tp.updated_at,
        COUNT(DISTINCT tr.test_case_id) AS num_test_cases
@@ -1539,6 +1565,7 @@ type GetTestPlanRow struct {
 	UpdatedByID    int32
 	Kind           TestKind
 	Description    sql.NullString
+	EnvironmentID  sql.NullInt32
 	StartAt        sql.NullTime
 	ClosedAt       sql.NullTime
 	ScheduledEndAt sql.NullTime
@@ -1562,6 +1589,7 @@ func (q *Queries) GetTestPlan(ctx context.Context, id int64) (GetTestPlanRow, er
 		&i.UpdatedByID,
 		&i.Kind,
 		&i.Description,
+		&i.EnvironmentID,
 		&i.StartAt,
 		&i.ClosedAt,
 		&i.ScheduledEndAt,
@@ -1636,7 +1664,7 @@ func (q *Queries) GetTestPlanStatusRatio(ctx context.Context) (GetTestPlanStatus
 }
 
 const getTestRun = `-- name: GetTestRun :one
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE id = $1
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs WHERE id = $1
 `
 
 func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error) {
@@ -1662,6 +1690,7 @@ func (q *Queries) GetTestRun(ctx context.Context, id uuid.UUID) (TestRun, error)
 		&i.TestedOn,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EnvironmentID,
 	)
 	return i, err
 }
@@ -2172,9 +2201,12 @@ tr.expected_result,
 tr.reactions,
 tr.tested_on,
 tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at
+tr.updated_at AS run_updated_at,
+
+tp.environment_id
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
+INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3
@@ -2216,6 +2248,7 @@ type ListTestCasesByAssignedUserRow struct {
 	TestedOn              time.Time
 	RunCreatedAt          sql.NullTime
 	RunUpdatedAt          sql.NullTime
+	EnvironmentID         sql.NullInt32
 }
 
 func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]ListTestCasesByAssignedUserRow, error) {
@@ -2257,6 +2290,7 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.TestedOn,
 			&i.RunCreatedAt,
 			&i.RunUpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -2490,7 +2524,7 @@ func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) (
 }
 
 const listTestRuns = `-- name: ListTestRuns :many
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs ORDER BY created_at DESC
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs ORDER BY created_at DESC
 `
 
 func (q *Queries) ListTestRuns(ctx context.Context) ([]TestRun, error) {
@@ -2522,6 +2556,7 @@ func (q *Queries) ListTestRuns(ctx context.Context) ([]TestRun, error) {
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -2537,7 +2572,7 @@ func (q *Queries) ListTestRuns(ctx context.Context) ([]TestRun, error) {
 }
 
 const listTestRunsAssignedToUser = `-- name: ListTestRunsAssignedToUser :many
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE assigned_to_id = $1
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs WHERE assigned_to_id = $1
 `
 
 func (q *Queries) ListTestRunsAssignedToUser(ctx context.Context, assignedToID int32) ([]TestRun, error) {
@@ -2569,6 +2604,7 @@ func (q *Queries) ListTestRunsAssignedToUser(ctx context.Context, assignedToID i
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -2584,7 +2620,7 @@ func (q *Queries) ListTestRunsAssignedToUser(ctx context.Context, assignedToID i
 }
 
 const listTestRunsByOwner = `-- name: ListTestRunsByOwner :many
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE owner_id = $1
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs WHERE owner_id = $1
 `
 
 func (q *Queries) ListTestRunsByOwner(ctx context.Context, ownerID int32) ([]TestRun, error) {
@@ -2616,6 +2652,7 @@ func (q *Queries) ListTestRunsByOwner(ctx context.Context, ownerID int32) ([]Tes
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -2648,6 +2685,7 @@ SELECT
     tr.tested_on,
     tr.created_at,
     tr.updated_at,
+    tr.environment_id,
     tc.title AS test_case_title,
     u.display_name AS executed_by
 FROM test_runs tr
@@ -2674,6 +2712,7 @@ type ListTestRunsByPlanRow struct {
 	TestedOn       time.Time
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
+	EnvironmentID  sql.NullInt32
 	TestCaseTitle  string
 	ExecutedBy     sql.NullString
 }
@@ -2704,6 +2743,7 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]L
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 			&i.TestCaseTitle,
 			&i.ExecutedBy,
 		); err != nil {
@@ -2721,7 +2761,7 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]L
 }
 
 const listTestRunsByProject = `-- name: ListTestRunsByProject :many
-SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at FROM test_runs WHERE project_id = $1
+SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs WHERE project_id = $1
 `
 
 func (q *Queries) ListTestRunsByProject(ctx context.Context, projectID int32) ([]TestRun, error) {
@@ -2753,6 +2793,7 @@ func (q *Queries) ListTestRunsByProject(ctx context.Context, projectID int32) ([
 			&i.TestedOn,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.EnvironmentID,
 		); err != nil {
 			return nil, err
 		}
@@ -3218,7 +3259,7 @@ UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
 updated_by_id = $5, kind = $6, description = $7, start_at = $8,
 closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
 num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17
+has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1
 `
 
@@ -3240,6 +3281,7 @@ type UpdateTestPlanParams struct {
 	HasReport      sql.NullBool
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
+	EnvironmentID  sql.NullInt32
 }
 
 func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
@@ -3261,6 +3303,7 @@ func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) 
 		arg.HasReport,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.EnvironmentID,
 	)
 	return err
 }

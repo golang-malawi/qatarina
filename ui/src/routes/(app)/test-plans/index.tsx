@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Heading } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-
 import { findTestPlansAllQueryOptions } from "@/data/queries/test-plans";
 
 export const Route = createFileRoute("/(app)/test-plans/")({
@@ -24,7 +23,10 @@ function ListTestPlans() {
   if (error) {
     return <div className="error">Error: error fetching</div>;
   }
-  const testPlanList = (testPlans?.data?.test_plans ?? []).map((t: any, i: number) => <p key={i}>{t.description}</p>);
+  
+  const testPlanList = (testPlans?.test_plans ?? []).map((t) => (
+    <p key={t.id}>{t.description}</p>
+  ));
   return (
     <Box>
       <Heading>List Test Plans</Heading>
