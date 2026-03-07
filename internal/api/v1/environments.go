@@ -2,8 +2,10 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
@@ -65,5 +67,46 @@ func GetEnvironment(environmentService services.EnvironmentService, logger loggi
 		}
 
 		return c.JSON(env)
+	}
+}
+
+// CreateEnvironmnet godoc
+//
+//	@ID				CreateEnvironmnet
+//	@Summary		Create a new environment
+//	@Description	Create a new environment
+//	@Tags			environments
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Param			request	body		schema.EnvironmentRequest	true	"Environment details"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/environments [post]
+func CreateEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for project ID")
+		}
+
+		request := new(schema.EnvironmentRequest)
+		validationErrors, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		env, err := environmentService.Create(c.Context(), int64(projectID), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiEnvironments, "failed to create environment", "error", err, "projectID", projectID)
+			return problemdetail.ServerErrorProblem(c, "failed to create environment")
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(env)
 	}
 }

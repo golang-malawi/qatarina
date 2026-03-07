@@ -63,6 +63,14 @@ type TestCaseService interface {
 	UnMarkAsDraft(ctx context.Context, testCaseID string) error
 	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
 	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
+	// FindAllClosed used to list closed test cases by project ID
+	FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllFailing used to list failing test cases by project ID
+	FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllScheduled used to list scheduled test cases by project ID
+	FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllBlocked is used to list bloked test cases by project ID
+	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -470,4 +478,96 @@ func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, use
 		})
 	}
 	return summaries, nil
+}
+
+func (t *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.TrueNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePassed},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.TrueNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateFailed},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePending},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateBlocked},
+	}
+
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+
+}
+
+func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseResponse {
+	return schema.TestCaseResponse{
+		ID:              row.ID.String(),
+		ProjectID:       int64(row.ProjectID.Int32),
+		CreatedByID:     int64(row.CreatedByID),
+		Kind:            string(row.Kind),
+		Code:            row.Code,
+		FeatureOrModule: row.FeatureOrModule.String,
+		Title:           row.Title,
+		Description:     row.Description,
+		IsDraft:         row.IsDraft.Bool,
+		Tags:            row.Tags,
+		CreatedAt:       common.FormatNullTime(row.CreatedAt),
+		UpdatedAt:       common.FormatNullTime(row.UpdatedAt),
+		Status:          row.Status,
+		Result:          string(row.ResultState),
+		ExecutedBy:      int64(row.TestedByID),
+		Notes:           row.Notes,
+	}
 }

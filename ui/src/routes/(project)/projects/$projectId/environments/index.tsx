@@ -27,39 +27,56 @@ function EnvironmentsPage() {
     queryFn: () => getProjectEnvironments(projectId),
   });
 
+  const environments = data?.data?.environments ?? [];
+
   if (isLoading) return <Spinner />;
   if (error) return <Text color="red.500">Failed to load environments.</Text>;
 
   return (
     <Box>
-      <Heading size="md" mb={4}>
-        Project Environments
-      </Heading>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Heading size="md">Project Environments</Heading>
+        <Link 
+        to="/projects/$projectId/environments/new"
+        params={{projectId}}
+        >
+          <Button colorScheme="blue" size="sm">
+            + Add Environment
+          </Button>
+        </Link>    
+        </Flex>      
+
       <List.Root gap={3}>
-        {data?.data?.environments?.map((env) => (
-          <List.Item
-            key={env.id}
-            border="1px solid #ccc"
-            p={3}
-            borderRadius="md"
+        {environments.length === 0 ?(
+          <Text color="gray.500">
+            No environments yet for this project.
+          </Text>
+          ) : (
+            environments.map((env) =>(
+              <List.Item
+                key={env.id}
+                border="1px solid #ccc"
+                p={3}
+                borderRadius="md"
           >
             <Flex justify="space-between" align="center">
               <Box>
                 <Text fontWeight="bold">{env.name}</Text>
                 {env.description && <Text>{env.description}</Text>}
-                {env.base_url && <Text color="blue.500">{env.base_url}</Text>}
+                {env.base_url && <Text color="blue.500">{env.base_url}</Text>}                
               </Box>
 
-            <Link
-            to="/projects/$projectId/environments/$environmentId"
-            params={{ projectId, environmentId: String(env.id) }}
-            >
-              <Button size="sm" mt={2}>View</Button>
-             </Link>     
-            </Flex>       
-          </List.Item>
-        ))}
+              <Link
+                to="/projects/$projectId/environments/$environmentId"
+                params={{projectId, environmentId: String(env.id)}}
+              >
+                <Button size="sm" mt={2}>View</Button>
+              </Link>
+              </Flex>          
+              </List.Item>
+            ))  
+          )}
       </List.Root>
-    </Box>
+      </Box>
   );
 }
