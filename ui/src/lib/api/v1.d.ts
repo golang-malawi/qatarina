@@ -1596,6 +1596,7 @@ export interface components {
             created_at?: string;
             created_by_id?: number;
             description?: string;
+            environment_id?: number;
             expected_result?: string;
             external_issue_id?: string;
             feature_or_module?: string;
@@ -1726,6 +1727,7 @@ export interface components {
             updated_at?: string;
         };
         "schema.ExecuteTestRunRequest": {
+            environment_id?: number;
             expected_result?: string;
             id: string;
             notes?: string;
@@ -1908,6 +1910,7 @@ export interface components {
         "schema.TestRunResponse": {
             actual_result?: string;
             code?: string;
+            environment_id?: number;
             executed_by?: string;
             expected_result?: string;
             id?: string;

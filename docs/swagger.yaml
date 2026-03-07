@@ -63,6 +63,8 @@ components:
           type: integer
         description:
           type: string
+        environment_id:
+          type: integer
         expected_result:
           type: string
         external_issue_id:
@@ -378,6 +380,8 @@ components:
       type: object
     schema.ExecuteTestRunRequest:
       properties:
+        environment_id:
+          type: integer
         expected_result:
           type: string
         id:
@@ -776,6 +780,8 @@ components:
           type: string
         code:
           type: string
+        environment_id:
+          type: integer
         executed_by:
           type: string
         expected_result:

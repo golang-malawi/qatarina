@@ -337,6 +337,7 @@ type TestRun struct {
 	TestedOn              time.Time
 	CreatedAt             sql.NullTime
 	UpdatedAt             sql.NullTime
+	EnvironmentID         sql.NullInt32
 }
 
 type TestRunResult struct {

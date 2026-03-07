@@ -54,16 +54,17 @@ func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) 
 // Create implements TestRunService
 func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
-		ID:           uuid.New(),
-		ProjectID:    request.ProjectID,
-		TestPlanID:   request.TestPlanID,
-		TestCaseID:   uuid.MustParse(request.TestCaseID),
-		OwnerID:      request.OwnerID,
-		TestedByID:   request.TestedByID,
-		AssignedToID: request.AssignedToID,
-		Code:         request.Code,
-		CreatedAt:    common.NullTime(time.Now()),
-		UpdatedAt:    common.NullTime(time.Now()),
+		ID:            uuid.New(),
+		ProjectID:     request.ProjectID,
+		TestPlanID:    request.TestPlanID,
+		TestCaseID:    uuid.MustParse(request.TestCaseID),
+		OwnerID:       request.OwnerID,
+		TestedByID:    request.TestedByID,
+		AssignedToID:  request.AssignedToID,
+		Code:          request.Code,
+		CreatedAt:     common.NullTime(time.Now()),
+		UpdatedAt:     common.NullTime(time.Now()),
+		EnvironmentID: common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to create page %w", err)
