@@ -28,6 +28,7 @@ import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 const fallback = "/dashboard" as const;
 
@@ -196,6 +197,11 @@ function LoginPage() {
         <Stack pt={2} direction="row" justifyContent="center">
           <Text>{t("new_user")}</Text>
           <ChakraLink href="#">{t("create_account")}</ChakraLink>
+        </Stack>
+
+        {/* Language Switcher */}
+        <Stack pt={4} direction="row" justifyContent="center">
+          <LanguageSwitcher/>
         </Stack>
       </Stack>
     </Flex>
