@@ -38,7 +38,10 @@ function CreateNewOrg() {
         });
         redirect({ to: "/orgs" });
       }
-    } catch {
+    } catch (err: any){
+      if (err.name === "CancelledError"){
+        return;
+      }    
       toaster.create({
         title: "Failed to create organization.",
         description: "Failed to create new organization",
