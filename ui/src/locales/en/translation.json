@@ -1,0 +1,15 @@
+{
+  "login": "Login",
+  "login_description": "Enter your email and password to continue.",
+  "email": "Email",
+  "password": "Password",
+  "remember_me": "Remember me",
+  "forgot_password": "Forgot password?",
+  "sign_in": "Sign in",
+  "create_account": "Create an account",
+  "new_user": "New to Qatarina?",
+  "dashboard": "Dashboard",
+  "projects": "Projects",
+  "test_cases": "Test Cases",
+  "test_plans": "Test Plans"
+}
