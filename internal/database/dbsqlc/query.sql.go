@@ -499,13 +499,13 @@ func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) 
 const createTestPlan = `-- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
-    kind, description, start_at, closed_at, scheduled_end_at,
+    kind, description, environment_id, start_at, closed_at, scheduled_end_at,
     num_test_cases, num_failures, is_complete, is_locked, has_report,
     created_at, updated_at
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 RETURNING id
 `
@@ -517,7 +517,9 @@ type CreateTestPlanParams struct {
 	UpdatedByID    int32
 	Kind           TestKind
 	Description    sql.NullString
+	EnvironmentID  sql.NullInt32
 	StartAt        sql.NullTime
+	ClosedAt       sql.NullTime
 	ScheduledEndAt sql.NullTime
 	NumTestCases   int32
 	NumFailures    int32
@@ -536,7 +538,9 @@ func (q *Queries) CreateTestPlan(ctx context.Context, arg CreateTestPlanParams) 
 		arg.UpdatedByID,
 		arg.Kind,
 		arg.Description,
+		arg.EnvironmentID,
 		arg.StartAt,
+		arg.ClosedAt,
 		arg.ScheduledEndAt,
 		arg.NumTestCases,
 		arg.NumFailures,
@@ -1521,7 +1525,7 @@ func (q *Queries) GetTestCasesWithTestersByPlan(ctx context.Context, testPlanID 
 
 const getTestPlan = `-- name: GetTestPlan :one
 SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
-       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.kind, tp.description, tp.environment_id, tp.start_at, tp.closed_at, tp.scheduled_end_at,
        tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
        tp.created_at, tp.updated_at,
        COUNT(DISTINCT tr.test_case_id) AS num_test_cases
@@ -1539,6 +1543,7 @@ type GetTestPlanRow struct {
 	UpdatedByID    int32
 	Kind           TestKind
 	Description    sql.NullString
+	EnvironmentID  sql.NullInt32
 	StartAt        sql.NullTime
 	ClosedAt       sql.NullTime
 	ScheduledEndAt sql.NullTime
@@ -1562,6 +1567,7 @@ func (q *Queries) GetTestPlan(ctx context.Context, id int64) (GetTestPlanRow, er
 		&i.UpdatedByID,
 		&i.Kind,
 		&i.Description,
+		&i.EnvironmentID,
 		&i.StartAt,
 		&i.ClosedAt,
 		&i.ScheduledEndAt,
@@ -3218,7 +3224,7 @@ UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
 updated_by_id = $5, kind = $6, description = $7, start_at = $8,
 closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
 num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17
+has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1
 `
 
@@ -3240,6 +3246,7 @@ type UpdateTestPlanParams struct {
 	HasReport      sql.NullBool
 	CreatedAt      sql.NullTime
 	UpdatedAt      sql.NullTime
+	EnvironmentID  sql.NullInt32
 }
 
 func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
@@ -3261,6 +3268,7 @@ func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) 
 		arg.HasReport,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.EnvironmentID,
 	)
 	return err
 }

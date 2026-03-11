@@ -14,12 +14,16 @@ import {
 import { useEffect, useState } from "react";
 import { toaster } from "@/components/ui/toaster";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
+
 /**
  * Test plan type – MATCHES API RESPONSE EXACTLY
  */
 type TestPlanData = {
   id: number;
   project_id: number;
+  environment_id: number;
   assigned_to_id: number;
   created_by_id: number;
   updated_by_id: number;
@@ -82,6 +86,12 @@ function ViewTestPlan() {
     }
   }, [initialTestPlan]);
 
+  const {data: envData} = useSuspenseQuery(
+    findEnvironmentsByProjectQueryOptions(projectId!)
+  );
+  const environments = envData?.environments ?? [];
+  const env = environments.find((e: any) => e.id === testPlan?.environment_id);
+  
   /**
    * Close test plan via API
    */
@@ -235,6 +245,10 @@ function ViewTestPlan() {
               </Button>
             )}
           </Flex>
+
+          <Text>
+            <strong>Environment:</strong> {env ? env.name : "Not Specified"}
+          </Text>
 
           {/* Stats */}
           <Flex gap={6} wrap="wrap" mt={4}>
