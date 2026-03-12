@@ -11,5 +11,8 @@
   "dashboard": "Dashboard",
   "projects": "Projects",
   "test_cases": "Test Cases",
-  "test_plans": "Test Plans"
+  "test_plans": "Test Plans",
+  "country": "Country",
+  "select_country": "Select Country",
+  "country_helper": "Choose the organization’s country"
 }

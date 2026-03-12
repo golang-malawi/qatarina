@@ -6,6 +6,7 @@ import {
 } from "@chakra-ui/react";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
+import { useTranslation } from "react-i18next";
 
 countries.registerLocale(enLocale);
 
@@ -25,9 +26,11 @@ const countryOptions = createListCollection({
 });
 
 export function CountryDropdown({ value, onChange }: CountryDropdownProps) {
+  const {t} = useTranslation();
+
   return (
     <Field.Root>
-      <Field.Label>Country</Field.Label>
+      <Field.Label>{t("country")}</Field.Label>
       <Select.Root
         collection={countryOptions}
         value={
@@ -44,7 +47,7 @@ export function CountryDropdown({ value, onChange }: CountryDropdownProps) {
         <Select.HiddenSelect />
         <Select.Control>
           <Select.Trigger>
-            <Select.ValueText placeholder="Select Country" />
+            <Select.ValueText placeholder={t("select_country")} />
           </Select.Trigger>
           <Select.IndicatorGroup>
             <Select.Indicator />
@@ -64,7 +67,7 @@ export function CountryDropdown({ value, onChange }: CountryDropdownProps) {
           </Select.Positioner>
         </Portal>
       </Select.Root>
-      <Field.HelperText>Choose the organization’s country</Field.HelperText>
+      <Field.HelperText>{t("country_helper")}</Field.HelperText>
     </Field.Root>
   );
 }

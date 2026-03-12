@@ -11,5 +11,8 @@
   "dashboard": "Tableau de bord",
   "projects": "Projets",
   "test_cases": "Cas de test",
-  "test_plans": "Plans de test"
+  "test_plans": "Plans de test",
+  "country": "Pays",
+  "select_country": "Sélectionner un pays",
+  "country_helper": "Choisissez le pays de l’organisation"
 }
