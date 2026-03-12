@@ -14,5 +14,8 @@
   "test_plans": "Test Plans",
   "country": "Country",
   "select_country": "Select Country",
-  "country_helper": "Choose the organization’s country"
+  "country_helper": "Choose the organization’s country",
+  "organization": "Organization",
+  "save_changes": "Save Changes",
+  "edit_profile": "Edit Profile"
 }

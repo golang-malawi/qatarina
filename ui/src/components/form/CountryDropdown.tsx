@@ -33,15 +33,10 @@ export function CountryDropdown({ value, onChange }: CountryDropdownProps) {
       <Field.Label>{t("country")}</Field.Label>
       <Select.Root
         collection={countryOptions}
-        value={
-          value 
-          ? [countryOptions.items.find(i => i.label === value)?.value ?? ""] 
-          : []
-        }
+        value={value ? [value] : []}
         onValueChange={(e) => {
           const code = e.value[0];
-          const item = countryOptions.items.find(i => i.value === code);
-          onChange(item?.label ?? "");
+          onChange(code);
         }}
       >
         <Select.HiddenSelect />

@@ -11,6 +11,10 @@ import { useParams } from '@tanstack/react-router';
 import { useGetOrgQuery } from "@/services/OrgsService";
 import { useGetUserQuery } from '@/services/UserService';
 
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+countries.registerLocale(enLocale);
+
 export const Route = createFileRoute("/(app)/orgs/$id/")({
   component: OrgDetailPage,
 });
@@ -40,7 +44,7 @@ function OrgDetailPage() {
 
       <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={8}>
         <DetailField label="Address" value={org?.address} />
-        <DetailField label="Country" value={org?.country} />
+        <DetailField label="Country" value={org?.country ? countries.getName(org.country, "en") || org.country : "N/A"} />
         <DetailField label="Website URL" value={org?.website_url} />
         <DetailField label="GitHub URL" value={org?.github_url} />
         <DetailField label="Created By (User)" value={creator?.display_name ?? org?.created_by} />
