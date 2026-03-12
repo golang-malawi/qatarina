@@ -16,6 +16,7 @@ import { ReactNode, useState } from "react";
 import React from "react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { NavItem } from "@/lib/navigation";
+import { LanguageSwitcher } from "./ui/LanguageSwitcher";
 
 interface NavLinkProps {
   item: NavItem;
@@ -142,6 +143,11 @@ const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
         }
         return <NavLinkItem key={link.path} item={link} />;
       })}
+
+      {/* Language Switcher */}
+      <Box p={4}>
+        <LanguageSwitcher/>
+      </Box>
     </Box>
   );
 };

@@ -1748,6 +1748,7 @@ export interface components {
             closed_at?: string;
             created_by_id?: number;
             description: string;
+            environment_id: number;
             kind: string;
             planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
@@ -1940,6 +1941,7 @@ export interface components {
             created_at?: string;
             created_by_id?: number;
             description?: string;
+            environment_id?: number;
             failed_count?: number;
             has_report?: boolean;
             id?: number;
