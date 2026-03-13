@@ -18,7 +18,7 @@ export interface NavItem {
 }
 
 export const MainLinkItems: NavItem[] = [
-  { path: "/test-cases/inbox", name: "Inbox", icon: FiInbox },
+  { path: "/workspace/test-cases/inbox", name: "Inbox", icon: FiInbox },
   { path: "/workspace/dashboard", name: "Dashboard", icon: FiHome },
   { path: "/workspace/projects", name: "Projects", icon: FiFolder },
   { path: "/orgs", name: "Organizations", icon: FiDatabase },
