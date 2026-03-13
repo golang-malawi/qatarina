@@ -1,17 +1,13 @@
 QATARINA
 ========
 
-This is an experimental project to build tooling for Software Quality Assurance and User Acceptance Testing.
-We hope it will become the standard for such processes for teams.
+This is a work in progress project to build tooling for Software Quality Assurance and User Acceptance Testing. We hope it will become the standard for such processes for teams.
 We have some exciting ideas to make it a good tool.
-
-So in the next 6 months we will be working on this as an experiment and trying to validate its existence.
-
-> NOTE: Highly experimental, in-development and definitely not ready for production use yet.
 
 ## Tech Stack
 
-The initial tech stack is as follows, we may eventually swap out parts of this stack as the project grows.
+
+We use the following technologies:
 
 - Go 1.25+
   - Fiber
@@ -20,13 +16,10 @@ The initial tech stack is as follows, we may eventually swap out parts of this s
 - PostgreSQL 15+
 - React with
   - TypeScript
-  - ChakraUI
-  - ReactRouter
-  - ReactQuery
-  - axios
+  - ChakraUI V3
+  - Tanstack Router
+  - Tanstack Query
 - Docker
-- TestContainers
-- WASM
 
 ### Dev tools
 
@@ -36,8 +29,22 @@ You will need to have the following developer tools installed:
 - [Swag](https://github.com/swaggo/swag) Note: use the v2 branch, because the current latest does not support Openapi v3
 - [Taskfile](https://taskfile.dev)
 
-
 ## Building and running
+
+Get the code by cloning the repository, and installing dependencies:
+
+```sh
+$ git clone https://github.com/golang-malawi/qatarina
+
+$ cd qatarina/ui
+
+$ npm install
+
+$ cd ..
+
+$ go mod tidy
+```
+
 
 In order to build the server you can run
 
@@ -58,7 +65,16 @@ More documentation about the project is in [./docs/developer.md](./docs/develope
 
 ## Contributing
 
-TODO: to describe the contribution process
+Contributions are welcome! Here's how to get started:
+
+1. **Fork** the repository and clone your fork locally.
+2. **Create a branch** for your change: `git checkout -b feature/my-change`.
+3. **Make your changes**, ensuring they follow the existing code style and conventions.
+4. **Test** your changes locally (run `go test ./...` for backend, `npm test` in `ui/` for frontend).
+5. **Commit** with a clear, descriptive message.
+6. **Push** your branch and open a **Pull Request** against `main`.
+
+Please open an **issue** first for larger changes or new features to discuss the approach before investing significant effort.
 
 ## LICENSE
 
