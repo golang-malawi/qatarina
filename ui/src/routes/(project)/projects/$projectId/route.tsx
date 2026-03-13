@@ -89,12 +89,7 @@ function RouteComponent() {
       sidebarItems={createProjectNavItems(projectId)}
       sidebarHeader={
         <Flex direction="column" gap="1">
-          <Text
-            fontSize="sm"
-            fontWeight="semibold"
-            color="fg.heading"
-            noOfLines={1}
-          >
+          <Text fontSize="sm" fontWeight="semibold" color="fg.heading">
             {project?.title}
           </Text>
         </Flex>

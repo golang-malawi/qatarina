@@ -28,19 +28,21 @@ function ListTestPlans() {
   if (error) {
     return <Text color="fg.error">Error: error fetching</Text>;
   }
-  const testPlanList = (testPlans?.data?.test_plans ?? []).map((t: any, i: number) => (
-    <Box
-      key={i}
-      p={4}
-      border="sm"
-      borderColor="border.subtle"
-      borderRadius="lg"
-      bg="bg.surface"
-      shadow="sm"
-    >
-      <Text color="fg.muted">{t.description}</Text>
-    </Box>
-  ));
+  const testPlanList = (testPlans?.test_plans ?? []).map(
+    (t: any, i: number) => (
+      <Box
+        key={i}
+        p={4}
+        border="sm"
+        borderColor="border.subtle"
+        borderRadius="lg"
+        bg="bg.surface"
+        shadow="sm"
+      >
+        <Text color="fg.muted">{t.description}</Text>
+      </Box>
+    ),
+  );
   return (
     <Box p={6}>
       <Heading color="fg.heading">List Test Plans</Heading>

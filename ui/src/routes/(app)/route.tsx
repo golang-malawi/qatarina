@@ -5,7 +5,9 @@ import { requireAuth } from "@/lib/auth/require-auth";
 export const Route = createFileRoute("/(app)")({
   beforeLoad: requireAuth,
   component: AppLayout,
-  errorComponent: ({ error }) => <ErrorComponent error={error} />,
+  errorComponent: ({ error }: { error: any }) => (
+    <ErrorComponent error={error} />
+  ),
 });
 
 function AppLayout() {

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
   ButtonGroup,
@@ -26,7 +26,6 @@ import {
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
 import { LuEye, LuPencil } from "react-icons/lu";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   markTestCaseAsDraft,
   useClosedTestCasesQuery,
@@ -127,9 +126,9 @@ export default function ListProjectTestCases() {
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
 
-  const { data: testCases } = useSuspenseQuery(
-    testCasesByProjectIdQueryOptions(projectId),
-  );
+  // const { data: testCases } = useSuspenseQuery(
+  //   testCasesByProjectIdQueryOptions(projectId),
+  // );
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -248,6 +247,7 @@ export default function ListProjectTestCases() {
 
         <Tabs.Content value="all">
           <AppDataTable<TestCase, TestCaseListResponse>
+            // @ts-ignore
             query={queryFactory}
             columns={columns}
             defaultSort={{ key: "created_at", desc: true }}

@@ -10,7 +10,7 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   findTestCaseInboxByIdQueryOptions,
   findTestCaseInboxQueryOptions,
@@ -39,7 +39,7 @@ export const Route = createFileRoute(
 });
 
 function TestCaseInboxItem() {
-  const { testCaseId } = useParams();
+  const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
 
   const { data: testCase } = useSuspenseQuery(
