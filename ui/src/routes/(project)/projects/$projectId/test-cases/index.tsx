@@ -247,7 +247,7 @@ export default function ListProjectTestCases() {
 
         <Tabs.Content value="all">
           <AppDataTable<TestCase, TestCaseListResponse>
-            // @ts-ignore
+            // @ts-expect-error TODO(sevenreup)
             query={queryFactory}
             columns={columns}
             defaultSort={{ key: "created_at", desc: true }}
