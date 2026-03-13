@@ -1,6 +1,6 @@
 import { createFieldConfig, FieldConfig } from '@/components/form';
+import { CountryField } from "./CountryField";
 
-// User creation fields
 export const userCreationFields: FieldConfig[] = [
   createFieldConfig('first_name', 'First Name', 'text', {
     placeholder: 'Enter first name',
@@ -18,6 +18,12 @@ export const userCreationFields: FieldConfig[] = [
     placeholder: 'Enter password',
     helperText: 'Choose a password for the user',
   }),
+  {
+    name: "country_iso",
+    label: "Country",
+    type: "custom" as const,
+    customComponent: CountryField,
+  },
 ];
 
 // User update fields (password is optional)
@@ -38,4 +44,10 @@ export const userUpdateFields: FieldConfig[] = [
     placeholder: 'Enter new password (optional)',
     helperText: 'Leave blank to keep current password',
   }),
+  {
+    name: "country_iso",
+    label: "Country",
+    type: "custom" as const,
+    customComponent: CountryField,
+  },
 ]; 

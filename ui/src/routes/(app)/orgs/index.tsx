@@ -10,6 +10,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+countries.registerLocale(enLocale);
+
 export const Route = createFileRoute("/(app)/orgs/")({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData($api.queryOptions("get", "/v1/orgs")),
@@ -79,7 +83,7 @@ function OrgsPage() {
           {(orgs ?? []).map((org: any) => (
             <Table.Row key={org.id}>
               <Table.Cell>{org.name}</Table.Cell>
-              <Table.Cell>{org.country}</Table.Cell>
+              <Table.Cell>{org.country ? countries.getName(org.country, "en") || org.country : "N/A"}</Table.Cell>
               <Table.Cell>
                 {org.website_url ? (
                   <a href={org.website_url} target="_blank" rel="noopener noreferrer">

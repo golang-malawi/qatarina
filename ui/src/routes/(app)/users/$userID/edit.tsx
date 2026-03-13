@@ -6,6 +6,8 @@ import { Box, Heading } from "@chakra-ui/react";
 import {toaster} from "@/components/ui/toaster";
 import { useState } from "react"; 
 import { useOrgsQuery } from "@/services/OrgsService";
+import { useTranslation } from "react-i18next";
+import { CountryField } from "@/data/forms/CountryField";
 
 export const Route = createFileRoute("/(app)/users/$userID/edit")({
   component: EditUserProfile,
@@ -30,6 +32,7 @@ function EditUserProfile() {
   const { data: orgsResponse} = useOrgsQuery();
   const updateUserMutation = useUpdateUserMutation();
   const [submitting, setSubmitting] = useState(false);
+  const {t} = useTranslation();
 
     const fields: FieldConfig[] = [
         { name: "first_name", label: "First Name", type: "text" },
@@ -38,9 +41,15 @@ function EditUserProfile() {
         { name: "phone", label: "Phone", type: "tel", placeholder: "+111239456789" },
         { name: "city", label: "City", type: "text" },
         { name: "address", label: "Address", type: "text" },
-        { name: "country_iso", label: "Country ISO (Optional)", type: "text", placeholder: "e.g. MW, US, GB" },
-        { name: "org_id", 
-          label: "Organization", 
+       {
+        name: "country_iso",
+        label: "",
+        type: "custom",
+        customComponent: CountryField,
+       },
+       {
+          name: "org_id", 
+          label: t("organization"),
           type: "select",
           options: orgsResponse?.orgs?.map((org: any) => ({ 
             label: org.name, 
@@ -115,13 +124,13 @@ function EditUserProfile() {
 
   return (
     <Box p={6}>
-        <Heading size="lg" mb={4}>Edit Profile</Heading>
+        <Heading size="lg" mb={4}>{t("edit_profile")}</Heading>
         <DynamicForm
             schema={schema}
             fields={fields}
             defaultValues={defaultValues}
             onSubmit={handleSubmit}
-            submitText="Save Changes"
+            submitText={t("save_changes")}
             submitLoading={submitting}
         />
     </Box>

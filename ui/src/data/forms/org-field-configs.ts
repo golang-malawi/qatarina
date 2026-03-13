@@ -1,4 +1,5 @@
 import { createFieldConfig } from "@/components/form";
+import { CountryField } from "./CountryField";
 
 export const orgFields = [
   createFieldConfig("name", "Organization Name", "text", {
@@ -8,9 +9,13 @@ export const orgFields = [
   createFieldConfig("address", "Address", "text", {
     placeholder: "Enter address",
   }),
-  createFieldConfig("country", "Country", "text", {
-    placeholder: "Enter country",
-  }),
+  {
+    name: "country",
+    label: "",
+    type: "custom" as const,
+    customComponent: CountryField,
+    required: true,
+  },
   createFieldConfig("github_url", "GitHub URL", "url", {
     placeholder: "Enter GitHub URL",
     helperText: "Optional",
