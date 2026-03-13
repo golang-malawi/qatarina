@@ -25,9 +25,9 @@ import { LuChevronsUpDown, LuPlus, LuX } from "react-icons/lu";
 import { NavItem } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
+import { Avatar } from "./ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { THEME_OPTIONS, useColorMode } from "./ui/color-mode";
-import { Avatar } from "./ui/avatar";
 
 interface NavLinkProps {
   item: NavItem;

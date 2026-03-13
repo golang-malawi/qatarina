@@ -27,7 +27,6 @@ import {
 } from "@/data/forms/test-plan-schemas";
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
-import { useParams } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/",
