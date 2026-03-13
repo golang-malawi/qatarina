@@ -1,5 +1,8 @@
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
-import { findTestCaseAllQueryOptions } from "@/data/queries/test-cases";
+import {
+  findTestCaseAllQueryOptions,
+  TestCaseListQueryParams,
+} from "@/data/queries/test-cases";
 import { Button, Flex, Heading, HStack } from "@chakra-ui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -71,7 +74,13 @@ function TestCasePage() {
   });
 
   const queryFactory = React.useCallback(
-    ({ page, pageSize, sortBy, sortOrder, search }) => ({
+    ({
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+      search,
+    }: TestCaseListQueryParams) => ({
       ...findTestCaseAllQueryOptions({
         page,
         pageSize,
@@ -80,14 +89,21 @@ function TestCasePage() {
         search,
       }),
     }),
-    []
+    [],
   );
 
   return (
     <div>
       <Heading color="fg.heading">Test Cases</Heading>
 
-      <Flex mb={4} mt={2} gap={3} alignItems="center" justify="space-between" wrap="wrap">
+      <Flex
+        mb={4}
+        mt={2}
+        gap={3}
+        alignItems="center"
+        justify="space-between"
+        wrap="wrap"
+      >
         <HStack gap="3" flexWrap="wrap">
           <Link to="/workspace/test-cases/new">
             <Button colorPalette="brand">Create New</Button>
@@ -98,6 +114,7 @@ function TestCasePage() {
       </Flex>
 
       <AppDataTable<TestCase, TestCaseListResponse>
+        // @ts-ignore
         query={queryFactory}
         columns={columns}
         defaultSort={{ key: "created_at", desc: true }}

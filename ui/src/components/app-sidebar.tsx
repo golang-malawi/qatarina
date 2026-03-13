@@ -61,7 +61,12 @@ export default function AppSidebar({
   return (
     <Sidebar
       header={
-        <SidebarHeader projects={projects} projectsLoading={projectsLoading} />
+        <SidebarHeader
+          projects={projects.map((p) => {
+            return { id: p.id!, title: p.title! };
+          })}
+          projectsLoading={projectsLoading}
+        />
       }
       variant={variant}
     >

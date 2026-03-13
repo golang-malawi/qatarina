@@ -4,7 +4,6 @@ import {
   Outlet,
   useMatchRoute,
 } from "@tanstack/react-router";
-import { changeTestPlanEnvironment } from "@/services/TestPlanService";
 import {
   Badge,
   Box,
@@ -16,9 +15,6 @@ import {
   Separator,
   Stack,
   Text,
-  Flex,
-  Stat,
-  Menu,
 } from "@chakra-ui/react";
 import {
   IconCheck,

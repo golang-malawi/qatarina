@@ -369,8 +369,8 @@ const config = defineConfig({
       backgroundColor: "bg.canvas",
       color: "fg",
       minHeight: "100dvh",
-      WebkitFontSmoothing: "antialiased",
-      MozOsxFontSmoothing: "grayscale",
+      // WebkitFontSmoothing: "antialiased",
+      // MozOsxFontSmoothing: "grayscale",
       backgroundImage:
         "radial-gradient(90rem 45rem at 10% -20%, var(--chakra-colors-brand-subtle) 0%, transparent 60%), radial-gradient(70rem 35rem at 90% -10%, var(--chakra-colors-info-subtle) 0%, transparent 55%)",
       backgroundAttachment: "fixed",

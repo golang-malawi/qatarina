@@ -102,7 +102,7 @@ export type TableQueryParams = {
 export type TableQueryOptions<TResponse> = UseQueryOptions<TResponse>;
 
 export type TableQueryFactory<TResponse> = (
-  params: TableQueryParams
+  params: TableQueryParams,
 ) => TableQueryOptions<TResponse>;
 
 export interface AppDataTableProps<TData, TResponse> {
@@ -124,7 +124,7 @@ export interface AppDataTableProps<TData, TResponse> {
   rowActionsLabel?: string;
   dataAccessor?: (response: TResponse | undefined) => TData[];
   paginationAccessor?: (
-    response: TResponse | undefined
+    response: TResponse | undefined,
   ) => PaginationInfo | undefined;
   getRowId?: (row: TData, index: number, parent?: any) => string;
 }
@@ -215,8 +215,8 @@ export function AppDataTable<TData, TResponse>({
       ? "desc"
       : "asc"
     : defaultSort?.desc
-    ? "desc"
-    : "asc";
+      ? "desc"
+      : "asc";
   const sortBy = sortKeyById.get(sortId) ?? sortId;
 
   const queryParams = React.useMemo(
@@ -233,7 +233,7 @@ export function AppDataTable<TData, TResponse>({
       sortBy,
       sortOrder,
       globalFilter,
-    ]
+    ],
   );
 
   const queryOptions = React.useMemo(() => {
@@ -272,13 +272,15 @@ export function AppDataTable<TData, TResponse>({
         }
         return true;
       }),
-    []
+    [],
   );
 
   const renderActionIcon = (icon?: React.ElementType | React.ReactNode) => {
     if (!icon) return null;
     if (React.isValidElement(icon)) return icon;
-    return <Icon as={icon} boxSize="4" color="fg.subtle" />;
+    return (
+      <Icon as={icon as React.ElementType} boxSize="4" color="fg.subtle" />
+    );
   };
 
   const renderRowActions = React.useCallback(
@@ -306,10 +308,10 @@ export function AppDataTable<TData, TResponse>({
                     typeof action.disabled === "function"
                       ? action.disabled(row)
                       : action.disabled;
-                  const href =
+                  const href: string =
                     typeof action.link === "function"
                       ? action.link(row)
-                      : action.link ?? action.href;
+                      : (action.link ?? `${action.href}`);
                   return (
                     <Menu.Item
                       key={name}
@@ -337,7 +339,7 @@ export function AppDataTable<TData, TResponse>({
         </Menu.Root>
       );
     },
-    [navigate, resolveActions, rowActionsLabel]
+    [navigate, resolveActions, rowActionsLabel],
   );
 
   React.useEffect(() => {
@@ -364,7 +366,8 @@ export function AppDataTable<TData, TResponse>({
         header: ({ table }) => (
           <Checkbox.Root
             checked={table.getIsAllPageRowsSelected()}
-            indeterminate={table.getIsSomePageRowsSelected()}
+            // TODO: check if this attribute is supported
+            // indeterminate={table.getIsSomePageRowsSelected()}
             onCheckedChange={({ checked }) =>
               table.toggleAllPageRowsSelected(!!checked)
             }
@@ -377,7 +380,8 @@ export function AppDataTable<TData, TResponse>({
           <Box onClick={(event) => event.stopPropagation()}>
             <Checkbox.Root
               checked={row.getIsSelected()}
-              indeterminate={row.getIsSomeSelected()}
+              // TODO: check if this attribute is supportes
+              // indeterminate={row.getIsSomeSelected()}
               onCheckedChange={({ checked }) => row.toggleSelected(!!checked)}
             >
               <Checkbox.HiddenInput />
@@ -391,7 +395,7 @@ export function AppDataTable<TData, TResponse>({
     }
 
     const hasActionsColumn = columns.some((column) =>
-      column.type ? column.type === "actions" : column.key === "actions"
+      column.type ? column.type === "actions" : column.key === "actions",
     );
 
     columns.forEach((column) => {
@@ -497,7 +501,9 @@ export function AppDataTable<TData, TResponse>({
 
   React.useEffect(() => {
     if (!onRowSelectionChange) return;
-    const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+    const selectedRows = table
+      .getSelectedRowModel()
+      .rows.map((row) => row.original);
     onRowSelectionChange(selectedRows);
   }, [onRowSelectionChange, table, rowSelection]);
 
@@ -523,12 +529,7 @@ export function AppDataTable<TData, TResponse>({
       )}
 
       {(showGlobalFilter || enableRowSelection) && (
-        <Flex
-          align="center"
-          justify="space-between"
-          gap="4"
-          wrap="wrap"
-        >
+        <Flex align="center" justify="space-between" gap="4" wrap="wrap">
           {showGlobalFilter && (
             <Input
               value={globalFilter ?? ""}
@@ -548,7 +549,11 @@ export function AppDataTable<TData, TResponse>({
       )}
 
       {queryResult.isError && (
-        <ErrorAlert message={(queryResult.error as Error)?.message ?? "Failed to load data"} />
+        <ErrorAlert
+          message={
+            (queryResult.error as Error)?.message ?? "Failed to load data"
+          }
+        />
       )}
 
       <Box
@@ -573,8 +578,8 @@ export function AppDataTable<TData, TResponse>({
                       sorted === "asc"
                         ? LuArrowUp
                         : sorted === "desc"
-                        ? LuArrowDown
-                        : LuArrowUpDown;
+                          ? LuArrowDown
+                          : LuArrowUpDown;
                     return (
                       <Table.ColumnHeader
                         key={header.id}
@@ -586,7 +591,9 @@ export function AppDataTable<TData, TResponse>({
                             variant="ghost"
                             size="xs"
                             onClick={header.column.getToggleSortingHandler()}
-                            justifyContent={meta?.align === "end" ? "flex-end" : "flex-start"}
+                            justifyContent={
+                              meta?.align === "end" ? "flex-end" : "flex-start"
+                            }
                             px="1"
                             py="1"
                           >
@@ -594,17 +601,21 @@ export function AppDataTable<TData, TResponse>({
                               <Text fontSize="xs" fontWeight="semibold">
                                 {flexRender(
                                   header.column.columnDef.header,
-                                  header.getContext()
+                                  header.getContext(),
                                 )}
                               </Text>
-                              <Icon as={sortIcon} boxSize="3.5" color="fg.subtle" />
+                              <Icon
+                                as={sortIcon}
+                                boxSize="3.5"
+                                color="fg.subtle"
+                              />
                             </HStack>
                           </Button>
                         ) : (
                           <Text fontSize="xs" fontWeight="semibold">
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                           </Text>
                         )}
@@ -661,7 +672,7 @@ export function AppDataTable<TData, TResponse>({
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
-                            cell.getContext()
+                            cell.getContext(),
                           )}
                         </Table.Cell>
                       );

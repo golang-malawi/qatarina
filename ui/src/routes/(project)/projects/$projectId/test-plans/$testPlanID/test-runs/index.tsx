@@ -26,7 +26,6 @@ import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
 import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
-import { useParams } from "@tanstack/react-router";
 import $api from "@/lib/api/query";
 
 type TestRunItem = components["schemas"]["schema.TestRunResponse"];
@@ -39,7 +38,7 @@ export const Route = createFileRoute(
 });
 
 function TestPlanTestRunsPage() {
-  const { projectId, testPlanID } = useParams();
+  const { projectId, testPlanID } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [closingRunId, setClosingRunId] = useState<string | null>(null);
