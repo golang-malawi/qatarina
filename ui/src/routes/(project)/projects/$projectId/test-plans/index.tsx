@@ -56,7 +56,7 @@ export const Route = createFileRoute(
 });
 
 function ListProjectTestPlans() {
-  const { projectId } = useParams();
+  const { projectId } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const deleteMutation = useDeleteTestPlanMutation();
   const {

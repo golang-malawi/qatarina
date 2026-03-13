@@ -43,7 +43,7 @@ function CreateNewTestPlan() {
   const createTestPlanMutation = useCreateTestPlanMutation();
   const testersQuery = useTestersQuery();
   const redirect = useNavigate();
-  const { projectId } = useParams();
+  const { projectId } = Route.useParams();
 
   const { data: envData } = useSuspenseQuery(
     findEnvironmentsByProjectQueryOptions(projectId!),

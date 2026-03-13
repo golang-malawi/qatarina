@@ -77,7 +77,7 @@ const columns: AppTableColumn<TestCase>[] = [
 ];
 
 export default function ListProjectTestCases() {
-  const { projectId } = useParams();
+  const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
 
