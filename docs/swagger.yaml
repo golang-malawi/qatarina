@@ -311,7 +311,6 @@ components:
           type: integer
       required:
       - description
-      - environment_id
       - kind
       - project_id
       - start_at

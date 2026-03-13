@@ -1,10 +1,4 @@
-import { 
-  Box, 
-  Heading, 
-  Table, 
-  Button, 
-  Flex 
-} from "@chakra-ui/react";
+import { Box, Heading, Table, Button, Flex } from "@chakra-ui/react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toaster } from "@/components/ui/toaster";
@@ -37,14 +31,19 @@ function OrgsPage() {
               description: `Organization "${name}" deleted successfully`,
               type: "success",
             });
-            queryClient.setQueryData(orgsQueryOptions.queryKey, (oldData: any) => {
-              if (!oldData) return oldData;
-              return {
-                ...oldData,
-                orgs: oldData.orgs.filter((o: any) => o.id !== orgID),
-              };
+            queryClient.setQueryData(
+              orgsQueryOptions.queryKey,
+              (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                  ...oldData,
+                  orgs: oldData.orgs.filter((o: any) => o.id !== orgID),
+                };
+              },
+            );
+            queryClient.invalidateQueries({
+              queryKey: orgsQueryOptions.queryKey,
             });
-            queryClient.invalidateQueries({ queryKey: orgsQueryOptions.queryKey });
           },
           onError: (error: any) => {
             toaster.create({
@@ -53,7 +52,7 @@ function OrgsPage() {
               type: "error",
             });
           },
-        }
+        },
       );
     }
   };
@@ -83,22 +82,38 @@ function OrgsPage() {
           {(orgs ?? []).map((org: any) => (
             <Table.Row key={org.id}>
               <Table.Cell>{org.name}</Table.Cell>
-              <Table.Cell>{org.country ? countries.getName(org.country, "en") || org.country : "N/A"}</Table.Cell>
+              <Table.Cell>
+                {org.country
+                  ? countries.getName(org.country, "en") || org.country
+                  : "N/A"}
+              </Table.Cell>
               <Table.Cell>
                 {org.website_url ? (
-                  <a href={org.website_url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={org.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {org.website_url}
                   </a>
-                ) : "N/A"}
+                ) : (
+                  "N/A"
+                )}
               </Table.Cell>
-              <Table.Cell>{new Date(org.created_at).toLocaleDateString()}</Table.Cell>
+              <Table.Cell>
+                {new Date(org.created_at).toLocaleDateString()}
+              </Table.Cell>
               <Table.Cell>
                 <Flex gap={2}>
                   <Link to="/orgs/$id" params={{ id: org.id.toString() }}>
-                    <Button size="sm" bg="black" color="white">View</Button>
+                    <Button size="sm" bg="black" color="white">
+                      View
+                    </Button>
                   </Link>
                   <Link to="/orgs/$id/edit" params={{ id: org.id.toString() }}>
-                    <Button size="sm" bg="black" color="white">Edit</Button>
+                    <Button size="sm" bg="black" color="white">
+                      Edit
+                    </Button>
                   </Link>
                   <Button
                     size="sm"
