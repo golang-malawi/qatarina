@@ -23,7 +23,7 @@ function ListTestPlans() {
   if (error) {
     return <div className="error">Error: error fetching</div>;
   }
-  
+
   const testPlanList = (testPlans?.test_plans ?? []).map((t) => (
     <p key={t.id}>{t.description}</p>
   ));

@@ -29,7 +29,7 @@ function InnerApp() {
   const auth = useAuth();
 
    if (!auth) {
-    return <Spinner size="xl" />; // or a loading screen
+    return <Spinner size="xl" color="brand.solid" />; // or a loading screen
   }
 
   const router = createRouter({
