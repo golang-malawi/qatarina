@@ -1,6 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { useTestPlanQuery } from "@/services/TestPlanService";
-import { closeTestPlan } from "@/services/TestPlanService";
+import { useTestPlanQuery, closeTestPlan, changeTestPlanEnvironment } from "@/services/TestPlanService";
 import {
   Box,
   Heading,
@@ -10,6 +9,7 @@ import {
   Button,
   Flex,
   Stat,
+  Menu,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { toaster } from "@/components/ui/toaster";
@@ -246,9 +246,50 @@ function ViewTestPlan() {
             )}
           </Flex>
 
-          <Text>
+          <Flex align="center" gap={2}>
+            <Text>
             <strong>Environment:</strong> {env ? env.name : "Not Specified"}
           </Text>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button
+                size="xs"
+                bg="black"
+                color="white"
+                _hover={{ bg: "gray.700" }}
+              >
+                Change
+              </Button>
+            </Menu.Trigger>
+            <Menu.Content>
+              {environments.map((env) => (
+                <Menu.Item
+                  key={env.id}
+                  value={String(env.id)}   
+                  onClick={async () =>{
+                    if (!testPlan || !env?.id) return;
+
+                    try {
+                      await changeTestPlanEnvironment(testPlan.id, env.id);
+
+                      setTestPlan((prev) =>
+                      prev ? { ...prev, environment_id: env.id! } : prev
+                    );
+
+                    await refetch();
+                    toaster.success({title: "Environment updated"});
+                    } catch (error) {
+                      console.error("Failed to update environemnt:", error);
+                      toaster.error({title: "Failed to update environment"});
+                    }
+                  }}
+                >
+                  {env.name}
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+            </Menu.Root>
+          </Flex>
 
           {/* Stats */}
           <Flex gap={6} wrap="wrap" mt={4}>

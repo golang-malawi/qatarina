@@ -9,15 +9,16 @@ import (
 )
 
 type TestRunRequest struct {
-	ProjectID    int32  `json:"project_id" validate:"required"`
-	TestPlanID   int32  `json:"test_plan_id" validate:"required"`
-	TestCaseID   string `json:"test_case_id" validate:"required"`
-	OwnerID      int32  `json:"owner_id" validate:"required"`
-	TestedByID   int32  `json:"tested_by_id" validate:"required"`
-	AssignedToID int32  `json:"assigned_to_id" validate:"-"`
-	Code         string `json:"code"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	ProjectID     int32  `json:"project_id" validate:"required"`
+	TestPlanID    int32  `json:"test_plan_id" validate:"required"`
+	TestCaseID    string `json:"test_case_id" validate:"required"`
+	OwnerID       int32  `json:"owner_id" validate:"required"`
+	TestedByID    int32  `json:"tested_by_id" validate:"required"`
+	AssignedToID  int32  `json:"assigned_to_id" validate:"-"`
+	Code          string `json:"code"`
+	CreatedAt     string `json:"created_at"`
+	UpdatedAt     string `json:"updated_at"`
+	EnvironmentID int32  `json:"environment_id"`
 }
 
 type BulkCommitTestResults struct {
@@ -92,6 +93,7 @@ type ExecuteTestRunRequest struct {
 	ExecutedBy     int64  `json:"-"`
 	Notes          string `json:"notes,omitempty"`
 	ExpectedResult string `json:"expected_result"`
+	EnvironmentID  int32  `json:"environment_id"`
 }
 
 type TestRunResponse struct {
@@ -109,6 +111,7 @@ type TestRunResponse struct {
 	TestedOn       string `json:"tested_on"`
 	TestCaseTitle  string `json:"test_case_title"`
 	ExecutedBy     string `json:"executed_by"`
+	EnvironmentID  int32  `json:"environment_id"`
 }
 
 func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse {
@@ -127,6 +130,7 @@ func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse 
 		TestedOn:       tr.TestedOn.Format(time.DateTime),
 		TestCaseTitle:  tr.TestCaseTitle,
 		ExecutedBy:     tr.ExecutedBy.String,
+		EnvironmentID:  tr.EnvironmentID.Int32,
 	}
 }
 
@@ -145,5 +149,6 @@ func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 		TestedOn:       tr.TestedOn.Format(time.DateTime),
 		TestCaseTitle:  "",
 		ExecutedBy:     "",
+		EnvironmentID:  tr.EnvironmentID.Int32,
 	}
 }

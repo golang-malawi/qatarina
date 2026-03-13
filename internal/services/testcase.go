@@ -426,6 +426,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			TestedOn:              &row.TestedOn,
 			CreatedAt:             row.RunCreatedAt.Time,
 			UpdatedAt:             row.RunUpdatedAt.Time,
+			EnvironmentID:         row.EnvironmentID.Int32,
 		})
 	}
 	return res, nil

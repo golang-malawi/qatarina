@@ -24,6 +24,7 @@ type TestPlanService interface {
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
+	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -276,4 +277,12 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) e
 	}
 
 	return nil
+}
+
+func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, envID int64) error {
+	params := dbsqlc.ChangeEnvironmentParams{
+		ID:            testPlanID,
+		EnvironmentID: common.NewNullInt32(int32(envID)),
+	}
+	return t.queries.ChangeEnvironment(ctx, params)
 }

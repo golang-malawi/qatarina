@@ -158,9 +158,12 @@ tr.expected_result,
 tr.reactions,
 tr.tested_on,
 tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at
+tr.updated_at AS run_updated_at,
+
+tp.environment_id
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
+INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -295,6 +298,12 @@ closed_at = $2,
 updated_at = $2
 WHERE id = $1;
 
+-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: GetTestRunStatesForPlan :many
 SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
 
@@ -332,6 +341,7 @@ SELECT
     tr.tested_on,
     tr.created_at,
     tr.updated_at,
+    tr.environment_id,
     tc.title AS test_case_title,
     u.display_name AS executed_by
 FROM test_runs tr
@@ -361,11 +371,11 @@ DELETE FROM test_runs WHERE project_id = $1;
 -- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
-result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result
+result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
 )
 RETURNING id;
 
@@ -537,6 +547,7 @@ tested_by_id = $3,
 notes = $4,
 actual_result = $5,
 expected_result = $6,
+environment_id = $7,
 tested_on = NOW(),
 updated_at = NOW()
 WHERE id = $1;

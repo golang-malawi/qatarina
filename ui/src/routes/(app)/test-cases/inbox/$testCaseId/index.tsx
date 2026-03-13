@@ -22,6 +22,7 @@ import {
 import { executeTestRun } from "@/services/TestRunService";
 
 import { toaster } from "@/components/ui/toaster";
+import $api from "@/lib/api/query";
 
 export const Route = createFileRoute("/(app)/test-cases/inbox/$testCaseId/")({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
@@ -45,12 +46,20 @@ function TestCaseInboxItem() {
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
 
+  const {data: {environments = []} = {}} = $api.useQuery(
+    "get",
+    "/v1/projects/{projectID}/environments",
+    {params: {path: {projectID: tc.project_id!.toString()}}}
+  );
+
+   const env = environments.find((e: any) => e.id === tc.environment_id);
+
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
      
       if (!testRunId || !expectedResult || !resultText) {
         throw new Error("Missing required test case data.");
-      }
+      }     
 
       return executeTestRun(testRunId, {
         id: testRunId,
@@ -58,6 +67,7 @@ function TestCaseInboxItem() {
         result: resultText,
         notes: notesText,
         expected_result: expectedResult,
+        environment_id: tc.environment_id,
       });
     },
     onSuccess: () => {
@@ -156,6 +166,9 @@ function TestCaseInboxItem() {
         </p>
         <p>
           <strong>Kind:</strong> {tc.kind}
+        </p>  
+        <p>
+          <strong>Environment:</strong> {env ? env.name: "Not specified"}
         </p>
         {isDraft && (
           <Box

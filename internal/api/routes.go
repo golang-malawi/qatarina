@@ -119,6 +119,7 @@ func (api *API) routes() {
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
