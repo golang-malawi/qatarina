@@ -158,9 +158,12 @@ tr.expected_result,
 tr.reactions,
 tr.tested_on,
 tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at
+tr.updated_at AS run_updated_at,
+
+tp.environment_id
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
+INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -244,6 +247,19 @@ UPDATE test_cases
 SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
+-- name: FindTestCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
+       tc.created_at, tc.updated_at,
+       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+       tr.id AS run_id, tr.result_state, tr.is_closed,
+       tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = @project_id
+  AND (tr.is_closed = @is_closed OR @is_closed IS NULL)
+  AND tr.result_state = ANY(@result_states::test_run_state[]);
+  
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
@@ -252,7 +268,7 @@ SELECT * FROM test_plans WHERE project_id = $1;
 
 -- name: GetTestPlan :one
 SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
-       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.kind, tp.description, tp.environment_id, tp.start_at, tp.closed_at, tp.scheduled_end_at,
        tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
        tp.created_at, tp.updated_at,
        COUNT(DISTINCT tr.test_case_id) AS num_test_cases
@@ -272,7 +288,7 @@ UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
 updated_by_id = $5, kind = $6, description = $7, start_at = $8,
 closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
 num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17
+has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1;
 
 -- name: CloseTestPlan :execrows
@@ -282,19 +298,25 @@ closed_at = $2,
 updated_at = $2
 WHERE id = $1;
 
+-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: GetTestRunStatesForPlan :many
 SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
 
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
-    kind, description, start_at, closed_at, scheduled_end_at,
+    kind, description, environment_id, start_at, closed_at, scheduled_end_at,
     num_test_cases, num_failures, is_complete, is_locked, has_report,
     created_at, updated_at
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 RETURNING id;
 
@@ -319,6 +341,7 @@ SELECT
     tr.tested_on,
     tr.created_at,
     tr.updated_at,
+    tr.environment_id,
     tc.title AS test_case_title,
     u.display_name AS executed_by
 FROM test_runs tr
@@ -348,11 +371,11 @@ DELETE FROM test_runs WHERE project_id = $1;
 -- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
-result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result
+result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
 )
 RETURNING id;
 
@@ -524,6 +547,7 @@ tested_by_id = $3,
 notes = $4,
 actual_result = $5,
 expected_result = $6,
+environment_id = $7,
 tested_on = NOW(),
 updated_at = NOW()
 WHERE id = $1;
@@ -558,3 +582,38 @@ FROM test_run_results trr
 INNER JOIN test_runs tr ON tr.id = trr.test_run_id
 WHERE trr.executed_by = $1
 GROUP BY tr.test_case_id;
+
+-- name: CreateOrg :one
+INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at;
+
+-- name: GetOrgByID :one
+SELECT id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+FROM orgs
+WHERE id = $1;
+
+-- name: ListOrgs :many
+SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
+FROM orgs
+ORDER BY name;
+
+-- name: UpdateOrg :exec
+UPDATE orgs SET name = $2, address = $3, country = $4, github_url = $5, website_url = $6, updated_at = now()
+WHERE id = $1;
+
+-- name: DeleteOrg :exec
+DELETE FROM orgs WHERE id = $1;
+
+-- name: CreateEnvironment :one
+INSERT INTO environments (
+    project_id, name, description, base_url, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, now(), now()
+) RETURNING *;
+
+-- name: ListEnvironmentsByProject :many
+SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
+
+-- name: GetEnvironment :one
+SELECT * FROM environments WHERE id = $1;

@@ -22,6 +22,28 @@ export const projectCreationFields: FieldConfig[] = [
     placeholder: 'https://example.com',
     helperText: 'Optional: Your project website',
   }),
+
+  {
+    name: 'environments',
+    label: 'Environments',
+    type: 'array',
+    helperText: 'Add one or more environments for this project',
+    fields: [
+      createFieldConfig('name', 'Environment Name', 'text', {
+        placeholder: 'Enter environment name',
+        helperText: 'Name of the environment (e.g., Staging, Production)',
+      }),
+      createFieldConfig('description', 'Description', 'textarea', {
+        placeholder: 'Describe the environment',
+        helperText: 'Optional: Describe the environment',
+      }),
+      createFieldConfig('base_url', 'Base URL', 'url', {
+        placeholder: 'https://env.example.com',
+        helperText: 'Optional: Base URL for this environment',
+      }),
+    ],
+  },
+
 ];
 
 // Project update fields
@@ -42,4 +64,26 @@ export const projectUpdateFields: FieldConfig[] = [
     placeholder: 'https://example.com',
     helperText: 'Optional: Your project website',
   }),
-]; 
+
+  {
+    name: 'environments',
+    label: 'Environments',
+    type: 'array',
+    helperText: 'Add one or more environments for this project',
+    fields: [
+      createFieldConfig('name', 'Environment Name', 'text', {
+        placeholder: 'Enter environment name',
+        helperText: 'Name of the environment (e.g., Staging, Production)',
+      }),
+      createFieldConfig('description', 'Description', 'textarea', {
+        placeholder: 'Describe the environment',
+        helperText: 'Optional: Describe the environment',
+      }),
+      createFieldConfig('base_url', 'Base URL', 'url', {
+        placeholder: 'https://env.example.com',
+        helperText: 'Optional: Base URL for this environment',
+      }),
+    ],
+  },
+];
+ 

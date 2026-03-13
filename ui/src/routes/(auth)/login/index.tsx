@@ -28,6 +28,8 @@ import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { getLastProjectPath } from "@/lib/last-project";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 const fallback = "/" as const;
 
@@ -57,6 +59,7 @@ function LoginPage() {
   const navigate = Route.useNavigate();
   const router = useRouter();
   const search = Route.useSearch();
+  const { t } = useTranslation();
 
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -77,8 +80,8 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
       setLoginError(null);
-      
-      await auth.login(data)
+
+      await auth.login(data);
 
       await router.invalidate();
 
@@ -115,13 +118,7 @@ function LoginPage() {
 
   return (
     <Flex minH="100vh" align="center" justify="center" p={4}>
-      <Stack
-        mx="auto"
-        maxW="lg"
-        w={{ base: "full", md: "md" }}
-        py={12}
-        px={6}
-      >
+      <Stack mx="auto" maxW="lg" w={{ base: "full", md: "md" }} py={12} px={6}>
         <Stack align="center">
           <Flex align="center" direction="row" gap={2}>
             <Logo />
@@ -147,10 +144,8 @@ function LoginPage() {
           borderRadius="xl"
         >
           <Card.Header>
-            <Card.Title>Welcome back</Card.Title>
-            <Card.Description>
-              Enter your email and password to continue.
-            </Card.Description>
+            <Card.Title>{t("login")}</Card.Title>
+            <Card.Description>{t("login_description")}</Card.Description>
           </Card.Header>
           <Card.Body>
             {loginError && (
@@ -161,7 +156,7 @@ function LoginPage() {
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack>
                 <Field.Root invalid={!!errors.email}>
-                  <Field.Label>Email</Field.Label>
+                  <Field.Label>{t("email")}</Field.Label>
                   <Input {...register("email")} />
                   <Field.ErrorText>
                     {errors.email && errors.email.message}
@@ -169,7 +164,7 @@ function LoginPage() {
                 </Field.Root>
 
                 <Field.Root invalid={!!errors.password}>
-                  <Field.Label>Password</Field.Label>
+                  <Field.Label>{t("password")}</Field.Label>
                   <PasswordInput {...register("password")} />
                   <Field.ErrorText>{errors.password?.message}</Field.ErrorText>
                 </Field.Root>
@@ -196,7 +191,7 @@ function LoginPage() {
                         >
                           <Checkbox.HiddenInput />
                           <Checkbox.Control />
-                          <Checkbox.Label>Remember me</Checkbox.Label>
+                          <Checkbox.Label>{t("remember_me")}</Checkbox.Label>
                         </Checkbox.Root>
                         <Field.ErrorText>
                           {errors.rememberMe && errors.rememberMe?.message}
@@ -205,7 +200,7 @@ function LoginPage() {
                     )}
                   />
                   <ChakraLink href="#" fontSize="sm" color="fg.accent" asChild>
-                    <Link to="/">Forgot password?</Link>
+                    <Link to="/">{t("forgot_password")}</Link>
                   </ChakraLink>
                 </Stack>
 
@@ -216,7 +211,7 @@ function LoginPage() {
                   type="submit"
                   loading={isSubmitting || loginMutation.isPending}
                 >
-                  Sign in
+                  {t("sign_in")}
                 </Button>
               </Stack>
             </form>
@@ -225,9 +220,15 @@ function LoginPage() {
 
         <Stack pt={2} direction="row" justifyContent="center">
           <Text>New to {SiteConfig.name}?</Text>
+          <Text>{t("new_user")}</Text>
           <ChakraLink href="#" color="fg.accent">
-            Create an account
+            {t("create_account")}
           </ChakraLink>
+        </Stack>
+
+        {/* Language Switcher */}
+        <Stack pt={4} direction="row" justifyContent="center">
+          <LanguageSwitcher />
         </Stack>
       </Stack>
     </Flex>

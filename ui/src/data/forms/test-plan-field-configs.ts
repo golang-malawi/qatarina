@@ -23,6 +23,11 @@ export const testPlanCreationFields: FieldConfig[] = [
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan should start',
   }),
+  createFieldConfig('environment_id', 'Environment', 'select', {
+    placeholder: 'Select environment',
+    helperText: 'Select environment for this test plan',
+    options: [],
+  }),
   createFieldConfig('scheduled_end_at', 'Scheduled End Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan is scheduled to end',

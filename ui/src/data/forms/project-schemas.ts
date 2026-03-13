@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { environmentSchema } from './environmentSchema';
 
 // Project creation schema
 export const projectCreationSchema = z.object({
@@ -6,6 +7,7 @@ export const projectCreationSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   version: z.string().min(1, 'Version is required'),
   website_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  environments: z.array(environmentSchema).optional(),
 });
 
 export type ProjectCreationFormValues = z.infer<typeof projectCreationSchema>;
@@ -16,6 +18,7 @@ export const projectUpdateSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   version: z.string().min(1, 'Version is required'),
   website_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  environments: z.array(environmentSchema).optional(),
 });
 
 export type ProjectUpdateFormValues = z.infer<typeof projectUpdateSchema>; 

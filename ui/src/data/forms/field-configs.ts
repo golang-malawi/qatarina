@@ -1,4 +1,5 @@
 import { createFieldConfig, createSelectOptions, FieldConfig } from '@/components/form';
+import { CountryField } from './CountryField';
 
 // Common field configurations
 export const commonFields = {
@@ -179,6 +180,13 @@ export const projectCreationFields: FieldConfig[] = [
     helperText: 'Choose the most appropriate category',
     options: categoryOptions,
   }),
+  {
+    name: 'country',
+    label: 'Country',
+    type: 'custom',
+    customComponent: CountryField,
+    required: true,
+  }
 ];
 
 export const testCaseCreationFields: FieldConfig[] = [
@@ -233,7 +241,7 @@ export const userSettingsFields: FieldConfig[] = [
 export function createCustomFieldConfig(
   name: string,
   label: string,
-  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'checkbox' | 'url' | 'tel',
+  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'checkbox' | 'url' | 'tel' | "custom",
   options?: Partial<FieldConfig>
 ): FieldConfig {
   return createFieldConfig(name, label, type, options);

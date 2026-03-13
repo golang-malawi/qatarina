@@ -11,6 +11,10 @@ import { Provider } from "./components/ui/provider";
 import { Spinner } from "@chakra-ui/react";
 import { Toaster } from "@/components/ui/toaster"
 
+// Import i18n and provider
+import i18n from "./i18n";
+import { I18nextProvider } from "react-i18next";
+
 const queryClient = new QueryClient();
 
 // Register things for typesafety
@@ -51,8 +55,10 @@ if (!rootElement.innerHTML) {
       <QueryClientProvider client={queryClient}>
         <Provider>
           <AuthProvider>
+          <I18nextProvider i18n={i18n}>
             <Toaster />
             <InnerApp />
+          </I18nextProvider>
           </AuthProvider>
         </Provider>
       </QueryClientProvider>

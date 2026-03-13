@@ -59,6 +59,12 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/closed", apiv1.ListClosedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/failing", apiv1.ListFailingTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/scheduled", apiv1.ListScheduledTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/blocked", apiv1.ListBlockedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
+		projectsV1.Post("/:projectID/environments", apiv1.CreateEnvironment(api.EnvironmentService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -113,6 +119,7 @@ func (api *API) routes() {
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
@@ -139,6 +146,15 @@ func (api *API) routes() {
 		testersV1.Delete("/:testerID", apiv1.DeleteTester(api.TesterService, api.logger))
 	}
 
+	orgsV1 := router.Group("/v1/orgs", authenticationMiddleware)
+	{
+		orgsV1.Get("", apiv1.ListOrgs(api.OrgService, api.logger))
+		orgsV1.Post("", apiv1.CreateOrg(api.OrgService, api.logger))
+		orgsV1.Get("/:orgID", apiv1.GetOrg(api.OrgService, api.logger))
+		orgsV1.Put("/:orgID", apiv1.UpdateOrg(api.OrgService, api.logger))
+		orgsV1.Delete("/:orgID", apiv1.DeleteOrg(api.OrgService, api.logger))
+	}
+
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
 	{
 		settingsApi.Get("", apiv1.GetSettings(api.Config))
@@ -153,6 +169,11 @@ func (api *API) routes() {
 	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
 	{
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
+	}
+
+	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+	{
+		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"

@@ -1,4 +1,4 @@
-import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
+import { useMemo, useState } from "react";
 import {
   Badge,
   Box,
@@ -17,7 +17,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { IconSearch, IconX } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
 import {
   EmptyState,
   ErrorState,
@@ -26,18 +25,21 @@ import {
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
+import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
+import { useParams } from "@tanstack/react-router";
+import $api from "@/lib/api/query";
 
 type TestRunItem = components["schemas"]["schema.TestRunResponse"];
 type ResultFilter = "all" | "passed" | "failed" | "pending";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/"
+  "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/",
 )({
   component: TestPlanTestRunsPage,
 });
 
 function TestPlanTestRunsPage() {
-  const { testPlanID } = Route.useParams();
+  const { projectId, testPlanID } = useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [closingRunId, setClosingRunId] = useState<string | null>(null);
@@ -51,7 +53,11 @@ function TestPlanTestRunsPage() {
     const runs = data?.test_runs;
     return Array.isArray(runs) ? (runs as TestRunItem[]) : [];
   }, [data?.test_runs]);
-
+  // TODO(wakisa): re-add environments to this view - they are being fetched but not used
+  /* const { data: { environments = [] } = {} } */
+  $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: projectId } },
+  });
   const filteredRuns = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -80,8 +86,12 @@ function TestPlanTestRunsPage() {
 
   const closedRuns = allRuns.filter((run) => run.is_closed).length;
   const openRuns = allRuns.length - closedRuns;
-  const passedRuns = allRuns.filter((run) => getResultState(run.result_state) === "passed").length;
-  const failedRuns = allRuns.filter((run) => getResultState(run.result_state) === "failed").length;
+  const passedRuns = allRuns.filter(
+    (run) => getResultState(run.result_state) === "passed",
+  ).length;
+  const failedRuns = allRuns.filter(
+    (run) => getResultState(run.result_state) === "failed",
+  ).length;
 
   if (isLoading) return <LoadingState label="Loading test runs..." />;
   if (error) return <ErrorState title="Error loading test runs" />;
@@ -157,7 +167,7 @@ function TestPlanTestRunsPage() {
                       ? "All"
                       : value.charAt(0).toUpperCase() + value.slice(1)}
                   </Button>
-                )
+                ),
               )}
             </HStack>
           </Stack>
@@ -178,7 +188,8 @@ function TestPlanTestRunsPage() {
         <Stack gap={4}>
           {filteredRuns.map((run, index) => {
             const runStatus = getResultState(run.result_state);
-            const runLabel = run.test_case_title?.trim() || `Test Run ${index + 1}`;
+            const runLabel =
+              run.test_case_title?.trim() || `Test Run ${index + 1}`;
             const runId = run.id ?? "";
 
             return (
@@ -242,8 +253,14 @@ function TestPlanTestRunsPage() {
                           fallback: "Not recorded",
                         })}
                       />
-                      <DetailItem label="Expected Result" value={run.expected_result} />
-                      <DetailItem label="Actual Result" value={run.actual_result} />
+                      <DetailItem
+                        label="Expected Result"
+                        value={run.expected_result}
+                      />
+                      <DetailItem
+                        label="Actual Result"
+                        value={run.actual_result}
+                      />
                     </Grid>
 
                     <Separator />
@@ -252,7 +269,9 @@ function TestPlanTestRunsPage() {
                       <Text fontSize="xs" color="fg.subtle">
                         Notes
                       </Text>
-                      <Text color="fg.default">{run.notes?.trim() || "No notes added."}</Text>
+                      <Text color="fg.default">
+                        {run.notes?.trim() || "No notes added."}
+                      </Text>
                     </Stack>
 
                     {!run.is_closed && runId && (

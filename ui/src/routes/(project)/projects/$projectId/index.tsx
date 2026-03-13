@@ -18,6 +18,7 @@ function ViewProject() {
     { label: "Reports", path: `/projects/$projectId/reports` },
     { label: "Insights", path: `/projects/$projectId/insights` },
     { label: "Settings", path: `/projects/$projectId/settings` },
+    {label: "Environments", path: `/projects/$projectId/environments`},
   ];
 
   return (
