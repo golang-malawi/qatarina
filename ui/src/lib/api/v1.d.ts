@@ -349,6 +349,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/environments/{envID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get details of a single environment by ID
+         * @description Get details of a single environment by ID
+         */
+        get: operations["GetEnvironment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox": {
         parameters: {
             query?: never;
@@ -436,6 +456,58 @@ export interface paths {
          * @description Delete a Module
          */
         delete: operations["DeleteModule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All organizations
+         * @description List All organizations
+         */
+        get: operations["ListOrgs"];
+        put?: never;
+        /**
+         * Create a new organization
+         * @description Create a new organization
+         */
+        post: operations["CreateOrg"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{orgID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get organization by ID
+         * @description Get organization by ID
+         */
+        get: operations["GetOrg"];
+        /**
+         * Update organization
+         * @description Update organization
+         */
+        put: operations["UpdateOrg"];
+        post?: never;
+        /**
+         * Delete organization
+         * @description Delete organization
+         */
+        delete: operations["DeleteOrg"];
         options?: never;
         head?: never;
         patch?: never;
@@ -545,6 +617,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/environments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List environments for a project
+         * @description List environments for a project
+         */
+        get: operations["ListEnvironments"];
+        put?: never;
+        /**
+         * Create a new environment
+         * @description Create a new environment
+         */
+        post: operations["CreateEnvironmnet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/modules": {
         parameters: {
             query?: never;
@@ -577,6 +673,86 @@ export interface paths {
          * @description Get a single Project's test cases
          */
         get: operations["GetProjectTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/test-cases/blocked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all test cases that are currently blocked
+         * @description List all test cases that are currently blocked
+         */
+        get: operations["ListBlockedTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/test-cases/closed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Completed/Closed Test Cases
+         * @description List Completed/Closed Test Cases
+         */
+        get: operations["ListClosedTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/test-cases/failing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Failing Test Cases
+         * @description List Failing Test Cases
+         */
+        get: operations["ListFailingTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/test-cases/scheduled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scheduled Test Cases
+         * @description List all test cases scheduled for execution
+         */
+        get: operations["ListScheduledTestCases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1067,6 +1243,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/environment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change environment of a Test Plan
+         * @description Change environment of a Test Plan
+         */
+        post: operations["ChangeEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-cases": {
         parameters: {
             query?: never;
@@ -1484,6 +1680,7 @@ export interface components {
             created_at?: string;
             created_by_id?: number;
             description?: string;
+            environment_id?: number;
             expected_result?: string;
             external_issue_id?: string;
             feature_or_module?: string;
@@ -1521,6 +1718,9 @@ export interface components {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
         };
+        "schema.ChangeEnvironmentRequest": {
+            environment_id: number;
+        };
         "schema.ChangePasswordRequest": {
             confirm_password: string;
             new_password: string;
@@ -1540,6 +1740,13 @@ export interface components {
         "schema.CompactUserListResponse": {
             total?: number;
             users?: components["schemas"]["schema.UserCompact"][];
+        };
+        "schema.CreateOrgRequest": {
+            address?: string;
+            country?: string;
+            github_url?: string;
+            name: string;
+            website_url?: string;
         };
         "schema.CreateProjectModuleRequest": {
             code: string;
@@ -1565,6 +1772,7 @@ export interface components {
             closed_at?: string;
             created_by_id?: number;
             description: string;
+            environment_id?: number;
             kind: string;
             planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
@@ -1585,7 +1793,25 @@ export interface components {
             test_plan_count?: number;
             tester_count?: number;
         };
+        "schema.EnvironmentListResponse": {
+            environments?: components["schemas"]["schema.EnvironmentResponse"][];
+        };
+        "schema.EnvironmentRequest": {
+            base_url?: string;
+            description?: string;
+            name: string;
+        };
+        "schema.EnvironmentResponse": {
+            base_url?: string;
+            created_at?: string;
+            description?: string;
+            id?: number;
+            name?: string;
+            project_id?: number;
+            updated_at?: string;
+        };
         "schema.ExecuteTestRunRequest": {
+            environment_id?: number;
             expected_result?: string;
             id: string;
             notes?: string;
@@ -1623,6 +1849,7 @@ export interface components {
         "schema.NewProjectRequest": {
             code: string;
             description: string;
+            environments?: components["schemas"]["schema.EnvironmentRequest"][];
             github_url?: string;
             name: string;
             parent_project_id?: number;
@@ -1637,6 +1864,21 @@ export interface components {
             last_name: string;
             organization_id?: number;
             password: string;
+        };
+        "schema.Org": {
+            address?: string;
+            country?: string;
+            created_at?: string;
+            created_by?: number;
+            github_url?: string;
+            id?: number;
+            name?: string;
+            updated_at?: string;
+            website_url?: string;
+        };
+        "schema.OrgListResponse": {
+            orgs?: components["schemas"]["schema.Org"][];
+            total?: number;
         };
         "schema.PageRequest": Record<string, never>;
         "schema.Pagination": {
@@ -1730,6 +1972,7 @@ export interface components {
             created_at?: string;
             created_by_id?: number;
             description?: string;
+            environment_id?: number;
             failed_count?: number;
             has_report?: boolean;
             id?: number;
@@ -1757,6 +2000,7 @@ export interface components {
         "schema.TestRunResponse": {
             actual_result?: string;
             code?: string;
+            environment_id?: number;
             executed_by?: string;
             expected_result?: string;
             id?: string;
@@ -1783,6 +2027,14 @@ export interface components {
         };
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
+        };
+        "schema.UpdateOrgRequest": {
+            address?: string;
+            country?: string;
+            github_url?: string;
+            id: number;
+            name: string;
+            website_url?: string;
         };
         "schema.UpdatePageRequest": Record<string, never>;
         "schema.UpdateProjectModuleRequest": {
@@ -1926,6 +2178,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.DashboardSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Environment ID */
+                envID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.EnvironmentResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2231,6 +2528,231 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListOrgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.OrgListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Organization data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.Org"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.Org"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Organization data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Organization ID */
+                orgID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
@@ -2697,6 +3219,97 @@ export interface operations {
             };
         };
     };
+    ListEnvironments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.EnvironmentListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateEnvironmnet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Environment details */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.EnvironmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetProjectModule: {
         parameters: {
             query?: never;
@@ -2760,6 +3373,186 @@ export interface operations {
                 /** @description Filter by draft state */
                 isDraft?: boolean;
             };
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListBlockedTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListClosedTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListFailingTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListScheduledTestCases: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 /** @description Project ID */
@@ -3806,6 +4599,52 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ChangeEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Environment change payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ChangeEnvironmentRequest"];
             };
         };
         responses: {

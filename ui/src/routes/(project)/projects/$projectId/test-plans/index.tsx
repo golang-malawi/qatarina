@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Box,
@@ -23,10 +23,8 @@ import {
   IconPlayerPlay,
   IconPlus,
   IconSearch,
-  IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { toaster } from "@/components/ui/toaster";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricCard } from "@/components/ui/metric-card";
 import {
@@ -43,12 +41,17 @@ import {
 import type { components } from "@/lib/api/v1";
 import { formatHumanDate } from "@/lib/date-time";
 import { useMemo, useState } from "react";
+import { IconTrash } from "@tabler/icons-react";
+import { toaster } from "@/components/ui/toaster";
+import { findProjectTestPlansQueryOptions } from "@/data/queries/test-plans";
 
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-plans/"
+  "/(project)/projects/$projectId/test-plans/",
 )({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(findProjectTestPlansQueryOptions(projectId)),
   component: ListProjectTestPlans,
 });
 
@@ -64,17 +67,13 @@ function ListProjectTestPlans() {
   } = useProjectTestPlansQuery(projectId!);
   const plans = useMemo(
     () => (testPlans?.test_plans ?? []) as TestPlanItem[],
-    [testPlans?.test_plans]
+    [testPlans?.test_plans],
   );
   const filteredPlans = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return plans;
     return plans.filter((plan) => {
-      const searchable = [
-        plan.id?.toString(),
-        plan.description,
-        plan.kind,
-      ]
+      const searchable = [plan.id?.toString(), plan.description, plan.kind]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -256,7 +255,11 @@ function ListProjectTestPlans() {
                           to="/projects/$projectId/test-plans/$testPlanID/execute"
                           params={{ projectId, testPlanID }}
                         >
-                          <Button variant="outline" colorPalette="green" size="sm">
+                          <Button
+                            variant="outline"
+                            colorPalette="green"
+                            size="sm"
+                          >
                             <IconPlayerPlay />
                             Start Session
                           </Button>
@@ -278,7 +281,11 @@ function ListProjectTestPlans() {
                           to="/projects/$projectId/test-plans/$testPlanID"
                           params={{ projectId, testPlanID }}
                         >
-                          <Button variant="outline" colorPalette="brand" size="sm">
+                          <Button
+                            variant="outline"
+                            colorPalette="brand"
+                            size="sm"
+                          >
                             <IconListCheck />
                             View Plan
                           </Button>

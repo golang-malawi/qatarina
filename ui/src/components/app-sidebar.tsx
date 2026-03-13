@@ -26,8 +26,8 @@ import { NavItem } from "@/lib/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
 import { useAuth } from "@/context/AuthContext";
-import { Avatar } from "./ui/avatar";
 import { THEME_OPTIONS, useColorMode } from "./ui/color-mode";
+import { Avatar } from "./ui/avatar";
 
 interface NavLinkProps {
   item: NavItem;
@@ -54,7 +54,7 @@ export default function AppSidebar({
   variant?: "default" | "inset";
 }) {
   const { data: projectsData, isLoading: projectsLoading } = useQuery(
-    findProjectsQueryOptions
+    findProjectsQueryOptions,
   );
   const projects = projectsData?.projects ?? [];
 
@@ -65,10 +65,7 @@ export default function AppSidebar({
       }
       variant={variant}
     >
-      <SidebarContent
-        items={items}
-        header={header}
-      />
+      <SidebarContent items={items} header={header} />
     </Sidebar>
   );
 }
@@ -144,7 +141,7 @@ const ContextSwitcher = ({
       shift: true,
       strategy: "fixed",
     }),
-    [isMobile]
+    [isMobile],
   );
   return (
     <Menu.Root positioning={positioning as any}>
@@ -442,23 +439,19 @@ interface SidebarProps extends BoxProps {
   header?: ReactNode;
 }
 
-const SidebarContent = ({
-  items,
-  header,
-  ...rest
-}: SidebarProps) => {
+const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
   const { isCollapsed } = useSidebar();
   const visibleItems = useMemo(
     () => items.filter((item) => !HIDDEN_PATHS.has(item.path)),
-    [items]
+    [items],
   );
 
   const groupedItems = useMemo(() => {
     const platform = visibleItems.filter((item) =>
-      PLATFORM_PATHS.has(item.path)
+      PLATFORM_PATHS.has(item.path),
     );
     const workspace = visibleItems.filter((item) =>
-      WORKSPACE_PATHS.has(item.path)
+      WORKSPACE_PATHS.has(item.path),
     );
     const system = visibleItems.filter((item) => SYSTEM_PATHS.has(item.path));
     const assignedPaths = new Set([
@@ -467,7 +460,7 @@ const SidebarContent = ({
       ...system.map((item) => item.path),
     ]);
     const unassigned = visibleItems.filter(
-      (item) => !assignedPaths.has(item.path)
+      (item) => !assignedPaths.has(item.path),
     );
     const isProjectContext =
       unassigned.length > 0 &&
@@ -518,7 +511,7 @@ const SidebarContent = ({
                   />
                 ) : (
                   <NavLinkItem key={link.path} item={link} />
-                )
+                ),
               )}
             </SidebarSection>
           )}
@@ -534,7 +527,7 @@ const SidebarContent = ({
                   />
                 ) : (
                   <NavLinkItem key={link.path} item={link} />
-                )
+                ),
               )}
             </SidebarSection>
           )}
@@ -553,11 +546,10 @@ const SidebarContent = ({
                   />
                 ) : (
                   <NavLinkItem key={link.path} item={link} />
-                )
+                ),
               )}
             </SidebarSection>
           )}
-
         </Stack>
       </Box>
 
@@ -639,7 +631,7 @@ const SidebarUser = ({ collapsed }: { collapsed: boolean }) => {
       shift: true,
       strategy: "fixed",
     }),
-    [isMobile]
+    [isMobile],
   );
 
   return (

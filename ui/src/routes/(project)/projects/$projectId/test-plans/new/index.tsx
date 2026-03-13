@@ -11,34 +11,44 @@ import {
   Spinner,
   Text,
 } from "@chakra-ui/react";
-import { Toaster, toaster } from "@/components/ui/toaster"
+import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { SelectAssignedTestCase, CreateTestPlan } from "@/common/models";
+import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { testPlanCreationSchema } from "@/data/forms/test-plan-schemas";
+import {
+  testPlanCreationSchema,
+  TestPlanCreationFormValues,
+} from "@/data/forms/test-plan-schemas";
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
+import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
+import { useParams } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-plans/new/"
+  "/(project)/projects/$projectId/test-plans/new/",
 )({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
     queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
   component: CreateNewTestPlan,
 });
 
-type CreateTestPlanForm = Omit<CreateTestPlan, "project_id">;
+type CreateTestPlanForm = TestPlanCreationFormValues;
 
 function CreateNewTestPlan() {
   const createTestPlanMutation = useCreateTestPlanMutation();
   const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
+
+  const { data: envData } = useSuspenseQuery(
+    findEnvironmentsByProjectQueryOptions(projectId!),
+  );
+  const environments = envData?.environments ?? [];
 
   const [selectedTestCases, setSelectedTestCases] = useState<
     SelectAssignedTestCase[]
@@ -47,7 +57,7 @@ function CreateNewTestPlan() {
   const [activeTestCaseId, setActiveTestCaseId] = useState<string | null>(null);
 
   const activeTestCase = selectedTestCases.find(
-    (t) => t.test_case_id === activeTestCaseId
+    (t) => t.test_case_id === activeTestCaseId,
   );
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
@@ -71,60 +81,71 @@ function CreateNewTestPlan() {
 
   const testers = testersQuery.data?.testers ?? [];
 
- async function handleSubmit(data: CreateTestPlanForm) {
-  const { isValid, unassigned } =
-    validateTestCaseAssignments(selectedTestCases);
+  async function handleSubmit(data: CreateTestPlanForm) {
+    const { isValid, unassigned } =
+      validateTestCaseAssignments(selectedTestCases);
 
-  if (!isValid) {
-    toaster.create({
-      title: "Missing tester assignments",
-      description: `You have ${unassigned.length} test case(s) without assigned testers.`,
-      type: "error",
-      duration: 4000,
+    if (!isValid) {
+      toaster.create({
+        title: "Missing tester assignments",
+        description: `You have ${unassigned.length} test case(s) without assigned testers.`,
+        type: "error",
+        duration: 4000,
+      });
+
+      return;
+    }
+
+    if (!data.environment_id) {
+      toaster.create({
+        title: "Missing environment",
+        description:
+          "Please select an environment before creating the test plan.",
+        type: "error",
+      });
+      return;
+    }
+
+    const res = await createTestPlanMutation.mutateAsync({
+      body: {
+        project_id: parseInt(projectId!),
+        environment_id: Number(data.environment_id),
+        kind: data.kind,
+        description: data.description,
+        start_at: data.start_at,
+        closed_at: data.closed_at,
+        scheduled_end_at: data.scheduled_end_at,
+        planned_tests: selectedTestCases.map((tc) => ({
+          test_case_id: tc.test_case_id,
+          user_ids: tc.user_ids.map(Number),
+        })),
+      },
     });
 
-    return;
+    if (res) {
+      toaster.create({
+        title: "Test Plan created",
+        type: "success",
+      });
+
+      redirect({
+        to: "/projects/$projectId/test-plans",
+        params: { projectId },
+      });
+    }
   }
-
-  const res = await createTestPlanMutation.mutateAsync({
-    body: {
-      project_id: parseInt(projectId!),
-      assigned_to_id: data.assigned_to_id,
-      kind: data.kind,
-      description: data.description,
-      start_at: data.start_at,
-      closed_at: data.closed_at,
-      scheduled_end_at: data.scheduled_end_at,
-      planned_tests: selectedTestCases.map((tc) => ({
-        test_case_id: tc.test_case_id,
-        user_ids: tc.user_ids.map(Number),
-      })),
-    },
-  });
-
-  if (res) {
-    toaster.create({
-      title: "Test Plan created",
-      type: "success",
-    });
-
-    redirect({
-      to: "/projects/$projectId/test-plans",
-      params: { projectId },
-    });
-  }
-}
-
 
   function openAssignModal(testCaseId: number) {
-    const exists = selectedTestCases.some((t) => t.test_case_id === testCaseId.toString());
+    const exists = selectedTestCases.some(
+      (t) => t.test_case_id === testCaseId.toString(),
+    );
 
     if (!exists) {
-    toaster.create({
-      title: "Test Case not selected",
-      description: "Please select the test case before assigning testers.",
-      type: "error",
-    });
+      toaster.create({
+        title: "Test Case not selected",
+        description: "Please select the test case before assigning testers.",
+        type: "error",
+      });
       return;
     }
 
@@ -132,10 +153,10 @@ function CreateNewTestPlan() {
   }
 
   function validateTestCaseAssignments(
-    selectedTestCases: SelectAssignedTestCase[]
+    selectedTestCases: SelectAssignedTestCase[],
   ) {
     const unassigned = selectedTestCases.filter(
-      (tc) => tc.user_ids.length === 0
+      (tc) => tc.user_ids.length === 0,
     );
 
     return {
@@ -143,17 +164,25 @@ function CreateNewTestPlan() {
       unassigned,
     };
   }
-  
 
   return (
     <div>
-      <Toaster
-      />
+      <Toaster />
       <Box p={6}>
         <Heading color="fg.heading">Create a Test Plan</Heading>
         <DynamicForm
           schema={testPlanCreationSchema}
-          fields={testPlanCreationFields}
+          fields={testPlanCreationFields.map((f) =>
+            f.name === "environment_id"
+              ? {
+                  ...f,
+                  options: environments.map((e: any) => ({
+                    label: e.name,
+                    value: String(e.id),
+                  })),
+                }
+              : f,
+          )}
           onSubmit={handleSubmit}
           submitText="Create Plan"
           layout="vertical"
@@ -199,7 +228,7 @@ function CreateNewTestPlan() {
               <Flex justify="space-between" align="center">
                 <Checkbox.Root
                   checked={selectedTestCases.some(
-                    (t) => t.test_case_id === testCase.id!.toString()
+                    (t) => t.test_case_id === testCase.id!.toString(),
                   )}
                   onCheckedChange={(e) => {
                     if (e.checked) {
@@ -209,7 +238,9 @@ function CreateNewTestPlan() {
                       ]);
                     } else {
                       setSelectedTestCases((prev) =>
-                        prev.filter((t) => t.test_case_id !== testCase.id!.toString())
+                        prev.filter(
+                          (t) => t.test_case_id !== testCase.id!.toString(),
+                        ),
                       );
                     }
                   }}
@@ -232,14 +263,15 @@ function CreateNewTestPlan() {
               </Flex>
 
               {/* Assigned testers preview */}
-              {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
-                ?.user_ids.length ? (
+              {selectedTestCases.find(
+                (t) => t.test_case_id === testCase.id!.toString(),
+              )?.user_ids.length ? (
                 <Flex mt={2} gap={2} wrap="wrap">
                   {selectedTestCases
                     .find((t) => t.test_case_id === testCase.id!.toString())!
                     .user_ids.map((uid) => {
                       const tester = testers.find(
-                        (t) => t.user_id?.toString() === uid.toString()
+                        (t) => t.user_id?.toString() === uid.toString(),
                       );
                       return (
                         <Box
@@ -271,7 +303,10 @@ function CreateNewTestPlan() {
         onOpenChange={() => setActiveTestCaseId(null)}
         title="Assign testers to test case"
         footer={
-          <Button colorPalette="brand" onClick={() => setActiveTestCaseId(null)}>
+          <Button
+            colorPalette="brand"
+            onClick={() => setActiveTestCaseId(null)}
+          >
             Done
           </Button>
         }
@@ -283,15 +318,13 @@ function CreateNewTestPlan() {
               prev.map((t) =>
                 t.test_case_id === activeTestCaseId
                   ? { ...t, user_ids: value.map(Number) }
-                  : t
-              )
+                  : t,
+              ),
             );
           }}
         >
           <Fieldset.Root>
-            <Fieldset.Legend fontSize="sm">
-              Select testers
-            </Fieldset.Legend>
+            <Fieldset.Legend fontSize="sm">Select testers</Fieldset.Legend>
 
             <Fieldset.Content>
               <For each={testers}>
@@ -328,9 +361,12 @@ function CreateNewTestPlan() {
                   prev.map((tc) => ({
                     ...tc,
                     user_ids: Array.from(
-                      new Set([...tc.user_ids, ...bulkSelectedTesters.map(Number)])
+                      new Set([
+                        ...tc.user_ids,
+                        ...bulkSelectedTesters.map(Number),
+                      ]),
                     ),
-                  }))
+                  })),
                 );
 
                 setBulkSelectedTesters([]);
@@ -344,8 +380,8 @@ function CreateNewTestPlan() {
       >
         <Box fontSize="sm" mb={3} color="fg.muted">
           Selected testers will be assigned to{" "}
-          <strong>{selectedTestCases.length}</strong> test cases.
-          Existing assignments will be kept.
+          <strong>{selectedTestCases.length}</strong> test cases. Existing
+          assignments will be kept.
         </Box>
 
         <CheckboxGroup
@@ -353,9 +389,7 @@ function CreateNewTestPlan() {
           onValueChange={setBulkSelectedTesters}
         >
           <Fieldset.Root>
-            <Fieldset.Legend fontSize="sm">
-              Select testers
-            </Fieldset.Legend>
+            <Fieldset.Legend fontSize="sm">Select testers</Fieldset.Legend>
 
             <Fieldset.Content>
               <For each={testers}>

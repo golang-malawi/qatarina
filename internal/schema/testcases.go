@@ -132,6 +132,7 @@ type AssignedTestCase struct {
 	TestedOn              *time.Time          `json:"tested_on"`
 	CreatedAt             time.Time           `json:"created_at"`
 	UpdatedAt             time.Time           `json:"updated_at"`
+	EnvironmentID         int32               `json:"environment_id"`
 }
 
 type TestCaseExecutionSummary struct {

@@ -1,4 +1,10 @@
-import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatchRoute,
+} from "@tanstack/react-router";
+import { changeTestPlanEnvironment } from "@/services/TestPlanService";
 import {
   Badge,
   Box,
@@ -10,6 +16,9 @@ import {
   Separator,
   Stack,
   Text,
+  Flex,
+  Stat,
+  Menu,
 } from "@chakra-ui/react";
 import {
   IconCheck,
@@ -44,7 +53,7 @@ type NavItem = {
 };
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-plans/$testPlanID"
+  "/(project)/projects/$projectId/test-plans/$testPlanID",
 )({
   component: ViewTestPlan,
 });
@@ -110,7 +119,9 @@ function ViewTestPlan() {
   };
 
   const kindLabel =
-    (TEST_PLAN_KINDS[testPlan.kind as keyof typeof TEST_PLAN_KINDS] as string) ??
+    (TEST_PLAN_KINDS[
+      testPlan.kind as keyof typeof TEST_PLAN_KINDS
+    ] as string) ??
     testPlan.kind ??
     "N/A";
   const totalCases = testPlan.num_test_cases ?? 0;
@@ -140,7 +151,10 @@ function ViewTestPlan() {
               <Icon as={IconLock} />
               {testPlan.is_locked ? "Locked" : "Open"}
             </Badge>
-            <Badge colorPalette={testPlan.has_report ? "blue" : "gray"} variant="subtle">
+            <Badge
+              colorPalette={testPlan.has_report ? "blue" : "gray"}
+              variant="subtle"
+            >
               {testPlan.has_report ? "Report available" : "No report yet"}
             </Badge>
           </>
@@ -263,7 +277,7 @@ function ViewTestPlan() {
                   to: item.path as any,
                   params: { projectId, testPlanID },
                   fuzzy: item.exact ? false : true,
-                })
+                }),
               );
 
               return (

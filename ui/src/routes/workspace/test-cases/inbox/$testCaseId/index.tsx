@@ -10,8 +10,12 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
-import { findTestCaseInboxByIdQueryOptions, findTestCaseInboxQueryOptions, findTestCaseSummaryQueryOptions } from "@/data/queries/test-cases";
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import {
+  findTestCaseInboxByIdQueryOptions,
+  findTestCaseInboxQueryOptions,
+  findTestCaseSummaryQueryOptions,
+} from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
   useMutation,
@@ -24,19 +28,22 @@ import {
 import { executeTestRun } from "@/services/TestRunService";
 
 import { toaster } from "@/components/ui/toaster";
+import $api from "@/lib/api/query";
 
-export const Route = createFileRoute("/workspace/test-cases/inbox/$testCaseId/")({
+export const Route = createFileRoute(
+  "/workspace/test-cases/inbox/$testCaseId/",
+)({
   loader: ({ context: { queryClient }, params: { testCaseId } }) =>
     queryClient.ensureQueryData(findTestCaseInboxByIdQueryOptions(testCaseId)),
   component: TestCaseInboxItem,
 });
 
 function TestCaseInboxItem() {
-  const { testCaseId } = Route.useParams();
+  const { testCaseId } = useParams();
   const queryClient = useQueryClient();
 
   const { data: testCase } = useSuspenseQuery(
-    findTestCaseInboxByIdQueryOptions(testCaseId)
+    findTestCaseInboxByIdQueryOptions(testCaseId),
   );
 
   const tc = testCase;
@@ -47,9 +54,16 @@ function TestCaseInboxItem() {
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
 
+  const { data: { environments = [] } = {} } = $api.useQuery(
+    "get",
+    "/v1/projects/{projectID}/environments",
+    { params: { path: { projectID: tc.project_id!.toString() } } },
+  );
+
+  const env = environments.find((e: any) => e.id === tc.environment_id);
+
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-     
       if (!testRunId || !expectedResult || !resultText) {
         throw new Error("Missing required test case data.");
       }
@@ -60,6 +74,7 @@ function TestCaseInboxItem() {
         result: resultText,
         notes: notesText,
         expected_result: expectedResult,
+        environment_id: tc.environment_id,
       });
     },
     onSuccess: () => {
@@ -68,7 +83,7 @@ function TestCaseInboxItem() {
         description: "Test result recorded",
         type: "success",
       });
-      setResultText("")
+      setResultText("");
       setNotesText("");
 
       queryClient.invalidateQueries({
@@ -80,7 +95,7 @@ function TestCaseInboxItem() {
 
       queryClient.invalidateQueries({
         queryKey: findTestCaseSummaryQueryOptions.queryKey,
-      })
+      });
     },
     onError: () => {
       toaster.create({
@@ -163,6 +178,9 @@ function TestCaseInboxItem() {
         <Text color="fg.muted">
           <strong>Kind:</strong> {tc.kind}
         </Text>
+        <Text>
+          <strong>Environment:</strong> {env ? env.name : "Not specified"}
+        </Text>
         {isDraft && (
           <Badge colorPalette="warning" variant="subtle">
             Draft
@@ -178,11 +196,14 @@ function TestCaseInboxItem() {
           placeholder="Observed behaviour (result)"
           value={resultText}
           onChange={(e) => setResultText(e.target.value)}
-          mb="2" 
+          mb="2"
         />
-        <Textarea placeholder="Notes about the testing process"
-        value={notesText}
-        onChange={(e) => setNotesText(e.target.value)} mb="4"/>
+        <Textarea
+          placeholder="Notes about the testing process"
+          value={notesText}
+          onChange={(e) => setNotesText(e.target.value)}
+          mb="4"
+        />
         <Button
           type="button"
           variant="outline"
