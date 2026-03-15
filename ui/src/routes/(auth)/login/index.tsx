@@ -219,7 +219,6 @@ function LoginPage() {
         </Card.Root>
 
         <Stack pt={2} direction="row" justifyContent="center">
-          <Text>New to {SiteConfig.name}?</Text>
           <Text>{t("new_user")}</Text>
           <ChakraLink href="#" color="fg.accent">
             {t("create_account")}
