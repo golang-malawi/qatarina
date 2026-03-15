@@ -20,7 +20,7 @@ export const userCreationFields: FieldConfig[] = [
   }),
   {
     name: "country_iso",
-    label: "Country",
+    label: "",
     type: "custom" as const,
     customComponent: CountryField,
   },
@@ -46,7 +46,7 @@ export const userUpdateFields: FieldConfig[] = [
   }),
   {
     name: "country_iso",
-    label: "Country",
+    label: "",
     type: "custom" as const,
     customComponent: CountryField,
   },
