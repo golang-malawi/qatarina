@@ -108,7 +108,7 @@ function EditUserProfile() {
         description: "Profile updated successfully",
         type: "success",
       });
-      navigate({ to: `/users/view/${userID}` });
+      navigate({ to: `/workspace/users/view/${userID}` });
     } catch (err: any) {
       console.error("Update failed:", err);
       const errorMsg = err?.response?.data?.detail || err?.message || "Invalid data in request. Please check inputs.";
