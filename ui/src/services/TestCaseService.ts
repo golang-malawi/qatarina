@@ -142,3 +142,13 @@ export async function updateTestCase(
     body: data,
   });  
 }
+
+export async function deleteTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID}},
+  });
+}
+
+export function useDeleteTestCaseMutation(){
+  return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
+}

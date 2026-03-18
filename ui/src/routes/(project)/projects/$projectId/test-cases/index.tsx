@@ -35,6 +35,7 @@ import {
   useBlockedTestCasesQuery,
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
+import { deleteTestCase } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -274,9 +275,30 @@ export default function ListProjectTestCases() {
                   row.id && markDraftMutation.mutate(String(row.id)),
               },
               { name: "use", label: "Use in Test Session" },
-              { name: "delete", label: "Delete", color: "fg.error" },
+              {
+                name: "delete",
+                label: "Delete",
+                color: "fg.error",
+                onClick: async (row) => {
+                  if (row.id) {
+                    try {
+                      await deleteTestCase(String(row.id));
+                      toaster.success({ title: "Test case deleted successfully" });
+                      queryClient.invalidateQueries(
+                        testCasesByProjectIdQueryOptions(projectId)
+                      );
+                      window.location.href = `/projects/${projectId}/test-cases`;
+                    } catch (err: any) {
+                      toaster.error({
+                        title: "Failed to delete test case",
+                        description: err?.message,
+                      });
+                    }
+                  }
+                },
+              } 
             ]}
-          />
+          /> 
         </Tabs.Content>
         <Tabs.Content value="completed">
           <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
