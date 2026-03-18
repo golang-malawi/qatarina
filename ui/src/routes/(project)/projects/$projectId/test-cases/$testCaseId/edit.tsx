@@ -43,7 +43,7 @@ function EditTestCase() {
     kind: z.string().min(1, "Kind is required"),
     feature_or_module: z.string().optional(),
     is_draft: z.boolean().optional(),
-    tags: z.array(z.string()).optional(),
+    tags: z.array(z.object({value: z.string() })).optional(),
   });
 
   const fields: FieldConfig[] = [
@@ -74,7 +74,7 @@ function EditTestCase() {
           title: values.title ?? "",
           kind: values.kind ?? "",
           is_draft: values.is_draft ?? false,
-          tags: values.tags ?? [],
+          tags: values.tags?.map(t => t.value) ?? [],
         },
       });
 
@@ -114,7 +114,7 @@ function EditTestCase() {
           kind: data.kind ?? "",
           feature_or_module: data.feature_or_module ?? "",
           is_draft: data.is_draft ?? false,
-          tags: data.tags ?? [],
+          tags: (data.tags ?? []).map((t: string) => ({ value: t })),
         }}
         onSubmit={handleSubmit}
         submitText="Update Test Case"
