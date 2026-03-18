@@ -65,12 +65,12 @@ func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
 type UpdateTestCaseRequest struct {
 	ID              string   `json:"id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code" validate:"required"`
+	Code            string   `json:"code,omitempty"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
-	Description     string   `json:"description" validate:"required"`
-	IsDraft         bool     `json:"is_draft" validate:"required"`
-	Tags            []string `json:"tags" validate:"required"`
+	Description     string   `json:"description,omitempty"`
+	IsDraft         bool     `json:"is_draft" validate:"-"`
+	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
 }
 

@@ -261,7 +261,12 @@ export default function ListProjectTestCases() {
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
               },
-              { name: "edit", label: "Edit", icon: LuPencil },
+              { name: "edit", 
+                label: "Edit", 
+                icon: LuPencil,
+                link: (row) =>
+                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
+               },
               {
                 name: "mark-draft",
                 label: "Mark as Draft",
