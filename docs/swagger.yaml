@@ -941,13 +941,9 @@ components:
         title:
           type: string
       required:
-      - code
-      - description
       - feature_or_module
       - id
-      - is_draft
       - kind
-      - tags
       - title
       type: object
     schema.UpdateTesterRoleRequest:

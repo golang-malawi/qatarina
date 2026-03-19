@@ -125,3 +125,30 @@ export function useBlockedTestCasesQuery(projectID: string){
     params: {path: {projectID}},
   });
 }
+
+export function useUpdateTestCaseMutation() {
+  return $api.useMutation(
+    "post", 
+    "/v1/test-cases/{testCaseID}"
+  ); 
+   
+}
+
+export async function updateTestCase(
+  data:components["schemas"]["schema.UpdateTestCaseRequest"]
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID: data.id}},
+    body: data,
+  });  
+}
+
+export async function deleteTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID}},
+  });
+}
+
+export function useDeleteTestCaseMutation(){
+  return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
+}

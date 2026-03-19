@@ -2057,13 +2057,13 @@ export interface components {
             website_url: string;
         };
         "schema.UpdateTestCaseRequest": {
-            code: string;
-            description: string;
+            code?: string;
+            description?: string;
             feature_or_module: string;
             id: string;
-            is_draft: boolean;
+            is_draft?: boolean;
             kind: string;
-            tags: string[];
+            tags?: string[];
             title: string;
         };
         "schema.UpdateTesterRoleRequest": {
