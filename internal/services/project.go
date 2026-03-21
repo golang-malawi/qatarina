@@ -26,16 +26,18 @@ type ProjectService interface {
 }
 
 type projectServiceImpl struct {
-	name   loggedmodule.Name
-	db     *dbsqlc.Queries
-	logger logging.Logger
+	name          loggedmodule.Name
+	db            *dbsqlc.Queries
+	logger        logging.Logger
+	moduleService ModuleService
 }
 
-func NewProjectService(db *dbsqlc.Queries, logger logging.Logger) ProjectService {
+func NewProjectService(db *dbsqlc.Queries, logger logging.Logger, moduleService ModuleService) ProjectService {
 	return &projectServiceImpl{
-		name:   "projects-service",
-		db:     db,
-		logger: logger,
+		name:          "projects-service",
+		db:            db,
+		logger:        logger,
+		moduleService: moduleService,
 	}
 }
 
@@ -55,6 +57,22 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 	})
 	if err != nil {
 		s.logger.Error(s.name, "failed to create project", "error", err)
+		return nil, err
+	}
+
+	// Create a default module for the new project
+	defaultModule := &schema.CreateProjectModuleRequest{
+		ProjectID:   projectID,
+		Name:        "Default Module",
+		Code:        "DEF",
+		Priority:    1,
+		Type:        "general",
+		Description: "Automatically created default module",
+	}
+
+	_, err = s.moduleService.Create(defaultModule)
+	if err != nil {
+		s.logger.Error(s.name, "failed to create default module", "projectID", projectID, "error", err)
 		return nil, err
 	}
 
