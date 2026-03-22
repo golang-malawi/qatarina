@@ -66,9 +66,15 @@ SELECT * FROM projects WHERE id = $1;
 
 -- name: UpdateProject :execrows
 UPDATE projects SET
-title = $2, description = $3, website_url = $4,
-version = $5, github_url = $6,
-owner_user_id = $7
+  title = $2,
+  code = $3,
+  description = $4,
+  website_url = $5,
+  version = $6,
+  github_url = $7,
+  owner_user_id = $8,
+  parent_project_id = $9,
+  updated_at = NOW()
 WHERE id = $1;
 
 -- name: DeleteProject :execrows

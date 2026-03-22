@@ -222,11 +222,12 @@ type Project struct {
 	// URL to Monday.com if available
 	MondayUrl sql.NullString
 	// The ID of the owner or creator of the project
-	OwnerUserID int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
-	Code        string
+	OwnerUserID     int32
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       sql.NullTime
+	Code            string
+	ParentProjectID sql.NullInt32
 }
 
 type ProjectTester struct {
