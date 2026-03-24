@@ -259,18 +259,18 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                       <Heading size="sm" mb={2}>Preview</Heading>                     
                       <ReactMarkdown
                         components={{
-                          h1: ({node, ...props}) => <Heading size="lg" {...props} />,
-                          h2: ({node, ...props}) => <Heading size="md" {...props} />,
-                          h3: ({node, ...props}) => <Heading size="sm" {...props} />,
-                          p: ({node, ...props}) => <Text mb={2} {...props} />,
-                          code: ({node, ...props}) => <Code colorScheme="yellow" {...props} />,
-                          ul: ({node, ...props}) => (
+                          h1: (props) => <Heading size="lg" {...props} />,
+                          h2: (props) => <Heading size="md" {...props} />,
+                          h3: (props) => <Heading size="sm" {...props} />,
+                          p: (props) => <Text mb={2} {...props} />,
+                          code: (props) => <Code colorScheme="yellow" {...props} />,
+                          ul: (props) => (
                             <List.Root variant="marker" pl={4} {...props} />
                           ),
-                          ol: ({node, ...props}) => (
+                          ol: (props) => (
                             <List.Root variant="marker" as="ol" pl={4} {...props} />
                           ),
-                          li: ({node, ...props}) => <List.Item {...props} />,
+                          li: (props) => <List.Item {...props} />,
                         }}
                       >
                         {(field.state.value as string) || ""}

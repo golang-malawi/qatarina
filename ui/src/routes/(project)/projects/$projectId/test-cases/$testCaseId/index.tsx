@@ -111,35 +111,32 @@ function ViewTestCase() {
             {testCase.description ? (
               <ReactMarkdown
                 components={{
-                  h1: ({node, ...props}) => <Heading size="lg" mb={2} {...props} />,
-                  h2: ({node, ...props}) => <Heading size="md" mb={2} {...props} />,
-                  h3: ({node, ...props}) => <Heading size="sm" mb={2} {...props} />,
-                  p: ({node, ...props}) => <Text mb={2} {...props} />,
-                  code: ({node, ...props}) => <Code colorScheme="yellow" {...props} />,
-                  ul: ({node, ...props}) => (
+                  h1: (props) => <Heading size="lg" mb={2} {...props} />,
+                  h2: (props) => <Heading size="md" mb={2} {...props} />,
+                  h3: (props) => <Heading size="sm" mb={2} {...props} />,
+                  p: (props) => <Text mb={2} {...props} />,
+                  code: (props) => <Code colorScheme="yellow" {...props} />,
+                  ul: (props) => (
                     <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
                   ),
-                  ol: ({node, ...props}) => (
+                  ol: (props) => (
                     <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
                   ),
-                  li: ({node, ...props}) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-                  blockquote: ({node, ...props}) => (
+                  li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
+                  blockquote: (props) => (
                     <blockquote
                       style={{
                         paddingLeft: "1rem",
-                        borderLeft: "4px solid #CBD5E0", 
-                        color: "#4A5568", 
+                        borderLeft: "4px solid #CBD5E0",
+                        color: "#4A5568",
                         fontStyle: "italic",
                         margin: "0.5rem 0",
                       }}
                       {...props}
                     />
                   ),
-                  a: ({node, ...props}) => (
-                    <a
-                      style={{ color: "#3182CE", textDecoration: "underline" }} 
-                      {...props}
-                    />
+                  a: (props) => (
+                    <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
                   ),
                 }}
               >
