@@ -8,6 +8,7 @@ import {
   Menu,
   Text,
   Textarea,
+  Code,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -29,6 +30,7 @@ import { executeTestRun } from "@/services/TestRunService";
 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
+import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute(
   "/workspace/test-cases/inbox/$testCaseId/",
@@ -92,7 +94,6 @@ function TestCaseInboxItem() {
       queryClient.invalidateQueries({
         queryKey: findTestCaseInboxQueryOptions.queryKey,
       });
-
       queryClient.invalidateQueries({
         queryKey: findTestCaseSummaryQueryOptions.queryKey,
       });
@@ -138,7 +139,7 @@ function TestCaseInboxItem() {
   return (
     <Box>
       <Heading size="lg" color="fg.heading">
-        {tc.description}
+        {tc.title}
       </Heading>
       <Menu.Root>
         <Menu.Trigger asChild>
@@ -157,7 +158,6 @@ function TestCaseInboxItem() {
           >
             {isDraft ? "Unmark as Draft" : "Mark as Draft"}
           </Menu.Item>
-
           <Menu.Item value="">Use in Test Plan</Menu.Item>
           <Menu.Item value="" color="fg.error">
             Delete
@@ -166,15 +166,51 @@ function TestCaseInboxItem() {
       </Menu.Root>
 
       <Container my="4">
-        <Heading size="lg" color="fg.heading">
-          {tc.title}
-        </Heading>
         <Text color="fg.muted">
           <strong>Code:</strong> {tc.code}
         </Text>
-        <Text color="fg.muted">
-          <strong>Description:</strong> {tc.description}
-        </Text>
+        <Box mt={2}>
+          <Heading size="sm" mb={2} color="fg.heading">
+            Description
+          </Heading>
+          {tc.description ? (
+            <ReactMarkdown
+              components={{
+                h1: ({node, ...props}) => <Heading size="lg" mb={2} {...props} />,
+                h2: ({node, ...props}) => <Heading size="md" mb={2} {...props} />,
+                h3: ({node, ...props}) => <Heading size="sm" mb={2} {...props} />,
+                p: ({node, ...props}) => <Text mb={2} {...props} />,
+                code: ({node, ...props}) => <Code colorScheme="yellow" {...props} />,
+                ul: ({node, ...props}) => (
+                  <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
+                ),
+                ol: ({node, ...props}) => (
+                  <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
+                ),
+                li: ({node, ...props}) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
+                blockquote: ({node, ...props}) => (
+                  <blockquote
+                    style={{
+                      paddingLeft: "1rem",
+                      borderLeft: "4px solid #CBD5E0",
+                      color: "#4A5568",
+                      fontStyle: "italic",
+                      margin: "0.5rem 0",
+                    }}
+                    {...props}
+                  />
+                ),
+                a: ({node, ...props}) => (
+                  <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
+                ),
+              }}
+            >
+              {tc.description}
+            </ReactMarkdown>
+          ) : (
+            <Text color="fg.subtle">No description provided.</Text>
+          )}
+        </Box>
         <Text color="fg.muted">
           <strong>Kind:</strong> {tc.kind}
         </Text>

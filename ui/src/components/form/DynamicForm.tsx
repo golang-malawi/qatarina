@@ -10,9 +10,14 @@ import {
   VStack,
   HStack,
   NativeSelect,
+  Heading,
+  Text,
+  Code,  
+  List,  
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
+import ReactMarkdown from "react-markdown";
 
 export type FieldType =
   | "text"
@@ -30,7 +35,8 @@ export type FieldType =
   | "feature-module"
   | "feature-module-type"
   | "custom"
-  | "array";
+  | "array"
+  | "markdown-textarea";
 
 export interface FieldConfig {
   name: string;
@@ -239,6 +245,40 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
+              {type === "markdown-textarea" && (
+                <Box flex="1">
+                  <Textarea  
+                      width="100%"
+                      minHeight="200px"                   
+                      value={(field.state.value as string) || ""}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder={placeholder}                                                         
+                    />
+                    <Box mt={2} p={4} border="1px solid" borderColor="gray.200" bg="gray.50" borderRadius="md">
+                      <Heading size="sm" mb={2}>Preview</Heading>                     
+                      <ReactMarkdown
+                        components={{
+                          h1: ({node, ...props}) => <Heading size="lg" {...props} />,
+                          h2: ({node, ...props}) => <Heading size="md" {...props} />,
+                          h3: ({node, ...props}) => <Heading size="sm" {...props} />,
+                          p: ({node, ...props}) => <Text mb={2} {...props} />,
+                          code: ({node, ...props}) => <Code colorScheme="yellow" {...props} />,
+                          ul: ({node, ...props}) => (
+                            <List.Root variant="marker" pl={4} {...props} />
+                          ),
+                          ol: ({node, ...props}) => (
+                            <List.Root variant="marker" as="ol" pl={4} {...props} />
+                          ),
+                          li: ({node, ...props}) => <List.Item {...props} />,
+                        }}
+                      >
+                        {(field.state.value as string) || ""}
+                      </ReactMarkdown>                      
+                    </Box>
+                  </Box>
+                )}
+
               {type === "select" && (
                 <NativeSelect.Root>
                   <NativeSelect.Field
@@ -288,7 +328,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={placeholder}
                 />
-              )}
+              )}   
 
               {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
               {showErrors && (
