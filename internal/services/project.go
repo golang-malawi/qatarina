@@ -117,16 +117,18 @@ func (s *projectServiceImpl) FindByID(ctx context.Context, projectID int64) (*db
 	}
 }
 
-// FindByID implements ProjectService.
+// Update implements ProjectService.
 func (s *projectServiceImpl) Update(ctx context.Context, request schema.UpdateProjectRequest) (bool, error) {
 	_, err := s.db.UpdateProject(ctx, dbsqlc.UpdateProjectParams{
-		ID:          int32(request.ID),
-		Title:       request.Name,
-		Description: request.Description,
-		WebsiteUrl:  common.NullString(request.WebsiteURL),
-		Version:     common.NullString(request.Version),
-		GithubUrl:   common.NullString(request.GitHubURL),
-		OwnerUserID: int32(request.ProjectOwnerID),
+		ID:              int32(request.ID),
+		Title:           request.Name,
+		Code:            request.Code,
+		Description:     request.Description,
+		WebsiteUrl:      common.NullString(request.WebsiteURL),
+		Version:         common.NullString(request.Version),
+		GithubUrl:       common.NullString(request.GitHubURL),
+		OwnerUserID:     int32(request.ProjectOwnerID),
+		ParentProjectID: common.NewNullInt32(int32(request.ParentProjectID)),
 	})
 
 	if err != nil {

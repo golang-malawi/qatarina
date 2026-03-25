@@ -576,6 +576,8 @@ components:
           type: string
         owner_user_id:
           type: integer
+        parent_project_id:
+          type: integer
         title:
           type: string
         trello_url:
@@ -896,6 +898,11 @@ components:
           type: string
         description:
           type: string
+        environments:
+          items:
+            $ref: '#/components/schemas/schema.EnvironmentRequest'
+          type: array
+          uniqueItems: false
         github_url:
           type: string
         id:

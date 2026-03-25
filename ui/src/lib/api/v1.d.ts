@@ -1900,6 +1900,7 @@ export interface components {
             jira_url?: string;
             monday_url?: string;
             owner_user_id?: number;
+            parent_project_id?: number;
             title?: string;
             trello_url?: string;
             updated_at?: string;
@@ -2048,6 +2049,7 @@ export interface components {
         "schema.UpdateProjectRequest": {
             code: string;
             description: string;
+            environments?: components["schemas"]["schema.EnvironmentRequest"][];
             github_url?: string;
             id: number;
             name: string;

@@ -32,17 +32,24 @@ import { useMemo, useState } from "react";
 
 type ProjectRecord = {
   id?: number;
+  project_owner_id: number;
   title?: string;
   description?: string;
   code?: string;
   version?: string;
   website_url?: string;
   github_url?: string;
+  parent_project_id?: number;
   jira_url?: string;
   trello_url?: string;
   monday_url?: string;
   is_active?: boolean;
   updated_at?: string;
+  environments?: {
+    name: string;
+    description?: string;
+    base_url?: string;
+  }[];
 };
 
 export const Route = createFileRoute("/workspace/projects/")({
@@ -57,25 +64,21 @@ function ProjectsPage() {
 
   const projectsQueryOptions = $api.queryOptions("get", "/v1/projects");
 
-  const {
-    data: { projects },
-    isPending,
-    error,
-  } = useSuspenseQuery(projectsQueryOptions);
+  const { data, isPending, error } = useSuspenseQuery(projectsQueryOptions);
 
   const deleteMutation = $api.useMutation("delete", "/v1/projects/{projectID}");
-  const projectRecords = useMemo(() => (projects ?? []) as ProjectRecord[], [projects]);
+  const projectRecords = useMemo(
+    () => (data?.projects ?? []) as ProjectRecord[], [data]);
   const filteredProjects = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = (typeof searchTerm === "string" ? searchTerm : "").trim().toLowerCase();
     if (!term) return projectRecords;
     return projectRecords.filter((record) => {
       const searchable = [
-        record.title,
-        record.description,
-        record.code,
-        record.version,
+        record.title ?? "",
+        record.description ?? "",
+        record.code ?? "",
+        record.version ?? "",
       ]
-        .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return searchable.includes(term);
@@ -190,9 +193,9 @@ function ProjectsPage() {
         <Card.Body p={{ base: 4, md: 5 }}>
           <InputGroup startElement={<IconSearch size={16} />}>
             <Input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by title, code, description, or version"
+              value={searchTerm ?? ""}
+              onChange={(event) => setSearchTerm(event.target.value ?? "")}
+              placeholder="Search by name, code, description, or version"
             />
           </InputGroup>
         </Card.Body>
@@ -350,6 +353,22 @@ function ProjectsPage() {
                           New Test Plan
                         </Button>
                       )}
+
+                      {hasId ? (
+                        <Link
+                          to="/workspace/projects/$projectId/edit"
+                          params={{ projectId }}
+                        >
+                          <Button variant="outline" colorPalette="orange" size="sm">
+                            Edit
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button variant="outline" colorPalette="orange" size="sm" disabled>
+                          Edit
+                        </Button>
+                      )}
+
                       <Button
                         variant="outline"
                         colorPalette="danger"

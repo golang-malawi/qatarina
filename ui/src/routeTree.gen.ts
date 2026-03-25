@@ -40,6 +40,7 @@ import { Route as WorkspaceUsersViewUserIDRouteImport } from './routes/workspace
 import { Route as appUsersUserIDEditRouteImport } from './routes/(app)/users/$userID/edit'
 import { Route as WorkspaceTestersViewTesterIdIndexRouteImport } from './routes/workspace/testers/view/$testerId/index'
 import { Route as WorkspaceTestCasesInboxTestCaseIdIndexRouteImport } from './routes/workspace/test-cases/inbox/$testCaseId/index'
+import { Route as WorkspaceProjectsProjectIdEditIndexRouteImport } from './routes/workspace/projects/$projectId/edit/index'
 import { Route as projectProjectsProjectIdTestersIndexRouteImport } from './routes/(project)/projects/$projectId/testers/index'
 import { Route as projectProjectsProjectIdTestPlansIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/index'
 import { Route as projectProjectsProjectIdTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/index'
@@ -228,6 +229,12 @@ const WorkspaceTestCasesInboxTestCaseIdIndexRoute =
     path: '/$testCaseId/',
     getParentRoute: () => WorkspaceTestCasesInboxRouteRoute,
   } as any)
+const WorkspaceProjectsProjectIdEditIndexRoute =
+  WorkspaceProjectsProjectIdEditIndexRouteImport.update({
+    id: '/projects/$projectId/edit/',
+    path: '/projects/$projectId/edit/',
+    getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
 const projectProjectsProjectIdTestersIndexRoute =
   projectProjectsProjectIdTestersIndexRouteImport.update({
     id: '/testers/',
@@ -415,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
+  '/workspace/projects/$projectId/edit/': typeof WorkspaceProjectsProjectIdEditIndexRoute
   '/workspace/test-cases/inbox/$testCaseId/': typeof WorkspaceTestCasesInboxTestCaseIdIndexRoute
   '/workspace/testers/view/$testerId/': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
@@ -470,6 +478,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
+  '/workspace/projects/$projectId/edit': typeof WorkspaceProjectsProjectIdEditIndexRoute
   '/workspace/test-cases/inbox/$testCaseId': typeof WorkspaceTestCasesInboxTestCaseIdIndexRoute
   '/workspace/testers/view/$testerId': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
@@ -528,6 +537,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/(project)/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/(project)/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
+  '/workspace/projects/$projectId/edit/': typeof WorkspaceProjectsProjectIdEditIndexRoute
   '/workspace/test-cases/inbox/$testCaseId/': typeof WorkspaceTestCasesInboxTestCaseIdIndexRoute
   '/workspace/testers/view/$testerId/': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
@@ -586,6 +596,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-cases/'
     | '/projects/$projectId/test-plans/'
     | '/projects/$projectId/testers/'
+    | '/workspace/projects/$projectId/edit/'
     | '/workspace/test-cases/inbox/$testCaseId/'
     | '/workspace/testers/view/$testerId/'
     | '/projects/$projectId/test-cases/$testCaseId/edit'
@@ -641,6 +652,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-cases'
     | '/projects/$projectId/test-plans'
     | '/projects/$projectId/testers'
+    | '/workspace/projects/$projectId/edit'
     | '/workspace/test-cases/inbox/$testCaseId'
     | '/workspace/testers/view/$testerId'
     | '/projects/$projectId/test-cases/$testCaseId/edit'
@@ -698,6 +710,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/test-cases/'
     | '/(project)/projects/$projectId/test-plans/'
     | '/(project)/projects/$projectId/testers/'
+    | '/workspace/projects/$projectId/edit/'
     | '/workspace/test-cases/inbox/$testCaseId/'
     | '/workspace/testers/view/$testerId/'
     | '/(project)/projects/$projectId/test-cases/$testCaseId/edit'
@@ -941,6 +954,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceTestCasesInboxTestCaseIdIndexRouteImport
       parentRoute: typeof WorkspaceTestCasesInboxRouteRoute
     }
+    '/workspace/projects/$projectId/edit/': {
+      id: '/workspace/projects/$projectId/edit/'
+      path: '/projects/$projectId/edit'
+      fullPath: '/workspace/projects/$projectId/edit/'
+      preLoaderRoute: typeof WorkspaceProjectsProjectIdEditIndexRouteImport
+      parentRoute: typeof WorkspaceRouteRoute
+    }
     '/(project)/projects/$projectId/testers/': {
       id: '/(project)/projects/$projectId/testers/'
       path: '/testers'
@@ -1167,6 +1187,7 @@ interface WorkspaceRouteRouteChildren {
   WorkspaceProjectsNewIndexRoute: typeof WorkspaceProjectsNewIndexRoute
   WorkspaceTestCasesNewIndexRoute: typeof WorkspaceTestCasesNewIndexRoute
   WorkspaceUsersNewIndexRoute: typeof WorkspaceUsersNewIndexRoute
+  WorkspaceProjectsProjectIdEditIndexRoute: typeof WorkspaceProjectsProjectIdEditIndexRoute
   WorkspaceTestersViewTesterIdIndexRoute: typeof WorkspaceTestersViewTesterIdIndexRoute
 }
 
@@ -1187,6 +1208,8 @@ const WorkspaceRouteRouteChildren: WorkspaceRouteRouteChildren = {
   WorkspaceProjectsNewIndexRoute: WorkspaceProjectsNewIndexRoute,
   WorkspaceTestCasesNewIndexRoute: WorkspaceTestCasesNewIndexRoute,
   WorkspaceUsersNewIndexRoute: WorkspaceUsersNewIndexRoute,
+  WorkspaceProjectsProjectIdEditIndexRoute:
+    WorkspaceProjectsProjectIdEditIndexRoute,
   WorkspaceTestersViewTesterIdIndexRoute:
     WorkspaceTestersViewTesterIdIndexRoute,
 }
