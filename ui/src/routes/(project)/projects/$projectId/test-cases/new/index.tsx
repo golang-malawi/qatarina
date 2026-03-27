@@ -1,4 +1,4 @@
-import { Box, Heading } from "@chakra-ui/react";
+import { Box, Heading} from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCreateTestCaseMutation } from "@/services/TestCaseService";
@@ -32,6 +32,7 @@ function NewTestCases() {
             .filter(Boolean)
         : values.tags || [];
 
+  try {
     const res = await createTestCaseMutation.mutateAsync({
       body: {
         project_id: parseInt(`${project_id}`),
@@ -57,8 +58,15 @@ function NewTestCases() {
         params: { projectId: `${project_id}` },
       });
     }
+  } catch (err) {
+    toaster.create({
+      title: "Failed to create test case",
+      description: (err as Error).message,
+      type: "error",
+      duration: 4000,
+    });
+  }   
   }
-
   return (
     <Box p={6}>
       <Heading size="3xl" color="fg.heading">
@@ -72,7 +80,7 @@ function NewTestCases() {
         submitLoading={createTestCaseMutation.isPending}
         layout="vertical"
         spacing={4}
-      />
+      />      
     </Box>
   );
 }

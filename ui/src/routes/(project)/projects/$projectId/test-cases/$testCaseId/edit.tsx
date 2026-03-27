@@ -49,7 +49,7 @@ function EditTestCase() {
   const fields: FieldConfig[] = [
     { name: "title", label: "Title", type: "text", required: true },
     { name: "code", label: "Code", type: "text" },
-    { name: "description", label: "Description", type: "textarea" },
+    { name: "description", label: "Description", type: "markdown-textarea" },
     { name: "kind", label: "Kind", type: "test-kind", required: true },
     { name: "feature_or_module", label: "Feature/Module", type: "feature-module" },
     { name: "is_draft", label: "Draft?", type: "checkbox" },

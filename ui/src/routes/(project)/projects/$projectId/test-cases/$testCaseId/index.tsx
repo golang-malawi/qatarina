@@ -11,7 +11,8 @@ import {
   Flex,
   Alert,
   Stack,
-  Spinner,
+  Spinner, 
+  Code,
 } from "@chakra-ui/react";
 import { AppDialog } from "@/components/ui/app-dialog";
 
@@ -20,6 +21,7 @@ import { useProjectTestPlansQuery } from "@/services/TestPlanService";
 import { assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -106,9 +108,43 @@ function ViewTestCase() {
             borderColor="border.subtle"
           >
             {/* Description */}
-            <Text mb={3} color="fg.muted">
-              {testCase.description || "No description provided."}
-            </Text>
+            {testCase.description ? (
+              <ReactMarkdown
+                components={{
+                  h1: (props) => <Heading size="lg" mb={2} {...props} />,
+                  h2: (props) => <Heading size="md" mb={2} {...props} />,
+                  h3: (props) => <Heading size="sm" mb={2} {...props} />,
+                  p: (props) => <Text mb={2} {...props} />,
+                  code: (props) => <Code colorScheme="yellow" {...props} />,
+                  ul: (props) => (
+                    <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
+                  ),
+                  ol: (props) => (
+                    <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
+                  ),
+                  li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
+                  blockquote: (props) => (
+                    <blockquote
+                      style={{
+                        paddingLeft: "1rem",
+                        borderLeft: "4px solid #CBD5E0",
+                        color: "#4A5568",
+                        fontStyle: "italic",
+                        margin: "0.5rem 0",
+                      }}
+                      {...props}
+                    />
+                  ),
+                  a: (props) => (
+                    <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
+                  ),
+                }}
+              >
+                {testCase.description}
+              </ReactMarkdown>
+            ) : (
+              <Text color="fg.subtle">No description provided.</Text>
+            )}    
 
             {/* Tags */}
             <Box mb={3}>

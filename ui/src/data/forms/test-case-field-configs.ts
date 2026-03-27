@@ -34,9 +34,9 @@ export const createTestCaseFields = (): FieldConfig[] => [
   {
     name: "description",
     label: "Description",
-    type: "text",
-    placeholder: "Enter description",
-    helperText: "Test Case Description.",
+    type: "markdown-textarea",
+    placeholder: "Enter steps/procedures (Markdown supported)",
+    helperText: "You can format this description using Markdown (e.g. lists, bold, headings).",
     required: true,
   },
   {

@@ -10,9 +10,15 @@ import {
   VStack,
   HStack,
   NativeSelect,
+  Heading,
+  Text,
+  Code,  
+  List,  
+  Tabs,
 } from "@chakra-ui/react";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
+import ReactMarkdown from "react-markdown";
 
 export type FieldType =
   | "text"
@@ -30,7 +36,8 @@ export type FieldType =
   | "feature-module"
   | "feature-module-type"
   | "custom"
-  | "array";
+  | "array"
+  | "markdown-textarea";
 
 export interface FieldConfig {
   name: string;
@@ -239,6 +246,59 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
+              {type === "markdown-textarea" && (
+                <Box w="100%">
+                  <Tabs.Root defaultValue="write">
+                    <Tabs.List>
+                      <Tabs.Trigger value="write">Write</Tabs.Trigger>
+                      <Tabs.Trigger value="preview">Preview</Tabs.Trigger>
+                    </Tabs.List>
+
+                    <Tabs.Content value="write">                      
+                        <Textarea
+                          width="100%"
+                          minHeight="200px"                           
+                          fontFamily="monospace"                    
+                          value={(field.state.value as string) || ""}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder={placeholder}
+                        />                        
+                    </Tabs.Content>
+
+                    <Tabs.Content value="preview">
+                      <Box
+                        mt={2}
+                        p={4}
+                        border="1px solid"
+                        borderColor="gray.200"
+                        bg="gray.50"
+                        borderRadius="md"
+                      >
+                        <ReactMarkdown
+                          components={{
+                            h1: (props) => <Heading size="lg" {...props} />,
+                            h2: (props) => <Heading size="md" {...props} />,
+                            h3: (props) => <Heading size="sm" {...props} />,
+                            p: (props) => <Text mb={2} {...props} />,
+                            code: (props) => <Code colorScheme="yellow" {...props} />,
+                            ul: (props) => (
+                              <List.Root variant="marker" pl={4} {...props} />
+                            ),
+                            ol: (props) => (
+                              <List.Root variant="marker" as="ol" pl={4} {...props} />
+                            ),
+                            li: (props) => <List.Item {...props} />,
+                          }}
+                        >
+                          {(field.state.value as string) || ""}
+                      </ReactMarkdown>
+                      </Box>
+                    </Tabs.Content>
+                  </Tabs.Root>                          
+                  </Box>
+                )}
+
               {type === "select" && (
                 <NativeSelect.Root>
                   <NativeSelect.Field
@@ -288,7 +348,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={placeholder}
                 />
-              )}
+              )}   
 
               {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
               {showErrors && (
