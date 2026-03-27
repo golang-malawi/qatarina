@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -63,7 +64,7 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 			}
 			isDraft = &val
 		}
-
+		suggested := false
 		testCases, total, err := testCasesService.FindAllPaged(context.Background(), services.TestCaseQueryParams{
 			Page:      page,
 			PageSize:  pageSize,
@@ -72,6 +73,7 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 			Search:    search,
 			Kind:      kind,
 			IsDraft:   isDraft,
+			Suggested: &suggested,
 		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test cases", "error", err)
@@ -526,5 +528,135 @@ func ListBlockedTestCases(testCasesService services.TestCaseService, logger logg
 		}
 
 		return c.JSON(schema.TestCaseListResponse{TestCases: testCases})
+	}
+}
+
+// SuggestTestCase godoc
+//
+//	@ID				SuggestTestCase
+//	@Summary		Suggest a new Test Case
+//	@Description	Suggest a new Test Case
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.CreateSuggestedTestCaseRequest 	true	"Suggest Test Case data"
+//	@Success		200			{object}	schema.TestCaseResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/suggest [post]
+func SuggestTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		req := new(schema.CreateSuggestedTestCaseRequest)
+		fmt.Printf("Debug: struct type = %T\n", req) // TODO DELETE TEST CODE
+		if validationErrors, err := common.ParseBodyThenValidate(c, req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		userID := authutil.GetAuthUserID(c)
+		req.CreatedByID = userID
+
+		tc, err := testCaseService.Suggest(c.Context(), req)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to suggest test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to suggest test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponse(tc))
+	}
+}
+
+// ListSuggestedTestCases godoc
+//
+//	@ID				ListSuggestedTestCases
+//	@Summary		List suggested test cases for a project
+//	@Description	List suggested test cases for a project
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path 		string	true	"Project ID"
+//	@Success		200			{object}	schema.TestCaseListResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-cases/suggested [get]
+func ListSuggestedTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil || projectID == 0 {
+			return problemdetail.BadRequest(c, "missing or invalid project ID")
+		}
+
+		testCases, err := testCaseService.FindAllSuggested(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch suggested test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch suggested test cases")
+		}
+
+		return c.JSON(schema.TestCaseListResponse{TestCases: schema.NewTestCaseResponseList(testCases)})
+	}
+}
+
+// AcceptSuggestedTestCase godoc
+//
+//	@ID				AcceptSuggestedTestCase
+//	@Summary		Accept a suggested test case
+//	@Description	Accept a suggested test case
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Param			request	body			true	""
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{testCaseID}/accept [post]
+func AcceptSuggestedTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("testCaseID", "")
+		if id == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		if err := testCaseService.AcceptSuggested(c.Context(), id); err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to accept suggested test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to accept suggested test case")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Suggested test case accepted",
+		})
+	}
+}
+
+// RejectSuggestedTestCase godoc
+//
+//	@ID				RejectSuggestedTestCase
+//	@Summary		Reject a suggested Test Case
+//	@Description	Reject a suggested Test Case
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			testCaseID	path		string	true	"Test Case ID"
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-caes/{testCaseID}/reject [delete]
+func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("testCaseID", "")
+		if id == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		if err := testCaseService.RejectSuggested(c.Context(), id); err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to reject suggested test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to reject suggested test case")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Suggested test case rejected",
+		})
 	}
 }

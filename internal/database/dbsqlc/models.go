@@ -267,6 +267,7 @@ type TestCase struct {
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
 	ProjectID sql.NullInt32
+	Suggested sql.NullBool
 }
 
 type TestCaseSequence struct {
