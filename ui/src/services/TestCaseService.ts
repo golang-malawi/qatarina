@@ -48,45 +48,23 @@ export async function createTestCase(
   return apiClient.request("post", "/v1/test-cases", { body: data });
 }
 
-
 export async function importTestCasesFromFile(
   projectId: string,
   file: File
-) {
+): Promise<{ message: string }> {
   const formData = new FormData();
   formData.append("projectID", projectId);
   formData.append("file", file);
 
-  try {
-    const res = await apiClient.request(
-      "post",
-      "/v1/test-cases/import-file",
-      {
-        params: { path: { formData: "" } },
-        body: formData as any,
-      }
-    );
-    if (
-      (res as any)?.success === false ||
-      (res as any)?.error ||
-      (res as any)?.errors?.length
-    ) {
-      throw new Error(
-        (res as any)?.message ||
-          (res as any)?.error ||
-          "Failed to import test cases"
-      );
-    }
+  const res = await apiClient.request("post", "/v1/test-cases/import-file", {
+    body: formData as any,
+  });
 
-    return res;
-  } catch (err: any) { 
-    const message =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Failed to import test cases";
-
-    throw new Error(message);
+  if (res.error) {
+    throw new Error(res.error.detail || "Failed to import test cases");
   }
+
+  return res.data as { message: string };
 }
 
 export async function markTestCaseAsDraft(testCaseID:string) {

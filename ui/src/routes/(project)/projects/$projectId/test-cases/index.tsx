@@ -140,12 +140,28 @@ export default function ListProjectTestCases() {
     if (!file) return;
 
     try {
-      await importTestCasesFromFile(projectId, file);
+      const response = await importTestCasesFromFile(projectId, file)
+      
+      const msg = response.message;
+
+      let toastType: "success" | "warning" | "info" = "success";
+      let title = "Import result";
+
+      if (msg.startsWith("Imported 0")) {
+        toastType = "warning";
+        title = "No new test cases imported";
+      } else if (msg.includes("skipped") && !msg.startsWith("Imported 0")){
+        toastType = "success";
+        title = "Imported completed with duplicates";
+      } else {
+        toastType = "success";
+        title = "Import successful";
+      }
 
       toaster.create({
-        title: "Import successful",
-        description: "Test cases imported successfully",
-        type: "success",
+        title,
+        description: msg,
+        type: toastType,
       });
 
       await queryClient.invalidateQueries({
