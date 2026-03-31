@@ -836,11 +836,30 @@ func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseR
 
 func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error) {
 	uuidVal, _ := uuid.NewV7()
+
+	project, err := t.queries.GetProject(ctx, int32(req.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
+	prefixKey := strings.ToLower(project.Code)
+	if err := t.queries.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, t.queries, req.ProjectID, &project, &req.Code)
+	if err != nil {
+		return nil, err
+	}
+
 	params := dbsqlc.CreateTestCaseParams{
 		ID:              uuidVal,
 		ProjectID:       common.NewNullInt32(int32(req.ProjectID)),
 		Kind:            dbsqlc.TestKind(req.Kind),
-		Code:            req.Code,
+		Code:            code,
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		Title:           req.Title,
 		Description:     req.Description,
@@ -852,7 +871,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		Suggested:       common.TrueNullBool(),
 	}
 
-	_, err := t.queries.CreateTestCase(ctx, params)
+	_, err = t.queries.CreateTestCase(ctx, params)
 	if err != nil {
 		return nil, err
 	}

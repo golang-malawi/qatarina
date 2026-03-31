@@ -607,7 +607,6 @@ func ListSuggestedTestCases(testCaseService services.TestCaseService, logger log
 //	@Accept			json
 //	@Produce		json
 //	@Param			testCaseID	path		string	true	"Test Case ID"
-//	@Param			request	body			true	""
 //	@Success		200			{object}	map[string]string
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
@@ -642,7 +641,7 @@ func AcceptSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 //	@Success		200			{object}	map[string]string
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-caes/{testCaseID}/reject [delete]
+//	@Router			/v1/test-cases/{testCaseID}/reject [delete]
 func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("testCaseID", "")
