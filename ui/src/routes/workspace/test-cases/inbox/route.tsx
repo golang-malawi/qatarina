@@ -12,6 +12,7 @@ import {
   Text,
   Spinner,
   Heading,
+  Button,
 } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
@@ -137,13 +138,20 @@ function TestCasePageInbox() {
           <Heading size="lg" color="fg.heading">
             Test Case Inbox
           </Heading>
+
+          <Link to="/workspace/test-cases/inbox/suggest">
+          <Button mt={4} colorPalette="brand">
+            Suggest Test Case
+          </Button>
+        </Link>
+
           <Input
             placeholder="Search for Test Cases..."
             mt={4}
             variant="outline"
             focusRingColor="brand.focusRing"
           />
-        </Box>
+        </Box>       
 
         <Box>{testCaseRows}</Box>
       </Box>

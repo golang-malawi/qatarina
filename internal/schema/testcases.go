@@ -35,6 +35,7 @@ type TestCaseResponse struct {
 	Result          string   `json:"result"`
 	ExecutedBy      int64    `json:"executed_by"`
 	Notes           string   `json:"notes"`
+	Suggested       bool     `json:"suggested"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
@@ -51,6 +52,7 @@ func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
 		Tags:            e.Tags,
 		CreatedAt:       formatSqlDateTime(e.CreatedAt),
 		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
+		Suggested:       e.Suggested.Valid && e.Suggested.Bool,
 	}
 }
 
@@ -149,4 +151,20 @@ type TestCaseInboxResponse struct {
 	ISDraft     bool   `json:"is_draft"`
 	TestRunID   string `json:"test_run_id,omitempty"`
 	ResultState string `json:"result_state,omitempty"`
+}
+
+type CreateSuggestedTestCaseRequest struct {
+	ProjectID       int64    `json:"project_id" validate:"required"`
+	Kind            string   `json:"kind" validate:"required"`
+	Code            string   `json:"code,omitempty"`
+	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
+	Title           string   `json:"title" validate:"required"`
+	Description     string   `json:"description" validate:"required"`
+	Tags            []string `json:"tags"`
+	CreatedByID     int64    `json:"-" validate:"-"`
+}
+
+type SugestedTestCaseResponse struct {
+	TestCaseResponse
+	Suggested bool `json:"suggested"`
 }
