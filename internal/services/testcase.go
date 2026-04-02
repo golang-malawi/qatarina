@@ -78,6 +78,14 @@ type TestCaseService interface {
 	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 	// GetExistingCodes is used to check existing test cases codes during file import
 	GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error)
+	// Suggest is used to make a tester suggest a test case
+	Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error)
+	// FindAllSuggested is used to list all suggested test cases
+	FindAllSuggested(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error)
+	// AcceptSuggested is used to accept a suggested test case
+	AcceptSuggested(ctx context.Context, testCaseID string) error
+	// RejectSuggested is used to reject a suggested test case
+	RejectSuggested(ctx context.Context, testCaseID string) error
 }
 
 type TestCaseQueryParams struct {
@@ -88,6 +96,7 @@ type TestCaseQueryParams struct {
 	Search    string
 	Kind      string
 	IsDraft   *bool
+	Suggested *bool
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -351,6 +360,15 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 		argPos++
 	}
 
+	if params.Suggested != nil {
+		conditions = append(conditions, fmt.Sprintf("suggested = $%d", argPos))
+		args = append(args, *params.Suggested)
+		argPos++
+	} else {
+		// Default: exclude suggested cases
+		conditions = append(conditions, "(suggested IS NULL OR suggested = false)")
+	}
+
 	whereClause := strings.Join(conditions, " AND ")
 
 	var total int64
@@ -470,6 +488,15 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
 		args = append(args, *params.IsDraft)
 		argPos++
+	}
+
+	if params.Suggested != nil {
+		conditions = append(conditions, fmt.Sprintf("suggested = $%d", argPos))
+		args = append(args, *params.Suggested)
+		argPos++
+	} else {
+		// Default: exclude suggested cases
+		conditions = append(conditions, "(suggested IS NULL OR suggested = false)")
 	}
 
 	whereClause := strings.Join(conditions, " AND ")
@@ -831,4 +858,71 @@ func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID in
 		codes[tc.Code] = true
 	}
 	return codes, nil
+func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error) {
+	uuidVal, _ := uuid.NewV7()
+
+	project, err := t.queries.GetProject(ctx, int32(req.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
+	prefixKey := strings.ToLower(project.Code)
+	if err := t.queries.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, t.queries, req.ProjectID, &project, &req.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	params := dbsqlc.CreateTestCaseParams{
+		ID:              uuidVal,
+		ProjectID:       common.NewNullInt32(int32(req.ProjectID)),
+		Kind:            dbsqlc.TestKind(req.Kind),
+		Code:            code,
+		FeatureOrModule: common.NullString(req.FeatureOrModule),
+		Title:           req.Title,
+		Description:     req.Description,
+		IsDraft:         common.FalseNullBool(),
+		Tags:            req.Tags,
+		CreatedByID:     int32(req.CreatedByID),
+		CreatedAt:       common.NewNullTime(time.Now()),
+		UpdatedAt:       common.NewNullTime(time.Now()),
+		Suggested:       common.TrueNullBool(),
+	}
+
+	_, err = t.queries.CreateTestCase(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	tc, err := t.queries.GetTestCase(ctx, uuidVal)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
+}
+
+func (t *testCaseServiceImpl) FindAllSuggested(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.FindAllSuggestedByProject(ctx, dbsqlc.FindAllSuggestedByProjectParams{
+		ProjectID: common.NewNullInt32(int32(projectID)),
+		Suggested: common.TrueNullBool(),
+	})
+}
+
+func (t *testCaseServiceImpl) AcceptSuggested(ctx context.Context, testCaseID string) error {
+	id := uuid.MustParse(testCaseID)
+	return t.queries.UpdateSuggestedFlag(ctx, dbsqlc.UpdateSuggestedFlagParams{
+		ID:        id,
+		Suggested: common.FalseNullBool(),
+	})
+}
+func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID string) error {
+	id := uuid.MustParse(testCaseID)
+	_, err := t.queries.DeleteTestCase(ctx, id)
+	return err
 }

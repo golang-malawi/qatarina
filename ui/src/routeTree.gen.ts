@@ -37,6 +37,7 @@ import { Route as projectProjectsProjectIdIndexRouteImport } from './routes/(pro
 import { Route as appOrgsNewIndexRouteImport } from './routes/(app)/orgs/new/index'
 import { Route as appOrgsIdIndexRouteImport } from './routes/(app)/orgs/$id/index'
 import { Route as WorkspaceUsersViewUserIDRouteImport } from './routes/workspace/users/view/$userID'
+import { Route as WorkspaceTestCasesInboxSuggestRouteImport } from './routes/workspace/test-cases/inbox/suggest'
 import { Route as appUsersUserIDEditRouteImport } from './routes/(app)/users/$userID/edit'
 import { Route as WorkspaceTestersViewTesterIdIndexRouteImport } from './routes/workspace/testers/view/$testerId/index'
 import { Route as WorkspaceTestCasesInboxTestCaseIdIndexRouteImport } from './routes/workspace/test-cases/inbox/$testCaseId/index'
@@ -211,6 +212,12 @@ const WorkspaceUsersViewUserIDRoute =
     id: '/users/view/$userID',
     path: '/users/view/$userID',
     getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const WorkspaceTestCasesInboxSuggestRoute =
+  WorkspaceTestCasesInboxSuggestRouteImport.update({
+    id: '/suggest',
+    path: '/suggest',
+    getParentRoute: () => WorkspaceTestCasesInboxRouteRoute,
   } as any)
 const appUsersUserIDEditRoute = appUsersUserIDEditRouteImport.update({
   id: '/users/$userID/edit',
@@ -401,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/workspace/testers/': typeof WorkspaceTestersIndexRoute
   '/workspace/users/': typeof WorkspaceUsersIndexRoute
   '/users/$userID/edit': typeof appUsersUserIDEditRoute
+  '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
   '/orgs/$id/': typeof appOrgsIdIndexRoute
   '/orgs/new/': typeof appOrgsNewIndexRoute
@@ -457,6 +465,7 @@ export interface FileRoutesByTo {
   '/workspace/testers': typeof WorkspaceTestersIndexRoute
   '/workspace/users': typeof WorkspaceUsersIndexRoute
   '/users/$userID/edit': typeof appUsersUserIDEditRoute
+  '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
   '/orgs/$id': typeof appOrgsIdIndexRoute
   '/orgs/new': typeof appOrgsNewIndexRoute
@@ -516,6 +525,7 @@ export interface FileRoutesById {
   '/workspace/testers/': typeof WorkspaceTestersIndexRoute
   '/workspace/users/': typeof WorkspaceUsersIndexRoute
   '/(app)/users/$userID/edit': typeof appUsersUserIDEditRoute
+  '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
   '/(app)/orgs/$id/': typeof appOrgsIdIndexRoute
   '/(app)/orgs/new/': typeof appOrgsNewIndexRoute
@@ -575,6 +585,7 @@ export interface FileRouteTypes {
     | '/workspace/testers/'
     | '/workspace/users/'
     | '/users/$userID/edit'
+    | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/view/$userID'
     | '/orgs/$id/'
     | '/orgs/new/'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/workspace/testers'
     | '/workspace/users'
     | '/users/$userID/edit'
+    | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/view/$userID'
     | '/orgs/$id'
     | '/orgs/new'
@@ -689,6 +701,7 @@ export interface FileRouteTypes {
     | '/workspace/testers/'
     | '/workspace/users/'
     | '/(app)/users/$userID/edit'
+    | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/view/$userID'
     | '/(app)/orgs/$id/'
     | '/(app)/orgs/new/'
@@ -933,6 +946,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceUsersViewUserIDRouteImport
       parentRoute: typeof WorkspaceRouteRoute
     }
+    '/workspace/test-cases/inbox/suggest': {
+      id: '/workspace/test-cases/inbox/suggest'
+      path: '/suggest'
+      fullPath: '/workspace/test-cases/inbox/suggest'
+      preLoaderRoute: typeof WorkspaceTestCasesInboxSuggestRouteImport
+      parentRoute: typeof WorkspaceTestCasesInboxRouteRoute
+    }
     '/(app)/users/$userID/edit': {
       id: '/(app)/users/$userID/edit'
       path: '/users/$userID/edit'
@@ -1157,11 +1177,13 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 )
 
 interface WorkspaceTestCasesInboxRouteRouteChildren {
+  WorkspaceTestCasesInboxSuggestRoute: typeof WorkspaceTestCasesInboxSuggestRoute
   WorkspaceTestCasesInboxTestCaseIdIndexRoute: typeof WorkspaceTestCasesInboxTestCaseIdIndexRoute
 }
 
 const WorkspaceTestCasesInboxRouteRouteChildren: WorkspaceTestCasesInboxRouteRouteChildren =
   {
+    WorkspaceTestCasesInboxSuggestRoute: WorkspaceTestCasesInboxSuggestRoute,
     WorkspaceTestCasesInboxTestCaseIdIndexRoute:
       WorkspaceTestCasesInboxTestCaseIdIndexRoute,
   }

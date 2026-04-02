@@ -130,3 +130,21 @@ export async function deleteTestCase(testCaseID: string) {
 export function useDeleteTestCaseMutation(){
   return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
 }
+
+export function useSuggestedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/suggested", {
+    params: { path: { projectID } },
+  });
+}
+
+export async function approveSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/accept", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export async function rejectSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}/reject", {
+    params: { path: { testCaseID } },
+  });
+}

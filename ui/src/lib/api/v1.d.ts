@@ -761,6 +761,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/test-cases/suggested": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List suggested test cases for a project
+         * @description List suggested test cases for a project
+         */
+        get: operations["ListSuggestedTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/test-plans": {
         parameters: {
             query?: never;
@@ -1051,6 +1071,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a suggested test case
+         * @description Accept a suggested test case
+         */
+        post: operations["AcceptSuggestedTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/mark-draft": {
         parameters: {
             query?: never;
@@ -1066,6 +1106,26 @@ export interface paths {
          */
         post: operations["MarkTestCaseAsDraft"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/{testCaseID}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Reject a suggested Test Case
+         * @description Reject a suggested Test Case
+         */
+        delete: operations["RejectSuggestedTestCase"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1165,6 +1225,26 @@ export interface paths {
         get: operations["SearchTestCases"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest a new Test Case
+         * @description Suggest a new Test Case
+         */
+        post: operations["SuggestTestCase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1756,6 +1836,15 @@ export interface components {
             project_id: number;
             type: string;
         };
+        "schema.CreateSuggestedTestCaseRequest": {
+            code?: string;
+            description: string;
+            feature_or_module: string;
+            kind: string;
+            project_id: number;
+            tags?: string[];
+            title: string;
+        };
         "schema.CreateTestCaseRequest": {
             /** @description optional; auto-generated if blank */
             code?: string;
@@ -1952,6 +2041,7 @@ export interface components {
             project_id?: number;
             result?: string;
             status?: string;
+            suggested?: boolean;
             tags?: string[];
             title?: string;
             updated_at?: string;
@@ -3597,6 +3687,51 @@ export interface operations {
             };
         };
     };
+    ListSuggestedTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetProjectTestPlans: {
         parameters: {
             query?: never;
@@ -4103,6 +4238,53 @@ export interface operations {
             };
         };
     };
+    AcceptSuggestedTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     MarkTestCaseAsDraft: {
         parameters: {
             query?: never;
@@ -4126,6 +4308,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    RejectSuggestedTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
@@ -4344,6 +4573,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    SuggestTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Suggest Test Case data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateSuggestedTestCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseResponse"];
                 };
             };
             /** @description Bad Request */

@@ -33,6 +33,9 @@ import {
   useScheduledTestCasesQuery,
   importTestCasesFromFile,
   useBlockedTestCasesQuery,
+  useSuggestedTestCasesQuery,
+  approveSuggestedTestCase,
+  rejectSuggestedTestCase,
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
 import { deleteTestCase } from "@/services/TestCaseService";
@@ -260,6 +263,10 @@ export default function ListProjectTestCases() {
             <IconAlertTriangle />
             &nbsp;Blocked
           </Tabs.Trigger>
+          <Tabs.Trigger color={"blue"} value="suggested">
+            <IconListDetails />
+            &nbsp;Suggested
+          </Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="all">
@@ -327,6 +334,9 @@ export default function ListProjectTestCases() {
         </Tabs.Content>
         <Tabs.Content value="blocked">
           <BlockedTestCasesTab projectID={projectId} userMap={userMap} />
+        </Tabs.Content>
+        <Tabs.Content value="suggested">
+          <SuggestedTestCasesTab projectID={projectId}/>
         </Tabs.Content>
       </Tabs.Root>
     </div>
@@ -419,7 +429,7 @@ type TestCasesTableProps = {
   error: any;
   loadingMessage: string;
   errorMessage: string;
-  userMap: Record<number, string>;
+  userMap: Record<number, string>;  
 };
 
 function TestCasesTable({
@@ -428,7 +438,7 @@ function TestCasesTable({
   error,
   loadingMessage,
   errorMessage,
-  userMap,
+  userMap, 
 }: TestCasesTableProps) {
   if (isLoading) return <p>{loadingMessage}</p>;
   if (error) return <p>{errorMessage}</p>;
@@ -454,6 +464,67 @@ function TestCasesTable({
             <Table.Cell>{tc.result}</Table.Cell>
             <Table.Cell>{userMap[tc.executed_by] ?? tc.executed_by}</Table.Cell>
             <Table.Cell>{tc.notes}</Table.Cell>
+          </Table.Row>
+        ))}
+      </Table.Body>
+    </Table.Root>
+  );
+}
+
+function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useSuggestedTestCasesQuery(projectID);
+
+  const handleApprove = async (id: string) => {
+    try {
+      await approveSuggestedTestCase(id);
+      toaster.success({ title: "Test case approved" });
+      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"] });
+      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases"] });
+    } catch (err: any) {
+      toaster.error({ title: "Failed to approve test case", description: err?.message });
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await rejectSuggestedTestCase(id);
+      toaster.success({ title: "Test case rejected" });
+      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"] });
+    } catch (err: any) {
+      toaster.error({ title: "Failed to reject test case", description: err?.message });
+    }
+  };
+
+  if (isLoading) return <p>Loading suggested cases...</p>;
+  if (error) return <p>Failed to load suggested test cases</p>;
+
+  return (
+    <Table.Root>
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeader>Code</Table.ColumnHeader>
+          <Table.ColumnHeader>Title</Table.ColumnHeader>
+          <Table.ColumnHeader>Description</Table.ColumnHeader> {/* NEW COLUMN */}
+          <Table.ColumnHeader>Actions</Table.ColumnHeader>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {(data?.test_cases ?? []).map((tc: any) => (
+          <Table.Row key={tc.id}>
+            <Table.Cell>{tc.code}</Table.Cell>
+            <Table.Cell>{tc.title}</Table.Cell>
+            <Table.Cell>{tc.description}</Table.Cell> {/* SHOW DESCRIPTION */}
+            <Table.Cell>
+              <Flex gap={2}>
+                <Button size="sm" colorPalette="green" onClick={() => handleApprove(String(tc.id))}>
+                  Approve
+                </Button>
+                <Button size="sm" colorPalette="red" onClick={() => handleReject(String(tc.id))}>
+                  Reject
+                </Button>
+              </Flex>
+            </Table.Cell>
           </Table.Row>
         ))}
       </Table.Body>
