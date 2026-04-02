@@ -820,6 +820,9 @@ func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID in
 	}
 	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return map[string]bool{}, nil
+		}
 		return nil, err
 	}
 
