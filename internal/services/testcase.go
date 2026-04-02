@@ -41,7 +41,7 @@ type TestCaseService interface {
 	Create(context.Context, *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error)
 
 	// BulkCreate creates test cases in bulk. Only valid test cases are created.
-	BulkCreate(context.Context, *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error)
+	BulkCreate(context.Context, *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, int, error)
 
 	// Update updates a test case in the system
 	Update(context.Context, *schema.UpdateTestCaseRequest) (*dbsqlc.TestCase, error)
@@ -76,6 +76,8 @@ type TestCaseService interface {
 	FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 	// FindAllBlocked is used to list bloked test cases by project ID
 	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// GetExistingCodes is used to check existing test cases codes during file import
+	GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error)
 	// Suggest is used to make a tester suggest a test case
 	Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error)
 	// FindAllSuggested is used to list all suggested test cases
@@ -114,21 +116,23 @@ func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger)
 }
 
 // BulkCreate implements TestCaseService.
-func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
+func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, int, error) {
 	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer sqlTx.Rollback()
 
 	tx := dbsqlc.New(sqlTx)
 
 	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
+	skipped := 0
+
 	for _, request := range bulkRequest.TestCases {
 		request.ProjectID = bulkRequest.ProjectID
 		project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch project: %w", err)
+			return nil, skipped, fmt.Errorf("failed to fetch project: %w", err)
 		}
 
 		// Ensure sequence row exists for this project's item
@@ -137,12 +141,12 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			ProjectID: int32(request.ProjectID),
 			Prefix:    prefixKey,
 		}); err != nil {
-			return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+			return nil, skipped, fmt.Errorf("failed to ensure sequence row: %w", err)
 		}
 
 		code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
 		if err != nil {
-			return nil, err
+			return nil, skipped, err
 		}
 
 		uuidVal, _ := uuid.NewV7()
@@ -168,27 +172,28 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 				Code:      request.Code,
 			})
 			if err == nil {
-				return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+				skipped++
+				continue
 			}
 		}
 
 		createdID, err := tx.CreateTestCase(ctx, params)
 		if err != nil {
-			return nil, err
+			return nil, skipped, err
 		}
 		tc, err := tx.GetTestCase(ctx, createdID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+			return nil, skipped, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
 		}
 
 		testCases = append(testCases, tc)
 	}
 
 	if err := sqlTx.Commit(); err != nil {
-		return nil, err
+		return nil, skipped, err
 	}
 
-	return testCases, nil
+	return testCases, skipped, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -832,6 +837,27 @@ func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseR
 		ExecutedBy:      int64(row.TestedByID),
 		Notes:           row.Notes,
 	}
+}
+
+func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return map[string]bool{}, nil
+		}
+		return nil, err
+	}
+
+	codes := make(map[string]bool, len(rows))
+	for _, tc := range rows {
+		codes[tc.Code] = true
+	}
+	return codes, nil
 }
 
 func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error) {

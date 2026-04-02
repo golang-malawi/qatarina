@@ -4469,10 +4469,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description Project ID */
-                formData: string;
-            };
+            path?: never;
             cookie?: never;
         };
         /** @description Excel or CSV file */
@@ -4488,7 +4485,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */

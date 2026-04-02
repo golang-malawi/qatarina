@@ -3161,18 +3161,11 @@ paths:
     post:
       description: Import test cases from Excel or CSV file
       operationId: ImportTestCasesFromFile
-      parameters:
-      - description: Project ID
-        in: path
-        name: formData
-        required: true
-        schema:
-          type: string
       requestBody:
         content:
           multipart/form-data:
             schema:
-              type: object
+              type: file
         description: Excel or CSV file
         required: true
       responses:
@@ -3180,6 +3173,8 @@ paths:
           content:
             application/json:
               schema:
+                additionalProperties:
+                  type: string
                 type: object
           description: OK
         "400":
