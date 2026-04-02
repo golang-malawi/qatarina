@@ -77,7 +77,7 @@ type TestCaseService interface {
 	// FindAllBlocked is used to list bloked test cases by project ID
 	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
 	// GetExistingCodes is used to check existing test cases codes during file import
-	GetExistingCodes(ctx context.Context, projectID int64) (map[string]struct{}, error)
+	GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error)
 }
 
 type TestCaseQueryParams struct {
@@ -812,7 +812,7 @@ func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseR
 	}
 }
 
-func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID int64) (map[string]struct{}, error) {
+func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error) {
 	params := dbsqlc.FindTestCasesByProjectIDParams{
 		ProjectID:    common.NewNullInt32(int32(projectID)),
 		IsClosed:     common.FalseNullBool(),
@@ -823,9 +823,9 @@ func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID in
 		return nil, err
 	}
 
-	codes := make(map[string]struct{}, len(rows))
+	codes := make(map[string]bool, len(rows))
 	for _, tc := range rows {
-		codes[tc.Code] = struct{}{}
+		codes[tc.Code] = true
 	}
 	return codes, nil
 }
