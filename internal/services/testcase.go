@@ -858,6 +858,8 @@ func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID in
 		codes[tc.Code] = true
 	}
 	return codes, nil
+}
+
 func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error) {
 	uuidVal, _ := uuid.NewV7()
 
