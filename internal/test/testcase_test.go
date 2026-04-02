@@ -62,7 +62,12 @@ func TestConcurrentBulkCreateByProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BulkCreate failed: %v", err)
 	}
-	t.Logf("Skipped %d duplicates", skipped)
+
+	// Check for skipped duplicates
+	expectedSkipped := 0
+	if skipped != expectedSkipped {
+		t.Errorf("expected %d skipped duplicates, got %d", expectedSkipped, skipped)
+	}
 
 	// Validate codes
 	seen := map[string]bool{}
