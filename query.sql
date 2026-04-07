@@ -82,14 +82,14 @@ DELETE FROM projects WHERE id = $1;
 
 -- name: CreateProject :one
 INSERT INTO projects (
-    title, description, version, is_active, is_public, website_url,
+    title, code, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
     owner_user_id, created_at, updated_at, deleted_at
 )
 VALUES(
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10,
-    $11, $12, $13, $14
+    $11, $12, $13, $14, $15
 ) RETURNING id;
 
 -- name: ListTestCases :many

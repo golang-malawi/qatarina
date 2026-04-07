@@ -4,6 +4,7 @@ import { environmentSchema } from './environmentSchema';
 // Project creation schema
 export const projectCreationSchema = z.object({
   name: z.string().min(3, 'Project name must be at least 3 characters'),
+  code: z.string().min(3, "Code must be at least 3 characters").max(10),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   version: z.string().min(1, 'Version is required'),
   website_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
