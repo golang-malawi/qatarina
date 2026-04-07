@@ -45,6 +45,7 @@ func NewProjectService(db *dbsqlc.Queries, logger logging.Logger, moduleService 
 func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProjectRequest) (*dbsqlc.Project, error) {
 	projectID, err := s.db.CreateProject(context.Background(), dbsqlc.CreateProjectParams{
 		Title:       request.Name,
+		Code:        request.Code,
 		Description: request.Description,
 		Version:     common.NullString(request.Version),
 		IsActive:    common.TrueNullBool(),

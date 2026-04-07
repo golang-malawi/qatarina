@@ -29,7 +29,7 @@ function CreateProject() {
         body: {
           name: values.name,
           description: values.description,
-          code: values.code || "",
+          code: values.code!,
           version: values.version,
           website_url: values.website_url || "",
           environments: values.environments || [],
