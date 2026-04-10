@@ -2086,6 +2086,44 @@ paths:
       summary: Update a Project
       tags:
       - projects
+  /v1/projects/{projectID}/archive:
+    post:
+      description: Mark a project as archived (inactive) without deleting it
+      operationId: ArchiveProject
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Archive a Project
+      tags:
+      - projects
   /v1/projects/{projectID}/environments:
     get:
       description: List environments for a project
@@ -2618,6 +2656,44 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Server error
       summary: Assign testers to a project
+      tags:
+      - projects
+  /v1/projects/{projectID}/unarchive:
+    post:
+      description: Restore a previously archived project back to active state
+      operationId: UnarchiveProject
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Unarchive a Project
       tags:
       - projects
   /v1/projects/import:
