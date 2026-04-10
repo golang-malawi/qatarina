@@ -325,7 +325,7 @@ function ProjectsPage() {
                           Open Workspace
                         </Button>
                       )}
-                      {hasId ? (
+                      {hasId && isActive ? (
                         <Link
                           to="/projects/$projectId/test-cases/new"
                           params={{ projectId }}
@@ -339,7 +339,7 @@ function ProjectsPage() {
                           Add Test Case
                         </Button>
                       )}
-                      {hasId ? (
+                      {hasId && isActive ? (
                         <Link
                           to="/projects/$projectId/test-plans/new"
                           params={{ projectId }}
@@ -354,7 +354,7 @@ function ProjectsPage() {
                         </Button>
                       )}
 
-                      {hasId ? (
+                      {hasId && isActive ? (
                         <Link
                           to="/workspace/projects/$projectId/edit"
                           params={{ projectId }}
@@ -375,9 +375,9 @@ function ProjectsPage() {
                         size="sm"
                         loading={deleteMutation.isPending}
                         onClick={() =>
-                          hasId && handleDelete(record.id!, record.title || title)
+                          hasId && isActive && handleDelete(record.id!, record.title || title)
                         }
-                        disabled={!hasId}
+                        disabled={!hasId || !isActive}
                       >
                         <IconTrash />
                         Delete
