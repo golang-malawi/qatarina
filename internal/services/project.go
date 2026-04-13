@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -24,16 +26,18 @@ type ProjectService interface {
 }
 
 type projectServiceImpl struct {
-	name   loggedmodule.Name
-	db     *dbsqlc.Queries
-	logger logging.Logger
+	name          loggedmodule.Name
+	db            *dbsqlc.Queries
+	logger        logging.Logger
+	moduleService ModuleService
 }
 
-func NewProjectService(db *dbsqlc.Queries, logger logging.Logger) ProjectService {
+func NewProjectService(db *dbsqlc.Queries, logger logging.Logger, moduleService ModuleService) ProjectService {
 	return &projectServiceImpl{
-		name:   "projects-service",
-		db:     db,
-		logger: logger,
+		name:          "projects-service",
+		db:            db,
+		logger:        logger,
+		moduleService: moduleService,
 	}
 }
 
@@ -41,6 +45,7 @@ func NewProjectService(db *dbsqlc.Queries, logger logging.Logger) ProjectService
 func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProjectRequest) (*dbsqlc.Project, error) {
 	projectID, err := s.db.CreateProject(context.Background(), dbsqlc.CreateProjectParams{
 		Title:       request.Name,
+		Code:        request.Code,
 		Description: request.Description,
 		Version:     common.NullString(request.Version),
 		IsActive:    common.TrueNullBool(),
@@ -54,6 +59,40 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 	if err != nil {
 		s.logger.Error(s.name, "failed to create project", "error", err)
 		return nil, err
+	}
+
+	// Create a default module for the new project
+	defaultModule := &schema.CreateProjectModuleRequest{
+		ProjectID:   projectID,
+		Name:        "Default Module",
+		Code:        "DEF",
+		Priority:    1,
+		Type:        "general",
+		Description: "Automatically created default module",
+	}
+
+	_, err = s.moduleService.Create(defaultModule)
+	if err != nil {
+		s.logger.Error(s.name, "failed to create default module", "projectID", projectID, "error", err)
+		return nil, err
+	}
+
+	for _, envReq := range request.Environments {
+		sanitized := sanitizeEnvName(envReq.Name)
+		if sanitized == "" {
+			continue
+		}
+
+		_, err := s.db.CreateEnvironment(ctx, dbsqlc.CreateEnvironmentParams{
+			ProjectID:   common.NewNullInt32(int32(projectID)),
+			Name:        sanitized,
+			Description: common.NullString(envReq.Description),
+			BaseUrl:     common.NullString(envReq.BaseURL),
+		})
+		if err != nil {
+			s.logger.Error(s.name, "failed to create environment", "error", err)
+			return nil, err
+		}
 	}
 	project, err := s.db.GetProject(context.Background(), projectID)
 	return &project, err
@@ -79,16 +118,18 @@ func (s *projectServiceImpl) FindByID(ctx context.Context, projectID int64) (*db
 	}
 }
 
-// FindByID implements ProjectService.
+// Update implements ProjectService.
 func (s *projectServiceImpl) Update(ctx context.Context, request schema.UpdateProjectRequest) (bool, error) {
 	_, err := s.db.UpdateProject(ctx, dbsqlc.UpdateProjectParams{
-		ID:          int32(request.ID),
-		Title:       request.Name,
-		Description: request.Description,
-		WebsiteUrl:  common.NullString(request.WebsiteURL),
-		Version:     common.NullString(request.Version),
-		GithubUrl:   common.NullString(request.GitHubURL),
-		OwnerUserID: int32(request.ProjectOwnerID),
+		ID:              int32(request.ID),
+		Title:           request.Name,
+		Code:            request.Code,
+		Description:     request.Description,
+		WebsiteUrl:      common.NullString(request.WebsiteURL),
+		Version:         common.NullString(request.Version),
+		GithubUrl:       common.NullString(request.GitHubURL),
+		OwnerUserID:     int32(request.ProjectOwnerID),
+		ParentProjectID: common.NewNullInt32(int32(request.ParentProjectID)),
 	})
 
 	if err != nil {
@@ -119,4 +160,16 @@ func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsq
 	}
 
 	return projects, nil
+}
+
+func sanitizeEnvName(name string) string {
+	n := strings.TrimSpace(name)
+	n = strings.ToLower(n)
+	n = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, n)
+	return n
 }

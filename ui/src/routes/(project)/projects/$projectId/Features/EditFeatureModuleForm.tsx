@@ -1,10 +1,13 @@
-import { Box, Heading, Spinner } from "@chakra-ui/react";
+import { Box, Heading, Spinner, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { featureModuleEditSchema, FeatureModuleEditFormData } from "@/data/forms/feature-module-schemas";
+import {
+  featureModuleEditSchema,
+  FeatureModuleEditFormData,
+} from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
 
 export const Route = createFileRoute(
@@ -24,7 +27,9 @@ function EditFeatureModuleForm() {
   const { moduleId } = Route.useSearch();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [defaultValues, setDefaultValues] = useState<FeatureModuleEditFormData | undefined>();
+  const [defaultValues, setDefaultValues] = useState<
+    FeatureModuleEditFormData | undefined
+  >();
 
   useEffect(() => {
     const fetchModule = async () => {
@@ -64,13 +69,12 @@ function EditFeatureModuleForm() {
 
   async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
-      ID: parseInt(moduleId),
+      id: parseInt(moduleId),
       name: values.name,
       type: values.type,
       description: values.description || "",
       code: values.code,
-      priority: values.priority,
-      ProjectID: parseInt(projectId),
+      priority: Number(values.priority),
     };
 
     const moduleService = new ModuleService();
@@ -84,7 +88,10 @@ function EditFeatureModuleForm() {
         duration: 3000,
       });
 
-      navigate({ to: `/projects/${projectId}/Features/` });
+      navigate({
+        to: "/projects/$projectId/Features",
+        params: { projectId },
+      });
     } catch (err) {
       console.error(err);
       toaster.create({
@@ -99,14 +106,14 @@ function EditFeatureModuleForm() {
   if (loading)
     return (
       <Box textAlign="center" mt={50}>
-        <Spinner size="xl" />
-        <p>Loading module details...</p>
+        <Spinner size="xl" color="brand.solid" />
+        <Text color="fg.muted">Loading module details...</Text>
       </Box>
     );
 
   return (
-    <Box>
-      <Heading>Edit Feature / Component / Module</Heading>
+    <Box p={6}>
+      <Heading color="fg.heading">Edit Feature / Component / Module</Heading>
       <DynamicForm
         schema={featureModuleEditSchema}
         fields={featureModuleEditFields}

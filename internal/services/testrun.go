@@ -35,6 +35,7 @@ type TestRunService interface {
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 	RecordPublicResult(context.Context, string, *schema.PublicTestResultRequest) error
+	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
 }
 
 type testRunService struct {
@@ -54,16 +55,17 @@ func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) 
 // Create implements TestRunService
 func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
-		ID:           uuid.New(),
-		ProjectID:    request.ProjectID,
-		TestPlanID:   request.TestPlanID,
-		TestCaseID:   uuid.MustParse(request.TestCaseID),
-		OwnerID:      request.OwnerID,
-		TestedByID:   request.TestedByID,
-		AssignedToID: request.AssignedToID,
-		Code:         request.Code,
-		CreatedAt:    common.NullTime(time.Now()),
-		UpdatedAt:    common.NullTime(time.Now()),
+		ID:            uuid.New(),
+		ProjectID:     request.ProjectID,
+		TestPlanID:    request.TestPlanID,
+		TestCaseID:    uuid.MustParse(request.TestCaseID),
+		OwnerID:       request.OwnerID,
+		TestedByID:    request.TestedByID,
+		AssignedToID:  request.AssignedToID,
+		Code:          request.Code,
+		CreatedAt:     common.NullTime(time.Now()),
+		UpdatedAt:     common.NullTime(time.Now()),
+		EnvironmentID: common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to create page %w", err)
@@ -182,6 +184,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		Notes:          request.Notes,
 		ActualResult:   common.NullString(request.Result),
 		ExpectedResult: common.NullString(request.ExpectedResult),
+		EnvironmentID:  common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute test case: %w", err)
@@ -243,4 +246,25 @@ func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (b
 func (t *testRunService) RecordPublicResult(ctx context.Context, token string, req *schema.PublicTestResultRequest) error {
 	//return t.queries.InsertPublicResult(ctx, token, req.TestCaseID, req.Result, req.Comment)
 	return fmt.Errorf("not implemented")
+}
+
+func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error) {
+	id := uuid.MustParse(testRunID)
+	tr, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test run: %w", err)
+	}
+	if tr.IsClosed.Valid && tr.IsClosed.Bool {
+		return &tr, nil
+	}
+	err = t.queries.CloseTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to close test run: %w", err)
+	}
+
+	closedRun, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
+	}
+	return &closedRun, nil
 }

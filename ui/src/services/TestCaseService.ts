@@ -48,45 +48,23 @@ export async function createTestCase(
   return apiClient.request("post", "/v1/test-cases", { body: data });
 }
 
-
 export async function importTestCasesFromFile(
   projectId: string,
   file: File
-) {
+): Promise<{ message: string }> {
   const formData = new FormData();
   formData.append("projectID", projectId);
   formData.append("file", file);
 
-  try {
-    const res = await apiClient.request(
-      "post",
-      "/v1/test-cases/import-file",
-      {
-        params: { path: { formData: "" } },
-        body: formData as any,
-      }
-    );
-    if (
-      (res as any)?.success === false ||
-      (res as any)?.error ||
-      (res as any)?.errors?.length
-    ) {
-      throw new Error(
-        (res as any)?.message ||
-          (res as any)?.error ||
-          "Failed to import test cases"
-      );
-    }
+  const res = await apiClient.request("post", "/v1/test-cases/import-file", {
+    body: formData as any,
+  });
 
-    return res;
-  } catch (err: any) { 
-    const message =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Failed to import test cases";
-
-    throw new Error(message);
+  if (res.error) {
+    throw new Error(res.error.detail || "Failed to import test cases");
   }
+
+  return res.data as { message: string };
 }
 
 export async function markTestCaseAsDraft(testCaseID:string) {
@@ -100,4 +78,73 @@ export async function unmarkTestCaseAsDraft(testCaseID:string) {
     params: {path: {testCaseID}},
   });
   
+}
+
+export function useClosedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/closed", {
+    params: {path: {projectID}}
+  })
+}
+
+export function useFailingTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/failing", {
+    params: { path: { projectID } },
+  });
+}
+
+export function useScheduledTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/scheduled", {
+    params: { path: { projectID } },
+  });
+}
+
+export function useBlockedTestCasesQuery(projectID: string){
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/blocked", {
+    params: {path: {projectID}},
+  });
+}
+
+export function useUpdateTestCaseMutation() {
+  return $api.useMutation(
+    "post", 
+    "/v1/test-cases/{testCaseID}"
+  ); 
+   
+}
+
+export async function updateTestCase(
+  data:components["schemas"]["schema.UpdateTestCaseRequest"]
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID: data.id}},
+    body: data,
+  });  
+}
+
+export async function deleteTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID}},
+  });
+}
+
+export function useDeleteTestCaseMutation(){
+  return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
+}
+
+export function useSuggestedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/suggested", {
+    params: { path: { projectID } },
+  });
+}
+
+export async function approveSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/accept", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export async function rejectSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}/reject", {
+    params: { path: { testCaseID } },
+  });
 }

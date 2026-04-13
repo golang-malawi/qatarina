@@ -107,6 +107,16 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 	return string(ns.TestRunState), nil
 }
 
+type Environment struct {
+	ID          int32
+	ProjectID   sql.NullInt32
+	Name        string
+	Description sql.NullString
+	BaseUrl     sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Invite struct {
 	ID            int32
 	SenderEmail   string
@@ -213,11 +223,12 @@ type Project struct {
 	// URL to Monday.com if available
 	MondayUrl sql.NullString
 	// The ID of the owner or creator of the project
-	OwnerUserID int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
-	Code        string
+	OwnerUserID     int32
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       sql.NullTime
+	Code            string
+	ParentProjectID sql.NullInt32
 }
 
 type ProjectTester struct {
@@ -257,6 +268,7 @@ type TestCase struct {
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
 	ProjectID sql.NullInt32
+	Suggested sql.NullBool
 }
 
 type TestCaseSequence struct {
@@ -295,9 +307,10 @@ type TestPlan struct {
 	// Whether test plan is locked or not
 	IsLocked sql.NullBool
 	// Whether the test plan has a report generated for it
-	HasReport sql.NullBool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	HasReport     sql.NullBool
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	EnvironmentID sql.NullInt32
 }
 
 type TestPlansCase struct {
@@ -327,6 +340,7 @@ type TestRun struct {
 	TestedOn              time.Time
 	CreatedAt             sql.NullTime
 	UpdatedAt             sql.NullTime
+	EnvironmentID         sql.NullInt32
 }
 
 type TestRunResult struct {

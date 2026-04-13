@@ -111,13 +111,13 @@ func GetOneTestPlan(testPlanService services.TestPlanService, logger logging.Log
 // GetTestPlanTestRuns godoc
 //
 //	@ID				GetTestPlanTestRuns
-//	@Summary		List all test cases of a test plan
-//	@Description	List all test cases of a test plan
-//	@Tags			test-plans
+//	@Summary		List all test runs of a test plan
+//	@Description	List all test runs of a test plan
+//	@Tags			test-plans, test-runs
 //	@Accept			json
 //	@Produce		json
-//	@Param			testplanID	path		string	true	"Test Plan ID"
-//	@Success		200			{object}	interface{}
+//	@Param			testPlanID	path		string	true	"Test Plan ID"
+//	@Success		200			{object}	schema.TestRunListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID}/test-runs [get]
@@ -137,7 +137,13 @@ func GetTestPlanTestRuns(testPlanService services.TestPlanService, logger loggin
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(testRuns)
+		responses := make([]schema.TestRunResponse, 0, len(testRuns))
+		for _, tr := range testRuns {
+			responses = append(responses, schema.NewTestRunResponseFromRow(tr))
+		}
+		return c.JSON(schema.TestRunListResponse{
+			TestRuns: responses,
+		})
 	}
 }
 
@@ -355,11 +361,52 @@ func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logge
 
 		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to close test plan", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			logger.Error(loggedmodule.ApiTestPlans, "failed to close test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to close test plan")
 		}
 		return c.JSON(fiber.Map{
 			"message": "Test plan closed successfully",
+		})
+	}
+}
+
+// ChangeEnvironment godoc
+//
+//	@ID				ChangeEnvironment
+//	@Summary		Change environment of a Test Plan
+//	@Description	Change environment of a Test Plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		string	true	"Test Plan ID"
+//	@Param			request	body		schema.ChangeEnvironmentRequest	true	"Environment change payload"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/environment [post]
+func ChangeEnvironment(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.ChangeEnvironmentRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid testPlaID in request")
+		}
+
+		err = testPlanService.ChangeEnvironment(c.Context(), int64(testPlanID), request.EnvironmentID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to update environment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update environment")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Environment updated successfully",
 		})
 	}
 }

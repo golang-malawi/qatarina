@@ -1,0 +1,21 @@
+{
+  "login": "Connexion",
+  "login_description": "Entrez votre email et mot de passe pour continuer.",
+  "email": "Email",
+  "password": "Mot de passe",
+  "remember_me": "Se souvenir de moi",
+  "forgot_password": "Mot de passe oublié ?",
+  "sign_in": "Se connecter",
+  "create_account": "Créer un compte",
+  "new_user": "Nouveau sur Qatarina ?",
+  "dashboard": "Tableau de bord",
+  "projects": "Projets",
+  "test_cases": "Cas de test",
+  "test_plans": "Plans de test",
+  "country": "Pays",
+  "select_country": "Sélectionner un pays",
+  "country_helper": "Choisissez votre pays",
+  "organization": "Organisation",
+  "save_changes": "Enregistrer les modifications",
+  "edit_profile": "Modifier le profil"
+}

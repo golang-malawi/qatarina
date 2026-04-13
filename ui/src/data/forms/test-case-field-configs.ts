@@ -1,6 +1,6 @@
 import { FieldConfig } from "@/components/form/DynamicForm";
 
-export const createTestCaseFields = (projectId: string): FieldConfig[] => [
+export const createTestCaseFields = (): FieldConfig[] => [
   {
     name: "title",
     label: "Title",
@@ -14,8 +14,8 @@ export const createTestCaseFields = (projectId: string): FieldConfig[] => [
     label: "Code",
     type: "text",
     placeholder: "Enter test case code",
-    helperText: "Test Case Code.",
-    required: true,
+    helperText: "Leave blank to auto-generate based on project",
+    required: false,
   },
   {
     name: "feature_or_module",
@@ -23,7 +23,6 @@ export const createTestCaseFields = (projectId: string): FieldConfig[] => [
     type: "feature-module",
     helperText: "Test Case Feature or Module.",
     required: true,
-    projectId: projectId,
   },
   {
     name: "kind",
@@ -35,9 +34,9 @@ export const createTestCaseFields = (projectId: string): FieldConfig[] => [
   {
     name: "description",
     label: "Description",
-    type: "text",
-    placeholder: "Enter description",
-    helperText: "Test Case Description.",
+    type: "markdown-textarea",
+    placeholder: "Enter steps/procedures (Markdown supported)",
+    helperText: "You can format this description using Markdown (e.g. lists, bold, headings).",
     required: true,
   },
   {

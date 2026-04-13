@@ -58,9 +58,15 @@ func TestConcurrentBulkCreateByProject(t *testing.T) {
 		TestCases: testCases,
 	}
 
-	created, err := svc.BulkCreate(context.Background(), bulkReq)
+	created, skipped, err := svc.BulkCreate(context.Background(), bulkReq)
 	if err != nil {
 		t.Fatalf("BulkCreate failed: %v", err)
+	}
+
+	// Check for skipped duplicates
+	expectedSkipped := 0
+	if skipped != expectedSkipped {
+		t.Errorf("expected %d skipped duplicates, got %d", expectedSkipped, skipped)
 	}
 
 	// Validate codes

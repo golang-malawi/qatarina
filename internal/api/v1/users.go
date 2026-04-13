@@ -83,7 +83,7 @@ func SearchUsers(userService services.UserService, logger logging.Logger) fiber.
 //	@Accept			json
 //	@Produce		json
 //	@Param			userID	path		string	true	"User ID"
-//	@Success		200		{object}	interface{}
+//	@Success		200		{object}	schema.User
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [get]

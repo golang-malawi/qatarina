@@ -40,8 +40,16 @@ func (s *testerServiceImpl) FindAll(ctx context.Context) ([]schema.Tester, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch project testers: %w", err)
 	}
+
+	seen := make(map[int64]bool)
 	testers := make([]schema.Tester, 0, len(projectTesters))
+
 	for _, tester := range projectTesters {
+		if seen[int64(tester.UserID)] {
+			continue
+		}
+		seen[int64(tester.UserID)] = true
+
 		testers = append(testers, schema.Tester{
 			UserID:      int64(tester.UserID),
 			ProjectID:   int64(tester.ProjectID),
@@ -66,6 +74,7 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 		ProjectID: int32(projectID),
 		UserID:    int32(userID),
 		Role:      role,
+		IsActive:  true,
 	})
 	if err != nil {
 		s.logger.Error("tester-service", "failed to assign tester to project", "error", err, "project_id", projectID, "user_id", userID)
@@ -96,8 +105,15 @@ func (s *testerServiceImpl) FindByProjectID(ctx context.Context, projectID int64
 		return nil, fmt.Errorf("failed to get tester IDs for project %d: %w", projectID, err)
 	}
 
+	seen := make(map[int64]bool)
+
 	testers := make([]schema.Tester, 0, len(projectTesters))
 	for _, tester := range projectTesters {
+		if seen[int64(tester.UserID)] {
+			continue
+		}
+		seen[int64(tester.UserID)] = true
+
 		testers = append(testers, schema.Tester{
 			UserID:      int64(tester.UserID),
 			ProjectID:   int64(tester.ProjectID),

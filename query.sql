@@ -24,9 +24,7 @@ UPDATE users SET last_login_at = $1 WHERE id = $2 AND is_activated AND deleted_a
 -- name: UpdateUser :exec
 UPDATE users SET
     first_name = $2, last_name = $3, display_name = $4, phone = $5,
-    org_id = $6, country_iso = $7, city = $8, address = $9,
-    is_activated = $10, is_reviewed = $11, is_super_admin = $12, is_verified = $13,
-    last_login_at = $14, email_confirmed_at = $15, created_at = $16, updated_at = $17, deleted_at = $18
+    org_id = $6, country_iso = $7, city = $8, address = $9, updated_at = $10
 WHERE id = $1;
 
 -- name: ChangeUserPassword :exec
@@ -75,9 +73,15 @@ SELECT * FROM projects WHERE id = $1;
 
 -- name: UpdateProject :execrows
 UPDATE projects SET
-title = $2, description = $3, website_url = $4,
-version = $5, github_url = $6,
-owner_user_id = $7
+  title = $2,
+  code = $3,
+  description = $4,
+  website_url = $5,
+  version = $6,
+  github_url = $7,
+  owner_user_id = $8,
+  parent_project_id = $9,
+  updated_at = NOW()
 WHERE id = $1;
 
 -- name: DeleteProject :execrows
@@ -85,14 +89,14 @@ DELETE FROM projects WHERE id = $1;
 
 -- name: CreateProject :one
 INSERT INTO projects (
-    title, description, version, is_active, is_public, website_url,
+    title, code, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
     owner_user_id, created_at, updated_at, deleted_at
 )
 VALUES(
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10,
-    $11, $12, $13, $14
+    $11, $12, $13, $14, $15
 ) RETURNING id;
 
 -- name: ListTestCases :many
@@ -167,9 +171,12 @@ tr.expected_result,
 tr.reactions,
 tr.tested_on,
 tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at
+tr.updated_at AS run_updated_at,
+
+tp.environment_id
 FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
+INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -205,11 +212,11 @@ WHERE p.project_id IS NULL;
 -- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
-    is_draft, tags, created_by_id, created_at, updated_at, project_id
+    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13
+    $8, $9, $10, $11, $12, $13, $14
 )
 RETURNING id;
 
@@ -253,6 +260,25 @@ UPDATE test_cases
 SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
+-- name: FindTestCasesByProjectID :many
+SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
+       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
+       tc.created_at, tc.updated_at, tc.suggested,
+       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+       tr.id AS run_id, tr.result_state, tr.is_closed,
+       tr.tested_by_id, tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = @project_id
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND (tr.is_closed = @is_closed OR @is_closed IS NULL)
+  AND tr.result_state = ANY(@result_states::test_run_state[]);
+  
+-- name: FindAllSuggestedByProject :many
+SELECT * FROM test_cases WHERE project_id = $1 AND suggested = $2;
+
+-- name: UpdateSuggestedFlag :exec
+UPDATE test_cases SET suggested = $2 WHERE id = $1;
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
@@ -261,7 +287,7 @@ SELECT * FROM test_plans WHERE project_id = $1;
 
 -- name: GetTestPlan :one
 SELECT tp.id, tp.project_id, tp.assigned_to_id, tp.created_by_id, tp.updated_by_id,
-       tp.kind, tp.description, tp.start_at, tp.closed_at, tp.scheduled_end_at,
+       tp.kind, tp.description, tp.environment_id, tp.start_at, tp.closed_at, tp.scheduled_end_at,
        tp.num_failures, tp.is_complete, tp.is_locked, tp.has_report,
        tp.created_at, tp.updated_at,
        COUNT(DISTINCT tr.test_case_id) AS num_test_cases
@@ -281,7 +307,7 @@ UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
 updated_by_id = $5, kind = $6, description = $7, start_at = $8,
 closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
 num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17
+has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1;
 
 -- name: CloseTestPlan :execrows
@@ -291,19 +317,25 @@ closed_at = $2,
 updated_at = $2
 WHERE id = $1;
 
+-- name: ChangeEnvironment :exec
+UPDATE test_plans
+SET environment_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: GetTestRunStatesForPlan :many
 SELECT result_state, is_closed FROM test_runs WHERE test_plan_id = $1;
 
 -- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
-    kind, description, start_at, closed_at, scheduled_end_at,
+    kind, description, environment_id, start_at, closed_at, scheduled_end_at,
     num_test_cases, num_failures, is_complete, is_locked, has_report,
     created_at, updated_at
 )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $7, $8,
-    $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 RETURNING id;
 
@@ -311,7 +343,31 @@ RETURNING id;
 SELECT * FROM test_runs ORDER BY created_at DESC;
 
 -- name: ListTestRunsByPlan :many
-SELECT * FROM test_runs WHERE test_plan_id = $1;
+SELECT
+    tr.id,
+    tr.project_id,
+    tr.test_plan_id,
+    tr.test_case_id,
+    tr.owner_id,
+    tr.tested_by_id,
+    tr.assigned_to_id,
+    tr.code,
+    tr.result_state,
+    tr.is_closed,
+    tr.notes,
+    tr.actual_result,
+    tr.expected_result,
+    tr.tested_on,
+    tr.created_at,
+    tr.updated_at,
+    tr.environment_id,
+    tc.title AS test_case_title,
+    u.display_name AS executed_by
+FROM test_runs tr
+JOIN test_cases tc ON tr.test_case_id = tc.id
+JOIN users u ON tr.tested_by_id = u.id
+WHERE tr.test_plan_id = $1
+ORDER BY tr.created_at DESC;
 
 -- name: ListTestRunsAssignedToUser :many
 SELECT * FROM test_runs WHERE assigned_to_id = $1;
@@ -334,11 +390,11 @@ DELETE FROM test_runs WHERE project_id = $1;
 -- name: CreateNewTestRun :one
 INSERT INTO test_runs (
 id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, code, created_at, updated_at,
-result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result
+result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass'
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
 )
 RETURNING id;
 
@@ -510,7 +566,14 @@ tested_by_id = $3,
 notes = $4,
 actual_result = $5,
 expected_result = $6,
+environment_id = $7,
 tested_on = NOW(),
+updated_at = NOW()
+WHERE id = $1;
+
+-- name: CloseTestRun :exec
+UPDATE test_runs
+SET is_closed = TRUE,
 updated_at = NOW()
 WHERE id = $1;
 
@@ -518,6 +581,15 @@ WHERE id = $1;
 SELECT closed_at, is_complete
 FROM test_plans
 WHERE id = $1;
+
+-- name: GetTestPlanRunStats :one
+SELECT
+    COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
+    COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
+    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+FROM test_runs
+WHERE test_plan_id = $1;
 
 -- name: GetTestCaseExecutionSummary :many
 SELECT
@@ -529,3 +601,38 @@ FROM test_run_results trr
 INNER JOIN test_runs tr ON tr.id = trr.test_run_id
 WHERE trr.executed_by = $1
 GROUP BY tr.test_case_id;
+
+-- name: CreateOrg :one
+INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at;
+
+-- name: GetOrgByID :one
+SELECT id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
+FROM orgs
+WHERE id = $1;
+
+-- name: ListOrgs :many
+SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
+FROM orgs
+ORDER BY name;
+
+-- name: UpdateOrg :exec
+UPDATE orgs SET name = $2, address = $3, country = $4, github_url = $5, website_url = $6, updated_at = now()
+WHERE id = $1;
+
+-- name: DeleteOrg :exec
+DELETE FROM orgs WHERE id = $1;
+
+-- name: CreateEnvironment :one
+INSERT INTO environments (
+    project_id, name, description, base_url, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, now(), now()
+) RETURNING *;
+
+-- name: ListEnvironmentsByProject :many
+SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
+
+-- name: GetEnvironment :one
+SELECT * FROM environments WHERE id = $1;

@@ -23,13 +23,17 @@ function RouteComponent() {
       type: values.type,
       description: values.description || "",
       code: values.code,
-      priority: values.priority,
-      ProjectID: parseInt(params.projectId),
+      priority: Number(values.priority),
+      project_id: parseInt(params.projectId),
     };
 
     try {
-      await moduleService.createModule(payload);
+      const res = await moduleService.createModule(payload)
 
+      if (!res || (res as any).type === "problemdetail.example.com/http/types/BadRequest"){
+        throw new Error((res as any).detail || "Failed to create module");
+      }
+      
       toaster.create({
         title: "Module created",
         description: `We've created ${values.type}: ${values.name}`,
@@ -37,7 +41,10 @@ function RouteComponent() {
         duration: 3000,
       });
 
-      navigate({ to: `/projects/${params.projectId}` });
+      navigate({
+        to: "/projects/$projectId/Features",
+        params: { projectId: params.projectId },
+      });
     } catch (err) {
       console.error(err);
       toaster.create({

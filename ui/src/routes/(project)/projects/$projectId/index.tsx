@@ -18,6 +18,7 @@ function ViewProject() {
     { label: "Reports", path: `/projects/$projectId/reports` },
     { label: "Insights", path: `/projects/$projectId/insights` },
     { label: "Settings", path: `/projects/$projectId/settings` },
+    {label: "Environments", path: `/projects/$projectId/environments`},
   ];
 
   return (
@@ -25,9 +26,9 @@ function ViewProject() {
       <Flex
         gap="2"
         p={4}
-        borderBottom="1px solid"
-        borderColor="gray.200"
-        bg="gray.50"
+        borderBottom="sm"
+        borderColor="border.subtle"
+        bg="bg.surface"
         overflowX="auto"
       >
         {navItems.map((item) => {
@@ -41,7 +42,7 @@ function ViewProject() {
             >
               <Button
                 variant={isActive ? "solid" : "ghost"}
-                colorScheme="teal"
+                colorPalette="brand"
                 size="sm"
               >
                 {item.label}

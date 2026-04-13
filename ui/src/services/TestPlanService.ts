@@ -1,5 +1,12 @@
 import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
+import { components } from "@/lib/api/v1";
+
+export type TestPlan = components["schemas"]["schema.TestPlanResponseItem"];
+
+export type TestPlansResponse = {
+  test_plans: TestPlan[];
+};
 
 type AssignTestsToPlanPayload = {
   planned_tests: { test_case_id?: string; user_ids?: number[] }[];
@@ -31,10 +38,14 @@ export function useTestPlansQuery() {
   return $api.useQuery("get", "/v1/test-plans");
 }
 
-export async function getProjectTestPlans(projectID: string) {
-  return apiClient.request("get", "/v1/projects/{projectID}/test-plans", {
-    params: { path: { projectID } },
-  });
+export async function getProjectTestPlans(
+  projectID: string
+): Promise<TestPlansResponse> {
+  const res = await apiClient.request(
+    "get", "/v1/projects/{projectID}/test-plans", 
+    { params: { path: { projectID } }}
+  );
+  return res.data as TestPlansResponse;
 }
 
 export async function getTestPlanById(testPlanID: string) {
@@ -53,13 +64,14 @@ export async function deleteTestPlan(testPlanID: string) {
   });
 }
 
-export async function getTestPlans() {
-  return apiClient.request("get", "/v1/test-plans");
+export async function getTestPlans() : Promise<TestPlansResponse> {
+  const res = await apiClient.request("get", "/v1/test-plans");
+  return res.data as TestPlansResponse;
 }
 
 export async function getTestRuns(testPlanID: string) {
   return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-runs", {
-    params: { path: { testplanID: testPlanID } },
+    params: { path: { testPlanID: testPlanID } },
   });
 }
 
@@ -75,6 +87,51 @@ export async function assignTestersToTestPlan(
       body: payload,
     }
   );
+}
+
+export async function closeTestPlan(testPlanID: number) {
+  const response = await apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/close",
+    {
+      params: { path: { testPlanID } },
+    }
+  );
+
+  // Check if the request failed
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to close test plan");
+  }
+
+  return response.data;
+}
+
+export function useCloseTestPlanMutation() {
+  return $api.useMutation("post", "/v1/test-plans/{testPlanID}/close");
+}
+
+export async function changeTestPlanEnvironment(
+  testPlanID: number,
+  environmentID: number
+
+){
+  const response = await apiClient.request(
+    "post", 
+    "/v1/test-plans/{testPlanID}/environment",
+    {
+      params: {path: {testPlanID: String(testPlanID)}},
+      body: {environment_id: environmentID},
+    }
+  );
+
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to update test plan");
+    
+  }
+
+  return response.data;
 }
 
 // export async function removeTestersFromTestPlan(

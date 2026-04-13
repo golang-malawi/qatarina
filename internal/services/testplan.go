@@ -17,13 +17,14 @@ import (
 type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
-	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.TestRun, error)
+	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.ListTestRunsByPlanRow, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
+	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -46,12 +47,13 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	// TODO: create the test plan
 	// TODO: create test-runs for the plan from assigned
 	testPlanParams := dbsqlc.CreateTestPlanParams{
-		ProjectID:    int32(request.ProjectID),
-		AssignedToID: int32(request.AssignedToID),
-		CreatedByID:  int32(request.CreatedByID),
-		UpdatedByID:  int32(request.UpdatedByID),
-		Kind:         dbsqlc.TestKind(request.Kind),
-		Description:  sql.NullString{String: request.Description, Valid: true},
+		ProjectID:     int32(request.ProjectID),
+		AssignedToID:  int32(request.AssignedToID),
+		CreatedByID:   int32(request.CreatedByID),
+		UpdatedByID:   int32(request.UpdatedByID),
+		Kind:          dbsqlc.TestKind(request.Kind),
+		Description:   sql.NullString{String: request.Description, Valid: true},
+		EnvironmentID: common.NewNullInt32(int32(request.EnvironmentID)),
 		// TODO: handle time fields
 		// StartAt:        sql.NullTime{Time: time.Now, Valid: true},
 		// ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
@@ -116,7 +118,7 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 }
 
 // FindAllByTestPlanID implements TestPlanService
-func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID int32) ([]dbsqlc.TestRun, error) {
+func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID int32) ([]dbsqlc.ListTestRunsByPlanRow, error) {
 	return t.queries.ListTestRunsByPlan(ctx, testPlanID)
 }
 
@@ -183,25 +185,36 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
 	}
 
+	// Get test run statistics
+	runStats, err := t.queries.GetTestPlanRunStats(ctx, int32(id))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
+	}
+
 	response := schema.TestPlanResponseItem{
-		ID:             plan.ID,
-		ProjectID:      plan.ProjectID,
-		AssignedToID:   plan.AssignedToID,
-		CreatedByID:    plan.CreatedByID,
-		UpdatedByID:    plan.UpdatedByID,
-		Kind:           string(plan.Kind),
-		Description:    plan.Description.String,
-		StartAt:        plan.StartAt.Time.Format(time.DateTime),
-		ClosedAt:       plan.ClosedAt.Time.Format(time.DateTime),
-		ScheduledEndAt: plan.ScheduledEndAt.Time.Format(time.DateTime),
-		NumTestCases:   int32(plan.NumTestCases),
-		NumFailures:    plan.NumFailures,
-		IsComplete:     plan.IsComplete.Bool,
-		IsLocked:       plan.IsLocked.Bool,
-		HasReport:      plan.HasReport.Bool,
-		CreatedAt:      plan.CreatedAt.Time.Format(time.DateTime),
-		UpdatedAt:      plan.UpdatedAt.Time.Format(time.DateTime),
-		TestCases:      []schema.TestCaseResponseItem{},
+		ID:              plan.ID,
+		ProjectID:       plan.ProjectID,
+		EnvironmentID:   plan.EnvironmentID.Int32,
+		AssignedToID:    plan.AssignedToID,
+		CreatedByID:     plan.CreatedByID,
+		UpdatedByID:     plan.UpdatedByID,
+		Kind:            string(plan.Kind),
+		Description:     plan.Description.String,
+		StartAt:         plan.StartAt.Time.Format(time.DateTime),
+		ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
+		ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+		NumTestCases:    int32(plan.NumTestCases),
+		NumFailures:     plan.NumFailures,
+		PassedCount:     runStats.PassedCount,
+		FailedCount:     runStats.FailedCount,
+		PendingCount:    runStats.PendingCount,
+		AssignedTesters: runStats.AssignedTestersCount,
+		IsComplete:      plan.IsComplete.Bool,
+		IsLocked:        plan.IsLocked.Bool,
+		HasReport:       plan.HasReport.Bool,
+		CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+		UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
+		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
 	for _, tc := range cases {
@@ -225,6 +238,7 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 		ProjectID:      int32(request.ProjectID),
 		Kind:           dbsqlc.TestKind(request.Kind),
 		Description:    common.NullString(request.Description),
+		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
 		StartAt:        common.NullTime(request.StartAt),
 		ClosedAt:       common.NullTime(request.ClosedAt),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
@@ -263,4 +277,12 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) e
 	}
 
 	return nil
+}
+
+func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, envID int64) error {
+	params := dbsqlc.ChangeEnvironmentParams{
+		ID:            testPlanID,
+		EnvironmentID: common.NewNullInt32(int32(envID)),
+	}
+	return t.queries.ChangeEnvironment(ctx, params)
 }
