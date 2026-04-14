@@ -11,6 +11,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/s3"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
 )
@@ -35,19 +36,23 @@ type TestRunService interface {
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
+	SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error)
+	GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error)
 }
 
 type testRunService struct {
-	db      *sql.DB
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	db       *sql.DB
+	queries  *dbsqlc.Queries
+	logger   logging.Logger
+	s3Client *s3.Client
 }
 
-func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, s3Client *s3.Client) TestRunService {
 	return &testRunService{
-		db:      db,
-		queries: conn,
-		logger:  logger,
+		db:       db,
+		queries:  conn,
+		logger:   logger,
+		s3Client: s3Client,
 	}
 }
 
@@ -261,4 +266,54 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
 	}
 	return &closedRun, nil
+}
+
+func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
+	s3Key := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
+	err := t.s3Client.Upload(ctx, s3Key, file.Content, file.ContentType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file: %w", err)
+	}
+
+	attachmentID := uuid.New()
+	err = t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
+		ID:              attachmentID,
+		TestRunResultID: uuid.MustParse(resultID),
+		FileName:        file.FileName,
+		FileType:        file.ContentType,
+		FileSize:        file.Size,
+		StorageKey:      s3Key,
+		StorageUrl:      t.s3Client.GetFileURL(s3Key),
+		CreatedAt:       common.NewNullTime(time.Now()),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save attachment metadata: %w", err)
+	}
+
+	return &schema.AttachmentResponse{
+		ID:         attachmentID.String(),
+		FileName:   file.FileName,
+		FileType:   file.ContentType,
+		FileSize:   file.Size,
+		StorageUrl: t.s3Client.GetFileURL(s3Key),
+	}, nil
+}
+
+func (t *testRunService) GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error) {
+	rows, err := t.queries.ListTestRunAttachments(ctx, uuid.MustParse(resultID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list attachments: %w", err)
+	}
+
+	attachments := make([]schema.AttachmentResponse, 0, len(rows))
+	for _, row := range rows {
+		attachments = append(attachments, schema.AttachmentResponse{
+			ID:         row.ID.String(),
+			FileName:   row.FileName,
+			FileType:   row.FileType,
+			FileSize:   row.FileSize,
+			StorageUrl: row.StorageUrl,
+		})
+	}
+	return attachments, nil
 }

@@ -17,6 +17,7 @@ type Config struct {
 	Logging    LoggingConfiguration    `mapstructure:"logging"`
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
+	S3         S3Configuration         `mapstructure:"s3"`
 }
 
 type DatabaseConfiguration struct {
@@ -73,6 +74,11 @@ type PlatformConfiguration struct {
 
 type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
+}
+
+type S3Configuration struct {
+	Bucket string `mapstructure:"bucket" envconfig:"QATARINA_S3_BUCKET"`
+	Region string `mapstructure:"region" envconfig:"QATARINA_S3_REGION"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -135,5 +141,9 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	S3: S3Configuration{
+		Bucket: "",
+		Region: "us-east-1",
 	},
 }

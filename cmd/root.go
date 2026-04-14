@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/s3"
 	"github.com/golang-malawi/qatarina/internal/version"
 	"github.com/lucasepe/homedir"
 	"github.com/spf13/cobra"
@@ -16,6 +21,7 @@ var (
 	qatarinaConfig = &config.Config{}
 	psqlPath       string
 	logFile        string
+	s3Client       *s3.Client
 )
 
 func init() {
@@ -87,5 +93,15 @@ func initConfig() {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
+
+	ctx := context.Background()
+	awsCfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(qatarinaConfig.S3.Region))
+	if err != nil {
+		fmt.Println("Unable to load AWS config:", err)
+		os.Exit(1)
+	}
+	awsS3Client := awss3.NewFromConfig(awsCfg)
+	s3Client = s3.NewClient(qatarinaConfig.S3.Bucket, awsS3Client)
+
 	// TODO: configure logging to file here..
 }

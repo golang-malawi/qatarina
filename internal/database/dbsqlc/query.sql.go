@@ -1962,6 +1962,39 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 	return err
 }
 
+const insertTestRunAttachment = `-- name: InsertTestRunAttachment :exec
+INSERT INTO test_run_attachments (
+    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+)
+`
+
+type InsertTestRunAttachmentParams struct {
+	ID              uuid.UUID
+	TestRunResultID uuid.UUID
+	FileName        string
+	FileType        string
+	FileSize        int64
+	StorageKey      string
+	StorageUrl      string
+	CreatedAt       sql.NullTime
+}
+
+func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) error {
+	_, err := q.db.ExecContext(ctx, insertTestRunAttachment,
+		arg.ID,
+		arg.TestRunResultID,
+		arg.FileName,
+		arg.FileType,
+		arg.FileSize,
+		arg.StorageKey,
+		arg.StorageUrl,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertTestRunResult = `-- name: InsertTestRunResult :one
 INSERT INTO test_run_results (
     id, test_run_id, status, result, notes, executed_by, executed_at, created_at, updated_at
@@ -2571,6 +2604,45 @@ func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) (
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EnvironmentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunAttachments = `-- name: ListTestRunAttachments :many
+SELECT id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+FROM test_run_attachments
+WHERE test_run_result_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListTestRunAttachments(ctx context.Context, testRunResultID uuid.UUID) ([]TestRunAttachment, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunAttachments, testRunResultID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRunAttachment
+	for rows.Next() {
+		var i TestRunAttachment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TestRunResultID,
+			&i.FileName,
+			&i.FileType,
+			&i.FileSize,
+			&i.StorageKey,
+			&i.StorageUrl,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

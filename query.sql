@@ -412,6 +412,19 @@ INSERT INTO test_run_results (
 )
 RETURNING id;
 
+-- name: InsertTestRunAttachment :exec
+INSERT INTO test_run_attachments (
+    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+);
+
+-- name: ListTestRunAttachments :many
+SELECT id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+FROM test_run_attachments
+WHERE test_run_result_id = $1
+ORDER BY created_at DESC;
+
 -- name: AssignTesterToProject :execrows
 INSERT INTO project_testers (
     project_id, user_id, role, is_active, created_at, updated_at

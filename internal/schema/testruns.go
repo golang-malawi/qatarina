@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -151,4 +152,19 @@ func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 		ExecutedBy:     "",
 		EnvironmentID:  tr.EnvironmentID.Int32,
 	}
+}
+
+type AttachmentRequest struct {
+	FileName    string    `json:"file_name"`
+	ContentType string    `json:"content_type"`
+	Size        int64     `json:"size"`
+	Content     io.Reader `json:"content"`
+}
+
+type AttachmentResponse struct {
+	ID         string `json:"id"`
+	FileName   string `json:"file_name"`
+	FileType   string `json:"file_type"`
+	FileSize   int64  `json:"file_size"`
+	StorageUrl string `json:"storage_url"`
 }
