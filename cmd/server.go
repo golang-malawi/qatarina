@@ -10,7 +10,7 @@ var serverCmd = &cobra.Command{
 	Short: "Starts the HelpAside server daemon",
 	Long:  `Starts the HelpAside server daemon`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		apiServer := api.NewAPI(qatarinaConfig)
+		apiServer := api.NewAPI(qatarinaConfig, storageClient)
 		// var err error
 		// apiServer.RiverClient, err = worker.StartRiverWorker(qatarinaConfig)
 		// if err != nil {

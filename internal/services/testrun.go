@@ -11,8 +11,8 @@ import (
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
-	"github.com/golang-malawi/qatarina/internal/s3"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/google/uuid"
 )
 
@@ -41,18 +41,20 @@ type TestRunService interface {
 }
 
 type testRunService struct {
-	db       *sql.DB
-	queries  *dbsqlc.Queries
-	logger   logging.Logger
-	s3Client *s3.Client
+	db          *sql.DB
+	queries     *dbsqlc.Queries
+	logger      logging.Logger
+	storage     storage.Storage
+	maxFileSize int64
 }
 
-func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, s3Client *s3.Client) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, storage storage.Storage, maxFileSize int64) TestRunService {
 	return &testRunService{
-		db:       db,
-		queries:  conn,
-		logger:   logger,
-		s3Client: s3Client,
+		db:          db,
+		queries:     conn,
+		logger:      logger,
+		storage:     storage,
+		maxFileSize: maxFileSize,
 	}
 }
 
@@ -269,10 +271,28 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 }
 
 func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	s3Key := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
-	err := t.s3Client.Upload(ctx, s3Key, file.Content, file.ContentType)
+	// Currently allowed file types are images and text files, this can be extended in the future as needed
+	allowedTypes := map[string]bool{
+		"text/plain":      true,
+		"text/markdown":   true,
+		"application/pdf": true,
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // docx
+		"image/jpeg":    true,
+		"image/png":     true,
+		"image/svg+xml": true,
+	}
+	if !allowedTypes[file.ContentType] {
+		return nil, fmt.Errorf("file type %s is not allowed", file.ContentType)
+	}
+	// File size limit set from config file
+	if file.Size > t.maxFileSize {
+		return nil, fmt.Errorf("file size exceeds the maximum allowed limit of %d bytes", t.maxFileSize)
+	}
+
+	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
+	err := t.storage.Upload(ctx, storageKey, file.Content, file.ContentType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to upload file: %w", err)
+		return nil, fmt.Errorf("failed to upload file to storage: %w", err)
 	}
 
 	attachmentID := uuid.New()
@@ -282,8 +302,8 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileName:        file.FileName,
 		FileType:        file.ContentType,
 		FileSize:        file.Size,
-		StorageKey:      s3Key,
-		StorageUrl:      t.s3Client.GetFileURL(s3Key),
+		StorageKey:      storageKey,
+		StorageUrl:      t.storage.GetFileURL(storageKey),
 		CreatedAt:       common.NewNullTime(time.Now()),
 	})
 	if err != nil {
@@ -295,7 +315,7 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileName:   file.FileName,
 		FileType:   file.ContentType,
 		FileSize:   file.Size,
-		StorageUrl: t.s3Client.GetFileURL(s3Key),
+		StorageUrl: t.storage.GetFileURL(storageKey),
 	}, nil
 }
 

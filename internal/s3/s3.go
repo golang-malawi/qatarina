@@ -11,12 +11,14 @@ import (
 
 type Client struct {
 	bucket string
+	region string
 	client *s3.Client
 }
 
-func NewClient(bucket string, client *s3.Client) *Client {
+func NewClient(bucket string, region string, client *s3.Client) *Client {
 	return &Client{
 		bucket: bucket,
+		region: region,
 		client: client,
 	}
 }
@@ -33,5 +35,5 @@ func (c *Client) Upload(ctx context.Context, key string, content io.Reader, cont
 }
 
 func (c *Client) GetFileURL(key string) string {
-	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", c.bucket, key)
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", c.bucket, c.region, key)
 }

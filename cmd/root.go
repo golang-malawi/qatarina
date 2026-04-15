@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/s3"
+	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/golang-malawi/qatarina/internal/version"
 	"github.com/lucasepe/homedir"
 	"github.com/spf13/cobra"
@@ -21,7 +22,7 @@ var (
 	qatarinaConfig = &config.Config{}
 	psqlPath       string
 	logFile        string
-	s3Client       *s3.Client
+	storageClient  storage.Storage
 )
 
 func init() {
@@ -94,14 +95,24 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
-	awsCfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(qatarinaConfig.S3.Region))
-	if err != nil {
-		fmt.Println("Unable to load AWS config:", err)
+	// Choose storage driver based on configuration
+	switch qatarinaConfig.Storage.Driver {
+	case "s3":
+		ctx := context.Background()
+		awsCfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(qatarinaConfig.Storage.S3Region))
+		if err != nil {
+			fmt.Println("Unable to load AWS config:", err)
+			os.Exit(1)
+		}
+		awsS3Client := awss3.NewFromConfig(awsCfg)
+		storageClient = s3.NewClient(qatarinaConfig.Storage.S3Bucket, qatarinaConfig.Storage.S3Region, awsS3Client)
+
+	case "local":
+		storageClient = storage.NewLocalClient(qatarinaConfig.Storage.LocalPath)
+
+	default:
+		fmt.Println("Invalid storage driver specified in config")
 		os.Exit(1)
 	}
-	awsS3Client := awss3.NewFromConfig(awsCfg)
-	s3Client = s3.NewClient(qatarinaConfig.S3.Bucket, awsS3Client)
-
 	// TODO: configure logging to file here..
 }

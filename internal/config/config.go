@@ -10,14 +10,16 @@ import (
 )
 
 type Config struct {
-	Server     HTTPServerConfiguration `mapstructure:"server"`
-	Auth       AuthConfiguration       `mapstructure:"auth"`
-	Database   DatabaseConfiguration   `mapstructure:"db"`
-	SMTP       SMTPConfiguration       `mapstructure:"smtp"`
-	Logging    LoggingConfiguration    `mapstructure:"logging"`
-	Platform   PlatformConfiguration   `mapstructure:"platform"`
-	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
-	S3         S3Configuration         `mapstructure:"s3"`
+	Server      HTTPServerConfiguration `mapstructure:"server"`
+	Auth        AuthConfiguration       `mapstructure:"auth"`
+	Database    DatabaseConfiguration   `mapstructure:"db"`
+	SMTP        SMTPConfiguration       `mapstructure:"smtp"`
+	Logging     LoggingConfiguration    `mapstructure:"logging"`
+	Platform    PlatformConfiguration   `mapstructure:"platform"`
+	ImportFile  ImportFileConfiguration `mapstructure:"import_file"`
+	S3          S3Configuration         `mapstructure:"s3"`
+	Storage     StorageConfiguration    `mapstructure:"storage"`
+	Attachments AttachmentConfiguration `mapstructure:"attachments"`
 }
 
 type DatabaseConfiguration struct {
@@ -76,9 +78,20 @@ type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
 }
 
+type StorageConfiguration struct {
+	Driver    string `mapstructure:"driver" envconfig:"QATARINA_STORAGE_DRIVER"`
+	LocalPath string `mapstructure:"local_path" envconfig:"QATARINA_STORAGE_LOCAL_PATH"`
+	S3Bucket  string `mapstructure:"s3_bucket" envconfig:"QATARINA_STORAGE_S3_BUCKET"`
+	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
+}
+
 type S3Configuration struct {
 	Bucket string `mapstructure:"bucket" envconfig:"QATARINA_S3_BUCKET"`
 	Region string `mapstructure:"region" envconfig:"QATARINA_S3_REGION"`
+}
+
+type AttachmentConfiguration struct {
+	MaxFileSize int64 `mapstructure:"max_file_size" envconfig:"QATARINA_ATTACHMENTS_MAX_FILE_SIZE"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -141,6 +154,12 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	Storage: StorageConfiguration{
+		Driver:    "local",
+		LocalPath: "./uploads",
+		S3Bucket:  "",
+		S3Region:  "us-east-1",
 	},
 	S3: S3Configuration{
 		Bucket: "",
