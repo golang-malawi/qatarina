@@ -2820,8 +2820,21 @@ SELECT
     tr.created_at,
     tr.updated_at,
     tr.environment_id,
-    tc.title AS test_case_title,
-    u.display_name AS executed_by
+    u.display_name AS executed_by,
+    (
+      SELECT id
+      FROM test_run_results trr
+      WHERE trr.test_run_id = tr.id
+      ORDER BY trr.created_at DESC
+      LIMIT 1
+    ) AS latest_result_id,
+    (
+      SELECT COUNT(*)
+      FROM test_run_attachments tra
+      JOIN test_run_results trr ON tra.test_run_result_id = trr.id
+      WHERE trr.test_run_id = tr.id
+    ) AS attachment_count,
+    tc.title AS test_case_title
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id
@@ -2830,25 +2843,27 @@ ORDER BY tr.created_at DESC
 `
 
 type ListTestRunsByPlanRow struct {
-	ID             uuid.UUID
-	ProjectID      int32
-	TestPlanID     int32
-	TestCaseID     uuid.UUID
-	OwnerID        int32
-	TestedByID     int32
-	AssignedToID   int32
-	Code           string
-	ResultState    TestRunState
-	IsClosed       sql.NullBool
-	Notes          string
-	ActualResult   sql.NullString
-	ExpectedResult sql.NullString
-	TestedOn       time.Time
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
-	EnvironmentID  sql.NullInt32
-	TestCaseTitle  string
-	ExecutedBy     sql.NullString
+	ID              uuid.UUID
+	ProjectID       int32
+	TestPlanID      int32
+	TestCaseID      uuid.UUID
+	OwnerID         int32
+	TestedByID      int32
+	AssignedToID    int32
+	Code            string
+	ResultState     TestRunState
+	IsClosed        sql.NullBool
+	Notes           string
+	ActualResult    sql.NullString
+	ExpectedResult  sql.NullString
+	TestedOn        time.Time
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	EnvironmentID   sql.NullInt32
+	ExecutedBy      sql.NullString
+	LatestResultID  uuid.UUID
+	AttachmentCount int64
+	TestCaseTitle   string
 }
 
 func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]ListTestRunsByPlanRow, error) {
@@ -2878,8 +2893,10 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]L
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EnvironmentID,
-			&i.TestCaseTitle,
 			&i.ExecutedBy,
+			&i.LatestResultID,
+			&i.AttachmentCount,
+			&i.TestCaseTitle,
 		); err != nil {
 			return nil, err
 		}

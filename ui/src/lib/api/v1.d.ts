@@ -1431,6 +1431,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-runs/{resultID}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List attachments for a Test Run Result
+         * @description List all file attachments linked to a Test Run Result
+         */
+        get: operations["ListAttachments"];
+        put?: never;
+        /**
+         * Upload an attachment for a Test Run Result
+         * @description Upload a file attachment linked to a Test Run Result
+         */
+        post: operations["UploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-runs/{testRunID}": {
         parameters: {
             query?: never;
@@ -1787,6 +1811,13 @@ export interface components {
         "schema.AssignedTestCaseListResponse": {
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
         };
+        "schema.AttachmentResponse": {
+            file_name?: string;
+            file_size?: number;
+            file_type?: string;
+            id?: string;
+            storage_url?: string;
+        };
         "schema.BulkAssignTesters": {
             project_id?: number;
             testers?: {
@@ -2090,12 +2121,14 @@ export interface components {
         };
         "schema.TestRunResponse": {
             actual_result?: string;
+            attachment_count?: number;
             code?: string;
             environment_id?: number;
             executed_by?: string;
             expected_result?: string;
             id?: string;
             is_closed?: boolean;
+            latest_result_id?: string;
             notes?: string;
             project_id?: number;
             result_state?: string;
@@ -5194,6 +5227,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Attachment file */
+        requestBody: {
+            content: {
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"];
                 };
             };
             /** @description Bad Request */

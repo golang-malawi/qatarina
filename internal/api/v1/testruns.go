@@ -323,14 +323,15 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test case is inactive")
 		}
 
-		executed, err := testRunService.Execute(context.Background(), request)
+		executed, resultID, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "testRunID", pathID)
 			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
 		}
 
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponseFromEntity(executed),
+			"test_run":  schema.NewTestRunResponseFromEntity(executed),
+			"result_id": resultID,
 		})
 	}
 }
@@ -440,8 +441,6 @@ func ListAttachments(testRunService services.TestRunService, logger logging.Logg
 			return problemdetail.ServerErrorProblem(c, "failed to list attachments")
 		}
 
-		return c.JSON(fiber.Map{
-			"attachments": attachments,
-		})
+		return c.JSON(attachments)
 	}
 }

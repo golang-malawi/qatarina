@@ -182,6 +182,9 @@ func (api *API) routes() {
 		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
 
+	// Serve uploaded attachment files from the configured local storage path.
+	router.Static("/uploads", api.Config.Storage.LocalPath)
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),
