@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
+import { IconSearch, IconX, IconPaperclip} from "@tabler/icons-react";
 import {
   EmptyState,
   ErrorState,
@@ -372,7 +372,7 @@ function AttachmentSection({
               No attachments available.
             </Text>
           ) : (
-            <Stack spacing={2}>
+            <Stack gap={2}>
               {attachments.map((attachment) => (
                 <Flex key={attachment.id} align="center" gap={2}>
                   <IconPaperclip size={16} />
