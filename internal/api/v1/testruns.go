@@ -323,14 +323,15 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test case is inactive")
 		}
 
-		executed, err := testRunService.Execute(context.Background(), request)
+		executed, resultID, err := testRunService.Execute(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "testRunID", pathID)
 			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
 		}
 
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponseFromEntity(executed),
+			"test_run":  schema.NewTestRunResponseFromEntity(executed),
+			"result_id": resultID,
 		})
 	}
 }
@@ -362,5 +363,84 @@ func CloseTestRun(testRunService services.TestRunService, logger logging.Logger)
 		return c.JSON(fiber.Map{
 			"test_run": schema.NewTestRunResponseFromEntity(tr),
 		})
+	}
+}
+
+// UploadAttachment godoc
+//
+//	@ID             UploadAttachment
+//	@Summary        Upload an attachment for a Test Run Result
+//	@Description    Upload a file attachment linked to a Test Run Result
+//	@Tags           test-runs
+//	@Accept         multipart/form-data
+//	@Produce        json
+//	@Param          resultID    path        string  true    "Test Run Result ID"
+//	@Param          file        formData    file    true    "Attachment file"
+//	@Success        200         {object}    schema.AttachmentResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-runs/{resultID}/attachments [post]
+func UploadAttachment(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		resultID := c.Params("resultID", "")
+		if resultID == "" {
+			return problemdetail.BadRequest(c, "missing resultID")
+		}
+
+		fileHeader, err := c.FormFile("file")
+		if err != nil {
+			return problemdetail.BadRequest(c, "missing file in request")
+		}
+
+		file, err := fileHeader.Open()
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to open uploaded file")
+		}
+		defer file.Close()
+
+		attachmentReq := &schema.AttachmentRequest{
+			FileName:    fileHeader.Filename,
+			ContentType: fileHeader.Header.Get("Content-Type"),
+			Size:        fileHeader.Size,
+			Content:     file,
+		}
+
+		resp, err := testRunService.SaveAttachment(c.Context(), resultID, attachmentReq)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to save attachment")
+		}
+
+		return c.JSON(resp)
+	}
+}
+
+// ListAttachments godoc
+//
+//	@ID             ListAttachments
+//	@Summary        List attachments for a Test Run Result
+//	@Description    List all file attachments linked to a Test Run Result
+//	@Tags           test-runs
+//	@Accept         json
+//	@Produce        json
+//	@Param          resultID    path        string  true    "Test Run Result ID"
+//	@Success        200         {array} schema.AttachmentResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-runs/{resultID}/attachments [get]
+func ListAttachments(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		resultID := c.Params("resultID", "")
+		if resultID == "" {
+			return problemdetail.BadRequest(c, "missing resultID")
+		}
+
+		attachments, err := testRunService.GetAttachments(c.Context(), resultID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to list attachments", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to list attachments")
+		}
+
+		return c.JSON(attachments)
 	}
 }

@@ -6,12 +6,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"mime"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/google/uuid"
 )
 
@@ -31,23 +35,29 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
-	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
+	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, string, error)
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
+	SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error)
+	GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error)
 }
 
 type testRunService struct {
-	db      *sql.DB
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	db          *sql.DB
+	queries     *dbsqlc.Queries
+	logger      logging.Logger
+	storage     storage.Storage
+	maxFileSize int64
 }
 
-func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, storage storage.Storage, maxFileSize int64) TestRunService {
 	return &testRunService{
-		db:      db,
-		queries: conn,
-		logger:  logger,
+		db:          db,
+		queries:     conn,
+		logger:      logger,
+		storage:     storage,
+		maxFileSize: maxFileSize,
 	}
 }
 
@@ -162,15 +172,15 @@ func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *sch
 	panic("unimplemented")
 }
 
-func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error) {
+func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, string, error) {
 	runUUID, err := uuid.Parse(request.ID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid test run ID: %w", err)
+		return nil, "", fmt.Errorf("invalid test run ID: %w", err)
 	}
 
 	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer sqlTx.Rollback()
 
@@ -186,11 +196,11 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		EnvironmentID:  common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute test case: %w", err)
+		return nil, "", fmt.Errorf("failed to execute test case: %w", err)
 	}
 
 	// Insert itnot test_run_results for history
-	_, err = tx.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+	insertedResultID, err := tx.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
 		ID:         uuid.New(),
 		TestRunID:  runUUID,
 		Status:     dbsqlc.TestRunState(request.Status),
@@ -202,19 +212,19 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		UpdatedAt:  time.Now(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert test run result: %w", err)
+		return nil, "", fmt.Errorf("failed to insert test run result: %w", err)
 	}
 
 	tr, err := tx.GetTestRun(ctx, runUUID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
+		return nil, "", fmt.Errorf("failed to fetch updated test case: %w", err)
 	}
 
 	if err := sqlTx.Commit(); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &tr, nil
+	return &tr, insertedResultID.String(), nil
 }
 
 func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bool, error) {
@@ -261,4 +271,86 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
 	}
 	return &closedRun, nil
+}
+
+func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
+	// Currently allowed file types are images and text files, this can be extended in the future as needed
+	allowedTypes := map[string]bool{
+		"text/plain":      true,
+		"text/markdown":   true,
+		"application/pdf": true,
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // docx
+		"image/jpeg":               true,
+		"image/png":                true,
+		"image/svg+xml":            true,
+		"application/octet-stream": true,
+	}
+
+	contentType := file.ContentType
+	if contentType == "" || contentType == "application/octet-stream" {
+		if ext := strings.ToLower(filepath.Ext(file.FileName)); ext != "" {
+			if guessed := mime.TypeByExtension(ext); guessed != "" {
+				contentType = guessed
+			}
+		}
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	if !allowedTypes[contentType] {
+		return nil, fmt.Errorf("file type %s is not allowed", contentType)
+	}
+	// File size limit set from config file
+	if file.Size > t.maxFileSize {
+		return nil, fmt.Errorf("file size exceeds the maximum allowed limit of %d bytes", t.maxFileSize)
+	}
+
+	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
+	err := t.storage.Upload(ctx, storageKey, file.Content, contentType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file to storage: %w", err)
+	}
+
+	attachmentID := uuid.New()
+	err = t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
+		ID:              attachmentID,
+		TestRunResultID: uuid.MustParse(resultID),
+		FileName:        file.FileName,
+		FileType:        file.ContentType,
+		FileSize:        file.Size,
+		StorageKey:      storageKey,
+		StorageUrl:      t.storage.GetFileURL(storageKey),
+		CreatedAt:       common.NewNullTime(time.Now()),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save attachment metadata: %w", err)
+	}
+
+	return &schema.AttachmentResponse{
+		ID:         attachmentID.String(),
+		FileName:   file.FileName,
+		FileType:   file.ContentType,
+		FileSize:   file.Size,
+		StorageUrl: t.storage.GetFileURL(storageKey),
+	}, nil
+}
+
+func (t *testRunService) GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error) {
+	rows, err := t.queries.ListTestRunAttachments(ctx, uuid.MustParse(resultID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list attachments: %w", err)
+	}
+
+	attachments := make([]schema.AttachmentResponse, 0, len(rows))
+	for _, row := range rows {
+		attachments = append(attachments, schema.AttachmentResponse{
+			ID:         row.ID.String(),
+			FileName:   row.FileName,
+			FileType:   row.FileType,
+			FileSize:   row.FileSize,
+			StorageUrl: row.StorageUrl,
+		})
+	}
+	return attachments, nil
 }

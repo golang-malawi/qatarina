@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -97,40 +98,44 @@ type ExecuteTestRunRequest struct {
 }
 
 type TestRunResponse struct {
-	ID             string `json:"id"`
-	ProjectID      int64  `json:"project_id"`
-	TestPlanID     int64  `json:"test_plan_id"`
-	TestCaseID     string `json:"test_case_id"`
-	TestedByID     int32  `json:"tested_by_id"`
-	Code           string `json:"code"`
-	ResultState    string `json:"result_state"`
-	IsClosed       bool   `json:"is_closed"`
-	Notes          string `json:"notes"`
-	ActualResult   string `json:"actual_result"`
-	ExpectedResult string `json:"expected_result"`
-	TestedOn       string `json:"tested_on"`
-	TestCaseTitle  string `json:"test_case_title"`
-	ExecutedBy     string `json:"executed_by"`
-	EnvironmentID  int32  `json:"environment_id"`
+	ID              string `json:"id"`
+	ProjectID       int64  `json:"project_id"`
+	TestPlanID      int64  `json:"test_plan_id"`
+	TestCaseID      string `json:"test_case_id"`
+	TestedByID      int32  `json:"tested_by_id"`
+	Code            string `json:"code"`
+	ResultState     string `json:"result_state"`
+	IsClosed        bool   `json:"is_closed"`
+	Notes           string `json:"notes"`
+	ActualResult    string `json:"actual_result"`
+	ExpectedResult  string `json:"expected_result"`
+	TestedOn        string `json:"tested_on"`
+	TestCaseTitle   string `json:"test_case_title"`
+	ExecutedBy      string `json:"executed_by"`
+	EnvironmentID   int32  `json:"environment_id"`
+	LatestResultID  string `json:"latest_result_id,omitempty"`
+	AttachmentCount int32  `json:"attachment_count,omitempty"`
 }
 
 func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse {
 	return TestRunResponse{
-		ID:             tr.ID.String(),
-		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID),
-		TestCaseID:     tr.TestCaseID.String(),
-		TestedByID:     tr.TestedByID,
-		Code:           tr.Code,
-		ResultState:    string(tr.ResultState),
-		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
-		Notes:          tr.Notes,
-		ActualResult:   tr.ActualResult.String,
-		ExpectedResult: tr.ExpectedResult.String,
-		TestedOn:       tr.TestedOn.Format(time.DateTime),
-		TestCaseTitle:  tr.TestCaseTitle,
-		ExecutedBy:     tr.ExecutedBy.String,
-		EnvironmentID:  tr.EnvironmentID.Int32,
+		ID:              tr.ID.String(),
+		ProjectID:       int64(tr.ProjectID),
+		TestPlanID:      int64(tr.TestPlanID),
+		TestCaseID:      tr.TestCaseID.String(),
+		TestedByID:      tr.TestedByID,
+		Code:            tr.Code,
+		ResultState:     string(tr.ResultState),
+		IsClosed:        tr.IsClosed.Valid && tr.IsClosed.Bool,
+		Notes:           tr.Notes,
+		ActualResult:    tr.ActualResult.String,
+		ExpectedResult:  tr.ExpectedResult.String,
+		TestedOn:        tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:   tr.TestCaseTitle,
+		ExecutedBy:      tr.ExecutedBy.String,
+		EnvironmentID:   tr.EnvironmentID.Int32,
+		LatestResultID:  tr.LatestResultID.String(),
+		AttachmentCount: int32(tr.AttachmentCount),
 	}
 }
 
@@ -151,4 +156,19 @@ func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 		ExecutedBy:     "",
 		EnvironmentID:  tr.EnvironmentID.Int32,
 	}
+}
+
+type AttachmentRequest struct {
+	FileName    string    `json:"file_name"`
+	ContentType string    `json:"content_type"`
+	Size        int64     `json:"size"`
+	Content     io.Reader `json:"content"`
+}
+
+type AttachmentResponse struct {
+	ID         string `json:"id"`
+	FileName   string `json:"file_name"`
+	FileType   string `json:"file_type"`
+	FileSize   int64  `json:"file_size"`
+	StorageUrl string `json:"storage_url"`
 }
