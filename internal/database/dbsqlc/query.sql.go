@@ -153,6 +153,31 @@ func (q *Queries) CommitTestRunResult(ctx context.Context, arg CommitTestRunResu
 	return id, err
 }
 
+const countCompletedTestCasesByProject = `-- name: CountCompletedTestCasesByProject :one
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = $1
+`
+
+func (q *Queries) CountCompletedTestCasesByProject(ctx context.Context, projectID sql.NullInt32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCompletedTestCasesByProject, projectID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countTestCasesByProject = `-- name: CountTestCasesByProject :one
+SELECT COUNT(*) FROM test_cases WHERE project_id = $1
+`
+
+func (q *Queries) CountTestCasesByProject(ctx context.Context, projectID sql.NullInt32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTestCasesByProject, projectID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTestCasesNotLinkedToProject = `-- name: CountTestCasesNotLinkedToProject :one
 SELECT COUNT(*) FROM test_cases
 RIGHT OUTER JOIN test_plans p ON p.test_case_id = test_cases.id
@@ -161,6 +186,24 @@ WHERE p.project_id IS NULL
 
 func (q *Queries) CountTestCasesNotLinkedToProject(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countTestCasesNotLinkedToProject)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countTestRunsByResultState = `-- name: CountTestRunsByResultState :one
+SELECT COUNT(*)
+FROM test_runs
+WHERE project_id = $1 AND result_state = $2
+`
+
+type CountTestRunsByResultStateParams struct {
+	ProjectID   int32
+	ResultState TestRunState
+}
+
+func (q *Queries) CountTestRunsByResultState(ctx context.Context, arg CountTestRunsByResultStateParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTestRunsByResultState, arg.ProjectID, arg.ResultState)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
