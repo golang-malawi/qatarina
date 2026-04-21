@@ -2267,6 +2267,7 @@ FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
+    AND tr.is_closed = FALSE
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3
 `
