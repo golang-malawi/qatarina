@@ -10,13 +10,14 @@ import {
   HStack,
   Input,
   InputGroup,
+  Link,
   Separator,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconSearch, IconX, IconPaperclip} from "@tabler/icons-react";
 import {
   EmptyState,
   ErrorState,
@@ -25,10 +26,18 @@ import {
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
-import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
+import {
+  closeTestRun,
+  getTestRunAttachments,
+  getTestRunsByPlan,
+} from "@/services/TestRunService";
+import { getApiEndpoint } from "@/common/request";
 import $api from "@/lib/api/query";
 
-type TestRunItem = components["schemas"]["schema.TestRunResponse"];
+type TestRunItem = components["schemas"]["schema.TestRunResponse"] & {
+  latest_result_id?: string;
+  attachment_count?: number;
+};
 type ResultFilter = "all" | "passed" | "failed" | "pending";
 
 export const Route = createFileRoute(
@@ -230,6 +239,15 @@ function TestPlanTestRunsPage() {
                         >
                           {run.is_closed ? "Closed" : "Open"}
                         </Badge>
+                        {run.attachment_count ? (
+                          <Badge colorPalette="blue" variant="subtle">
+                            <Flex align="center" gap={1}>
+                              <IconPaperclip size={14} />
+                              {run.attachment_count} attachment
+                              {run.attachment_count > 1 ? "s" : ""}
+                            </Flex>
+                          </Badge>
+                        ) : null}
                         {runId && (
                           <Badge colorPalette="blue" variant="outline">
                             ID: {runId}
@@ -273,6 +291,11 @@ function TestPlanTestRunsPage() {
                       </Text>
                     </Stack>
 
+                    <AttachmentSection
+                      latestResultId={run.latest_result_id}
+                      attachmentCount={run.attachment_count}
+                    />
+
                     {!run.is_closed && runId && (
                       <Button
                         alignSelf="start"
@@ -295,6 +318,107 @@ function TestPlanTestRunsPage() {
       )}
     </Box>
   );
+}
+
+function AttachmentSection({
+  latestResultId,
+  attachmentCount,
+}: {
+  latestResultId?: string;
+  attachmentCount?: number;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const {
+    data: attachments = [],
+    isLoading,
+  } = useQuery({
+    queryKey: ["testRunAttachments", latestResultId],
+    queryFn: () =>
+      latestResultId ? getTestRunAttachments(latestResultId) : Promise.resolve([]),
+    enabled: isOpen && Boolean(latestResultId),
+  });
+
+  if (!latestResultId) {
+    return null;
+  }
+
+  return (
+    <Box>
+      <Flex align="center" gap={3}>
+        <Badge colorPalette="blue" variant="subtle">
+          <Flex align="center" gap={1}>
+            <IconPaperclip size={14} />
+            {attachmentCount ?? 0} attachment{(attachmentCount ?? 0) === 1 ? "" : "s"}
+          </Flex>
+        </Badge>
+        <Button
+          size="xs"
+          variant="outline"
+          colorPalette="brand"
+          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={attachmentCount === 0}
+        >
+          {isOpen ? "Hide attachments" : "View attachments"}
+        </Button>
+      </Flex>
+      {isOpen && (
+        <Box mt={3} pl={2}>
+          {isLoading ? (
+            <Text fontSize="sm" color="fg.subtle">
+              Loading attachments...
+            </Text>
+          ) : attachments.length === 0 ? (
+            <Text fontSize="sm" color="fg.subtle">
+              No attachments available.
+            </Text>
+          ) : (
+            <Stack gap={2}>
+              {attachments.map((attachment) => (
+                <Flex key={attachment.id} align="center" gap={2}>
+                  <IconPaperclip size={16} />
+                  <Link
+                    href={getAttachmentDownloadLink(attachment.storage_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    fontWeight="medium"
+                  >
+                    {attachment.file_name}
+                  </Link>
+                  <Text fontSize="xs" color="fg.subtle">
+                    {formatFileSize(attachment.file_size)}
+                  </Text>
+                </Flex>
+              ))}
+            </Stack>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function formatFileSize(bytes?: number) {
+  if (!bytes || bytes <= 0) return "0 bytes";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let index = 0;
+
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+
+  return `${size.toFixed(1)} ${units[index]}`;
+}
+
+function getAttachmentDownloadLink(storageUrl?: string) {
+  if (!storageUrl) return "";
+  if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
+    return storageUrl;
+  }
+
+  const apiEndpoint = getApiEndpoint().replace(/\/$/, "");
+  return `${apiEndpoint}${storageUrl}`;
 }
 
 function getResultState(resultState?: string): ResultFilter {

@@ -138,6 +138,8 @@ func (api *API) routes() {
 		testRunsV1.Post("/:testRunID/execute", apiv1.ExecuteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:resultID/attachments", apiv1.UploadAttachment(api.TestRunsService, api.logger))
+		testRunsV1.Get("/:resultID/attachments", apiv1.ListAttachments(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
@@ -179,6 +181,9 @@ func (api *API) routes() {
 	{
 		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
+
+	// Serve uploaded attachment files from the configured local storage path.
+	router.Static("/uploads", api.Config.Storage.LocalPath)
 
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
