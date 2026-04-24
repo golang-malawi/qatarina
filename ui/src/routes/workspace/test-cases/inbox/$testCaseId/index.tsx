@@ -14,8 +14,6 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   findTestCaseInboxByIdQueryOptions,
-  findTestCaseInboxQueryOptions,
-  findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
@@ -88,15 +86,9 @@ function TestCaseInboxItem() {
       setResultText("");
       setNotesText("");
 
-      queryClient.invalidateQueries({
-        queryKey: findTestCaseInboxByIdQueryOptions(testCaseId).queryKey,
-      });
-      queryClient.invalidateQueries({
-        queryKey: findTestCaseInboxQueryOptions.queryKey,
-      });
-      queryClient.invalidateQueries({
-        queryKey: findTestCaseSummaryQueryOptions.queryKey,
-      });
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
+      queryClient.invalidateQueries({queryKey: ["testCases", "inbox", testCaseId] });
+      queryClient.invalidateQueries({ queryKey: ["testCases", "summary"] });
     },
     onError: () => {
       toaster.create({
@@ -135,6 +127,23 @@ function TestCaseInboxItem() {
       });
     },
   });
+
+    if (tc.is_closed) {
+    return (
+      <Box>
+        <Heading size="lg" color="fg.heading">
+          {tc.title} 
+          </Heading>
+          <Badge colorScheme="gray" ml={2}>
+            Closed
+          </Badge>
+          <Text mt={2}>{tc.description}</Text>
+          <Text mt={4} color="fg.subtle">
+            This test case is closed. Results can no longer be recorded.
+          </Text>
+        </Box>
+      );
+    }
 
   return (
     <Box>

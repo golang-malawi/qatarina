@@ -61,7 +61,7 @@ type TestCaseService interface {
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
-	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error)
+	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error)
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -646,11 +646,12 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
-func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32) ([]schema.AssignedTestCase, error) {
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error) {
 	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
-		AssignedToID: int32(userID),
-		Limit:        limit,
-		Offset:       offset,
+		AssignedToID:  int32(userID),
+		Limit:         limit,
+		Offset:        offset,
+		IncludeClosed: includeClosed,
 	})
 
 	if err != nil {

@@ -2267,14 +2267,16 @@ FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
+    AND ($4 ::bool OR tr.is_closed = FALSE)
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
 type ListTestCasesByAssignedUserParams struct {
-	AssignedToID int32
-	Limit        int32
-	Offset       int32
+	AssignedToID  int32
+	Limit         int32
+	Offset        int32
+	IncludeClosed bool
 }
 
 type ListTestCasesByAssignedUserRow struct {
@@ -2311,7 +2313,12 @@ type ListTestCasesByAssignedUserRow struct {
 }
 
 func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]ListTestCasesByAssignedUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTestCasesByAssignedUser, arg.AssignedToID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listTestCasesByAssignedUser,
+		arg.AssignedToID,
+		arg.Limit,
+		arg.Offset,
+		arg.IncludeClosed,
+	)
 	if err != nil {
 		return nil, err
 	}

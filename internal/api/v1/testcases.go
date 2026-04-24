@@ -301,8 +301,9 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 		page := ctx.QueryInt("page", 1)
 		pageSize := ctx.QueryInt("pageSize", 20)
 		offset := (page - 1) * pageSize
+		includeClosed := ctx.QueryBool("includeClosed", false)
 
-		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset))
+		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset), includeClosed)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch assigned test cases", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
