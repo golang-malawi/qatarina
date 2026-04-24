@@ -15,7 +15,7 @@ function ViewProject() {
   // const matchRoute = useMatchRoute();
 
   const navItems = [
-    { label: "Summary", path: `/projects/$projectId` },
+    { label: "Summary", path: `/projects/$projectId/summary` },
     { label: "Test Cases", path: `/projects/$projectId/test-cases` },
     { label: "Test Plans", path: `/projects/$projectId/test-plans` },
     { label: "Features/Modules", path: `/projects/$projectId/Features` },

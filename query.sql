@@ -523,6 +523,20 @@ SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is
 -- name: GetTestCaseCount :one
 SELECT COUNT(*) FROM test_cases;
 
+-- name: CountTestCasesByProject :one
+SELECT COUNT(*) FROM test_cases WHERE project_id = $1;
+
+-- name: CountCompletedTestCasesByProject :one
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = $1;
+
+-- name: CountTestRunsByResultState :one
+SELECT COUNT(*)
+FROM test_runs
+WHERE project_id = $1 AND result_state = $2;
+
 -- name: GetTestCasesWithTestersByPlan :many
 SELECT
     tc.id AS test_case_id,
