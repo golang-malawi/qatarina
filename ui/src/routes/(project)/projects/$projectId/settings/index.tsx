@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
+import { ProjectSettings } from "./ProjectSettings";
 
-export const Route = createFileRoute('/(project)/projects/$projectId/settings/')({
-  component: RouteComponent,
-})
+export const Route = createFileRoute("/(project)/projects/$projectId/settings/")({
+  component: SettingsPage,
+});
 
-function RouteComponent() {
-  return <div>Hello "/projects/view/settings/"!</div>
+function SettingsPage() {
+  const { projectId } = Route.useParams();
+  return <ProjectSettings projectId={projectId} />;
 }

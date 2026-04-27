@@ -92,6 +92,18 @@ VALUES(
     $11, $12, $13, $14, $15
 ) RETURNING id;
 
+-- name: ArchiveProject :one
+UPDATE projects
+SET is_active = false
+WHERE id = $1
+RETURNING *;
+
+-- name: UnarchiveProject :one
+UPDATE projects
+SET is_active = true
+WHERE id = $1
+RETURNING *;
+
 -- name: ListTestCases :many
 SELECT * FROM test_cases ORDER BY created_at DESC;
 
