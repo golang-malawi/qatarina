@@ -30,3 +30,10 @@ export function useUpdateProjectMutation(){
   return $api.useMutation("post", "/v1/projects/{projectID}");
 }
 
+export function useArchiveProjectMutation(){
+  return $api.useMutation("post", "/v1/projects/{projectID}/archive");
+}
+
+export function useUnarchiveProjectMutation(){
+  return $api.useMutation("post", "/v1/projects/{projectID}/unarchive");
+}

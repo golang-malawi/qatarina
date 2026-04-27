@@ -454,3 +454,62 @@ func AssignTesters(testerService services.TesterService, logger logging.Logger) 
 		})
 	}
 }
+
+// ArchiveProject godoc
+//
+//	@ID             ArchiveProject
+//	@Summary        Archive a Project
+//	@Description    Mark a project as archived (inactive) without deleting it
+//	@Tags           projects
+//	@Accept         json
+//	@Produce        json
+//	@Param          projectID   path        int true    "Project ID"
+//	@Success        200         {object}    schema.ProjectResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/projects/{projectID}/archive [post]
+func ArchiveProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		if err := projectService.ArchiveProject(c.Context(), projectID); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to archive project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to archive project")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Project archived successfully",
+		})
+	}
+}
+
+// UnarchiveProject godoc
+//
+//	@ID             UnarchiveProject
+//	@Summary        Unarchive a Project
+//	@Description    Restore a previously archived project back to active state
+//	@Tags           projects
+//	@Accept         json
+//	@Produce        json
+//	@Param          projectID   path        int true    "Project ID"
+//	@Success        200         {object}    schema.ProjectResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/projects/{projectID}/unarchive [post]
+func UnarchiveProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		if err := projectService.UnarchiveProject(c.Context(), projectID); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to unarchive project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to unarchive project")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Project unarchived successfully",
+		})
+	}
+}

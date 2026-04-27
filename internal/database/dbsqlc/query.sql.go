@@ -15,6 +15,38 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
+const archiveProject = `-- name: ArchiveProject :one
+UPDATE projects
+SET is_active = false
+WHERE id = $1
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id
+`
+
+func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error) {
+	row := q.db.QueryRowContext(ctx, archiveProject, id)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Version,
+		&i.IsActive,
+		&i.IsPublic,
+		&i.WebsiteUrl,
+		&i.GithubUrl,
+		&i.TrelloUrl,
+		&i.JiraUrl,
+		&i.MondayUrl,
+		&i.OwnerUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Code,
+		&i.ParentProjectID,
+	)
+	return i, err
+}
+
 const assignTesterToProject = `-- name: AssignTesterToProject :execrows
 INSERT INTO project_testers (
     project_id, user_id, role, is_active, created_at, updated_at
@@ -3216,6 +3248,38 @@ type SetTestCaseDraftStatusParams struct {
 func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDraftStatusParams) error {
 	_, err := q.db.ExecContext(ctx, setTestCaseDraftStatus, arg.ID, arg.IsDraft)
 	return err
+}
+
+const unarchiveProject = `-- name: UnarchiveProject :one
+UPDATE projects
+SET is_active = true
+WHERE id = $1
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id
+`
+
+func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, error) {
+	row := q.db.QueryRowContext(ctx, unarchiveProject, id)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Version,
+		&i.IsActive,
+		&i.IsPublic,
+		&i.WebsiteUrl,
+		&i.GithubUrl,
+		&i.TrelloUrl,
+		&i.JiraUrl,
+		&i.MondayUrl,
+		&i.OwnerUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Code,
+		&i.ParentProjectID,
+	)
+	return i, err
 }
 
 const updateOrg = `-- name: UpdateOrg :exec
