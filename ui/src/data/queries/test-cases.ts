@@ -22,19 +22,20 @@ export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
     params: { query: params },
   });
 
-export const findTestCaseInboxQueryOptions = queryOptions({
-  queryKey: ["testCases", "inbox"],
-  queryFn: async (): Promise<AssignedTestCaseListResponse> => {
-    const res = await getInboxTestCases();
-    return (res?.data ?? res) as AssignedTestCaseListResponse;
-  },
+export const findTestCaseInboxQueryOptions = (includeClosed: boolean) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", includeClosed],
+    queryFn: async (): Promise<AssignedTestCaseListResponse> => {
+      const res = await getInboxTestCases({ includeClosed });
+      return (res?.data ?? res) as AssignedTestCaseListResponse;
+    },
 });
 
 export const findTestCaseInboxByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["testCases", "inbox", id],
     queryFn: async (): Promise<AssignedTestCase> => {
-      const res = await getInboxTestCases();
+      const res = await getInboxTestCases({ includeClosed: true });
       const response = (res?.data ?? res) as AssignedTestCaseListResponse;
 
       const match = response.test_cases?.find(
