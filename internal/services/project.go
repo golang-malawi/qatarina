@@ -23,6 +23,8 @@ type ProjectService interface {
 	Update(context.Context, schema.UpdateProjectRequest) (bool, error)
 	DeleteProject(context.Context, int64) error
 	Search(context.Context, string) ([]dbsqlc.Project, error)
+	ArchiveProject(context.Context, int64) error
+	UnarchiveProject(context.Context, int64) error
 }
 
 type projectServiceImpl struct {
@@ -160,6 +162,24 @@ func (p *projectServiceImpl) Search(ctx context.Context, keyword string) ([]dbsq
 	}
 
 	return projects, nil
+}
+
+func (s *projectServiceImpl) ArchiveProject(ctx context.Context, projectID int64) error {
+	_, err := s.db.ArchiveProject(ctx, int32(projectID))
+	if err != nil {
+		s.logger.Error(s.name, "failed to archive project", "projectID", projectID, "error", err)
+		return err
+	}
+	return nil
+}
+
+func (s *projectServiceImpl) UnarchiveProject(ctx context.Context, projectID int64) error {
+	_, err := s.db.UnarchiveProject(ctx, int32(projectID))
+	if err != nil {
+		s.logger.Error(s.name, "failed to unarchive project", "projectID", projectID, "error", err)
+		return err
+	}
+	return nil
 }
 
 func sanitizeEnvName(name string) string {
