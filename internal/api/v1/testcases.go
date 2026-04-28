@@ -660,3 +660,33 @@ func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 		})
 	}
 }
+
+// GetProjectTestCasesSummary godoc
+//
+//	@ID				GetProjectTestCaseSummary
+//	@Summary		Get summary of test cases for a project
+//	@Description	Get summary of test cases for a project
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	schema.ProjectTestCaseSummaryResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/summary [get]
+func GetProjectTestCasesSummary(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil || projectID == 0 {
+			return problemdetail.BadRequest(c, "missing or invalid project ID")
+		}
+
+		summary, err := testCaseService.GetSummary(c.Context(), int64(projectID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch project test case summary", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch project test case summary")
+		}
+
+		return c.JSON(summary)
+	}
+}
