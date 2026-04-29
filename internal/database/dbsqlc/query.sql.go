@@ -1994,6 +1994,39 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 	return err
 }
 
+const insertTestRunAttachment = `-- name: InsertTestRunAttachment :exec
+INSERT INTO test_run_attachments (
+    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+)
+`
+
+type InsertTestRunAttachmentParams struct {
+	ID              uuid.UUID
+	TestRunResultID uuid.UUID
+	FileName        string
+	FileType        string
+	FileSize        int64
+	StorageKey      string
+	StorageUrl      string
+	CreatedAt       sql.NullTime
+}
+
+func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) error {
+	_, err := q.db.ExecContext(ctx, insertTestRunAttachment,
+		arg.ID,
+		arg.TestRunResultID,
+		arg.FileName,
+		arg.FileType,
+		arg.FileSize,
+		arg.StorageKey,
+		arg.StorageUrl,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertTestRunResult = `-- name: InsertTestRunResult :one
 INSERT INTO test_run_results (
     id, test_run_id, status, result, notes, executed_by, executed_at, created_at, updated_at
@@ -2624,6 +2657,45 @@ func (q *Queries) ListTestPlansByProject(ctx context.Context, projectID int32) (
 	return items, nil
 }
 
+const listTestRunAttachments = `-- name: ListTestRunAttachments :many
+SELECT id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+FROM test_run_attachments
+WHERE test_run_result_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListTestRunAttachments(ctx context.Context, testRunResultID uuid.UUID) ([]TestRunAttachment, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunAttachments, testRunResultID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestRunAttachment
+	for rows.Next() {
+		var i TestRunAttachment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TestRunResultID,
+			&i.FileName,
+			&i.FileType,
+			&i.FileSize,
+			&i.StorageKey,
+			&i.StorageUrl,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestRuns = `-- name: ListTestRuns :many
 SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs ORDER BY created_at DESC
 `
@@ -2787,8 +2859,21 @@ SELECT
     tr.created_at,
     tr.updated_at,
     tr.environment_id,
-    tc.title AS test_case_title,
-    u.display_name AS executed_by
+    u.display_name AS executed_by,
+    (
+      SELECT id
+      FROM test_run_results trr
+      WHERE trr.test_run_id = tr.id
+      ORDER BY trr.created_at DESC
+      LIMIT 1
+    ) AS latest_result_id,
+    (
+      SELECT COUNT(*)
+      FROM test_run_attachments tra
+      JOIN test_run_results trr ON tra.test_run_result_id = trr.id
+      WHERE trr.test_run_id = tr.id
+    ) AS attachment_count,
+    tc.title AS test_case_title
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id
@@ -2797,25 +2882,27 @@ ORDER BY tr.created_at DESC
 `
 
 type ListTestRunsByPlanRow struct {
-	ID             uuid.UUID
-	ProjectID      int32
-	TestPlanID     int32
-	TestCaseID     uuid.UUID
-	OwnerID        int32
-	TestedByID     int32
-	AssignedToID   int32
-	Code           string
-	ResultState    TestRunState
-	IsClosed       sql.NullBool
-	Notes          string
-	ActualResult   sql.NullString
-	ExpectedResult sql.NullString
-	TestedOn       time.Time
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
-	EnvironmentID  sql.NullInt32
-	TestCaseTitle  string
-	ExecutedBy     sql.NullString
+	ID              uuid.UUID
+	ProjectID       int32
+	TestPlanID      int32
+	TestCaseID      uuid.UUID
+	OwnerID         int32
+	TestedByID      int32
+	AssignedToID    int32
+	Code            string
+	ResultState     TestRunState
+	IsClosed        sql.NullBool
+	Notes           string
+	ActualResult    sql.NullString
+	ExpectedResult  sql.NullString
+	TestedOn        time.Time
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	EnvironmentID   sql.NullInt32
+	ExecutedBy      sql.NullString
+	LatestResultID  uuid.UUID
+	AttachmentCount int64
+	TestCaseTitle   string
 }
 
 func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]ListTestRunsByPlanRow, error) {
@@ -2845,8 +2932,10 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]L
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EnvironmentID,
-			&i.TestCaseTitle,
 			&i.ExecutedBy,
+			&i.LatestResultID,
+			&i.AttachmentCount,
+			&i.TestCaseTitle,
 		); err != nil {
 			return nil, err
 		}

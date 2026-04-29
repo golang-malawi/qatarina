@@ -342,6 +342,17 @@ type TestRun struct {
 	EnvironmentID         sql.NullInt32
 }
 
+type TestRunAttachment struct {
+	ID              uuid.UUID
+	TestRunResultID uuid.UUID
+	FileName        string
+	FileType        string
+	FileSize        int64
+	StorageKey      string
+	StorageUrl      string
+	CreatedAt       sql.NullTime
+}
+
 type TestRunResult struct {
 	ID         uuid.UUID
 	TestRunID  uuid.UUID

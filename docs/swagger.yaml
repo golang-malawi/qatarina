@@ -124,6 +124,19 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.AttachmentResponse:
+      properties:
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        file_type:
+          type: string
+        id:
+          type: string
+        storage_url:
+          type: string
+      type: object
     schema.BulkAssignTesters:
       properties:
         project_id:
@@ -819,6 +832,8 @@ components:
       properties:
         actual_result:
           type: string
+        attachment_count:
+          type: integer
         code:
           type: string
         environment_id:
@@ -831,6 +846,8 @@ components:
           type: string
         is_closed:
           type: boolean
+        latest_result_id:
+          type: string
         notes:
           type: string
         project_id:
@@ -3837,6 +3854,85 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create a new Test Run
+      tags:
+      - test-runs
+  /v1/test-runs/{resultID}/attachments:
+    get:
+      description: List all file attachments linked to a Test Run Result
+      operationId: ListAttachments
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/schema.AttachmentResponse'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List attachments for a Test Run Result
+      tags:
+      - test-runs
+    post:
+      description: Upload a file attachment linked to a Test Run Result
+      operationId: UploadAttachment
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Attachment file
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AttachmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload an attachment for a Test Run Result
       tags:
       - test-runs
   /v1/test-runs/{testRunID}:
