@@ -6,9 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"mime"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -274,32 +271,15 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 }
 
 func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	allowedTypes := common.AllowedFileTypes
-
-	contentType := file.ContentType
-	if contentType == "" || contentType == "application/octet-stream" {
-		if ext := strings.ToLower(filepath.Ext(file.FileName)); ext != "" {
-			if guessed := mime.TypeByExtension(ext); guessed != "" {
-				contentType = guessed
-			}
-		}
-	}
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	if !allowedTypes[contentType] {
-		return nil, fmt.Errorf("file type %s is not allowed", contentType)
-	}
-	// File size limit set from config file
-	if file.Size > t.maxFileSize {
-		return nil, fmt.Errorf("file size exceeds the maximum allowed limit of %d bytes", t.maxFileSize)
+	contentType, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
+	if err != nil {
+		return nil, err
 	}
 
 	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
-	err := t.storage.Upload(ctx, storageKey, file.Content, contentType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload file to storage: %w", err)
+
+	if err := t.storage.Upload(ctx, storageKey, file.Content, contentType); err != nil {
+		return nil, fmt.Errorf("failed to save file to storage: %w", err)
 	}
 
 	attachmentID := uuid.New()
