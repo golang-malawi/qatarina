@@ -274,17 +274,7 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 }
 
 func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	// Currently allowed file types are images and text files, this can be extended in the future as needed
-	allowedTypes := map[string]bool{
-		"text/plain":      true,
-		"text/markdown":   true,
-		"application/pdf": true,
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // docx
-		"image/jpeg":               true,
-		"image/png":                true,
-		"image/svg+xml":            true,
-		"application/octet-stream": true,
-	}
+	allowedTypes := common.AllowedFileTypes
 
 	contentType := file.ContentType
 	if contentType == "" || contentType == "application/octet-stream" {
