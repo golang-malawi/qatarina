@@ -1,10 +1,14 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
@@ -113,6 +117,39 @@ func (c *Config) OpenDB() *sqlx.DB {
 	db.SetMaxIdleConns(10)
 
 	return db
+}
+
+// ValidateStorage checks that the configured storage driver is healthy.
+func (c *Config) ValidateStorage() error {
+	switch c.Storage.Driver {
+	case "local":
+		// Check if local path exists
+		if _, err := os.Stat(c.Storage.LocalPath); os.IsNotExist(err) {
+			if mkErr := os.MkdirAll(c.Storage.LocalPath, 0755); mkErr != nil {
+				return fmt.Errorf("failed to create local storage directory: %w", mkErr)
+			}
+		}
+		return nil
+
+	case "s3":
+		ctx := context.Background()
+		awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(c.S3.Region))
+		if err != nil {
+			return fmt.Errorf("failed to load AWS config: %w", err)
+		}
+		svc := s3.NewFromConfig(awsCfg)
+		_, err = svc.HeadBucket(ctx, &s3.HeadBucketInput{
+			Bucket: &c.S3.Bucket,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to access S3 bucket: %w", err)
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported storage driver: %s", c.Storage.Driver)
+	}
+
 }
 
 var DefaultConfig = Config{

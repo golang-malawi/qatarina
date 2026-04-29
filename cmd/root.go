@@ -95,6 +95,12 @@ func initConfig() {
 		os.Exit(1)
 	}
 
+	// Validate storage configuration before creating client
+	if err := qatarinaConfig.ValidateStorage(); err != nil {
+		fmt.Println("Storage configuration error:", err)
+		os.Exit(1)
+	}
+
 	// Choose storage driver based on configuration
 	switch qatarinaConfig.Storage.Driver {
 	case "s3":
