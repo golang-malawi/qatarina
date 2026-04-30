@@ -513,3 +513,76 @@ func UnarchiveProject(projectService services.ProjectService, logger logging.Log
 		})
 	}
 }
+
+// AddProjectTestCaseTemplate godoc
+//
+//	@ID				AddProjectTestCaseTemplate
+//	@Summary	Add or update the test case template for a project
+//	@Description	Add or update the test case template for a project. This template can be used as a default structure for test cases within the project.
+//	@Tags		projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int	true	"Project ID"
+//	@Param			request	body			schema.AddProjectTestCaseTemplateRequest	true	"Test case template data"
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-case-template [post]
+func AddProjectTestCaseTemplate(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request schema.AddProjectTestCaseTemplateRequest
+		_, err := common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		}
+
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
+		if err := projectService.AddProjectTestCaseTemplate(c.Context(), projectID, request.TestCaseTemplate); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to add test case template to project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to add test case template to project")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Test case template added successfully",
+		})
+	}
+}
+
+// GetProjectTestCaseTemplate godoc
+//
+//	@ID				GetProjectTestCaseTemplate
+//	@Summary	Get the test case template for a project
+//	@Description	Get the test case template for a project. This template can be used as a default structure for test cases within the project.
+//	@Tags		projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int	true	"Project ID"
+//	@Success		200			{object}	schema.ProjectTestCaseTemplateResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-case-template [get]
+func GetProjectTestCaseTemplate(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		template, err := projectService.GetProjectTestCaseTemplate(c.Context(), projectID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to get test case template for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to get test case template for project")
+		}
+
+		if template == nil {
+			return c.JSON(schema.ProjectTestCaseTemplateResponse{
+				TestCaseTemplate: "",
+			})
+		}
+		return c.JSON(schema.ProjectTestCaseTemplateResponse{
+			TestCaseTemplate: *template,
+		})
+	}
+}

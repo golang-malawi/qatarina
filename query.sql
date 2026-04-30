@@ -104,6 +104,15 @@ SET is_active = true
 WHERE id = $1
 RETURNING *;
 
+-- name: AddProjectTestCaseTemplate :exec
+UPDATE projects
+SET testcase_template = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: GetProjectTestCaseTemplate :one
+SELECT testcase_template FROM projects WHERE id = $1;
+
 -- name: ListTestCases :many
 SELECT * FROM test_cases ORDER BY created_at DESC;
 

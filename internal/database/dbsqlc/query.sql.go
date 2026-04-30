@@ -15,11 +15,28 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
+const addProjectTestCaseTemplate = `-- name: AddProjectTestCaseTemplate :exec
+UPDATE projects
+SET testcase_template = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type AddProjectTestCaseTemplateParams struct {
+	ID               int32
+	TestcaseTemplate sql.NullString
+}
+
+func (q *Queries) AddProjectTestCaseTemplate(ctx context.Context, arg AddProjectTestCaseTemplateParams) error {
+	_, err := q.db.ExecContext(ctx, addProjectTestCaseTemplate, arg.ID, arg.TestcaseTemplate)
+	return err
+}
+
 const archiveProject = `-- name: ArchiveProject :one
 UPDATE projects
 SET is_active = false
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
 `
 
 func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -43,6 +60,7 @@ func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error)
 		&i.DeletedAt,
 		&i.Code,
 		&i.ParentProjectID,
+		&i.TestcaseTemplate,
 	)
 	return i, err
 }
@@ -1277,7 +1295,7 @@ func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id FROM projects WHERE id = $1
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
@@ -1301,6 +1319,7 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.DeletedAt,
 		&i.Code,
 		&i.ParentProjectID,
+		&i.TestcaseTemplate,
 	)
 	return i, err
 }
@@ -1352,6 +1371,17 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 		return nil, err
 	}
 	return items, nil
+}
+
+const getProjectTestCaseTemplate = `-- name: GetProjectTestCaseTemplate :one
+SELECT testcase_template FROM projects WHERE id = $1
+`
+
+func (q *Queries) GetProjectTestCaseTemplate(ctx context.Context, id int32) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getProjectTestCaseTemplate, id)
+	var testcase_template sql.NullString
+	err := row.Scan(&testcase_template)
+	return testcase_template, err
 }
 
 const getRecentProjects = `-- name: GetRecentProjects :many
@@ -2175,7 +2205,7 @@ func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id FROM projects ORDER BY created_at DESC
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
@@ -2205,6 +2235,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.DeletedAt,
 			&i.Code,
 			&i.ParentProjectID,
+			&i.TestcaseTemplate,
 		); err != nil {
 			return nil, err
 		}
@@ -2959,7 +2990,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const searchProject = `-- name: SearchProject :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id FROM projects
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects
 WHERE title ILIKE '%' || $1 || '%'
 `
 
@@ -2990,6 +3021,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.DeletedAt,
 			&i.Code,
 			&i.ParentProjectID,
+			&i.TestcaseTemplate,
 		); err != nil {
 			return nil, err
 		}
@@ -3172,7 +3204,7 @@ const unarchiveProject = `-- name: UnarchiveProject :one
 UPDATE projects
 SET is_active = true
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
 `
 
 func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -3196,6 +3228,7 @@ func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, erro
 		&i.DeletedAt,
 		&i.Code,
 		&i.ParentProjectID,
+		&i.TestcaseTemplate,
 	)
 	return i, err
 }
