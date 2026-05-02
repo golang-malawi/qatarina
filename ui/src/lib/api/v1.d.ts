@@ -681,6 +681,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/test-case-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the test case template for a project
+         * @description Get the test case template for a project. This template can be used as a default structure for test cases within the project.
+         */
+        get: operations["GetProjectTestCaseTemplate"];
+        put?: never;
+        /**
+         * Add or update the test case template for a project
+         * @description Add or update the test case template for a project. This template can be used as a default structure for test cases within the project.
+         */
+        post: operations["AddProjectTestCaseTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/test-cases": {
         parameters: {
             query?: never;
@@ -1787,6 +1811,10 @@ export interface components {
             title?: string;
             type?: string;
         };
+        "schema.AddProjectTestCaseTemplateRequest": {
+            project_id: number;
+            test_case_template: string;
+        };
         "schema.AssignTestsToPlanRequest": {
             planned_tests: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
@@ -2035,6 +2063,9 @@ export interface components {
             updated_at?: string;
             version?: string;
             website_url?: string;
+        };
+        "schema.ProjectTestCaseTemplateResponse": {
+            test_case_template?: string;
         };
         "schema.RefreshTokenRequest": Record<string, never>;
         "schema.RefreshTokenResponse": Record<string, never>;
@@ -3510,6 +3541,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetProjectTestCaseTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ProjectTestCaseTemplateResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    AddProjectTestCaseTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Test case template data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.AddProjectTestCaseTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
