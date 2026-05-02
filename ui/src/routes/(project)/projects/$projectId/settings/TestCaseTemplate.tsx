@@ -70,7 +70,7 @@ function TestCaseTemplatePage() {
   return (
     <Box p={4}>
       <Heading size="lg" mb={8}>
-        {data?.test_case_template ? "Edit Test Case Template" : "Add Test Case Template"}
+        {data?.test_case_template ? "Add Test Case DescriptionTemplate" : "Add Test Case Template"}
       </Heading>
       <Stack gap={6}>
         <Textarea

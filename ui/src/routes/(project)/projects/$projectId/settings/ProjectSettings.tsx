@@ -30,9 +30,9 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
         </Box>
 
         <Box>
-          <Heading size="md" mb={2}>Test Case Template</Heading>
+          <Heading size="md" mb={2}>Test Case Description Template</Heading>
           <Text mb={4} color="gray.600">
-            Define a default template to guide users when creating test cases.
+            Define a default description template to guide users when creating test cases.
           </Text>
           <Button onClick={handleAddTemplate} colorScheme="blue">
             Add Template
