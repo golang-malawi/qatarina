@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjectTestCaseTemplateQuery, useAddProjectTestCaseTemplateMutation } from "@/services/ProjectService";
+import { toaster } from "@/components/ui/toaster";
 
 function TestCaseTemplatePage() {
   const navigate = useNavigate();
@@ -33,10 +34,23 @@ function TestCaseTemplatePage() {
           test_case_template: template,
         },
       });
+      
+      toaster.create({
+        title: "Template saved.",
+        description: "We've saved your test case template.",
+        type: "success",
+        duration: 3000,
+      });
       queryClient.invalidateQueries({ queryKey: ["projectTemplate", projectID] });
       navigate({ to: `/projects/${projectId}/settings` });
     } catch (err: any) {
       console.error("Failed to save template", err);
+      toaster.create({
+        title: "Failed to save template",
+        description: err.message,
+        type: "error",
+        duration: 4000,
+      });
     }
   };
 

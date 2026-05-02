@@ -1,7 +1,8 @@
-import { Box, Heading} from "@chakra-ui/react";
+import { Box, Heading, Spinner, Text} from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCreateTestCaseMutation } from "@/services/TestCaseService";
+import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import {
@@ -21,6 +22,7 @@ function NewTestCases() {
   const redirect = useNavigate();
   const project_id = params.projectId;
   const createTestCaseMutation = useCreateTestCaseMutation();
+  const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
 
   async function handleSubmit(values: TestCaseCreationFormData) {
     // Handle tags - if it's a string, split it, otherwise use as is
@@ -67,6 +69,16 @@ function NewTestCases() {
     });
   }   
   }
+
+  if (isLoading) {
+    return (
+      <Box p={6}>
+        <Spinner size="lg" />
+        <Text mt={4}>Loading template...</Text>
+      </Box>
+    );
+  }
+
   return (
     <Box p={6}>
       <Heading size="3xl" color="fg.heading">
@@ -80,6 +92,15 @@ function NewTestCases() {
         submitLoading={createTestCaseMutation.isPending}
         layout="vertical"
         spacing={4}
+        defaultValues={{
+          title: "",
+          code: "",
+          feature_or_module: "",
+          kind: "",
+          description: data?.test_case_template ?? "",
+          tags: [],
+          is_draft: false,
+        }}
       />      
     </Box>
   );
