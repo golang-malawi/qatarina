@@ -25,6 +25,8 @@ type ProjectService interface {
 	Search(context.Context, string) ([]dbsqlc.Project, error)
 	ArchiveProject(context.Context, int64) error
 	UnarchiveProject(context.Context, int64) error
+	AddProjectTestCaseTemplate(ctx context.Context, projectID int64, template string) error
+	GetProjectTestCaseTemplate(context.Context, int64) (*string, error)
 }
 
 type projectServiceImpl struct {
@@ -192,4 +194,29 @@ func sanitizeEnvName(name string) string {
 		return r
 	}, n)
 	return n
+}
+
+func (s *projectServiceImpl) AddProjectTestCaseTemplate(ctx context.Context, projectID int64, template string) error {
+	err := s.db.AddProjectTestCaseTemplate(ctx, dbsqlc.AddProjectTestCaseTemplateParams{
+		ID:               int32(projectID),
+		TestcaseTemplate: common.NullString(template),
+	})
+	if err != nil {
+		s.logger.Error(s.name, "failed to add project test case template", "projectID", projectID, "error", err)
+		return err
+	}
+	return nil
+}
+
+func (s *projectServiceImpl) GetProjectTestCaseTemplate(ctx context.Context, projectID int64) (*string, error) {
+	tpl, err := s.db.GetProjectTestCaseTemplate(ctx, int32(projectID))
+	if err != nil {
+		s.logger.Error(s.name, "failed to get project test case template", "projectID", projectID, "error", err)
+		return nil, err
+	}
+
+	if tpl.Valid {
+		return &tpl.String, nil
+	}
+	return nil, nil
 }

@@ -29,6 +29,16 @@ components:
         type:
           type: string
       type: object
+    schema.AddProjectTestCaseTemplateRequest:
+      properties:
+        project_id:
+          type: integer
+        test_case_template:
+          type: string
+      required:
+      - project_id
+      - test_case_template
+      type: object
     schema.AssignTestsToPlanRequest:
       properties:
         planned_tests:
@@ -613,6 +623,11 @@ components:
         version:
           type: string
         website_url:
+          type: string
+      type: object
+    schema.ProjectTestCaseTemplateResponse:
+      properties:
+        test_case_template:
           type: string
       type: object
     schema.RefreshTokenRequest:
@@ -2239,6 +2254,87 @@ paths:
       summary: Get a Modules by project
       tags:
       - modules
+  /v1/projects/{projectID}/test-case-template:
+    get:
+      description: Get the test case template for a project. This template can be
+        used as a default structure for test cases within the project.
+      operationId: GetProjectTestCaseTemplate
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectTestCaseTemplateResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get the test case template for a project
+      tags:
+      - projects
+    post:
+      description: Add or update the test case template for a project. This template
+        can be used as a default structure for test cases within the project.
+      operationId: AddProjectTestCaseTemplate
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.AddProjectTestCaseTemplateRequest'
+        description: Test case template data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Add or update the test case template for a project
+      tags:
+      - projects
   /v1/projects/{projectID}/test-cases:
     get:
       description: Get a single Project's test cases
