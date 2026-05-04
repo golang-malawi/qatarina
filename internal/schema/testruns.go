@@ -9,15 +9,16 @@ import (
 )
 
 type TestRunRequest struct {
-	ProjectID    int32  `json:"project_id" validate:"required"`
-	TestPlanID   int32  `json:"test_plan_id" validate:"required"`
-	TestCaseID   string `json:"test_case_id" validate:"required"`
-	OwnerID      int32  `json:"owner_id" validate:"required"`
-	TestedByID   int32  `json:"tested_by_id" validate:"required"`
-	AssignedToID int32  `json:"assigned_to_id" validate:"-"`
-	Code         string `json:"code"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	ProjectID     int32  `json:"project_id" validate:"required"`
+	TestPlanID    int32  `json:"test_plan_id" validate:"required"`
+	TestCaseID    string `json:"test_case_id" validate:"required"`
+	OwnerID       int32  `json:"owner_id" validate:"required"`
+	TestedByID    int32  `json:"tested_by_id" validate:"required"`
+	AssignedToID  int32  `json:"assigned_to_id" validate:"-"`
+	Code          string `json:"code"`
+	CreatedAt     string `json:"created_at"`
+	UpdatedAt     string `json:"updated_at"`
+	EnvironmentID int32  `json:"environment_id"`
 }
 
 type BulkCommitTestResults struct {
@@ -26,13 +27,13 @@ type BulkCommitTestResults struct {
 }
 
 type CommitTestRunResult struct {
-	UserID         int64  `json:"-"`
-	TestRunID      string `json:"test_run_id" validate:"required"`
-	Notes          string `json:"notes" validate:"required"`
-	IsClosed       bool   `json:"is_closed"`
-	TestedOn       string `json:"tested_on" validate:"required"`
-	ActualResult   string `json:"actual_result" validate:"required"`
-	ExpectedResult string `json:"expected_result"`
+	UserID         int64     `json:"-"`
+	TestRunID      string    `json:"test_run_id" validate:"required"`
+	Notes          string    `json:"notes" validate:"required"`
+	IsClosed       bool      `json:"is_closed"`
+	TestedOn       time.Time `json:"tested_on" validate:"required"`
+	ActualResult   string    `json:"actual_result" validate:"required"`
+	ExpectedResult string    `json:"expected_result"`
 	// State is the result of the test run
 	State dbsqlc.TestRunState `json:"result_state" validate:"required"`
 }
@@ -64,7 +65,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 			TestRunID:      "",
 			Notes:          entryNormalized,
 			IsClosed:       false,
-			TestedOn:       testDate.Format(time.DateOnly),
+			TestedOn:       testDate,
 			ActualResult:   entryNormalized,
 			ExpectedResult: fmt.Sprintf("Expected different behavior"),
 			State:          dbsqlc.TestRunStateFailed,
@@ -75,7 +76,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 	return testRuns, nil
 }
 
-type TestRunResponse struct {
+type TestRunSummary struct {
 	ID         string `json:"id"`
 	ProjectID  int64  `json:"project_id"`
 	TestPlanID int64  `json:"test_plan_id"`
@@ -83,4 +84,71 @@ type TestRunResponse struct {
 
 type TestRunListResponse struct {
 	TestRuns []TestRunResponse `json:"test_runs"`
+}
+
+type ExecuteTestRunRequest struct {
+	ID             string `json:"id" validate:"required"`
+	Result         string `json:"result" validate:"required"`
+	Status         string `json:"status" validate:"required"`
+	ExecutedBy     int64  `json:"-"`
+	Notes          string `json:"notes,omitempty"`
+	ExpectedResult string `json:"expected_result"`
+	EnvironmentID  int32  `json:"environment_id"`
+}
+
+type TestRunResponse struct {
+	ID             string `json:"id"`
+	ProjectID      int64  `json:"project_id"`
+	TestPlanID     int64  `json:"test_plan_id"`
+	TestCaseID     string `json:"test_case_id"`
+	TestedByID     int32  `json:"tested_by_id"`
+	Code           string `json:"code"`
+	ResultState    string `json:"result_state"`
+	IsClosed       bool   `json:"is_closed"`
+	Notes          string `json:"notes"`
+	ActualResult   string `json:"actual_result"`
+	ExpectedResult string `json:"expected_result"`
+	TestedOn       string `json:"tested_on"`
+	TestCaseTitle  string `json:"test_case_title"`
+	ExecutedBy     string `json:"executed_by"`
+	EnvironmentID  int32  `json:"environment_id"`
+}
+
+func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse {
+	return TestRunResponse{
+		ID:             tr.ID.String(),
+		ProjectID:      int64(tr.ProjectID),
+		TestPlanID:     int64(tr.TestPlanID),
+		TestCaseID:     tr.TestCaseID.String(),
+		TestedByID:     tr.TestedByID,
+		Code:           tr.Code,
+		ResultState:    string(tr.ResultState),
+		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
+		Notes:          tr.Notes,
+		ActualResult:   tr.ActualResult.String,
+		ExpectedResult: tr.ExpectedResult.String,
+		TestedOn:       tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:  tr.TestCaseTitle,
+		ExecutedBy:     tr.ExecutedBy.String,
+		EnvironmentID:  tr.EnvironmentID.Int32,
+	}
+}
+
+func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
+	return TestRunResponse{
+		ID:             tr.ID.String(),
+		ProjectID:      int64(tr.ProjectID),
+		TestPlanID:     int64(tr.TestPlanID),
+		TestCaseID:     tr.TestCaseID.String(),
+		Code:           tr.Code,
+		ResultState:    string(tr.ResultState),
+		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
+		Notes:          tr.Notes,
+		ActualResult:   tr.ActualResult.String,
+		ExpectedResult: tr.ExpectedResult.String,
+		TestedOn:       tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:  "",
+		ExecutedBy:     "",
+		EnvironmentID:  tr.EnvironmentID.Int32,
+	}
 }

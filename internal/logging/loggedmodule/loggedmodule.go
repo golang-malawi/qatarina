@@ -16,5 +16,7 @@ const (
 	ApiPages             Name = "apiv1:pages"
 	ApiModules           Name = "apiv1:modules"
 	ApiDashboard         Name = "apiv1:dashboard"
+	ApiOrgs              Name = "apiv1:orgs"
+	ApiEnvironments      Name = "apiv1:environments"
 	ApiGitHubIntegration Name = "apiv1:githubIntegration"
 )

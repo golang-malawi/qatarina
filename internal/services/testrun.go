@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,15 +31,21 @@ type TestRunService interface {
 	// This allows Testers to record failed tests which get backlinked to default test plan or
 	// a specific test plan if specified
 	CreateFromFoundIssues(context.Context, *schema.NewFoundIssuesRequest)
+	Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error)
+	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
+	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
+	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
 }
 
 type testRunService struct {
+	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 }
 
-func NewTestRunService(conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
 	return &testRunService{
+		db:      db,
 		queries: conn,
 		logger:  logger,
 	}
@@ -47,15 +54,17 @@ func NewTestRunService(conn *dbsqlc.Queries, logger logging.Logger) TestRunServi
 // Create implements TestRunService
 func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
-		ProjectID:    request.ProjectID,
-		TestPlanID:   request.TestPlanID,
-		TestCaseID:   uuid.MustParse(request.TestCaseID),
-		OwnerID:      request.OwnerID,
-		TestedByID:   request.TestedByID,
-		AssignedToID: request.AssignedToID,
-		Code:         request.Code,
-		CreatedAt:    common.NullTime(time.Now()),
-		UpdatedAt:    common.NullTime(time.Now()),
+		ID:            uuid.New(),
+		ProjectID:     request.ProjectID,
+		TestPlanID:    request.TestPlanID,
+		TestCaseID:    uuid.MustParse(request.TestCaseID),
+		OwnerID:       request.OwnerID,
+		TestedByID:    request.TestedByID,
+		AssignedToID:  request.AssignedToID,
+		Code:          request.Code,
+		CreatedAt:     common.NullTime(time.Now()),
+		UpdatedAt:     common.NullTime(time.Now()),
+		EnvironmentID: common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to create page %w", err)
@@ -82,22 +91,35 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 	}
 
 	_, err = t.queries.CommitTestRunResult(ctx, dbsqlc.CommitTestRunResultParams{
-		ID:           uuid.MustParse(request.TestRunID),
-		TestedByID:   int32(request.UserID),
-		Notes:        request.Notes,
-		UpdatedAt:    sql.NullTime{Valid: true, Time: time.Now()},
-		ResultState:  request.State,
-		IsClosed:     sql.NullBool{Valid: true, Bool: request.IsClosed},
-		TestedOn:     time.Now(), // TODO: get from the request
-		ActualResult: sql.NullString{Valid: true, String: request.ActualResult},
-		ExpectedResult: sql.NullString{
-			Valid:  true,
-			String: cmp.Or(request.ExpectedResult, testRun.ExpectedResult.String),
-		},
+		ID:             uuid.MustParse(request.TestRunID),
+		TestedByID:     int32(request.UserID),
+		Notes:          request.Notes,
+		UpdatedAt:      common.NullTime(time.Now()),
+		ResultState:    request.State,
+		IsClosed:       common.NewNullBool(request.IsClosed),
+		TestedOn:       request.TestedOn,
+		ActualResult:   common.NullString(request.ActualResult),
+		ExpectedResult: common.NullString(cmp.Or(request.ExpectedResult, testRun.ExpectedResult.String)),
 	})
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Update the test_runs_results for historical logging
+	_, err = t.queries.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+		ID:         uuid.New(),
+		TestRunID:  uuid.MustParse(request.TestRunID),
+		Status:     request.State,
+		Result:     request.ActualResult,
+		Notes:      common.NullString(request.Notes),
+		ExecutedBy: int32(request.UserID),
+		ExecutedAt: request.TestedOn,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert to test_run_results: %w", err)
 	}
 
 	testRun, err = t.queries.GetTestRun(ctx, uuid.MustParse(request.TestRunID))
@@ -138,4 +160,105 @@ func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error
 // CreateFromFoundIssues implements TestRunService.
 func (t *testRunService) CreateFromFoundIssues(ctx context.Context, request *schema.NewFoundIssuesRequest) {
 	panic("unimplemented")
+}
+
+func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTestRunRequest) (*dbsqlc.TestRun, error) {
+	runUUID, err := uuid.Parse(request.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID: %w", err)
+	}
+
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
+		ID:             runUUID,
+		ResultState:    dbsqlc.TestRunState(request.Status),
+		TestedByID:     int32(request.ExecutedBy),
+		Notes:          request.Notes,
+		ActualResult:   common.NullString(request.Result),
+		ExpectedResult: common.NullString(request.ExpectedResult),
+		EnvironmentID:  common.NewNullInt32(request.EnvironmentID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute test case: %w", err)
+	}
+
+	// Insert itnot test_run_results for history
+	_, err = tx.InsertTestRunResult(ctx, dbsqlc.InsertTestRunResultParams{
+		ID:         uuid.New(),
+		TestRunID:  runUUID,
+		Status:     dbsqlc.TestRunState(request.Status),
+		Result:     request.Result,
+		Notes:      common.NullString(request.Notes),
+		ExecutedBy: int32(request.ExecutedBy),
+		ExecutedAt: time.Now(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert test run result: %w", err)
+	}
+
+	tr, err := tx.GetTestRun(ctx, runUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated test case: %w", err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tr, nil
+}
+
+func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bool, error) {
+	plan, err := t.queries.IsTestPlanActive(ctx, planID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return !plan.ClosedAt.Valid && !plan.IsComplete.Bool, nil
+}
+
+func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (bool, error) {
+	isDraft, err := t.queries.IsTestCaseActive(ctx, uuid.MustParse(caseID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if isDraft.Valid && isDraft.Bool {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error) {
+	id := uuid.MustParse(testRunID)
+	tr, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test run: %w", err)
+	}
+	if tr.IsClosed.Valid && tr.IsClosed.Bool {
+		return &tr, nil
+	}
+	err = t.queries.CloseTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to close test run: %w", err)
+	}
+
+	closedRun, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
+	}
+	return &closedRun, nil
 }

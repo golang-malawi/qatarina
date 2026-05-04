@@ -19,11 +19,11 @@ import (
 //	@Summary		Import test cases from Excel or CSV file
 //	@Description	Import test cases from Excel or CSV file
 //	@Tags			test-cases
-//	@Accept			json
+//	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			projectID formData	path		string	true	"Project ID"
-//	@Param			request	body		file	true	"Excel or CSV file"
-//	@Success		200			{object}	interface{}
+//	@Param			projectID 	formData	string	true	"Project ID"
+//	@Param			file		formData 	file	true 	"Excel or CSV file"
+//	@Success		200			{object}	map[string]string
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/import-file [post]
@@ -62,13 +62,13 @@ func ImportTestCasesFromFile(testCaseService services.TestCaseService, importSer
 			TestCases: testCases,
 		}
 
-		_, err = testCaseService.BulkCreate(context.Background(), request)
+		created, skipped, err := testCaseService.BulkCreate(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to import test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to import test cases")
 		}
 
-		message := fmt.Sprintf("Imported %d test cases", len(testCases))
+		message := fmt.Sprintf("Imported %d test cases, skipped %d duplicates", len(created), skipped)
 		return c.JSON(fiber.Map{
 			"message": message,
 		})

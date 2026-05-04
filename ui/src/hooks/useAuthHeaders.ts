@@ -1,8 +1,17 @@
 export default function createAuthHeaders() {
-    const token = localStorage.getItem('auth.token') || 'none';
-    return {
-        headers: {
-            'Authorization': `Bearer ${token}`
+    const raw = localStorage.getItem("auth.user");
+    if (!raw) return {};
+
+    try {
+        const user = JSON.parse(raw);
+        if (user.token) {
+            return {
+                    Authorization: `Bearer ${user.token}`,
+            };
         }
+    } catch {
+        // ignore parse errors
     }
+    return {};
+   
 }

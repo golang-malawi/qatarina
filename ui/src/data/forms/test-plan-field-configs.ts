@@ -1,15 +1,13 @@
-import { createFieldConfig, createSelectOptions, FieldConfig } from '@/components/form';
+import { createFieldConfig, FieldConfig } from '@/components/form';
+import { TEST_PLAN_KINDS } from '@/common/constants/test-plan-kind';
 
 // Test plan kind options
-export const testPlanKindOptions = createSelectOptions([
-  { value: 'manual', label: 'Manual Testing' },
-  { value: 'automated', label: 'Automated Testing' },
-  { value: 'regression', label: 'Regression Testing' },
-  { value: 'smoke', label: 'Smoke Testing' },
-  { value: 'integration', label: 'Integration Testing' },
-  { value: 'performance', label: 'Performance Testing' },
-]);
-
+export const testPlanKindOptions = TEST_PLAN_KINDS.map((kind) => ({
+  label: kind
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase()),
+  value: kind,
+}));
 // Test plan creation fields
 export const testPlanCreationFields: FieldConfig[] = [
   createFieldConfig('description', 'Description', 'textarea', {
@@ -19,11 +17,16 @@ export const testPlanCreationFields: FieldConfig[] = [
   createFieldConfig('kind', 'Test Plan Type', 'select', {
     placeholder: 'Select test plan type',
     helperText: 'Choose the type of testing this plan covers',
-    options: testPlanKindOptions,
+    options: testPlanKindOptions, 
   }),
   createFieldConfig('start_at', 'Start Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan should start',
+  }),
+  createFieldConfig('environment_id', 'Environment', 'select', {
+    placeholder: 'Select environment',
+    helperText: 'Select environment for this test plan',
+    options: [],
   }),
   createFieldConfig('scheduled_end_at', 'Scheduled End Date', 'text', {
     placeholder: 'YYYY-MM-DD',
@@ -34,6 +37,7 @@ export const testPlanCreationFields: FieldConfig[] = [
     helperText: 'When the test plan was actually closed (optional)',
   }),
 ];
+
 
 // Test plan update fields
 export const testPlanUpdateFields: FieldConfig[] = [

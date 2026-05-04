@@ -1,133 +1,262 @@
-import { Box, Button, Flex, Heading, IconButton, Spinner, Stack, Table, Text } from '@chakra-ui/react';
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react';
-import { LuPencil, LuTrash } from 'react-icons/lu';
+import {
+  Badge,
+  Box,
+  Card,
+  Grid,
+  Heading,
+  HStack,
+  Icon,
+  Input,
+  InputGroup,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { IconSearch, IconUsers } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/ui/page-states";
+import { useTestPlanQuery } from "@/services/TestPlanService";
+import { useUsersQuery } from "@/services/UserService";
+import type { components } from "@/lib/api/v1";
 
-export const Route = createFileRoute(
-  '/(project)/projects/$projectId/test-plans/$testPlanID/testers/',
-)({
-  component: RouteComponent,
-})
+type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
-type Tester = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+type UserRecord = {
+  ID?: number;
+  id?: number;
+  FirstName?: string;
+  LastName?: string;
+  displayName?: string;
+  Email?: string;
+  email?: string;
+  username?: string;
 };
 
+type PlanTester = {
+  id: number;
+  name: string;
+  email: string;
+  role: "Plan Owner" | "Assigned Tester";
+  assignments: number;
+};
 
-function RouteComponent() {
-const [testers, setTesters] = useState<Tester[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const Route = createFileRoute(
+  "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
+)({
+  component: TestPlanTestersPage,
+});
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setTesters([
-          {
-            id: "1",
-            name: "Alice Johnson",
-            email: "alice@example.com",
-            role: "Lead Tester",
-          },
-          {
-            id: "2",
-            name: "Bob Smith",
-            email: "bob@example.com",
-            role: "QA Engineer",
-          },
-          {
-            id: "3",
-            name: "Charlie Brown",
-            email: "charlie@example.com",
-            role: "Junior Tester",
-          },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load testers.");
-        setLoading(false);
-      }
-    }, 1000);
+function TestPlanTestersPage() {
+  const { testPlanID } = Route.useParams();
+  const [searchTerm, setSearchTerm] = useState("");
 
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const handleDelete = (id: string) => {
-    if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    setTesters((prev) => prev.filter((t) => t.id !== id));
+  const testPlanQuery = useTestPlanQuery(testPlanID) as {
+    data: TestPlanItem | undefined;
+    isLoading: boolean;
+    isError: boolean;
   };
+  const usersQuery = useUsersQuery();
 
-  const handleEdit = (id: string) => {
-    console.log("Edit tester", id);
-  };
+  const users = useMemo(
+    () => (usersQuery.data?.users ?? []) as UserRecord[],
+    [usersQuery.data?.users]
+  );
+  const usersById = useMemo(() => {
+    const map = new Map<number, UserRecord>();
+    users.forEach((user) => {
+      const id = Number(user.ID ?? user.id);
+      if (!Number.isNaN(id)) map.set(id, user);
+    });
+    return map;
+  }, [users]);
+
+  const assignmentCountByTester = useMemo(() => {
+    const map = new Map<number, number>();
+    const testCases = testPlanQuery.data?.test_cases ?? [];
+    testCases.forEach((testCase) => {
+      testCase.assigned_tester_ids?.forEach((testerId) => {
+        map.set(testerId, (map.get(testerId) ?? 0) + 1);
+      });
+    });
+    return map;
+  }, [testPlanQuery.data?.test_cases]);
+
+  const testers = useMemo(() => {
+    const ids = new Set<number>();
+
+    if (testPlanQuery.data?.assigned_to_id) {
+      ids.add(testPlanQuery.data.assigned_to_id);
+    }
+
+    assignmentCountByTester.forEach((_, testerId) => ids.add(testerId));
+
+    return Array.from(ids)
+      .map((id): PlanTester => {
+        const user = usersById.get(id);
+        const assignments = assignmentCountByTester.get(id) ?? 0;
+
+        return {
+          id,
+          name: getUserName(user, id),
+          email: user?.Email ?? user?.email ?? "No email available",
+          role:
+            id === testPlanQuery.data?.assigned_to_id
+              ? "Plan Owner"
+              : "Assigned Tester",
+          assignments,
+        };
+      })
+      .sort((a, b) => b.assignments - a.assignments || a.name.localeCompare(b.name));
+  }, [assignmentCountByTester, testPlanQuery.data?.assigned_to_id, usersById]);
+
+  const filteredTesters = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return testers;
+
+    return testers.filter((tester) => {
+      const searchable = `${tester.id} ${tester.name} ${tester.email} ${tester.role}`.toLowerCase();
+      return searchable.includes(term);
+    });
+  }, [searchTerm, testers]);
+
+  const totalAssignments = testers.reduce(
+    (total, tester) => total + tester.assignments,
+    0
+  );
+
+  if (testPlanQuery.isLoading || usersQuery.isLoading) {
+    return <LoadingState label="Loading testers..." />;
+  }
+  if (testPlanQuery.isError) {
+    return <ErrorState title="Failed to load testers for this plan" />;
+  }
 
   return (
-    <Box p={6}>
-      {/* Header */}
-      <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Testers Assigned to this Plan</Heading>
-        <Button colorScheme="teal">+ Add New Tester</Button>
-      </Flex>
+    <Box w="full">
+      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
+        <Card.Body p={{ base: 4, md: 6 }}>
+          <Stack gap={2}>
+            <HStack gap={2}>
+              <Icon as={IconUsers} color="brand.solid" />
+              <Heading size="lg" color="fg.heading">
+                Plan Testers
+              </Heading>
+            </HStack>
+            <Text color="fg.subtle">
+              View everyone currently assigned to this plan and track tester
+              workload across linked test cases.
+            </Text>
+            <HStack gap={2} flexWrap="wrap">
+              <Badge colorPalette="brand" variant="subtle">
+                {testers.length} tester(s)
+              </Badge>
+              <Badge colorPalette="blue" variant="subtle">
+                {totalAssignments} assignment(s)
+              </Badge>
+              <Badge colorPalette="gray" variant="subtle">
+                {filteredTesters.length} shown
+              </Badge>
+            </HStack>
+          </Stack>
+        </Card.Body>
+      </Card.Root>
 
-      {/* Total Testers */}
-      <Text mb={4} color="gray.600">
-        Total Testers: <strong>{testers.length}</strong>
-      </Text>
+      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
+        <Card.Body p={4}>
+          <InputGroup startElement={<IconSearch size={16} />}>
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by tester name, email, role, or id"
+            />
+          </InputGroup>
+        </Card.Body>
+      </Card.Root>
 
-      {/* Tester Table */}
-      {loading ? (
-        <Flex justify="center" py={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
+      {testers.length === 0 ? (
+        <EmptyState
+          title="No testers assigned yet"
+          description="Assign testers from the Test Cases tab to populate this list."
+        />
+      ) : filteredTesters.length === 0 ? (
+        <EmptyState
+          title="No matching testers"
+          description="Try another search term to find a specific tester."
+        />
       ) : (
-        <Stack gap="6">
-          <Table.Root size="md">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>ID</Table.ColumnHeader>
-                <Table.ColumnHeader>Name</Table.ColumnHeader>
-                <Table.ColumnHeader>Email</Table.ColumnHeader>
-                <Table.ColumnHeader>Role</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {testers.map((tester) => (
-                <Table.Row key={tester.id}>
-                  <Table.Cell>{tester.id}</Table.Cell>
-                  <Table.Cell>{tester.name}</Table.Cell>
-                  <Table.Cell>{tester.email}</Table.Cell>
-                  <Table.Cell>{tester.role}</Table.Cell>
-                  <Table.Cell>
-                    <Flex gap={2}>
-                      <IconButton
-                        aria-label="Edit tester"
-                        onClick={() => handleEdit(tester.id)}
-                        colorScheme="blue"
-                        size="sm"
-                        children={<LuPencil />}
-                      />
-                      <IconButton
-                        aria-label="Delete tester"
-                        onClick={() => handleDelete(tester.id)}
-                        colorScheme="red"
-                        size="sm"
-                        children={<LuTrash />}
-                      />
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
+        <Stack gap={4}>
+          {filteredTesters.map((tester) => (
+            <Card.Root
+              key={tester.id}
+              border="sm"
+              borderColor="border.subtle"
+              bg="bg.surface"
+              shadow="sm"
+            >
+              <Card.Body p={5}>
+                <Grid
+                  templateColumns={{
+                    base: "1fr",
+                    md: "minmax(0, 1.3fr) minmax(0, 1fr)",
+                  }}
+                  gap={4}
+                >
+                  <Stack gap={1}>
+                    <Heading size="md" color="fg.heading">
+                      {tester.name}
+                    </Heading>
+                    <Text color="fg.subtle" fontSize="sm">
+                      {tester.email}
+                    </Text>
+                    <HStack gap={2} flexWrap="wrap">
+                      <Badge colorPalette="gray" variant="outline">
+                        ID: {tester.id}
+                      </Badge>
+                      <Badge
+                        colorPalette={tester.role === "Plan Owner" ? "purple" : "brand"}
+                        variant="subtle"
+                      >
+                        {tester.role}
+                      </Badge>
+                    </HStack>
+                  </Stack>
+
+                  <Stack gap={1}>
+                    <Text fontSize="xs" color="fg.subtle">
+                      Assigned Test Cases
+                    </Text>
+                    <Heading size="lg" color="fg.heading">
+                      {tester.assignments}
+                    </Heading>
+                    <Text color="fg.subtle" fontSize="sm">
+                      {tester.assignments > 0
+                        ? "Direct case assignments in this plan."
+                        : "No direct case assignments yet."}
+                    </Text>
+                  </Stack>
+                </Grid>
+              </Card.Body>
+            </Card.Root>
+          ))}
         </Stack>
       )}
     </Box>
+  );
+}
+
+function getUserName(user?: UserRecord, fallbackId?: number) {
+  if (!user) return `User ${fallbackId ?? ""}`.trim();
+  const fullName = `${user.FirstName ?? ""} ${user.LastName ?? ""}`.trim();
+  return (
+    user.displayName ||
+    fullName ||
+    user.username ||
+    user.Email ||
+    user.email ||
+    `User ${fallbackId ?? ""}`.trim()
   );
 }

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -114,6 +115,13 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Param			projectID	path		string	true	"Project ID"
+//	@Param			page		query		int		false	"Page number (1-based)"
+//	@Param			pageSize	query		int		false	"Page size"
+//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft)"
+//	@Param			sortOrder	query		string	false	"Sort order (asc, desc)"
+//	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
+//	@Param			kind		query		string	false	"Filter by kind"
+//	@Param			isDraft		query		bool	false	"Filter by draft state"
 //	@Success		200			{object}	schema.TestCaseListResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
@@ -124,14 +132,50 @@ func GetProjectTestCases(testCaseService services.TestCaseService, logger loggin
 		if err != nil {
 			return problemdetail.BadRequest(c, "invalid parameter for projectID")
 		}
-		testCases, err := testCaseService.FindAllByProjectID(context.Background(), projectID)
+
+		page, err := strconv.Atoi(c.Query("page", "1"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid page parameter")
+		}
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "10"))
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid pageSize parameter")
+		}
+		sortBy := c.Query("sortBy", "created_at")
+		sortOrder := c.Query("sortOrder", "desc")
+		search := strings.TrimSpace(c.Query("search", ""))
+		kind := strings.TrimSpace(c.Query("kind", ""))
+		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
+		var isDraft *bool
+		if isDraftParam != "" {
+			val, err := strconv.ParseBool(isDraftParam)
+			if err != nil {
+				return problemdetail.BadRequest(c, "invalid isDraft parameter")
+			}
+			isDraft = &val
+		}
+
+		testCases, total, err := testCaseService.FindAllByProjectIDPaged(context.Background(), projectID, services.TestCaseQueryParams{
+			Page:      page,
+			PageSize:  pageSize,
+			SortBy:    sortBy,
+			SortOrder: sortOrder,
+			Search:    search,
+			Kind:      kind,
+			IsDraft:   isDraft,
+		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(fiber.Map{
-			"test_cases": schema.NewTestCaseResponseList(testCases),
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
+			Pagination: &schema.Pagination{
+				Total:    total,
+				Page:     page,
+				PageSize: pageSize,
+			},
 		})
 	}
 }
@@ -407,6 +451,138 @@ func AssignTesters(testerService services.TesterService, logger logging.Logger) 
 
 		return c.JSON(fiber.Map{
 			"message": "Testers assigned successfully",
+		})
+	}
+}
+
+// ArchiveProject godoc
+//
+//	@ID             ArchiveProject
+//	@Summary        Archive a Project
+//	@Description    Mark a project as archived (inactive) without deleting it
+//	@Tags           projects
+//	@Accept         json
+//	@Produce        json
+//	@Param          projectID   path        int true    "Project ID"
+//	@Success        200         {object}    schema.ProjectResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/projects/{projectID}/archive [post]
+func ArchiveProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		if err := projectService.ArchiveProject(c.Context(), projectID); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to archive project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to archive project")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Project archived successfully",
+		})
+	}
+}
+
+// UnarchiveProject godoc
+//
+//	@ID             UnarchiveProject
+//	@Summary        Unarchive a Project
+//	@Description    Restore a previously archived project back to active state
+//	@Tags           projects
+//	@Accept         json
+//	@Produce        json
+//	@Param          projectID   path        int true    "Project ID"
+//	@Success        200         {object}    schema.ProjectResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/projects/{projectID}/unarchive [post]
+func UnarchiveProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		if err := projectService.UnarchiveProject(c.Context(), projectID); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to unarchive project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to unarchive project")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Project unarchived successfully",
+		})
+	}
+}
+
+// AddProjectTestCaseTemplate godoc
+//
+//	@ID				AddProjectTestCaseTemplate
+//	@Summary	Add or update the test case template for a project
+//	@Description	Add or update the test case template for a project. This template can be used as a default structure for test cases within the project.
+//	@Tags		projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int	true	"Project ID"
+//	@Param			request	body			schema.AddProjectTestCaseTemplateRequest	true	"Test case template data"
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-case-template [post]
+func AddProjectTestCaseTemplate(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var request schema.AddProjectTestCaseTemplateRequest
+		_, err := common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		}
+
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
+		if err := projectService.AddProjectTestCaseTemplate(c.Context(), projectID, request.TestCaseTemplate); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to add test case template to project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to add test case template to project")
+		}
+		return c.JSON(fiber.Map{
+			"message": "Test case template added successfully",
+		})
+	}
+}
+
+// GetProjectTestCaseTemplate godoc
+//
+//	@ID				GetProjectTestCaseTemplate
+//	@Summary	Get the test case template for a project
+//	@Description	Get the test case template for a project. This template can be used as a default structure for test cases within the project.
+//	@Tags		projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int	true	"Project ID"
+//	@Success		200			{object}	schema.ProjectTestCaseTemplateResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/test-case-template [get]
+func GetProjectTestCaseTemplate(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+		template, err := projectService.GetProjectTestCaseTemplate(c.Context(), projectID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to get test case template for project", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to get test case template for project")
+		}
+
+		if template == nil {
+			return c.JSON(schema.ProjectTestCaseTemplateResponse{
+				TestCaseTemplate: "",
+			})
+		}
+		return c.JSON(schema.ProjectTestCaseTemplateResponse{
+			TestCaseTemplate: *template,
 		})
 	}
 }

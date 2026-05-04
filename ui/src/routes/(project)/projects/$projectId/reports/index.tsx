@@ -92,45 +92,75 @@ function ReportsPage() {
     <Box p={6}>
       {/* Header */}
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Reports</Heading>
-        <Button colorScheme="teal">+ Generate New Report</Button>
+        <Heading size="lg" color="fg.heading">
+          Reports
+        </Heading>
+        <Button colorPalette="brand">+ Generate New Report</Button>
       </Flex>
 
       {/* Summary Cards */}
       <SimpleGrid columns={[1, 2, 4]} gap={4} mb={6}>
-        <Box p={4} shadow="sm" borderRadius="md" bg="gray.100">
-          <Text fontSize="sm" color="gray.600">
+        <Box
+          p={4}
+          shadow="card"
+          borderRadius="lg"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+        >
+          <Text fontSize="sm" color="fg.muted">
             Total Reports
           </Text>
           <Heading size="lg">{totalReports}</Heading>
-          <Text fontSize="xs" color="gray.500">
+          <Text fontSize="xs" color="fg.subtle">
             Across all statuses
           </Text>
         </Box>
 
-        <Box p={4} shadow="sm" borderRadius="md" bg="gray.100">
-          <Text fontSize="sm" color="gray.600">
+        <Box
+          p={4}
+          shadow="card"
+          borderRadius="lg"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+        >
+          <Text fontSize="sm" color="fg.muted">
             Completed
           </Text>
-          <Heading size="lg" color="green.500">
+          <Heading size="lg" color="fg.success">
             {completedReports}
           </Heading>
         </Box>
 
-        <Box p={4} shadow="sm" borderRadius="md" bg="gray.100">
-          <Text fontSize="sm" color="gray.600">
+        <Box
+          p={4}
+          shadow="card"
+          borderRadius="lg"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+        >
+          <Text fontSize="sm" color="fg.muted">
             In Progress
           </Text>
-          <Heading size="lg" color="yellow.500">
+          <Heading size="lg" color="fg.warning">
             {inProgressReports}
           </Heading>
         </Box>
 
-        <Box p={4} shadow="sm" borderRadius="md" bg="gray.100">
-          <Text fontSize="sm" color="gray.600">
+        <Box
+          p={4}
+          shadow="card"
+          borderRadius="lg"
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+        >
+          <Text fontSize="sm" color="fg.muted">
             Failed
           </Text>
-          <Heading size="lg" color="red.500">
+          <Heading size="lg" color="fg.error">
             {failedReports}
           </Heading>
         </Box>
@@ -139,10 +169,10 @@ function ReportsPage() {
       {/* Report Table */}
       {loading ? (
         <Flex justify="center" py={10}>
-          <Spinner size="lg" />
+          <Spinner size="lg" color="brand.solid" />
         </Flex>
       ) : error ? (
-        <Text color="red.500">{error}</Text>
+        <Text color="fg.error">{error}</Text>
       ) : (
         <Stack gap="6">
           <Table.Root size="md">
@@ -169,21 +199,21 @@ function ReportsPage() {
                       <IconButton
                         aria-label="View report"
                         onClick={() => handleView(report.id)}
-                        colorScheme="blue"
+                        colorPalette="info"
                         size="sm"
                         children={<LuEye />}
                       />
                       <IconButton
                         aria-label="Download report"
                         onClick={() => handleDownload(report.id)}
-                        colorScheme="green"
+                        colorPalette="success"
                         size="sm"
                         children={<LuDownload />}
                       />
                       <IconButton
                         aria-label="Delete report"
                         onClick={() => handleDelete(report.id)}
-                        colorScheme="red"
+                        colorPalette="danger"
                         size="sm"
                         children={<LuTrash />}
                       />

@@ -5,11 +5,11 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { QueryClient } from "@tanstack/react-query";
-import { AuthContext } from "@/context/user";
+import { AuthContextType } from "@/context/AuthContext";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
-  auth: AuthContext;
+  auth: AuthContextType;
 }>()({ component: () => <Layout /> });
 
 const Layout = () => {

@@ -9,9 +9,10 @@ import {
   Text,
   IconButton,
 } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LuPencil, LuTrash } from "react-icons/lu";
+import {useProjectTestersQuery, useDeleteTesterMutation} from "@/services/TesterService";
+import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/testers/"
@@ -27,74 +28,84 @@ type Tester = {
 };
 
 function ProjectTestersPage() {
-  const [testers, setTesters] = useState<Tester[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {projectId} = Route.useParams();
+  const projectID = Number(projectId)
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setTesters([
-          {
-            id: "1",
-            name: "Alice Johnson",
-            email: "alice@example.com",
-            role: "Lead Tester",
-          },
-          {
-            id: "2",
-            name: "Bob Smith",
-            email: "bob@example.com",
-            role: "QA Engineer",
-          },
-          {
-            id: "3",
-            name: "Charlie Brown",
-            email: "charlie@example.com",
-            role: "Junior Tester",
-          },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load testers.");
-        setLoading(false);
-      }
-    }, 1000);
+  const {data, isPending, isError, error, refetch} = useProjectTestersQuery(projectID);
+  const deleteMutation = useDeleteTesterMutation();
 
-    return () => clearTimeout(timeout);
-  }, []);
+  if (isPending) {
+    return(
+      <Flex justify="center" py={10}>
+        <Spinner size="lg" color="brand.solid" />
+      </Flex>
+    );
+  }
 
-  const handleDelete = (id: string) => {
+  if (isError) {
+    return(
+      <Text color="fg.error">
+        Failed to load testers: {error?.detail ?? error?.title ?? "Unknown error"}
+      </Text>
+    ); 
+  }
+
+  const testers: Tester[] =
+    data?.testers?.map((t: any) => ({
+      id: String(t.user_id),
+      name: t.name,
+      email: t.email ?? "N/A",
+      role: t.role,
+    })) ?? [];
+
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to remove this tester?")) return;
-    setTesters((prev) => prev.filter((t) => t.id !== id));
+    
+    try {
+      await deleteMutation.mutateAsync({
+        params: {path: {testerID: id}}
+      });
+      toaster.success({title: "Tester removed successfully"});
+      refetch();
+    } catch (err){
+      console.error("Failed to delete tester", err);
+      toaster.error({title: "Failed to remove tester"})
+    }
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit tester", id);
+    navigate({
+      to: "/projects/$projectId/testers/edit/$testerId",
+      params: {projectId, testerId:id},
+    })
   };
 
   return (
     <Box p={6}>
       {/* Header */}
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg">Project Testers</Heading>
-        <Button colorScheme="teal">+ Add New Tester</Button>
+        <Heading size="lg" color="fg.heading">
+          Project Testers
+        </Heading>
+        <Button colorPalette="brand"
+        onClick={() =>
+          navigate({
+            to: "/projects/$projectId/testers/new",
+            params: {projectId},
+          })
+        }
+      >
+        + Add New Tester
+        </Button>
       </Flex>
 
       {/* Total Testers */}
-      <Text mb={4} color="gray.600">
+      <Text mb={4} color="fg.muted">
         Total Testers: <strong>{testers.length}</strong>
       </Text>
 
       {/* Tester Table */}
-      {loading ? (
-        <Flex justify="center" py={10}>
-          <Spinner size="lg" />
-        </Flex>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
-      ) : (
         <Stack gap="6">
           <Table.Root size="md">
             <Table.Header>
@@ -118,14 +129,14 @@ function ProjectTestersPage() {
                       <IconButton
                         aria-label="Edit tester"
                         onClick={() => handleEdit(tester.id)}
-                        colorScheme="blue"
+                        colorPalette="info"
                         size="sm"
                         children={<LuPencil />}
                       />
                       <IconButton
                         aria-label="Delete tester"
                         onClick={() => handleDelete(tester.id)}
-                        colorScheme="red"
+                        colorPalette="danger"
                         size="sm"
                         children={<LuTrash />}
                       />
@@ -136,7 +147,6 @@ function ProjectTestersPage() {
             </Table.Body>
           </Table.Root>
         </Stack>
-      )}
     </Box>
   );
 }

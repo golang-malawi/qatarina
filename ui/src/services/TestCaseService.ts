@@ -7,7 +7,9 @@ export function useTestCasesQuery() {
 }
 
 export function useTestCaseQuery(testCaseID: string) {
-  return $api.useQuery("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
+  return $api.useQuery("get", "/v1/test-cases/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
 }
 
 export function useCreateTestCaseMutation() {
@@ -15,21 +17,136 @@ export function useCreateTestCaseMutation() {
 }
 
 export function useProjectTestCasesQuery(projectID: string) {
-  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases", { params: { path: { projectID } } });
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases", {
+    params: { path: { projectID } },
+  });
 }
 
 export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getTestCasesByTestPlanID(testPlanID: string) {
-  return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", { params: { path: { testplanID: testPlanID } } });
+export async function getInboxTestCases(params?: { includeClosed?: boolean }) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox", { 
+    params: { query: { includeClosed: params?.includeClosed ?? false } } as any,
+  });
+}
+
+export async function getTestCasesByTestPlanID(testPlanID: number) {
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", {
+    params: { path: { testPlanID: testPlanID } },
+  });
 }
 
 export async function getTestCaseById(testCaseID: string) {
-  return apiClient.request("get", "/v1/test-cases/{testCaseID}", { params: { path: { testCaseID } } });
+  return apiClient.request("get", "/v1/test-cases/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
 }
 
-export async function createTestCase(data: components["schemas"]["schema.CreateTestCaseRequest"]) {
+export async function createTestCase(
+  data: components["schemas"]["schema.CreateTestCaseRequest"]
+) {
   return apiClient.request("post", "/v1/test-cases", { body: data });
+}
+
+export async function importTestCasesFromFile(
+  projectId: string,
+  file: File
+): Promise<{ message: string }> {
+  const formData = new FormData();
+  formData.append("projectID", projectId);
+  formData.append("file", file);
+
+  const res = await apiClient.request("post", "/v1/test-cases/import-file", {
+    body: formData as any,
+  });
+
+  if (res.error) {
+    throw new Error(res.error.detail || "Failed to import test cases");
+  }
+
+  return res.data as { message: string };
+}
+
+export async function markTestCaseAsDraft(testCaseID:string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/mark-draft",{
+    params: {path: {testCaseID}},
+  });
+  
+}
+export async function unmarkTestCaseAsDraft(testCaseID:string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/unmark-draft",{
+    params: {path: {testCaseID}},
+  });
+  
+}
+
+export function useClosedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/closed", {
+    params: {path: {projectID}}
+  })
+}
+
+export function useFailingTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/failing", {
+    params: { path: { projectID } },
+  });
+}
+
+export function useScheduledTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/scheduled", {
+    params: { path: { projectID } },
+  });
+}
+
+export function useBlockedTestCasesQuery(projectID: string){
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/blocked", {
+    params: {path: {projectID}},
+  });
+}
+
+export function useUpdateTestCaseMutation() {
+  return $api.useMutation(
+    "post", 
+    "/v1/test-cases/{testCaseID}"
+  ); 
+   
+}
+
+export async function updateTestCase(
+  data:components["schemas"]["schema.UpdateTestCaseRequest"]
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID: data.id}},
+    body: data,
+  });  
+}
+
+export async function deleteTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}", {
+    params: {path: {testCaseID}},
+  });
+}
+
+export function useDeleteTestCaseMutation(){
+  return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
+}
+
+export function useSuggestedTestCasesQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/suggested", {
+    params: { path: { projectID } },
+  });
+}
+
+export async function approveSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/accept", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export async function rejectSuggestedTestCase(testCaseID: string) {
+  return apiClient.request("delete", "/v1/test-cases/{testCaseID}/reject", {
+    params: { path: { testCaseID } },
+  });
 }

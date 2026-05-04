@@ -1,22 +1,79 @@
 import $api from "@/lib/api/query";
-import {
-  getTestCases,
-  getTestCaseById,
-} from "@/services/TestCaseService";
+import { getTestCaseById, getInboxTestCases } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
+import { components } from "@/lib/api/v1";
 
-export const findTestCaseAllQueryOptions = queryOptions({
-  queryKey: ["testCases"],
-  queryFn: () => getTestCases(),
+type AssignedTestCaseListResponse =
+  components["schemas"]["schema.AssignedTestCaseListResponse"];
+type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+
+export type TestCaseListQueryParams = {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+  kind?: string;
+  isDraft?: boolean;
+};
+
+export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
+  $api.queryOptions("get", "/v1/test-cases", {
+    params: { query: params },
+  });
+
+export const findTestCaseInboxQueryOptions = (includeClosed: boolean) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", includeClosed],
+    queryFn: async (): Promise<AssignedTestCaseListResponse> => {
+      const res = await getInboxTestCases({ includeClosed });
+      return (res?.data ?? res) as AssignedTestCaseListResponse;
+    },
 });
+
+export const findTestCaseInboxByIdQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", id],
+    queryFn: async (): Promise<AssignedTestCase> => {
+      const res = await getInboxTestCases({ includeClosed: true });
+      const response = (res?.data ?? res) as AssignedTestCaseListResponse;
+
+      const match = response.test_cases?.find(
+        (tc: AssignedTestCase) => tc.id === id,
+      );
+      if (!match) {
+        throw new Error(`Inbox test case ${id} not found`);
+      }
+      return match;
+    },
+  });
 
 export const findTestCaseByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["projectTestCases", id],
-    queryFn: () => getTestCaseById(id),
+    queryFn: async (): Promise<AssignedTestCase> => {
+      const res = await getTestCaseById(id);
+      return (res?.data ?? res) as AssignedTestCase;
+    },
   });
 
-export const testCasesByProjectIdQueryOptions = (projectID: string) =>
+export const testCasesByProjectIdQueryOptions = (
+  projectID: string,
+  params?: TestCaseListQueryParams,
+) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
-    params: { path: { projectID } },
+    params: { path: { projectID }, query: params },
   });
+
+export const findTestCaseSummaryQueryOptions = $api.queryOptions(
+  "get",
+  "/v1/me/test-cases/summary",
+  {},
+);
+
+export function findInboxTestCasesQueryOptions() {
+  return queryOptions({
+    queryKey: ["test-cases", "inbox"],
+    queryFn: () => getInboxTestCases(),
+  });
+}

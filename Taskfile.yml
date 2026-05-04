@@ -10,9 +10,15 @@ tasks:
     cmds:
       - go build -o build/qatarina
 
-  install-tools:
+  install-swag2:
     cmds:
-      - go install github.com/swaggo/swag/v2/cmd/swag@v2.0.0-rc4
+    - git clone --branch v2.0.0-rc4 --single-branch https://github.com/swaggo/swag ./tmp-swag
+    - cd ./tmp-swag && go build -o ~/go/bin/swag2 ./cmd/swag 
+    - rm -rf ./tmp-swag
+
+  install-tools:
+    deps: [install-swag2]
+    cmds:
       - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
       - go install github.com/mitchellh/gox@latest
 
@@ -29,7 +35,7 @@ tasks:
   generate:
     cmds:
       - sqlc generate
-      - swag init --v3.1
+      - swag2 init --v3.1
       - cd ui && npm run gen:api
 
   dev-ui:

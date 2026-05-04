@@ -69,6 +69,7 @@ const (
 	TestRunStatePending TestRunState = "pending"
 	TestRunStatePassed  TestRunState = "passed"
 	TestRunStateFailed  TestRunState = "failed"
+	TestRunStateBlocked TestRunState = "blocked"
 )
 
 func (e *TestRunState) Scan(src interface{}) error {
@@ -104,6 +105,16 @@ func (ns NullTestRunState) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TestRunState), nil
+}
+
+type Environment struct {
+	ID          int32
+	ProjectID   sql.NullInt32
+	Name        string
+	Description sql.NullString
+	BaseUrl     sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type GithubInstallation struct {
@@ -220,10 +231,13 @@ type Project struct {
 	// URL to Monday.com if available
 	MondayUrl sql.NullString
 	// The ID of the owner or creator of the project
-	OwnerUserID int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
+	OwnerUserID      int32
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	DeletedAt        sql.NullTime
+	Code             string
+	ParentProjectID  sql.NullInt32
+	TestcaseTemplate sql.NullString
 }
 
 type ProjectTester struct {
@@ -263,6 +277,14 @@ type TestCase struct {
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
 	ProjectID sql.NullInt32
+	Suggested sql.NullBool
+}
+
+type TestCaseSequence struct {
+	ProjectID       int32
+	Prefix          string
+	CurrentVal      int32
+	LastGeneratedAt sql.NullTime
 }
 
 type TestPlan struct {
@@ -294,9 +316,10 @@ type TestPlan struct {
 	// Whether test plan is locked or not
 	IsLocked sql.NullBool
 	// Whether the test plan has a report generated for it
-	HasReport sql.NullBool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	HasReport     sql.NullBool
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	EnvironmentID sql.NullInt32
 }
 
 type TestPlansCase struct {
@@ -326,6 +349,19 @@ type TestRun struct {
 	TestedOn              time.Time
 	CreatedAt             sql.NullTime
 	UpdatedAt             sql.NullTime
+	EnvironmentID         sql.NullInt32
+}
+
+type TestRunResult struct {
+	ID         uuid.UUID
+	TestRunID  uuid.UUID
+	Status     TestRunState
+	Result     string
+	Notes      sql.NullString
+	ExecutedBy int32
+	ExecutedAt time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type TestRunsComment struct {

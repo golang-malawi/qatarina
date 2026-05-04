@@ -31,6 +31,11 @@ func (api *API) routes() {
 
 	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
 
+	authV1 := router.Group("/v1/auth", authenticationMiddleware)
+	{
+		authV1.Post("/change-password", apiv1.ChangePassword(api.AuthService, api.logger))
+	}
+
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
 		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))
@@ -51,11 +56,22 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-plans", apiv1.GetProjectTestPlans(api.TestPlansService, api.logger))
 		projectsV1.Get("/:projectID/test-runs", apiv1.GetProjectTestRuns(api.TestRunsService, api.logger))
 		projectsV1.Get("/:projectID/testers", apiv1.GetProjectTesters(api.ProjectsService, api.TesterService, api.logger))
-		projectsV1.Post("/:projectID/testers", apiv1.AssignTesters(api.TesterService, api.logger))
+		projectsV1.Post("/:projectID/testers/assign", apiv1.AssignTesters(api.TesterService, api.logger))
 		projectsV1.Get("/:projectID", apiv1.GetOneProject(api.ProjectsService))
 		projectsV1.Post("/:projectID", apiv1.UpdateProject(api.ProjectsService, api.logger))
 		projectsV1.Delete("/:projectID", apiv1.DeleteProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/modules", apiv1.GetProjectModules(api.ModuleService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/closed", apiv1.ListClosedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/failing", apiv1.ListFailingTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/scheduled", apiv1.ListScheduledTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/blocked", apiv1.ListBlockedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
+		projectsV1.Post("/:projectID/environments", apiv1.CreateEnvironment(api.EnvironmentService, api.logger))
+		projectsV1.Get("/:projectID/test-cases/suggested", apiv1.ListSuggestedTestCases(api.TestCasesService, api.logger))
+		projectsV1.Post("/:projectID/archive", apiv1.ArchiveProject(api.ProjectsService, api.logger))
+		projectsV1.Post("/:projectID/unarchive", apiv1.UnarchiveProject(api.ProjectsService, api.logger))
+		projectsV1.Get("/:projectID/test-case-template", apiv1.GetProjectTestCaseTemplate(api.ProjectsService, api.logger))
+		projectsV1.Post("/:projectID/test-case-template", apiv1.AddProjectTestCaseTemplate(api.ProjectsService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -77,17 +93,28 @@ func (api *API) routes() {
 		pagesV1.Delete("/:pageID", apiv1.DeletePage(api.PageService, api.logger))
 	}
 
+	meV1 := router.Group("/v1/me", authenticationMiddleware)
+	{
+		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
+		meV1.Get("/test-cases/summary", apiv1.GetExecutionSummary(api.TestCasesService, api.logger))
+	}
+
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
-		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService))
+		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.GitHubService, api.logger))
+		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/mark-draft", apiv1.MarkTestCaseAsDraft(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/unmark-draft", apiv1.UnMarkTestCaseAsDraft(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/accept", apiv1.AcceptSuggestedTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Delete("/:testCaseID/reject", apiv1.RejectSuggestedTestCase(api.TestCasesService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
@@ -101,6 +128,8 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 	}
 
 	testRunsV1 := router.Group("/v1/test-runs", authenticationMiddleware)
@@ -112,7 +141,9 @@ func (api *API) routes() {
 		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID/execute", apiv1.ExecuteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
@@ -121,6 +152,17 @@ func (api *API) routes() {
 		testersV1.Get("/query", apiv1.SearchTesters(api.TesterService, api.logger))
 		testersV1.Get("/:testerID", apiv1.GetOneTester(api.TesterService, api.logger))
 		testersV1.Post("/invite", apiv1.InviteTester(api.TesterService, api.logger))
+		testersV1.Post("/:testerID/update-role", apiv1.UpdateTesterRole(api.TesterService, api.logger))
+		testersV1.Delete("/:testerID", apiv1.DeleteTester(api.TesterService, api.logger))
+	}
+
+	orgsV1 := router.Group("/v1/orgs", authenticationMiddleware)
+	{
+		orgsV1.Get("", apiv1.ListOrgs(api.OrgService, api.logger))
+		orgsV1.Post("", apiv1.CreateOrg(api.OrgService, api.logger))
+		orgsV1.Get("/:orgID", apiv1.GetOrg(api.OrgService, api.logger))
+		orgsV1.Put("/:orgID", apiv1.UpdateOrg(api.OrgService, api.logger))
+		orgsV1.Delete("/:orgID", apiv1.DeleteOrg(api.OrgService, api.logger))
 	}
 
 	settingsApi := router.Group("/v1/settings", authenticationMiddleware)
@@ -143,12 +185,16 @@ func (api *API) routes() {
 	{
 		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.GitHubService, api.logger))
 		githubIntegrationV1.Post("/pull-requests", apiv1.ListGitHubPullRequests(api.GitHubService, api.logger))
-	}
+		environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+		{
+			environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
+		}
 
-	// Serves the app at the root path  "/"
-	router.Use(filesystem.New(filesystem.Config{
-		Root:         http.FS(frontendAssets),
-		Browse:       false,
-		NotFoundFile: "index.html",
-	}))
+		// Serves the app at the root path  "/"
+		router.Use(filesystem.New(filesystem.Config{
+			Root:         http.FS(frontendAssets),
+			Browse:       false,
+			NotFoundFile: "index.html",
+		}))
+	}
 }

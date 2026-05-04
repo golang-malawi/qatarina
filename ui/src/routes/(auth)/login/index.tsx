@@ -20,15 +20,25 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/isLoggedIn";
 import { sleep } from "@/lib/utils";
 import { LoginFormValues, loginSchema } from "@/data/forms/login";
 import { Logo } from "@/components/logo";
 import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
+import { useAuth } from "@/hooks/isLoggedIn";
+import { getLastProjectPath } from "@/lib/last-project";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
-const fallback = "/dashboard" as const;
+const fallback = "/" as const;
+
+const resolvePostLoginRedirect = (redirectTo?: string) => {
+  const lastProjectPath = getLastProjectPath();
+  if (lastProjectPath) return lastProjectPath;
+  if (redirectTo) return redirectTo;
+  return fallback;
+};
 
 export const Route = createFileRoute("/(auth)/login/")({
   validateSearch: z.object({
@@ -36,7 +46,9 @@ export const Route = createFileRoute("/(auth)/login/")({
   }),
   beforeLoad: ({ context, search }) => {
     if (context.auth.isAuthenticated) {
-      throw redirect({ to: search.redirect || fallback });
+      throw redirect({
+        to: resolvePostLoginRedirect(search.redirect || undefined),
+      });
     }
   },
   component: LoginPage,
@@ -47,6 +59,7 @@ function LoginPage() {
   const navigate = Route.useNavigate();
   const router = useRouter();
   const search = Route.useSearch();
+  const { t } = useTranslation();
 
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -67,14 +80,18 @@ function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormValues) => {
       setLoginError(null);
+
       await auth.login(data);
+
       await router.invalidate();
 
       // TODO: 🥲 dies without this sleep because the context state is not refresing in time
       await sleep(1);
 
-      await navigate({ to: search.redirect || fallback, replace: true });
-      return data;
+      await navigate({
+        to: resolvePostLoginRedirect(search.redirect || undefined),
+        replace: true,
+      });
     },
     onSuccess: (data) => {
       console.log("Login successful", data);
@@ -101,36 +118,45 @@ function LoginPage() {
 
   return (
     <Flex minH="100vh" align="center" justify="center" p={4}>
-      <Stack mx="auto" maxW="lg" w={{ sm: "full", md: "450px" }} py={12} px={6}>
+      <Stack mx="auto" maxW="lg" w={{ base: "full", md: "md" }} py={12} px={6}>
         <Stack align="center">
           <Flex align="center" direction="row" gap={2}>
             <Logo />
-            <Heading fontSize="3xl" textAlign="center" fontWeight="bold">
+            <Heading
+              fontSize="3xl"
+              textAlign="center"
+              fontWeight="bold"
+              color="fg.heading"
+            >
               {SiteConfig.name}
             </Heading>
           </Flex>
-          <Text fontSize="md" color="gray.500" textAlign="center">
+          <Text fontSize="md" color="fg.muted" textAlign="center">
             {SiteConfig.subtitle}
           </Text>
         </Stack>
 
-        <Card.Root>
+        <Card.Root
+          bg="bg.surface"
+          border="sm"
+          borderColor="border.subtle"
+          shadow="card"
+          borderRadius="xl"
+        >
           <Card.Header>
-            <Card.Title>Welcome back</Card.Title>
-            <Card.Description>
-              Enter your email and password to continue.
-            </Card.Description>
+            <Card.Title>{t("login")}</Card.Title>
+            <Card.Description>{t("login_description")}</Card.Description>
           </Card.Header>
           <Card.Body>
             {loginError && (
-              <Text color="red.500" mb={2} textAlign="center">
+              <Text color="fg.error" mb={2} textAlign="center">
                 {loginError}
               </Text>
             )}
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack>
                 <Field.Root invalid={!!errors.email}>
-                  <Field.Label>Email</Field.Label>
+                  <Field.Label>{t("email")}</Field.Label>
                   <Input {...register("email")} />
                   <Field.ErrorText>
                     {errors.email && errors.email.message}
@@ -138,7 +164,7 @@ function LoginPage() {
                 </Field.Root>
 
                 <Field.Root invalid={!!errors.password}>
-                  <Field.Label>Password</Field.Label>
+                  <Field.Label>{t("password")}</Field.Label>
                   <PasswordInput {...register("password")} />
                   <Field.ErrorText>{errors.password?.message}</Field.ErrorText>
                 </Field.Root>
@@ -165,7 +191,7 @@ function LoginPage() {
                         >
                           <Checkbox.HiddenInput />
                           <Checkbox.Control />
-                          <Checkbox.Label>Remember me</Checkbox.Label>
+                          <Checkbox.Label>{t("remember_me")}</Checkbox.Label>
                         </Checkbox.Root>
                         <Field.ErrorText>
                           {errors.rememberMe && errors.rememberMe?.message}
@@ -173,19 +199,19 @@ function LoginPage() {
                       </Field.Root>
                     )}
                   />
-                  <ChakraLink href="#" fontSize="sm" asChild>
-                    <Link to="/">Forgot password?</Link>
+                  <ChakraLink href="#" fontSize="sm" color="fg.accent" asChild>
+                    <Link to="/">{t("forgot_password")}</Link>
                   </ChakraLink>
                 </Stack>
 
                 <Button
                   mt={4}
                   w="full"
-                  colorScheme="teal"
+                  colorPalette="brand"
                   type="submit"
                   loading={isSubmitting || loginMutation.isPending}
                 >
-                  Sign in
+                  {t("sign_in")}
                 </Button>
               </Stack>
             </form>
@@ -193,8 +219,15 @@ function LoginPage() {
         </Card.Root>
 
         <Stack pt={2} direction="row" justifyContent="center">
-          <Text>New to {SiteConfig.name}?</Text>
-          <ChakraLink href="#">Create an account</ChakraLink>
+          <Text>{t("new_user")}</Text>
+          <ChakraLink href="#" color="fg.accent">
+            {t("create_account")}
+          </ChakraLink>
+        </Stack>
+
+        {/* Language Switcher */}
+        <Stack pt={4} direction="row" justifyContent="center">
+          <LanguageSwitcher />
         </Stack>
       </Stack>
     </Flex>

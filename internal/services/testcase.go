@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -12,21 +13,26 @@ import (
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // TestCaseService contains functionality to manage services
 type TestCaseService interface {
 	// FindAll retrieves all test cases in the database
 	FindAll(context.Context) ([]dbsqlc.TestCase, error)
+	// FindAllPaged retrieves test cases with pagination, sorting, and filtering
+	FindAllPaged(context.Context, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
 	// FindAllByID retrieves all test cases in the database by Project ID
 	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
 
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
+	// FindAllByProjectIDPaged retrieves test cases by Project ID with pagination, sorting, and filtering
+	FindAllByProjectIDPaged(context.Context, int64, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
 	// FindAllByTestPlanID retrieves all test cases in the database by Test Plan ID
-	FindAllByTestPlanID(context.Context, uuid.UUID) ([]dbsqlc.TestCase, error)
+	FindAllByTestPlanID(context.Context, int64) ([]schema.TestCaseResponseItem, error)
 
 	// FindAllCreatedBy retrieves all test cases in the database created by a specific user
 	FindAllCreatedBy(context.Context, int64) ([]dbsqlc.TestCase, error)
@@ -35,7 +41,7 @@ type TestCaseService interface {
 	Create(context.Context, *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error)
 
 	// BulkCreate creates test cases in bulk. Only valid test cases are created.
-	BulkCreate(context.Context, *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error)
+	BulkCreate(context.Context, *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, int, error)
 
 	// Update updates a test case in the system
 	Update(context.Context, *schema.UpdateTestCaseRequest) (*dbsqlc.TestCase, error)
@@ -54,6 +60,43 @@ type TestCaseService interface {
 
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
+	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
+	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error)
+	// MarkAsDraft is used to mark a test case as draft
+	MarkAsDraft(ctx context.Context, testCaseID string) error
+	// UnMarkAsDraft is used to unmark a draft test case
+	UnMarkAsDraft(ctx context.Context, testCaseID string) error
+	// GetExecutionSummaryByUser used to dynamically update the counts for 'success', 'failed, and 'test executed'
+	GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error)
+	// FindAllClosed used to list closed test cases by project ID
+	FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllFailing used to list failing test cases by project ID
+	FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllScheduled used to list scheduled test cases by project ID
+	FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// FindAllBlocked is used to list bloked test cases by project ID
+	FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error)
+	// GetExistingCodes is used to check existing test cases codes during file import
+	GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error)
+	// Suggest is used to make a tester suggest a test case
+	Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error)
+	// FindAllSuggested is used to list all suggested test cases
+	FindAllSuggested(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error)
+	// AcceptSuggested is used to accept a suggested test case
+	AcceptSuggested(ctx context.Context, testCaseID string) error
+	// RejectSuggested is used to reject a suggested test case
+	RejectSuggested(ctx context.Context, testCaseID string) error
+}
+
+type TestCaseQueryParams struct {
+	Page      int
+	PageSize  int
+	SortBy    string
+	SortOrder string
+	Search    string
+	Kind      string
+	IsDraft   *bool
+	Suggested *bool
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -73,34 +116,84 @@ func NewTestCaseService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger)
 }
 
 // BulkCreate implements TestCaseService.
-func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, error) {
-	createList := make([]uuid.UUID, 0)
+func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schema.BulkCreateTestCases) ([]dbsqlc.TestCase, int, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	testCases := make([]dbsqlc.TestCase, 0, len(bulkRequest.TestCases))
+	skipped := 0
+
 	for _, request := range bulkRequest.TestCases {
+		request.ProjectID = bulkRequest.ProjectID
+		project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+		if err != nil {
+			return nil, skipped, fmt.Errorf("failed to fetch project: %w", err)
+		}
+
+		// Ensure sequence row exists for this project's item
+		prefixKey := strings.ToLower(project.Code)
+		if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+			ProjectID: int32(request.ProjectID),
+			Prefix:    prefixKey,
+		}); err != nil {
+			return nil, skipped, fmt.Errorf("failed to ensure sequence row: %w", err)
+		}
+
+		code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
+		if err != nil {
+			return nil, skipped, err
+		}
+
 		uuidVal, _ := uuid.NewV7()
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
-			ProjectID:        sql.NullInt32{Int32: int32(bulkRequest.ProjectID), Valid: true},
+			ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
 			Kind:             dbsqlc.TestKind(request.Kind),
-			Code:             request.Code,
-			FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
+			Code:             code,
+			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
 			ParentTestCaseID: sql.NullInt32{},
-			IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
+			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
 			CreatedByID:      1,
-			CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-			UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
+			CreatedAt:        common.NewNullTime(time.Now()),
+			UpdatedAt:        common.NewNullTime(time.Now()),
 		}
 
-		createdID, err := t.queries.CreateTestCase(ctx, params)
-		if err != nil {
-			return nil, err
+		if strings.TrimSpace(request.Code) != "" {
+			_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+				ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+				Code:      request.Code,
+			})
+			if err == nil {
+				skipped++
+				continue
+			}
 		}
-		createList = append(createList, createdID)
+
+		createdID, err := tx.CreateTestCase(ctx, params)
+		if err != nil {
+			return nil, skipped, err
+		}
+		tc, err := tx.GetTestCase(ctx, createdID)
+		if err != nil {
+			return nil, skipped, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+		}
+
+		testCases = append(testCases, tc)
 	}
 
-	return []dbsqlc.TestCase{}, nil
+	if err := sqlTx.Commit(); err != nil {
+		return nil, skipped, err
+	}
+
+	return testCases, skipped, nil
 }
 
 // BulkDelete implements TestCaseService.
@@ -110,29 +203,74 @@ func (t *testCaseServiceImpl) BulkDelete(context.Context, []string) error {
 
 // Create implements TestCaseService.
 func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
-	uuidVal, _ := uuid.NewV7()
-	params := dbsqlc.CreateTestCaseParams{
-		ID:               uuidVal,
-		ProjectID:        sql.NullInt32{Int32: int32(request.ProjectID), Valid: true},
-		Kind:             dbsqlc.TestKind(request.Kind),
-		Code:             request.Code,
-		FeatureOrModule:  sql.NullString{String: request.FeatureOrModule, Valid: true},
-		Title:            request.Title,
-		Description:      request.Description,
-		ParentTestCaseID: sql.NullInt32{},
-		IsDraft:          sql.NullBool{Bool: request.IsDraft, Valid: true},
-		Tags:             request.Tags,
-		CreatedByID:      1,
-		CreatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt:        sql.NullTime{Time: time.Now(), Valid: true},
-	}
-
-	createdID, err := t.queries.CreateTestCase(ctx, params)
+	sqlTx, err := t.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	res, err := t.queries.GetTestCase(ctx, createdID)
-	return &res, err
+	defer sqlTx.Rollback()
+
+	tx := dbsqlc.New(sqlTx)
+
+	project, err := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
+	// Ensure sequence row exists for this project inside the same transaction
+	prefixKey := strings.ToLower(project.Code)
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(request.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, tx, request.ProjectID, &project, &request.Code)
+	if err != nil {
+		return nil, err
+	}
+	uuidVal, _ := uuid.NewV7()
+	params := dbsqlc.CreateTestCaseParams{
+		ID:               uuidVal,
+		ProjectID:        common.NewNullInt32(int32(request.ProjectID)),
+		Kind:             dbsqlc.TestKind(request.Kind),
+		Code:             code,
+		FeatureOrModule:  common.NullString(request.FeatureOrModule),
+		Title:            request.Title,
+		Description:      request.Description,
+		ParentTestCaseID: sql.NullInt32{},
+		IsDraft:          common.NewNullBool(request.IsDraft),
+		Tags:             request.Tags,
+		CreatedByID:      1,
+		CreatedAt:        common.NewNullTime(time.Now()),
+		UpdatedAt:        common.NewNullTime(time.Now()),
+	}
+
+	if strings.TrimSpace(request.Code) != "" {
+		_, err := tx.GetTestCaseByCode(ctx, dbsqlc.GetTestCaseByCodeParams{
+			ProjectID: common.NewNullInt32(int32(request.ProjectID)),
+			Code:      request.Code,
+		})
+		if err == nil {
+			return nil, fmt.Errorf("test case code %q already exists in project %d — please choose a different code or leave it blank to auto-generate", request.Code, request.ProjectID)
+		}
+	}
+
+	createdID, err := tx.CreateTestCase(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	tc, err := tx.GetTestCase(ctx, createdID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch test case %q after insert: %w", code, err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &tc, err
 }
 
 // DeleteByID implements TestCaseService.
@@ -164,6 +302,125 @@ func (t *testCaseServiceImpl) FindAll(ctx context.Context) ([]dbsqlc.TestCase, e
 	return t.queries.ListTestCases(ctx)
 }
 
+// FindAllPaged implements TestCaseService.
+func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error) {
+	page := params.Page
+	pageSize := params.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+	}
+	sortColumn, ok := sortMap[sortKey]
+	if !ok || sortColumn == "" {
+		sortColumn = "created_at"
+	}
+	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	conditions := []string{"1=1"}
+	args := []interface{}{}
+	argPos := 1
+
+	search := strings.TrimSpace(params.Search)
+	if search != "" {
+		conditions = append(conditions, fmt.Sprintf("(code ILIKE $%d OR title ILIKE $%d OR description ILIKE $%d OR feature_or_module ILIKE $%d)", argPos, argPos, argPos, argPos))
+		args = append(args, "%"+search+"%")
+		argPos++
+	}
+
+	if params.Kind != "" {
+		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
+		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.IsDraft != nil {
+		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
+		args = append(args, *params.IsDraft)
+		argPos++
+	}
+
+	if params.Suggested != nil {
+		conditions = append(conditions, fmt.Sprintf("suggested = $%d", argPos))
+		args = append(args, *params.Suggested)
+		argPos++
+	} else {
+		// Default: exclude suggested cases
+		conditions = append(conditions, "(suggested IS NULL OR suggested = false)")
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	var total int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM test_cases WHERE %s", whereClause)
+	if err := t.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limit := pageSize
+	offset := (page - 1) * pageSize
+	args = append(args, limit, offset)
+	limitPos := argPos
+	offsetPos := argPos + 1
+
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
+
+	rows, err := t.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	items := []dbsqlc.TestCase{}
+	for rows.Next() {
+		var item dbsqlc.TestCase
+		if err := rows.Scan(
+			&item.ID,
+			&item.Kind,
+			&item.Code,
+			&item.FeatureOrModule,
+			&item.Title,
+			&item.Description,
+			&item.ParentTestCaseID,
+			&item.IsDraft,
+			pq.Array(&item.Tags),
+			&item.CreatedByID,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&item.ProjectID,
+		); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
 // FindAllByID implements TestCaseService.
 func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
 	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
@@ -175,9 +432,151 @@ func (t *testCaseServiceImpl) FindAllByProjectID(ctx context.Context, projectID 
 	return t.queries.ListTestCasesByProject(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
 }
 
+// FindAllByProjectIDPaged implements TestCaseService.
+func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, projectID int64, params TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error) {
+	page := params.Page
+	pageSize := params.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+	}
+	sortColumn, ok := sortMap[sortKey]
+	if !ok || sortColumn == "" {
+		sortColumn = "created_at"
+	}
+	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	conditions := []string{"project_id = $1"}
+	args := []interface{}{int32(projectID)}
+	argPos := 2
+
+	search := strings.TrimSpace(params.Search)
+	if search != "" {
+		conditions = append(conditions, fmt.Sprintf("(code ILIKE $%d OR title ILIKE $%d OR description ILIKE $%d OR feature_or_module ILIKE $%d)", argPos, argPos, argPos, argPos))
+		args = append(args, "%"+search+"%")
+		argPos++
+	}
+
+	if params.Kind != "" {
+		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
+		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.IsDraft != nil {
+		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
+		args = append(args, *params.IsDraft)
+		argPos++
+	}
+
+	if params.Suggested != nil {
+		conditions = append(conditions, fmt.Sprintf("suggested = $%d", argPos))
+		args = append(args, *params.Suggested)
+		argPos++
+	} else {
+		// Default: exclude suggested cases
+		conditions = append(conditions, "(suggested IS NULL OR suggested = false)")
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	var total int64
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM test_cases WHERE %s", whereClause)
+	if err := t.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	limit := pageSize
+	offset := (page - 1) * pageSize
+	args = append(args, limit, offset)
+	limitPos := argPos
+	offsetPos := argPos + 1
+
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
+
+	rows, err := t.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	items := []dbsqlc.TestCase{}
+	for rows.Next() {
+		var item dbsqlc.TestCase
+		if err := rows.Scan(
+			&item.ID,
+			&item.Kind,
+			&item.Code,
+			&item.FeatureOrModule,
+			&item.Title,
+			&item.Description,
+			&item.ParentTestCaseID,
+			&item.IsDraft,
+			pq.Array(&item.Tags),
+			&item.CreatedByID,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+			&item.ProjectID,
+		); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
 // FindAllByProjectID implements TestCaseService.
-func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID uuid.UUID) ([]dbsqlc.TestCase, error) {
-	return t.queries.ListTestCasesByPlan(ctx, testPlanID)
+func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID int64) ([]schema.TestCaseResponseItem, error) {
+	rows, err := t.queries.GetTestCasesWithPlanInfo(ctx, int32(testPlanID))
+	if err != nil {
+		return nil, err
+	}
+
+	cases := make([]schema.TestCaseResponseItem, 0, len(rows))
+	for _, r := range rows {
+		assigned := r.PlanID.Valid
+		var planSummary *schema.TestPlanSummary
+		if assigned {
+			planSummary = &schema.TestPlanSummary{
+				ID:   r.PlanID.Int64,
+				Name: r.PlanName.String,
+			}
+		}
+		cases = append(cases, schema.TestCaseResponseItem{
+			ID:                   r.TestCaseID.String(),
+			Title:                r.Title,
+			IsAssignedToTestPlan: assigned,
+			TestPlan:             planSummary,
+			AssignedTesterIDs:    r.TesterIds,
+		})
+	}
+	return cases, nil
 }
 
 // FindAllCreatedBy implements TestCaseService.
@@ -226,4 +625,307 @@ func (t *testCaseServiceImpl) Search(ctx context.Context, keyword string) ([]dbs
 
 	return testCases, nil
 
+}
+
+func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, project *dbsqlc.Project, userCode *string) (string, error) {
+	if userCode != nil && *userCode != "" {
+		return *userCode, nil
+	}
+
+	prefixKey := strings.ToLower(project.Code)
+
+	seq, err := db.GetNextTestCaseSequence(ctx, dbsqlc.GetNextTestCaseSequenceParams{
+		ProjectID: int32(projectID),
+		Prefix:    prefixKey,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get next sequence: %w", err)
+	}
+
+	displayPrefix := strings.ToUpper(prefixKey) // used for code formatting
+	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
+}
+
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error) {
+	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
+		AssignedToID:  int32(userID),
+		Limit:         limit,
+		Offset:        offset,
+		IncludeClosed: includeClosed,
+	})
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []schema.AssignedTestCase{}, nil
+		}
+		return nil, fmt.Errorf("failed to load assigned test cases: %v", err)
+	}
+
+	res := make([]schema.AssignedTestCase, 0)
+	for _, row := range rows {
+		res = append(res, schema.AssignedTestCase{
+			ID:                    row.TestCaseID.String(),
+			Kind:                  row.Kind,
+			Code:                  row.Code,
+			FeatureOrModule:       row.FeatureOrModule.String,
+			Title:                 row.Title,
+			Description:           row.Description,
+			ParentTestCaseID:      int(row.ParentTestCaseID.Int32),
+			IsDraft:               row.IsDraft.Bool,
+			Tags:                  row.Tags,
+			CreatedByID:           row.CreatedByID,
+			TestCaseCreatedAt:     row.TestCaseCreatedAt.Time,
+			TestCaseUpdatedAt:     row.TestCaseUpdatedAt.Time,
+			ProjectID:             int64(row.ProjectID.Int32),
+			TestRunID:             row.TestRunID.String(),
+			TestPlanID:            row.TestPlanID,
+			TestCaseID:            row.TestCaseID.String(),
+			OwnerID:               row.OwnerID,
+			TestedByID:            row.TestedByID,
+			AssignedToID:          row.AssignedToID,
+			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
+			ExternalIssueID:       row.ExternalIssueID.String,
+			ResultState:           row.ResultState,
+			IsClosed:              row.IsClosed.Bool,
+			Notes:                 row.Notes,
+			ActualResult:          row.ActualResult.String,
+			ExpectedResult:        row.ExpectedResult.String,
+			Reactions:             row.Reactions.RawMessage,
+			TestedOn:              &row.TestedOn,
+			CreatedAt:             row.RunCreatedAt.Time,
+			UpdatedAt:             row.RunUpdatedAt.Time,
+			EnvironmentID:         row.EnvironmentID.Int32,
+		})
+	}
+	return res, nil
+}
+
+func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {
+	params := dbsqlc.SetTestCaseDraftStatusParams{
+		ID:      uuid.MustParse(testCaseID),
+		IsDraft: common.TrueNullBool(),
+	}
+
+	err := t.queries.SetTestCaseDraftStatus(ctx, params)
+	if err != nil {
+		t.logger.Error("failed to update draft status", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (t *testCaseServiceImpl) UnMarkAsDraft(ctx context.Context, testCaseID string) error {
+	params := dbsqlc.SetTestCaseDraftStatusParams{
+		ID:      uuid.MustParse(testCaseID),
+		IsDraft: common.FalseNullBool(),
+	}
+
+	err := t.queries.SetTestCaseDraftStatus(ctx, params)
+	if err != nil {
+		t.logger.Error("failed to update draft status", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error) {
+	rows, err := t.queries.GetTestCaseExecutionSummary(ctx, int32(userID))
+	if err != nil {
+		return nil, err
+	}
+
+	summaries := make([]schema.TestCaseExecutionSummary, 0, len(rows))
+	for _, r := range rows {
+		summaries = append(summaries, schema.TestCaseExecutionSummary{
+			TestCaseID:   r.TestCaseID.String(),
+			UsageCount:   int(r.UsageCount),
+			SuccessCount: int(r.SuccessCount),
+			FailureCount: int(r.FailureCount),
+		})
+	}
+	return summaries, nil
+}
+
+func (t *testCaseServiceImpl) FindAllClosed(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.TrueNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePassed},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllFailing(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.TrueNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateFailed},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllScheduled(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStatePending},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+}
+
+func (t *testCaseServiceImpl) FindAllBlocked(ctx context.Context, projectID int64) ([]schema.TestCaseResponse, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{dbsqlc.TestRunStateBlocked},
+	}
+
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]schema.TestCaseResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, toTestCaseResponse(row))
+	}
+	return responses, nil
+
+}
+
+func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseResponse {
+	return schema.TestCaseResponse{
+		ID:              row.ID.String(),
+		ProjectID:       int64(row.ProjectID.Int32),
+		CreatedByID:     int64(row.CreatedByID),
+		Kind:            string(row.Kind),
+		Code:            row.Code,
+		FeatureOrModule: row.FeatureOrModule.String,
+		Title:           row.Title,
+		Description:     row.Description,
+		IsDraft:         row.IsDraft.Bool,
+		Tags:            row.Tags,
+		CreatedAt:       common.FormatNullTime(row.CreatedAt),
+		UpdatedAt:       common.FormatNullTime(row.UpdatedAt),
+		Status:          row.Status,
+		Result:          string(row.ResultState),
+		ExecutedBy:      int64(row.TestedByID),
+		Notes:           row.Notes,
+	}
+}
+
+func (t *testCaseServiceImpl) GetExistingCodes(ctx context.Context, projectID int64) (map[string]bool, error) {
+	params := dbsqlc.FindTestCasesByProjectIDParams{
+		ProjectID:    common.NewNullInt32(int32(projectID)),
+		IsClosed:     common.FalseNullBool(),
+		ResultStates: []dbsqlc.TestRunState{},
+	}
+	rows, err := t.queries.FindTestCasesByProjectID(ctx, params)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return map[string]bool{}, nil
+		}
+		return nil, err
+	}
+
+	codes := make(map[string]bool, len(rows))
+	for _, tc := range rows {
+		codes[tc.Code] = true
+	}
+	return codes, nil
+}
+
+func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSuggestedTestCaseRequest) (*dbsqlc.TestCase, error) {
+	uuidVal, _ := uuid.NewV7()
+
+	project, err := t.queries.GetProject(ctx, int32(req.ProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch project: %w", err)
+	}
+
+	prefixKey := strings.ToLower(project.Code)
+	if err := t.queries.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.ProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	code, err := GenerateNextCode(ctx, t.queries, req.ProjectID, &project, &req.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	params := dbsqlc.CreateTestCaseParams{
+		ID:              uuidVal,
+		ProjectID:       common.NewNullInt32(int32(req.ProjectID)),
+		Kind:            dbsqlc.TestKind(req.Kind),
+		Code:            code,
+		FeatureOrModule: common.NullString(req.FeatureOrModule),
+		Title:           req.Title,
+		Description:     req.Description,
+		IsDraft:         common.FalseNullBool(),
+		Tags:            req.Tags,
+		CreatedByID:     int32(req.CreatedByID),
+		CreatedAt:       common.NewNullTime(time.Now()),
+		UpdatedAt:       common.NewNullTime(time.Now()),
+		Suggested:       common.TrueNullBool(),
+	}
+
+	_, err = t.queries.CreateTestCase(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	tc, err := t.queries.GetTestCase(ctx, uuidVal)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
+}
+
+func (t *testCaseServiceImpl) FindAllSuggested(ctx context.Context, projectID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.FindAllSuggestedByProject(ctx, dbsqlc.FindAllSuggestedByProjectParams{
+		ProjectID: common.NewNullInt32(int32(projectID)),
+		Suggested: common.TrueNullBool(),
+	})
+}
+
+func (t *testCaseServiceImpl) AcceptSuggested(ctx context.Context, testCaseID string) error {
+	id := uuid.MustParse(testCaseID)
+	return t.queries.UpdateSuggestedFlag(ctx, dbsqlc.UpdateSuggestedFlagParams{
+		ID:        id,
+		Suggested: common.FalseNullBool(),
+	})
+}
+func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID string) error {
+	id := uuid.MustParse(testCaseID)
+	_, err := t.queries.DeleteTestCase(ctx, id)
+	return err
 }

@@ -15,6 +15,7 @@ import (
 type Logger interface {
 	Debug(component loggedmodule.Name, msg string, args ...any)
 	Info(component loggedmodule.Name, msg string, args ...any)
+	Warn(componet loggedmodule.Name, msg string, args ...any)
 	Error(component loggedmodule.Name, msg string, args ...any)
 }
 
@@ -50,6 +51,16 @@ func (l *slogLogger) Info(component loggedmodule.Name, msg string, args ...any) 
 	}
 	newargs := append(args, "component", component)
 	l.logger.Info(msg, newargs...)
+}
+
+// Warn implements Logger.
+func (l *slogLogger) Warn(component loggedmodule.Name, msg string, args ...any) {
+	if args == nil {
+		l.logger.Warn(msg, "component", component)
+		return
+	}
+	newargs := append(args, "component", component)
+	l.logger.Warn(msg, newargs...)
 }
 
 func NewFromConfig(loggingConfig *config.LoggingConfiguration) Logger {
@@ -91,4 +102,12 @@ func CreateLogger(lc *config.LoggingConfiguration) *slog.Logger {
 			Level: GetLoggingLevel(lc),
 		},
 	))
+}
+
+func NewForTest() Logger {
+	return &slogLogger{
+		logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})),
+	}
 }
