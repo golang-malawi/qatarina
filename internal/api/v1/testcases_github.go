@@ -1,11 +1,11 @@
 package v1
 
 import (
-	"context"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -19,23 +19,69 @@ import (
 // @Tags test-cases
 // @Accept json
 // @Produce json
-// @Param request body schema.ImportFromGithubRequest true "GitHub import request"
+// @Param request body schema.ImportIssuesRequest true "GitHub import request"
 // @Success 200 {object} schema.TestCaseListResponse "List of imported test cases"
 // @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
 // @Failure 500 {object} problemdetail.ProblemDetail "Server error"
 // @Router /v1/test-cases/import/github [post]
 func ImportIssuesFromGitHubAsTestCases(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		request := new(schema.ImportFromGithubRequest)
+		request := new(schema.ImportIssuesRequest)
 		_, err := common.ParseBodyThenValidate(c, request)
 		if err != nil {
 			return problemdetail.BadRequest(c, "failed to process request body")
 		}
 
-		testCases, err := githubService.CreateTestCasesFromOpenIssues(context.Background(), request.Owner, request.Repository, request.ProjectID)
+		userID := authutil.GetAuthUserID(c)
+
+		owner, repo, err := common.SplitProject(request.Project)
 		if err != nil {
-			logger.Error("github-api-import", "failed to process data import", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to complete import of issues")
+			return problemdetail.BadRequest(c, err.Error())
+		}
+
+		testCases, err := githubService.CreateTestCasesFromOpenIssues(c.Context(), owner, repo, request.ProjectID, userID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to import issues as test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to import GitHub issues as test cases")
+		}
+		return c.JSON(fiber.Map{
+			"test_cases": testCases,
+		})
+	}
+}
+
+// ImportPullRequestsFromGitHubAsTestCases godoc
+//
+//	@ID				ImportPullRequestsFromGitHubAsTestCases
+//	@Summary		Import GitHub pull requests as test cases
+//	@Description	Import GitHub pull requests as test cases
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.ImportIssuesRequest	true	"GitHub import request"
+//	@Success		200			{object}	schema.TestCaseListResponse	"List of imported test cases"
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/github-import/pull-requests [post]
+func ImportPullRequestsFromGitHubAsTestCases(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.ImportIssuesRequest)
+		_, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to process request body")
+		}
+
+		owner, repo, err := common.SplitProject(request.Project)
+		if err != nil {
+			return problemdetail.BadRequest(c, err.Error())
+		}
+
+		userID := authutil.GetAuthUserID(c)
+
+		testCases, err := githubService.CreateTestCasesFromOpenPullRequests(c.Context(), owner, repo, request.ProjectID, userID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to import pull requests as test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to import GitHub pull requests as test cases")
 		}
 		return c.JSON(fiber.Map{
 			"test_cases": testCases,

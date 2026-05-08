@@ -57,6 +57,7 @@ func NewAPI(config *config.Config) *API {
 	moduleService := services.NewModuleService(dbConn)
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
+	testCaseService := services.NewTestCaseService(rawDB.DB, dbConn, logger)
 
 	return &API{
 		logger:                logger,
@@ -64,7 +65,7 @@ func NewAPI(config *config.Config) *API {
 		Config:                config,
 		AuthService:           services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:       projectService,
-		TestCasesService:      services.NewTestCaseService(rawDB.DB, dbConn, logger),
+		TestCasesService:      testCaseService,
 		TestPlansService:      services.NewTestPlanService(dbConn, logger),
 		TestRunsService:       services.NewTestRunService(rawDB.DB, dbConn, logger),
 		UserService:           services.NewUserService(dbConn, logger, config.SMTP),

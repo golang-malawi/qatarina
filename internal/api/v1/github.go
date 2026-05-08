@@ -6,11 +6,39 @@ import (
 	"encoding/hex"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 )
+
+// GitHubHealth godoc
+//
+//	@ID				GitHubHealth
+//	@Summary		Github integration health check
+//	@Description	Github integration health check
+//	@Tags			github
+//	@Accept			json
+//	@Produce		json
+//	@Success		200			{object}	map[string]any	"Health status"
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/github/health [get]
+func GitHubHealth(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		health, err := githubService.Health(c.Context())
+		if err != nil {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to check GitHub health", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to check GitHub health")
+		}
+
+		return c.JSON(fiber.Map{
+			"status": health,
+		})
+	}
+}
 
 func GitHubWebhook(installationStore services.GitHubService, secret string, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -37,7 +65,7 @@ func GitHubWebhook(installationStore services.GitHubService, secret string, logg
 
 		err := installationStore.UpsertInstallation(c.Context(), int64(idFloat), login)
 		if err != nil {
-			logger.Error("github-webhook", "failed to store installation", "error", err)
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to store installation", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to store installation")
 		}
 
@@ -47,16 +75,29 @@ func GitHubWebhook(installationStore services.GitHubService, secret string, logg
 	}
 }
 
+// ListGitHubIssues godoc
+//
+//	@ID				ListGitHubIssues
+//	@Summary		List GitHub issues
+//	@Description	List GitHub issues
+//	@Tags			github
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.GitHubRepoRequest	true	"GitHub repository request"
+//	@Success		200			{object}	map[string]any	"List of GitHub issues"
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/github/issues [post]
 func ListGitHubIssues(gitHubService services.GitHubService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var req schema.ListGitHubRequest
+		var req schema.GitHubRepoRequest
 		if err := c.BodyParser(&req); err != nil {
 			return problemdetail.BadRequest(c, "invalid request body")
 		}
 
 		issues, err := gitHubService.ListIssues(c.Context(), req.Project)
 		if err != nil {
-			logger.Error("github-list-issues", "failed to list issues", "error", err)
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list issues", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to list GitHub issues")
 		}
 
@@ -66,22 +107,34 @@ func ListGitHubIssues(gitHubService services.GitHubService, logger logging.Logge
 	}
 }
 
+// ListGitHubPullRequest godoc
+//
+//	@ID				ListGitHubPullRequest
+//	@Summary		List GitHub pull requests
+//	@Description	List GitHub pull requests
+//	@Tags			github
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.GitHubRepoRequest	true	"GitHub repository request"
+//	@Success		200			{object}	map[string]any	"List of GitHub pull requests"
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/github/pull-requests [post]
 func ListGitHubPullRequests(gitHubService services.GitHubService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		var req schema.ListGitHubRequest
+		var req schema.GitHubRepoRequest
 		if err := c.BodyParser(&req); err != nil {
 			return problemdetail.BadRequest(c, "invalid request body")
 		}
 
-		parts := splitProject(req.Project)
-		if parts == nil {
-			return problemdetail.BadRequest(c, "invalid project format")
+		owner, repo, err := common.SplitProject(req.Project)
+		if err != nil {
+			return problemdetail.BadRequest(c, err.Error())
 		}
-		owner, repo := parts[0], parts[1]
 
 		prs, err := gitHubService.ListPullRequests(c.Context(), owner, repo)
 		if err != nil {
-			logger.Error("github-list-prs", "failed to list pull requests", "error", err)
+			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list pull requests", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to list GitHub pull requests")
 		}
 
@@ -89,15 +142,6 @@ func ListGitHubPullRequests(gitHubService services.GitHubService, logger logging
 			"pull_requests": prs,
 		})
 	}
-}
-
-func splitProject(project string) []string {
-	for i := range project {
-		if project[i] == '/' {
-			return []string{project[:i], project[i+1:]}
-		}
-	}
-	return nil
 }
 
 func verifySignature(secret, body []byte, signature string) bool {

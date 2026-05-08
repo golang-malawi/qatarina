@@ -81,14 +81,6 @@ type BulkCreateTestCases struct {
 	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required,min=1,max=100"`
 }
 
-type ImportFromGithubRequest struct {
-	Owner          string `json:"owner"`
-	Repository     string `json:"repository"`
-	GitHubToken    string `json:"github_token"`
-	ProjectID      int64  `json:"project_id"`
-	InstallationID int64  `json:"installation_id" validate:"required"`
-}
-
 type TestCaseListResponse struct {
 	TestCases  []TestCaseResponse `json:"test_cases"`
 	Pagination *Pagination        `json:"pagination,omitempty"`

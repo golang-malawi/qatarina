@@ -1183,6 +1183,36 @@ func (q *Queries) GetEnvironment(ctx context.Context, id int32) (Environment, er
 	return i, err
 }
 
+const getFirstInstallation = `-- name: GetFirstInstallation :one
+SELECT installation_id, account_login
+FROM github_installations
+ORDER BY created_at ASC
+LIMIT 1
+`
+
+type GetFirstInstallationRow struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) GetFirstInstallation(ctx context.Context) (GetFirstInstallationRow, error) {
+	row := q.db.QueryRowContext(ctx, getFirstInstallation)
+	var i GetFirstInstallationRow
+	err := row.Scan(&i.InstallationID, &i.AccountLogin)
+	return i, err
+}
+
+const getInstallationIDByAccount = `-- name: GetInstallationIDByAccount :one
+SELECT installation_id FROM github_installations WHERE account_login = $1
+`
+
+func (q *Queries) GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getInstallationIDByAccount, accountLogin)
+	var installation_id int64
+	err := row.Scan(&installation_id)
+	return installation_id, err
+}
+
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
@@ -1216,36 +1246,6 @@ func (q *Queries) GetNextTestCaseSequence(ctx context.Context, arg GetNextTestCa
 	var current_val int32
 	err := row.Scan(&current_val)
 	return current_val, err
-}
-
-const getFirstInstallation = `-- name: GetFirstInstallation :one
-SELECT installation_id, account_login
-FROM github_installations
-ORDER BY created_at ASC
-LIMIT 1
-`
-
-type GetFirstInstallationRow struct {
-	InstallationID int64
-	AccountLogin   string
-}
-
-func (q *Queries) GetFirstInstallation(ctx context.Context) (GetFirstInstallationRow, error) {
-	row := q.db.QueryRowContext(ctx, getFirstInstallation)
-	var i GetFirstInstallationRow
-	err := row.Scan(&i.InstallationID, &i.AccountLogin)
-	return i, err
-}
-
-const getInstallationIDByAccount = `-- name: GetInstallationIDByAccount :one
-SELECT installation_id FROM github_installations WHERE account_login = $1
-`
-
-func (q *Queries) GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getInstallationIDByAccount, accountLogin)
-	var installation_id int64
-	err := row.Scan(&installation_id)
-	return installation_id, err
 }
 
 const getOneModule = `-- name: GetOneModule :one
@@ -2140,6 +2140,131 @@ func (q *Queries) IsTestCaseUsedInTestRun(ctx context.Context, testCaseID uuid.U
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const isTestPlanActive = `-- name: IsTestPlanActive :one
+SELECT closed_at, is_complete
+FROM test_plans
+WHERE id = $1
+`
+
+type IsTestPlanActiveRow struct {
+	ClosedAt   sql.NullTime
+	IsComplete sql.NullBool
+}
+
+func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanActiveRow, error) {
+	row := q.db.QueryRowContext(ctx, isTestPlanActive, id)
+	var i IsTestPlanActiveRow
+	err := row.Scan(&i.ClosedAt, &i.IsComplete)
+	return i, err
+}
+
+const listEnvironmentsByProject = `-- name: ListEnvironmentsByProject :many
+SELECT id, project_id, name, description, base_url, created_at, updated_at FROM environments WHERE project_id = $1 ORDER BY name
+`
+
+func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.NullInt32) ([]Environment, error) {
+	rows, err := q.db.QueryContext(ctx, listEnvironmentsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Environment
+	for rows.Next() {
+		var i Environment
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.BaseUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInstallations = `-- name: ListInstallations :many
+SELECT installation_id, account_login
+FROM github_installations
+`
+
+type ListInstallationsRow struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) ListInstallations(ctx context.Context) ([]ListInstallationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listInstallations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListInstallationsRow
+	for rows.Next() {
+		var i ListInstallationsRow
+		if err := rows.Scan(&i.InstallationID, &i.AccountLogin); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrgs = `-- name: ListOrgs :many
+SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
+FROM orgs
+ORDER BY name
+`
+
+func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
+	rows, err := q.db.QueryContext(ctx, listOrgs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Org
+	for rows.Next() {
+		var i Org
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.Country,
+			&i.GithubUrl,
+			&i.WebsiteUrl,
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProjects = `-- name: ListProjects :many

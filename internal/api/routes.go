@@ -106,7 +106,8 @@ func (api *API) routes() {
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
-		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.GitHubService, api.logger))
+		testCasesV1.Post("/github-import/issues", apiv1.ImportIssuesFromGitHubAsTestCases(api.GitHubService, api.logger))
+		testCasesV1.Post("/github-import/pull-requests", apiv1.ImportPullRequestsFromGitHubAsTestCases(api.GitHubService, api.logger))
 		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
 		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
@@ -171,11 +172,6 @@ func (api *API) routes() {
 		settingsApi.Patch("/:settingKey", apiv1.UpdateSetting(api.Config))
 	}
 
-	frontendAssets, err := fs.Sub(ui.FrontendDistFS, "dist")
-	if err != nil {
-		panic(fmt.Errorf("failed to embed dist directory, cannot start Server. Got %v", err))
-	}
-
 	dashboardApi := router.Group("/v1/dashboard", authenticationMiddleware)
 	{
 		dashboardApi.Get("/summary", apiv1.DashboardSummary(api.DashboardService, api.logger))
@@ -183,18 +179,24 @@ func (api *API) routes() {
 
 	githubIntegrationV1 := router.Group("/v1/github", authenticationMiddleware)
 	{
+		githubIntegrationV1.Get("/health", apiv1.GitHubHealth(api.GitHubService, api.logger))
 		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.GitHubService, api.logger))
 		githubIntegrationV1.Post("/pull-requests", apiv1.ListGitHubPullRequests(api.GitHubService, api.logger))
-		environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
-		{
-			environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
-		}
-
-		// Serves the app at the root path  "/"
-		router.Use(filesystem.New(filesystem.Config{
-			Root:         http.FS(frontendAssets),
-			Browse:       false,
-			NotFoundFile: "index.html",
-		}))
 	}
+
+	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
+	{
+		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
+	}
+
+	frontendAssets, err := fs.Sub(ui.FrontendDistFS, "dist")
+	if err != nil {
+		panic(fmt.Errorf("failed to embed dist directory, cannot start Server. Got %v", err))
+	}
+	// Serves the app at the root path  "/"
+	router.Use(filesystem.New(filesystem.Config{
+		Root:         http.FS(frontendAssets),
+		Browse:       false,
+		NotFoundFile: "index.html",
+	}))
 }
