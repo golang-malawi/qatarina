@@ -40,6 +40,13 @@ export const createTestCaseFields = (): FieldConfig[] => [
     required: true,
   },
   {
+    name: "script_file",
+    label: "Attach Basi/Playwright Script",
+    type: "file",
+    accept: ".basi, .yaml, yml",
+    helperText: "Upload a Basi/Playwright script file for this test case"
+  },
+  {
     name: "tags",
     label: "Tags",
     type: "text",
@@ -51,5 +58,5 @@ export const createTestCaseFields = (): FieldConfig[] => [
     label: "Is Draft",
     type: "checkbox",
     helperText: "Mark this test case as a draft",
-  },
+  }
 ];

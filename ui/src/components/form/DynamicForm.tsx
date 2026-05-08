@@ -37,7 +37,8 @@ export type FieldType =
   | "feature-module-type"
   | "custom"
   | "array"
-  | "markdown-textarea";
+  | "markdown-textarea"
+  | "file";
 
 export interface FieldConfig {
   name: string;
@@ -55,6 +56,7 @@ export interface FieldConfig {
     onBlur: () => void;
   }) => ReactNode;
   fields?: FieldConfig[]; // for array type
+  accept?: string;
 }
 
 export interface FormConfig<T extends z.ZodTypeAny> {
@@ -329,6 +331,18 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                   />
                   <span>{label}</span>
                 </label>
+              )}
+
+              {type === "file" &&(
+                <Input
+                type="file"
+                accept={fieldConfig.accept}
+                onBlur={field.handleBlur}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  field.handleChange(file);
+                }}
+              />
               )}
 
               {[

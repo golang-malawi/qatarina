@@ -1,4 +1,4 @@
-import { Box, Heading, Spinner, Text} from "@chakra-ui/react";
+import { Box, Heading, Spinner, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCreateTestCaseMutation } from "@/services/TestCaseService";
@@ -25,19 +25,31 @@ function NewTestCases() {
   const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
 
   async function handleSubmit(values: TestCaseCreationFormData) {
-    // Handle tags - if it's a string, split it, otherwise use as is
     const tags =
       typeof values.tags === "string"
-        ? values.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
+        ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : values.tags || [];
 
-  try {
-    const res = await createTestCaseMutation.mutateAsync({
-      body: {
-        project_id: parseInt(`${project_id}`),
+    let body:any;
+
+    if (values.script_file) {
+      // File present - use FormData
+      const formData = new FormData();
+      formData.append("project_id", project_id.toString());
+      formData.append("kind", values.kind);
+      formData.append("code", values.code ?? "");
+      formData.append("feature_or_module", values.feature_or_module);
+      formData.append("title", values.title);
+      formData.append("description", values.description);
+      formData.append("is_draft", (values.is_draft ?? false).toString());
+      tags.forEach((tag) => formData.append("tags", tag));
+      formData.append("script_file", values.script_file);
+
+      body = formData;
+    } else {
+      // No file - send JSON
+      body = {
+        project_id: Number(project_id),
         kind: values.kind,
         code: values.code,
         feature_or_module: values.feature_or_module,
@@ -45,29 +57,32 @@ function NewTestCases() {
         description: values.description,
         is_draft: values.is_draft ?? false,
         tags,
-      },
-    });
+      };
+    }
 
-    if (res) {
+    try {
+      const res = await createTestCaseMutation.mutateAsync({ body });
+
+      if (res) {
+        toaster.create({
+          title: "Test Case created.",
+          description: "We've created your Test Case.",
+          type: "success",
+          duration: 3000,
+        });
+        redirect({
+          to: "/projects/$projectId/test-cases",
+          params: { projectId: `${project_id}` },
+        });
+      }
+    } catch (err) {
       toaster.create({
-        title: "Test Case created.",
-        description: "We've created your Test Case.",
-        type: "success",
-        duration: 3000,
-      });
-      redirect({
-        to: "/projects/$projectId/test-cases",
-        params: { projectId: `${project_id}` },
+        title: "Failed to create test case",
+        description: (err as Error).message,
+        type: "error",
+        duration: 4000,
       });
     }
-  } catch (err) {
-    toaster.create({
-      title: "Failed to create test case",
-      description: (err as Error).message,
-      type: "error",
-      duration: 4000,
-    });
-  }   
   }
 
   if (isLoading) {
@@ -101,7 +116,9 @@ function NewTestCases() {
           tags: [],
           is_draft: false,
         }}
-      />      
+      />
     </Box>
   );
 }
+
+export default NewTestCases;

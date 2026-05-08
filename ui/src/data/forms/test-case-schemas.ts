@@ -8,6 +8,7 @@ export const testCaseCreationSchema = z.object({
   description: z.string().min(1, "Description is required"),
   tags: z.union([z.string(), z.array(z.string())]).optional().default([]),
   is_draft: z.boolean().optional().default(false),
+  script_file: z.any().optional(),
 });
 
 export type TestCaseCreationFormData = z.infer<typeof testCaseCreationSchema>;
