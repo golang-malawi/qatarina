@@ -6,9 +6,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -18,6 +21,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
+	"github.com/golang-malawi/qatarina/internal/validation"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 	"github.com/google/uuid"
 )
@@ -149,28 +153,122 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Summary		Create a new Test Case
 //	@Description	Create a new Test Case
 //	@Tags			test-cases
-//	@Accept			json
+//	@Accept			json,multipart/form-data
 //	@Produce		json
 //	@Param			request	body		schema.CreateTestCaseRequest	true	"Create Test Case data"
+//	@Param			script_file	formData	file	false	"Script file"
 //	@Success		200		{object}	schema.TestCaseResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [post]
-func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+func CreateTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
-		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
-			if validationErrors {
-				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+
+		// Check if a script file is uploaded
+		fileHeader, err := c.FormFile("script_file")
+		hasFile := err == nil && fileHeader != nil
+
+		if hasFile {
+			// Parse from multipart form
+			form, err := c.MultipartForm()
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to parse multipart form", "error", err)
+				return problemdetail.BadRequest(c, "failed to parse multipart form")
 			}
-			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
-			return problemdetail.BadRequest(c, "failed to parse data in request")
+
+			// Populate request from form values
+			if vals, ok := form.Value["project_id"]; ok && len(vals) > 0 {
+				if pid, err := strconv.ParseInt(vals[0], 10, 64); err == nil {
+					request.ProjectID = pid
+				}
+			}
+			if vals, ok := form.Value["kind"]; ok && len(vals) > 0 {
+				request.Kind = vals[0]
+			}
+			if vals, ok := form.Value["code"]; ok && len(vals) > 0 {
+				request.Code = vals[0]
+			}
+			if vals, ok := form.Value["feature_or_module"]; ok && len(vals) > 0 {
+				request.FeatureOrModule = vals[0]
+			}
+			if vals, ok := form.Value["title"]; ok && len(vals) > 0 {
+				request.Title = vals[0]
+			}
+			if vals, ok := form.Value["description"]; ok && len(vals) > 0 {
+				request.Description = vals[0]
+			}
+			if vals, ok := form.Value["is_draft"]; ok && len(vals) > 0 {
+				if draft, err := strconv.ParseBool(vals[0]); err == nil {
+					request.IsDraft = draft
+				}
+			}
+			if vals, ok := form.Value["tags"]; ok {
+				request.Tags = vals
+			} else {
+				request.Tags = []string{}
+			}
+
+			// Validate the struct
+			if errors := validation.ValidateStruct(request); errors != nil {
+				return problemdetail.ValidationErrors(c, "invalid data in request", errors)
+			}
+		} else {
+			// Parse from JSON
+			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+				if validationErrors {
+					return problemdetail.ValidationErrors(c, "invalid data in request", err)
+				}
+				logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
+				return problemdetail.BadRequest(c, "failed to parse data in request")
+			}
 		}
 
 		testCase, err := testCaseService.Create(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
+		}
+
+		// if file uploaded, forward to runner
+		if hasFile {
+			file, _ := fileHeader.Open()
+			defer file.Close()
+
+			runnerURL := "http://qatarina-runner:8080/run?runner=basi"
+			resp, err := http.Post(runnerURL, "application/octet-stream", file)
+			if err == nil {
+				output, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+
+				runReq := &schema.TestRunRequest{
+					ProjectID:    int32(request.ProjectID),
+					TestPlanID:   0,
+					TestCaseID:   testCase.ID.String(),
+					OwnerID:      int32(testCase.CreatedByID),
+					TestedByID:   int32(testCase.CreatedByID),
+					AssignedToID: int32(testCase.CreatedByID),
+					Code:         testCase.Code,
+				}
+
+				createdRun, err := testRunService.Create(c.Context(), runReq)
+				if err != nil {
+					logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
+					return problemdetail.ServerErrorProblem(c, "failed to create test run")
+				}
+
+				commitReq := &schema.CommitTestRunResult{
+					TestRunID:      createdRun.ID.String(),
+					Notes:          "Auto-executed on creation via script",
+					IsClosed:       true,
+					TestedOn:       time.Now(),
+					ActualResult:   string(output),
+					ExpectedResult: "Script assertions",
+					State:          determineStateFromBasiOutput(string(output)),
+				}
+
+				_, _ = testRunService.Commit(c.Context(), commitReq)
+			}
 		}
 
 		return c.JSON(schema.NewTestCaseResponse(testCase))
@@ -659,4 +757,15 @@ func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 			"message": "Suggested test case rejected",
 		})
 	}
+}
+
+// determineStateFromBasiOutput inpects the runner output and decides pass/fail
+func determineStateFromBasiOutput(output string) dbsqlc.TestRunState {
+	// if output contains "error" or "failed", mark as failed
+	lowered := strings.ToLower(output)
+	if strings.Contains(lowered, "error") || strings.Contains(lowered, "fail") {
+		return dbsqlc.TestRunStateFailed
+	}
+	return dbsqlc.TestRunStatePassed
+
 }

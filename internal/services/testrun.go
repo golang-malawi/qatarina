@@ -21,7 +21,7 @@ type TestRunService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestRun, error)
 	Commit(context.Context, *schema.CommitTestRunResult) (*dbsqlc.TestRun, error)
 	CommitBulk(context.Context, *schema.BulkCommitTestResults) (bool, error)
-	Create(context.Context, *schema.TestRunRequest) (bool, error)
+	Create(context.Context, *schema.TestRunRequest) (*dbsqlc.TestRun, error)
 	GetOneTestRun(context.Context, string) (*dbsqlc.TestRun, error)
 	// CreateFromFailedTest records tests without necessarily first creating TestCases.
 	//
@@ -52,9 +52,10 @@ func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) 
 }
 
 // Create implements TestRunService
-func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
+func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (*dbsqlc.TestRun, error) {
+	id := uuid.New()
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
-		ID:            uuid.New(),
+		ID:            id,
 		ProjectID:     request.ProjectID,
 		TestPlanID:    request.TestPlanID,
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
@@ -67,10 +68,15 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 		EnvironmentID: common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to create page %w", err)
+		return nil, fmt.Errorf("failed to create page %w", err)
 	}
 
-	return true, nil
+	run, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch creatd test run: %w", err)
+	}
+
+	return &run, nil
 }
 
 // FindAll implements TestRunService.

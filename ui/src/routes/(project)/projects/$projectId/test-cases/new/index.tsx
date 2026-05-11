@@ -110,7 +110,7 @@ function NewTestCases() {
         defaultValues={{
           title: "",
           code: "",
-          feature_or_module: "",
+          feature_or_module: "Feature",
           kind: "",
           description: data?.test_case_template ?? "",
           tags: [],
