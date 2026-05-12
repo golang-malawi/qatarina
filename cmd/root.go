@@ -90,7 +90,7 @@ func initConfig() {
 
 	pemBytes, err := os.ReadFile(qatarinaConfig.GitHub.PrivateKeyPath)
 	if err != nil {
-		fmt.Println("Failed to read GitHub App private key:", err)
+		fmt.Printf("Failed to read GitHub App private key at %s: %v\n", qatarinaConfig.GitHub.PrivateKeyPath, err)
 		os.Exit(1)
 	}
 	qatarinaConfig.GitHub.PrivateKeyPEM = string(pemBytes)

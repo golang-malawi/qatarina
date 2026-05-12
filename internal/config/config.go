@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -142,6 +143,11 @@ func (c *Config) GetInstallationToken(installationID int64) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("failed to get installation token: %s %s", resp.Status, string(body))
+	}
 
 	var result struct {
 		Token string `json:"token"`
