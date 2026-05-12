@@ -4318,10 +4318,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Create Test Case data */
-        requestBody: {
+        /** @description Script file */
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["schema.CreateTestCaseRequest"];
+                "application/json": Record<string, never>;
+                "multipart/form-data": Record<string, never>;
             };
         };
         responses: {

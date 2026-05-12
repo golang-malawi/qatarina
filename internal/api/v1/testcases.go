@@ -2,12 +2,15 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -165,6 +168,9 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
 
+		userID := authutil.GetAuthUserID(c)
+		request.CreatedByID = strconv.Itoa(int(userID))
+
 		// Check if a script file is uploaded
 		fileHeader, err := c.FormFile("script_file")
 		hasFile := err == nil && fileHeader != nil
@@ -235,39 +241,74 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			file, _ := fileHeader.Open()
 			defer file.Close()
 
-			runnerURL := "http://qatarina-runner:8080/run?runner=basi"
-			resp, err := http.Post(runnerURL, "application/octet-stream", file)
-			if err == nil {
-				output, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
+			// Create a buffer and multipart writer
+			var buf bytes.Buffer
+			writer := multipart.NewWriter(&buf)
 
-				runReq := &schema.TestRunRequest{
-					ProjectID:    int32(request.ProjectID),
-					TestPlanID:   0,
-					TestCaseID:   testCase.ID.String(),
-					OwnerID:      int32(testCase.CreatedByID),
-					TestedByID:   int32(testCase.CreatedByID),
-					AssignedToID: int32(testCase.CreatedByID),
-					Code:         testCase.Code,
+			// Add file to form
+			formFile, err := writer.CreateFormFile("file", fileHeader.Filename)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to create form file", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to process script file")
+			}
+
+			_, err = io.Copy(formFile, file)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to copy file to form", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to process script file")
+			}
+
+			writer.Close()
+
+			runnerURL := "http://localhost:8080/run?runner=basi"
+			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
+			var output string
+			var state dbsqlc.TestRunState
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to post to runner", "error", err)
+				output = "Failed to connect to runner"
+				state = dbsqlc.TestRunStateFailed
+			} else {
+				defer resp.Body.Close()
+				body, _ := io.ReadAll(resp.Body)
+				output = string(body)
+				if resp.StatusCode != 200 {
+					logger.Error(loggedmodule.ApiTestCases, "runner returned non-200 status", "status", resp.StatusCode, "output", output)
+					state = dbsqlc.TestRunStateFailed
+				} else {
+					state = determineStateFromBasiOutput(output)
 				}
+			}
 
-				createdRun, err := testRunService.Create(c.Context(), runReq)
-				if err != nil {
-					logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
-					return problemdetail.ServerErrorProblem(c, "failed to create test run")
-				}
+			runReq := &schema.TestRunRequest{
+				ProjectID:    int32(request.ProjectID),
+				TestPlanID:   0,
+				TestCaseID:   testCase.ID.String(),
+				OwnerID:      int32(userID),
+				TestedByID:   int32(userID),
+				AssignedToID: int32(userID),
+				Code:         testCase.Code,
+			}
 
-				commitReq := &schema.CommitTestRunResult{
-					TestRunID:      createdRun.ID.String(),
-					Notes:          "Auto-executed on creation via script",
-					IsClosed:       true,
-					TestedOn:       time.Now(),
-					ActualResult:   string(output),
-					ExpectedResult: "Script assertions",
-					State:          determineStateFromBasiOutput(string(output)),
-				}
+			createdRun, err := testRunService.Create(c.Context(), runReq)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to create test run")
+			}
 
-				_, _ = testRunService.Commit(c.Context(), commitReq)
+			commitReq := &schema.CommitTestRunResult{
+				TestRunID:      createdRun.ID.String(),
+				Notes:          "Auto-executed on creation via script",
+				IsClosed:       true,
+				TestedOn:       time.Now(),
+				ActualResult:   output,
+				ExpectedResult: "Script assertions",
+				State:          state,
+			}
+
+			if _, err := testRunService.Commit(c.Context(), commitReq); err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to commit test run result", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to commit test run result")
 			}
 		}
 
@@ -759,13 +800,26 @@ func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 	}
 }
 
-// determineStateFromBasiOutput inpects the runner output and decides pass/fail
+// determineStateFromBasiOutput inspects the runner output and decides pass/fail
 func determineStateFromBasiOutput(output string) dbsqlc.TestRunState {
-	// if output contains "error" or "failed", mark as failed
+	// Try to parse as JSON first
+	type RunnerResult struct {
+		Result string `json:"result"`
+	}
+	var result RunnerResult
+	if err := json.Unmarshal([]byte(output), &result); err == nil {
+		lowered := strings.ToLower(result.Result)
+		if lowered == "pass" || lowered == "passed" || lowered == "success" {
+			return dbsqlc.TestRunStatePassed
+		}
+		if lowered == "fail" || lowered == "failed" || lowered == "error" {
+			return dbsqlc.TestRunStateFailed
+		}
+	}
+	// Fallback to string contains
 	lowered := strings.ToLower(output)
 	if strings.Contains(lowered, "error") || strings.Contains(lowered, "fail") {
 		return dbsqlc.TestRunStateFailed
 	}
 	return dbsqlc.TestRunStatePassed
-
 }

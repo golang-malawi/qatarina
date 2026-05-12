@@ -118,9 +118,9 @@ func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse 
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID),
+		TestPlanID:     int64(tr.TestPlanID.Int32),
 		TestCaseID:     tr.TestCaseID.String(),
-		TestedByID:     tr.TestedByID,
+		TestedByID:     tr.TestedByID.Int32,
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),
 		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
@@ -138,7 +138,7 @@ func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID),
+		TestPlanID:     int64(tr.TestPlanID.Int32),
 		TestCaseID:     tr.TestCaseID.String(),
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),

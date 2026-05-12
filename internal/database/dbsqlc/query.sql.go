@@ -176,7 +176,7 @@ RETURNING id
 
 type CommitTestRunResultParams struct {
 	ID             uuid.UUID
-	TestedByID     int32
+	TestedByID     sql.NullInt32
 	UpdatedAt      sql.NullTime
 	ResultState    TestRunState
 	IsClosed       sql.NullBool
@@ -279,7 +279,7 @@ id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_
 result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
-$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+$1, $2, NULLIF($3, 0), $4, $5, $6, $7, $8, $9, $10,
 'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
 )
 RETURNING id
@@ -288,10 +288,10 @@ RETURNING id
 type CreateNewTestRunParams struct {
 	ID            uuid.UUID
 	ProjectID     int32
-	TestPlanID    int32
+	TestPlanID    interface{}
 	TestCaseID    uuid.UUID
 	OwnerID       int32
-	TestedByID    int32
+	TestedByID    sql.NullInt32
 	AssignedToID  int32
 	Code          string
 	CreatedAt     sql.NullTime
@@ -838,7 +838,7 @@ WHERE id = $1
 type ExecuteTestRunParams struct {
 	ID             uuid.UUID
 	ResultState    TestRunState
-	TestedByID     int32
+	TestedByID     sql.NullInt32
 	Notes          string
 	ActualResult   sql.NullString
 	ExpectedResult sql.NullString
@@ -944,7 +944,7 @@ type FindTestCasesByProjectIDRow struct {
 	RunID           uuid.UUID
 	ResultState     TestRunState
 	IsClosed        sql.NullBool
-	TestedByID      int32
+	TestedByID      sql.NullInt32
 	Notes           string
 }
 
@@ -1508,7 +1508,7 @@ type GetTestCaseExecutionSummaryRow struct {
 	FailureCount int64
 }
 
-func (q *Queries) GetTestCaseExecutionSummary(ctx context.Context, executedBy int32) ([]GetTestCaseExecutionSummaryRow, error) {
+func (q *Queries) GetTestCaseExecutionSummary(ctx context.Context, executedBy sql.NullInt32) ([]GetTestCaseExecutionSummaryRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTestCaseExecutionSummary, executedBy)
 	if err != nil {
 		return nil, err
@@ -1578,7 +1578,7 @@ type GetTestCasesWithPlanInfoRow struct {
 	TesterIds       []int64
 }
 
-func (q *Queries) GetTestCasesWithPlanInfo(ctx context.Context, testPlanID int32) ([]GetTestCasesWithPlanInfoRow, error) {
+func (q *Queries) GetTestCasesWithPlanInfo(ctx context.Context, testPlanID sql.NullInt32) ([]GetTestCasesWithPlanInfoRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTestCasesWithPlanInfo, testPlanID)
 	if err != nil {
 		return nil, err
@@ -1632,11 +1632,11 @@ GROUP BY tc.id, tc.title, tr.test_plan_id
 type GetTestCasesWithTestersByPlanRow struct {
 	TestCaseID uuid.UUID
 	Title      string
-	TestPlanID int32
+	TestPlanID sql.NullInt32
 	TesterIds  []int64
 }
 
-func (q *Queries) GetTestCasesWithTestersByPlan(ctx context.Context, testPlanID int32) ([]GetTestCasesWithTestersByPlanRow, error) {
+func (q *Queries) GetTestCasesWithTestersByPlan(ctx context.Context, testPlanID sql.NullInt32) ([]GetTestCasesWithTestersByPlanRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTestCasesWithTestersByPlan, testPlanID)
 	if err != nil {
 		return nil, err
@@ -1751,7 +1751,7 @@ type GetTestPlanRunStatsRow struct {
 	AssignedTestersCount int64
 }
 
-func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID int32) (GetTestPlanRunStatsRow, error) {
+func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID sql.NullInt32) (GetTestPlanRunStatsRow, error) {
 	row := q.db.QueryRowContext(ctx, getTestPlanRunStats, testPlanID)
 	var i GetTestPlanRunStatsRow
 	err := row.Scan(
@@ -1823,7 +1823,7 @@ type GetTestRunStatesForPlanRow struct {
 	IsClosed    sql.NullBool
 }
 
-func (q *Queries) GetTestRunStatesForPlan(ctx context.Context, testPlanID int32) ([]GetTestRunStatesForPlanRow, error) {
+func (q *Queries) GetTestRunStatesForPlan(ctx context.Context, testPlanID sql.NullInt32) ([]GetTestRunStatesForPlanRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTestRunStatesForPlan, testPlanID)
 	if err != nil {
 		return nil, err
@@ -2039,7 +2039,7 @@ type InsertTestRunResultParams struct {
 	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
-	ExecutedBy int32
+	ExecutedBy sql.NullInt32
 	ExecutedAt time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -2357,9 +2357,9 @@ type ListTestCasesByAssignedUserRow struct {
 	TestCaseUpdatedAt     sql.NullTime
 	ProjectID             sql.NullInt32
 	TestRunID             uuid.UUID
-	TestPlanID            int32
+	TestPlanID            sql.NullInt32
 	OwnerID               int32
-	TestedByID            int32
+	TestedByID            sql.NullInt32
 	AssignedToID          int32
 	AssigneeCanChangeCode sql.NullBool
 	ExternalIssueID       sql.NullString
@@ -2830,10 +2830,10 @@ ORDER BY tr.created_at DESC
 type ListTestRunsByPlanRow struct {
 	ID             uuid.UUID
 	ProjectID      int32
-	TestPlanID     int32
+	TestPlanID     sql.NullInt32
 	TestCaseID     uuid.UUID
 	OwnerID        int32
-	TestedByID     int32
+	TestedByID     sql.NullInt32
 	AssignedToID   int32
 	Code           string
 	ResultState    TestRunState
@@ -2849,7 +2849,7 @@ type ListTestRunsByPlanRow struct {
 	ExecutedBy     sql.NullString
 }
 
-func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID int32) ([]ListTestRunsByPlanRow, error) {
+func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID sql.NullInt32) ([]ListTestRunsByPlanRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTestRunsByPlan, testPlanID)
 	if err != nil {
 		return nil, err

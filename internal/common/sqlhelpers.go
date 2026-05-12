@@ -22,7 +22,7 @@ func NewNullBool(b bool) sql.NullBool {
 }
 
 func NewNullInt32(i int32) sql.NullInt32 {
-	return sql.NullInt32{Int32: i, Valid: true}
+	return sql.NullInt32{Int32: i, Valid: i != 0}
 }
 
 func NewNullTime(t time.Time) sql.NullTime {

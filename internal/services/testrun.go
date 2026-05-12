@@ -57,10 +57,10 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
 		ID:            id,
 		ProjectID:     request.ProjectID,
-		TestPlanID:    request.TestPlanID,
+		TestPlanID:    sql.NullInt32{Int32: request.TestPlanID, Valid: request.TestPlanID != 0},
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
 		OwnerID:       request.OwnerID,
-		TestedByID:    request.TestedByID,
+		TestedByID:    common.NewNullInt32(request.TestedByID),
 		AssignedToID:  request.AssignedToID,
 		Code:          request.Code,
 		CreatedAt:     common.NullTime(time.Now()),
@@ -98,7 +98,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 
 	_, err = t.queries.CommitTestRunResult(ctx, dbsqlc.CommitTestRunResultParams{
 		ID:             uuid.MustParse(request.TestRunID),
-		TestedByID:     int32(request.UserID),
+		TestedByID:     common.NewNullInt32(int32(request.UserID)),
 		Notes:          request.Notes,
 		UpdatedAt:      common.NullTime(time.Now()),
 		ResultState:    request.State,
@@ -119,7 +119,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 		Status:     request.State,
 		Result:     request.ActualResult,
 		Notes:      common.NullString(request.Notes),
-		ExecutedBy: int32(request.UserID),
+		ExecutedBy: common.NewNullInt32(int32(request.UserID)),
 		ExecutedAt: request.TestedOn,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -185,7 +185,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
 		ID:             runUUID,
 		ResultState:    dbsqlc.TestRunState(request.Status),
-		TestedByID:     int32(request.ExecutedBy),
+		TestedByID:     common.NewNullInt32(int32(request.ExecutedBy)),
 		Notes:          request.Notes,
 		ActualResult:   common.NullString(request.Result),
 		ExpectedResult: common.NullString(request.ExpectedResult),
@@ -202,7 +202,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		Status:     dbsqlc.TestRunState(request.Status),
 		Result:     request.Result,
 		Notes:      common.NullString(request.Notes),
-		ExecutedBy: int32(request.ExecutedBy),
+		ExecutedBy: common.NewNullInt32(int32(request.ExecutedBy)),
 		ExecutedAt: time.Now(),
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),

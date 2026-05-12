@@ -2999,9 +2999,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/schema.CreateTestCaseRequest'
-        description: Create Test Case data
-        required: true
+              type: file
+          multipart/form-data:
+            schema:
+              type: file
+        description: Script file
       responses:
         "200":
           content:

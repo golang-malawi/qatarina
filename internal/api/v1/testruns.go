@@ -303,7 +303,7 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 		}
 
 		// Check if test plan is active
-		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID))
+		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID.Int32))
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", tr.TestPlanID, "testRunID", pathID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "error fetching test plan")

@@ -408,8 +408,8 @@ id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_
 result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
-$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
+@id, @project_id, NULLIF(@test_plan_id, 0), @test_case_id, @owner_id, @tested_by_id, @assigned_to_id, @code, @created_at, @updated_at,
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', @environment_id
 )
 RETURNING id;
 

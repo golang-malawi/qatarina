@@ -323,10 +323,10 @@ type TestPlansCase struct {
 type TestRun struct {
 	ID                    uuid.UUID
 	ProjectID             int32
-	TestPlanID            int32
+	TestPlanID            sql.NullInt32
 	TestCaseID            uuid.UUID
 	OwnerID               int32
-	TestedByID            int32
+	TestedByID            sql.NullInt32
 	AssignedToID          int32
 	AssigneeCanChangeCode sql.NullBool
 	Code                  string
@@ -349,7 +349,7 @@ type TestRunResult struct {
 	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
-	ExecutedBy int32
+	ExecutedBy sql.NullInt32
 	ExecutedAt time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
