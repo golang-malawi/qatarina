@@ -369,6 +369,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/github/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Github integration health check
+         * @description Github integration health check
+         */
+        get: operations["GitHubHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/github/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List GitHub issues
+         * @description List GitHub issues
+         */
+        post: operations["ListGitHubIssues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/github/pull-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List GitHub pull requests
+         * @description List GitHub pull requests
+         */
+        post: operations["ListGitHubPullRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox": {
         parameters: {
             query?: never;
@@ -1235,6 +1295,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/github-import/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import GitHub issues as test cases
+         * @description Imports open issues from a GitHub repository as test cases for a project
+         */
+        post: operations["ImportIssuesFromGitHubAsTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/github-import/pull-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import GitHub pull requests as test cases
+         * @description Import GitHub pull requests as test cases
+         */
+        post: operations["ImportPullRequestsFromGitHubAsTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/import-file": {
         parameters: {
             query?: never;
@@ -1249,26 +1349,6 @@ export interface paths {
          * @description Import test cases from Excel or CSV file
          */
         post: operations["ImportTestCasesFromFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/test-cases/import/github": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Import GitHub issues as test cases
-         * @description Imports open issues from a GitHub repository as test cases for a project
-         */
-        post: operations["ImportIssuesFromGitHubAsTestCases"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1975,16 +2055,18 @@ export interface components {
             result: string;
             status: string;
         };
+        "schema.GitHubRepoRequest": {
+            project: string;
+        };
         "schema.HealthStatus": {
             message?: string;
             status?: string;
             uptime?: number;
         };
-        "schema.ImportFromGithubRequest": {
-            github_token?: string;
-            owner?: string;
-            project_id?: number;
-            repository?: string;
+        "schema.ImportIssuesRequest": {
+            ids?: number[];
+            project: string;
+            project_id: number;
         };
         "schema.ImportProjectRequest": Record<string, never>;
         "schema.LoginRequest": {
@@ -2386,6 +2468,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.EnvironmentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GitHubHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Health status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListGitHubIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GitHub repository request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.GitHubRepoRequest"];
+            };
+        };
+        responses: {
+            /** @description List of GitHub issues */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListGitHubPullRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GitHub repository request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.GitHubRepoRequest"];
+            };
+        };
+        responses: {
+            /** @description List of GitHub pull requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Bad Request */
@@ -4719,6 +4935,92 @@ export interface operations {
             };
         };
     };
+    ImportIssuesFromGitHubAsTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GitHub import request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ImportIssuesRequest"];
+            };
+        };
+        responses: {
+            /** @description List of imported test cases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ImportPullRequestsFromGitHubAsTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GitHub import request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ImportIssuesRequest"];
+            };
+        };
+        responses: {
+            /** @description List of imported test cases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     ImportTestCasesFromFile: {
         parameters: {
             query?: never;
@@ -4754,49 +5056,6 @@ export interface operations {
                 };
             };
             /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
-                };
-            };
-        };
-    };
-    ImportIssuesFromGitHubAsTestCases: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description GitHub import request */
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["schema.ImportFromGithubRequest"];
-            };
-        };
-        responses: {
-            /** @description List of imported test cases */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
-                };
-            };
-            /** @description Server error */
             500: {
                 headers: {
                     [name: string]: unknown;

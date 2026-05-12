@@ -21,8 +21,8 @@ type GitHubService interface {
 	FetchProjects(ctx context.Context) ([]string, error)
 	ListIssues(ctx context.Context, project string) ([]any, error)
 	ListPullRequests(ctx context.Context, owner, repo string) ([]any, error)
-	CreateTestCasesFromOpenIssues(ctx context.Context, owner, repo string, projectID int64, userID int64) ([]dbsqlc.TestCase, error)
-	CreateTestCasesFromOpenPullRequests(ctx context.Context, owner, repo string, projectID int64, userID int64) ([]dbsqlc.TestCase, error)
+	CreateTestCasesFromIssues(ctx context.Context, owner, repo string, issueIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error)
+	CreateTestCasesFromPullRequests(ctx context.Context, owner, repo string, prIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error)
 
 	// Health check
 	Health(ctx context.Context) (string, error)
@@ -167,7 +167,7 @@ func (g *githubServiceImpl) ListPullRequests(ctx context.Context, owner, repo st
 	return results, nil
 }
 
-func (g *githubServiceImpl) CreateTestCasesFromOpenIssues(ctx context.Context, owner, repo string, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
+func (g *githubServiceImpl) CreateTestCasesFromIssues(ctx context.Context, owner, repo string, issueIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
 	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
 		State:     "open",
 		Sort:      "created_at",
@@ -184,11 +184,19 @@ func (g *githubServiceImpl) CreateTestCasesFromOpenIssues(ctx context.Context, o
 		return nil, err
 	}
 
+	selected := make(map[int64]bool)
+	for _, id := range issueIDs {
+		selected[id] = true
+	}
+
 	testCases := make([]dbsqlc.TestCase, 0)
 	for _, issue := range issues {
+		if len(selected) > 0 && !selected[issue.GetID()] {
+			continue
+		}
+
 		labelsToTags := make([]string, 0)
 		for _, label := range issue.Labels {
-
 			if label.Name != nil {
 				labelsToTags = append(labelsToTags, *label.Name)
 			}
@@ -212,7 +220,7 @@ func (g *githubServiceImpl) CreateTestCasesFromOpenIssues(ctx context.Context, o
 			FeatureOrModule: "none",
 			Title:           title,
 			Description:     body,
-			IsDraft:         true,
+			IsDraft:         false,
 			Tags:            labelsToTags,
 			CreatedByID:     fmt.Sprintf("%d", userID),
 		})
@@ -226,7 +234,7 @@ func (g *githubServiceImpl) CreateTestCasesFromOpenIssues(ctx context.Context, o
 	return testCases, nil
 }
 
-func (g *githubServiceImpl) CreateTestCasesFromOpenPullRequests(ctx context.Context, owner, repo string, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
+func (g *githubServiceImpl) CreateTestCasesFromPullRequests(ctx context.Context, owner, repo string, prIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
 	prs, _, err := g.client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
 		State:     "open",
 		Sort:      "created_at",
@@ -242,11 +250,19 @@ func (g *githubServiceImpl) CreateTestCasesFromOpenPullRequests(ctx context.Cont
 		return nil, fmt.Errorf("failed to list pull requests: %w", err)
 	}
 
+	selected := make(map[int64]bool)
+	for _, id := range prIDs {
+		selected[id] = true
+	}
+
 	testCases := make([]dbsqlc.TestCase, 0)
 	for _, pr := range prs {
+		if len(selected) > 0 && !selected[pr.GetID()] {
+			continue
+		}
+
 		labelsToTags := make([]string, 0)
 		for _, label := range pr.Labels {
-
 			if label.Name != nil {
 				labelsToTags = append(labelsToTags, *label.Name)
 			}
@@ -270,7 +286,7 @@ func (g *githubServiceImpl) CreateTestCasesFromOpenPullRequests(ctx context.Cont
 			FeatureOrModule: "none",
 			Title:           title,
 			Description:     body,
-			IsDraft:         true,
+			IsDraft:         false,
 			Tags:            labelsToTags,
 			CreatedByID:     fmt.Sprintf("%d", userID),
 		})

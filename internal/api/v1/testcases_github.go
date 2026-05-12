@@ -23,7 +23,7 @@ import (
 // @Success 200 {object} schema.TestCaseListResponse "List of imported test cases"
 // @Failure 400 {object} problemdetail.ProblemDetail "Invalid request"
 // @Failure 500 {object} problemdetail.ProblemDetail "Server error"
-// @Router /v1/test-cases/import/github [post]
+// @Router /v1/test-cases/github-import/issues [post]
 func ImportIssuesFromGitHubAsTestCases(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ImportIssuesRequest)
@@ -39,7 +39,7 @@ func ImportIssuesFromGitHubAsTestCases(githubService services.GitHubService, log
 			return problemdetail.BadRequest(c, err.Error())
 		}
 
-		testCases, err := githubService.CreateTestCasesFromOpenIssues(c.Context(), owner, repo, request.ProjectID, userID)
+		testCases, err := githubService.CreateTestCasesFromIssues(c.Context(), owner, repo, request.IDs, request.ProjectID, userID)
 		if err != nil {
 			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to import issues as test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to import GitHub issues as test cases")
@@ -78,7 +78,7 @@ func ImportPullRequestsFromGitHubAsTestCases(githubService services.GitHubServic
 
 		userID := authutil.GetAuthUserID(c)
 
-		testCases, err := githubService.CreateTestCasesFromOpenPullRequests(c.Context(), owner, repo, request.ProjectID, userID)
+		testCases, err := githubService.CreateTestCasesFromPullRequests(c.Context(), owner, repo, request.IDs, request.ProjectID, userID)
 		if err != nil {
 			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to import pull requests as test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to import GitHub pull requests as test cases")

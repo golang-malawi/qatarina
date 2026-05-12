@@ -433,6 +433,13 @@ components:
       - result
       - status
       type: object
+    schema.GitHubRepoRequest:
+      properties:
+        project:
+          type: string
+      required:
+      - project
+      type: object
     schema.HealthStatus:
       properties:
         message:
@@ -442,16 +449,20 @@ components:
         uptime:
           type: integer
       type: object
-    schema.ImportFromGithubRequest:
+    schema.ImportIssuesRequest:
       properties:
-        github_token:
-          type: string
-        owner:
+        ids:
+          items:
+            type: integer
+          type: array
+          uniqueItems: false
+        project:
           type: string
         project_id:
           type: integer
-        repository:
-          type: string
+      required:
+      - project
+      - project_id
       type: object
     schema.ImportProjectRequest:
       type: object
@@ -1323,6 +1334,106 @@ paths:
       summary: Get details of a single environment by ID
       tags:
       - environements
+  /v1/github/health:
+    get:
+      description: Github integration health check
+      operationId: GitHubHealth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Health status
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Github integration health check
+      tags:
+      - github
+  /v1/github/issues:
+    post:
+      description: List GitHub issues
+      operationId: ListGitHubIssues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.GitHubRepoRequest'
+        description: GitHub repository request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: List of GitHub issues
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List GitHub issues
+      tags:
+      - github
+  /v1/github/pull-requests:
+    post:
+      description: List GitHub pull requests
+      operationId: ListGitHubPullRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.GitHubRepoRequest'
+        description: GitHub repository request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: List of GitHub pull requests
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List GitHub pull requests
+      tags:
+      - github
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
@@ -3329,6 +3440,73 @@ paths:
       summary: Create multiple Test Cases at once
       tags:
       - test-cases
+  /v1/test-cases/github-import/issues:
+    post:
+      description: Imports open issues from a GitHub repository as test cases for
+        a project
+      operationId: ImportIssuesFromGitHubAsTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ImportIssuesRequest'
+        description: GitHub import request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: List of imported test cases
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Invalid request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Server error
+      summary: Import GitHub issues as test cases
+      tags:
+      - test-cases
+  /v1/test-cases/github-import/pull-requests:
+    post:
+      description: Import GitHub pull requests as test cases
+      operationId: ImportPullRequestsFromGitHubAsTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ImportIssuesRequest'
+        description: GitHub import request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: List of imported test cases
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Import GitHub pull requests as test cases
+      tags:
+      - test-cases
   /v1/test-cases/import-file:
     post:
       description: Import test cases from Excel or CSV file
@@ -3362,40 +3540,6 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Import test cases from Excel or CSV file
-      tags:
-      - test-cases
-  /v1/test-cases/import/github:
-    post:
-      description: Imports open issues from a GitHub repository as test cases for
-        a project
-      operationId: ImportIssuesFromGitHubAsTestCases
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/schema.ImportFromGithubRequest'
-        description: GitHub import request
-        required: true
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/schema.TestCaseListResponse'
-          description: List of imported test cases
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-          description: Invalid request
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-          description: Server error
-      summary: Import GitHub issues as test cases
       tags:
       - test-cases
   /v1/test-cases/query:
