@@ -37,6 +37,19 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
   return null;
 }
 
+function handleGitHubApiError(res: any, defaultMessage: string): never {
+  if (res.error) {
+    const error = new Error(res.error.detail || defaultMessage) as Error & {
+      installUrl?: string;
+    };
+    if (res.error.context?.install_url) {
+      error.installUrl = res.error.context.install_url;
+    }
+    throw error;
+  }
+  throw new Error(defaultMessage);
+}
+
 /**
  * List GitHub issues from a repository
  */
@@ -46,7 +59,7 @@ export async function listGitHubIssues(project: string): Promise<GitHubIssue[]> 
   });
 
   if (res.error) {
-    throw new Error(res.error.detail || "Failed to fetch GitHub issues");
+    handleGitHubApiError(res, "Failed to fetch GitHub issues");
   }
 
   const issues = (res.data as any)?.issues || [];
@@ -68,7 +81,7 @@ export async function listGitHubPullRequests(
   });
 
   if (res.error) {
-    throw new Error(res.error.detail || "Failed to fetch GitHub pull requests");
+    handleGitHubApiError(res, "Failed to fetch GitHub pull requests");
   }
 
   const prs = (res.data as any)?.pull_requests || [];
@@ -95,7 +108,7 @@ export async function importGitHubIssuesAsTestCases(
   );
 
   if (res.error) {
-    throw new Error(res.error.detail || "Failed to import GitHub issues");
+    handleGitHubApiError(res, "Failed to import GitHub issues");
   }
 
   return res.data;
@@ -118,9 +131,7 @@ export async function importGitHubPullRequestsAsTestCases(
   );
 
   if (res.error) {
-    throw new Error(
-      res.error.detail || "Failed to import GitHub pull requests"
-    );
+    handleGitHubApiError(res, "Failed to import GitHub pull requests");
   }
 
   return res.data;

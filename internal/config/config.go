@@ -82,6 +82,7 @@ type ImportFileConfiguration struct {
 
 type GitHubConfiguration struct {
 	AppID          string `mapstructure:"app_id" envconfig:"QATARINA_GITHUB_APP_ID"`
+	AppSlug        string `mapstructure:"app_slug" envconfig:"QATARINA_GITHUB_APP_SLUG"`
 	PrivateKeyPEM  string // populated at runtime
 	PrivateKeyPath string `mapstructure:"private_key_path" envconfig:"QATARINA_GITHUB_PRIVATE_KEY_PATH"`
 	WebhookSecret  string `mapstructure:"webhook_secret" envconfig:"QATARINA_GITHUB_WEBHOOK_SECRET"`
@@ -156,6 +157,13 @@ func (c *Config) GetInstallationToken(installationID int64) (string, error) {
 		return "", err
 	}
 	return result.Token, nil
+}
+
+func (c *Config) GetGitHubAppInstallURL() string {
+	if c.GitHub.AppSlug == "" {
+		return ""
+	}
+	return fmt.Sprintf("https://github.com/apps/%s/installations/new", c.GitHub.AppSlug)
 }
 
 var DefaultConfig = Config{

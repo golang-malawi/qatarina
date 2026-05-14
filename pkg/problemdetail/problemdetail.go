@@ -22,6 +22,19 @@ func BadRequestProblemDetail(message string) ProblemDetail {
 	}
 }
 
+func BadRequestProblemDetailWithContext(message string, context any) ProblemDetail {
+	return ProblemDetail{
+		Type:    "problemdetail.example.com/http/types/BadRequest",
+		Title:   "Invalid data in the request body",
+		Detail:  message,
+		Context: context,
+	}
+}
+
+func BadRequestWithContext(ctx *fiber.Ctx, message string, context any) error {
+	return ctx.Status(http.StatusBadRequest).JSON(BadRequestProblemDetailWithContext(message, context))
+}
+
 func PaymentRequiredProblemDetail(message string) ProblemDetail {
 	return ProblemDetail{
 		Type:    "problemdetail.example.com/http/types/PaymentRequired",
@@ -38,6 +51,19 @@ func ServerErrorProblemDetail(message string) ProblemDetail {
 		Detail:  message,
 		Context: nil,
 	}
+}
+
+func ServerErrorProblemDetailWithContext(message string, context any) ProblemDetail {
+	return ProblemDetail{
+		Type:    "problemdetail.example.com/http/types/ServerError",
+		Title:   message,
+		Detail:  message,
+		Context: context,
+	}
+}
+
+func ServerErrorProblemWithContext(ctx *fiber.Ctx, message string, context any) error {
+	return ctx.Status(http.StatusInternalServerError).JSON(ServerErrorProblemDetailWithContext(message, context))
 }
 
 func NotAuthorizedProblem(ctx *fiber.Ctx, message string) error {

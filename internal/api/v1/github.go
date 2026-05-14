@@ -4,6 +4,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -98,9 +100,18 @@ func ListGitHubIssues(gitHubService services.GitHubService, logger logging.Logge
 		issues, err := gitHubService.ListIssues(c.Context(), req.Project)
 		if err != nil {
 			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list issues", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to list GitHub issues")
+			if errors.Is(err, services.ErrInstallationNotFound) {
+				owner, _, parseErr := common.SplitProject(req.Project)
+				installURL := gitHubService.GitHubAppInstallURL()
+				message := fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner)
+				context := fiber.Map{"install_url": installURL}
+				if parseErr != nil {
+					message = "GitHub App not installed for this account. Click here to install."
+				}
+				return problemdetail.BadRequestWithContext(c, message, context)
+			}
+			return problemdetail.ServerErrorProblem(c, "failed to list issues")
 		}
-
 		return c.JSON(fiber.Map{
 			"issues": issues,
 		})
@@ -135,9 +146,16 @@ func ListGitHubPullRequests(gitHubService services.GitHubService, logger logging
 		prs, err := gitHubService.ListPullRequests(c.Context(), owner, repo)
 		if err != nil {
 			logger.Error(loggedmodule.ApiGitHubIntegration, "failed to list pull requests", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to list GitHub pull requests")
+			if errors.Is(err, services.ErrInstallationNotFound) {
+				installURL := gitHubService.GitHubAppInstallURL()
+				return problemdetail.BadRequestWithContext(
+					c,
+					fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner),
+					fiber.Map{"install_url": installURL},
+				)
+			}
+			return problemdetail.ServerErrorProblem(c, "failed to list pull requests")
 		}
-
 		return c.JSON(fiber.Map{
 			"pull_requests": prs,
 		})

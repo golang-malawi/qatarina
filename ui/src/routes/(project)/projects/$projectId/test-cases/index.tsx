@@ -46,10 +46,10 @@ import { useUsersQuery } from "@/services/UserService";
 import { deleteTestCase } from "@/services/TestCaseService";
 import {
   parseGitHubUrl,
-  listGitHubIssues,
-  listGitHubPullRequests,
   importGitHubIssuesAsTestCases,
   importGitHubPullRequestsAsTestCases,
+  listGitHubIssues,
+  listGitHubPullRequests,
   type GitHubItem,
 } from "@/services/GitHubService";
 
@@ -107,6 +107,7 @@ export default function ListProjectTestCases() {
   );
   const [isLoadingGitHub, setIsLoadingGitHub] = useState(false);
   const [githubError, setGithubError] = useState<string | null>(null);
+  const [githubInstallUrl, setGithubInstallUrl] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
   const markDraftMutation = useMutation({
@@ -207,43 +208,38 @@ export default function ListProjectTestCases() {
   };
 
   const handleGitHubConnect = async () => {
-    if (!githubUrl.trim()) {
-      setGithubError("Please enter a GitHub repository URL");
-      return;
+  if (!githubUrl.trim()) {
+    setGithubError("Please enter a GitHub repository URL");
+    return;
+  }
+  const parsed = parseGitHubUrl(githubUrl);
+  if (!parsed) {
+    setGithubError("Invalid GitHub URL. Use format: https://github.com/owner/repo");
+    return;
+  }
+
+  setIsLoadingGitHub(true);
+  setGithubError(null);
+  setGithubItems([]);
+  setSelectedItems(new Set());
+
+  try {
+    const [issues, prs] = await Promise.all([
+      listGitHubIssues(`${parsed.owner}/${parsed.repo}`),
+      listGitHubPullRequests(parsed.owner, parsed.repo),
+    ]);
+    setGithubItems([...issues, ...prs]);
+
+    if (issues.length + prs.length === 0) {
+      setGithubError("No open issues or pull requests found in this repository.");
     }
-
-    const parsed = parseGitHubUrl(githubUrl);
-    if (!parsed) {
-      setGithubError("Invalid GitHub URL. Use format: https://github.com/owner/repo");
-      return;
-    }
-
-    setIsLoadingGitHub(true);
-    setGithubError(null);
-    setGithubItems([]);
-    setSelectedItems(new Set());
-
-    try {
-      // Fetch both issues and PRs in parallel
-      const [issues, prs] = await Promise.all([
-        listGitHubIssues(`${parsed.owner}/${parsed.repo}`),
-        listGitHubPullRequests(parsed.owner, parsed.repo),
-      ]);
-
-      const combined = [...issues, ...prs];
-      setGithubItems(combined);
-
-      if (combined.length === 0) {
-        setGithubError("No open issues or pull requests found in this repository.");
-      }
-    } catch (err: any) {
-      setGithubError(
-        err?.message || "Failed to fetch GitHub items. Please check the URL and try again."
-      );
-    } finally {
-      setIsLoadingGitHub(false);
-    }
-  };
+  } catch (err: any) {
+    setGithubError(err.message || "Failed to fetch GitHub items");
+    setGithubInstallUrl(err.installUrl || null);
+  } finally {
+    setIsLoadingGitHub(false);
+  }
+};
 
   const handleImportGitHub = async () => {
     if (selectedItems.size === 0) {
@@ -305,6 +301,7 @@ export default function ListProjectTestCases() {
       setFilterType("all");
       setGithubError(null);
     } catch (err: any) {
+      setGithubInstallUrl((err as any)?.installUrl ?? null);
       toaster.create({
         title: "Import failed",
         description: err?.message || "Failed to import from GitHub",
@@ -417,6 +414,7 @@ export default function ListProjectTestCases() {
           onConnect={handleGitHubConnect}
           isLoading={isLoadingGitHub}
           error={githubError}
+          installUrl={githubInstallUrl}
           items={githubItems}
           filteredItems={filteredItems}
           filterType={filterType}
@@ -429,6 +427,7 @@ export default function ListProjectTestCases() {
           onImport={handleImportGitHub}
           isImporting={isImporting}
         />
+
       )}
 
       <Tabs.Root
@@ -554,6 +553,7 @@ interface GitHubImportModalProps {
   onConnect: () => void;
   isLoading: boolean;
   error: string | null;
+  installUrl: string | null;
   items: GitHubItem[];
   filteredItems: GitHubItem[];
   filterType: "all" | "issue" | "pull_request";
@@ -575,6 +575,7 @@ function GitHubImportModal({
   onConnect,
   isLoading,
   error,
+  installUrl,
   items,
   filteredItems,
   filterType,
@@ -633,6 +634,26 @@ function GitHubImportModal({
               {error && (
                 <div style={{ padding: "8px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00" }}>
                   <Text fontSize="sm">{error}</Text>
+                  {installUrl && (
+                    <div style={{ marginTop: "12px" }}>
+                      <Button
+                        colorPalette="blue"
+                        size="sm"
+                        variant="solid"
+                        cursor="pointer"
+                        onClick={() => {
+                          // Native client-side window redirection handles external URLs safely
+                          window.open(installUrl, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{ display: "inline-flex" }}
+                      >
+                        Install GitHub App
+                      </Button>
+                      <Text fontSize="xs" color="fg.muted" mt={2}>
+                        After installation, return here and click Connect again.
+                      </Text>
+                    </div>
+                  )}
                 </div>
               )}
 

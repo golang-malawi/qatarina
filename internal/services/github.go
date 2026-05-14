@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -16,6 +18,7 @@ type GitHubService interface {
 	// Installation management
 	UpsertInstallation(ctx context.Context, installationID int64, accountLogin string) error
 	GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error)
+	GitHubAppInstallURL() string
 
 	// GitHub API
 	FetchProjects(ctx context.Context) ([]string, error)
@@ -27,6 +30,8 @@ type GitHubService interface {
 	// Health check
 	Health(ctx context.Context) (string, error)
 }
+
+var ErrInstallationNotFound = errors.New("GitHub app installation not found")
 
 type githubServiceImpl struct {
 	client          *github.Client
@@ -59,6 +64,9 @@ func (s *githubServiceImpl) UpsertInstallation(ctx context.Context, installation
 func (g *githubServiceImpl) GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error) {
 	id, err := g.queries.GetInstallationIDByAccount(ctx, accountLogin)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("%w for account %s", ErrInstallationNotFound, accountLogin)
+		}
 		return 0, fmt.Errorf("failed to find installation ID: %w", err)
 	}
 	return id, nil
@@ -89,22 +97,21 @@ func (g *githubServiceImpl) ListIssues(ctx context.Context, project string) ([]a
 		return nil, fmt.Errorf("invalid project format: %w", err)
 	}
 
-	// 1. Look up installation ID for this owner
 	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
 	if err != nil {
-		return nil, fmt.Errorf("no installation found for account %s: %w", owner, err)
+		if errors.Is(err, ErrInstallationNotFound) {
+			return nil, fmt.Errorf("GitHub app is not installed on repository owner %s: %w", owner, err)
+		}
+		return nil, fmt.Errorf("failed to get GitHub installation: %w", err)
 	}
 
-	// 2. Get a fresh installation token
 	token, err := g.config.GetInstallationToken(installationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installation token: %w", err)
 	}
 
-	// 3. Build temporary GitHub client
 	client := NewGitHubClient(token)
 
-	// 4. Call GitHub API
 	issues, _, err := client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
 		State:       "open",
 		Sort:        "created",
@@ -134,7 +141,10 @@ func (g *githubServiceImpl) ListIssues(ctx context.Context, project string) ([]a
 func (g *githubServiceImpl) ListPullRequests(ctx context.Context, owner, repo string) ([]any, error) {
 	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get installation token: %w", err)
+		if errors.Is(err, ErrInstallationNotFound) {
+			return nil, fmt.Errorf("GitHub app is not installed on repository owner %s: %w", owner, err)
+		}
+		return nil, fmt.Errorf("failed to get GitHub installation: %w", err)
 	}
 
 	token, err := g.config.GetInstallationToken(installationID)
@@ -168,7 +178,21 @@ func (g *githubServiceImpl) ListPullRequests(ctx context.Context, owner, repo st
 }
 
 func (g *githubServiceImpl) CreateTestCasesFromIssues(ctx context.Context, owner, repo string, issueIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
-	issues, _, err := g.client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
+	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
+	if err != nil {
+		if errors.Is(err, ErrInstallationNotFound) {
+			return nil, fmt.Errorf("GitHub app is not installed on repository owner %s: %w", owner, err)
+		}
+		return nil, fmt.Errorf("failed to get GitHub installation: %w", err)
+	}
+
+	token, err := g.config.GetInstallationToken(installationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation token: %w", err)
+	}
+
+	client := NewGitHubClient(token)
+	issues, _, err := client.Issues.ListByRepo(ctx, owner, repo, &github.IssueListByRepoOptions{
 		State:     "open",
 		Sort:      "created_at",
 		Direction: "desc",
@@ -235,7 +259,21 @@ func (g *githubServiceImpl) CreateTestCasesFromIssues(ctx context.Context, owner
 }
 
 func (g *githubServiceImpl) CreateTestCasesFromPullRequests(ctx context.Context, owner, repo string, prIDs []int64, projectID int64, userID int64) ([]dbsqlc.TestCase, error) {
-	prs, _, err := g.client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
+	installationID, err := g.GetInstallationIDByAccount(ctx, owner)
+	if err != nil {
+		if errors.Is(err, ErrInstallationNotFound) {
+			return nil, fmt.Errorf("GitHub app is not installed on repository owner %s: %w", owner, err)
+		}
+		return nil, fmt.Errorf("failed to get GitHub installation: %w", err)
+	}
+
+	token, err := g.config.GetInstallationToken(installationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installation token: %w", err)
+	}
+
+	client := NewGitHubClient(token)
+	prs, _, err := client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
 		State:     "open",
 		Sort:      "created_at",
 		Direction: "desc",
@@ -298,6 +336,10 @@ func (g *githubServiceImpl) CreateTestCasesFromPullRequests(ctx context.Context,
 	}
 
 	return testCases, nil
+}
+
+func (g *githubServiceImpl) GitHubAppInstallURL() string {
+	return g.config.GetGitHubAppInstallURL()
 }
 
 func (g *githubServiceImpl) Health(ctx context.Context) (string, error) {
