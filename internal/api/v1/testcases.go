@@ -19,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
@@ -164,7 +165,7 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [post]
-func CreateTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+func CreateTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
 
@@ -260,7 +261,7 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 
 			writer.Close()
 
-			runnerURL := "http://localhost:8080/run?runner=basi"
+			runnerURL := cfg.Runner.BasiURL
 			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
 			var output string
 			var state dbsqlc.TestRunState

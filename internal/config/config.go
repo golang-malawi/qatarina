@@ -17,6 +17,7 @@ type Config struct {
 	Logging    LoggingConfiguration    `mapstructure:"logging"`
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
+	Runner     RunnerConfiguration     `mapstructure:"runner"`
 }
 
 type DatabaseConfiguration struct {
@@ -73,6 +74,10 @@ type PlatformConfiguration struct {
 
 type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
+}
+
+type RunnerConfiguration struct {
+	BasiURL string `mapstructure:"basi_url" envconfig:"QATARINA_RUNNER_BASI_URL"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -135,5 +140,8 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	Runner: RunnerConfiguration{
+		BasiURL: "http://localhost:8080/run?runner=basi",
 	},
 }
