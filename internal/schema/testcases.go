@@ -16,6 +16,7 @@ type CreateTestCaseRequest struct {
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
 	ProjectID       int64    `json:"project_id" validate:"-"`
+	Runner          string   `json:"runner"` // "basi", "playwright", "cyprus", "browseruse"
 }
 
 type TestCaseResponse struct {

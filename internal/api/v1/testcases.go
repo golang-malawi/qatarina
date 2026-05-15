@@ -215,6 +215,9 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			} else {
 				request.Tags = []string{}
 			}
+			if vals, ok := form.Value["runner"]; ok && len(vals) > 0 {
+				request.Runner = vals[0]
+			}
 
 			// Validate the struct
 			if errors := validation.ValidateStruct(request); errors != nil {
@@ -261,7 +264,20 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 
 			writer.Close()
 
-			runnerURL := cfg.Runner.BasiURL
+			var runnerURL string
+			switch request.Runner {
+			case "basi":
+				runnerURL = cfg.Runner.BasiURL
+			case "playwright":
+				runnerURL = cfg.Runner.PlaywrightURL
+			case "cypress":
+				runnerURL = cfg.Runner.CypressURL
+			case "browseruse":
+				runnerURL = cfg.Runner.BrowserUseURL
+			default:
+				return problemdetail.BadRequest(c, "invalid runner specified")
+			}
+
 			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
 			var output string
 			var state dbsqlc.TestRunState

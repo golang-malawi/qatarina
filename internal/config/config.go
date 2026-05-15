@@ -77,7 +77,10 @@ type ImportFileConfiguration struct {
 }
 
 type RunnerConfiguration struct {
-	BasiURL string `mapstructure:"basi_url" envconfig:"QATARINA_RUNNER_BASI_URL"`
+	BasiURL       string `mapstructure:"basi_url" envconfig:"QATARINA_RUNNER_BASI_URL"`
+	PlaywrightURL string `mapstructure:"playwright_url"`
+	CypressURL    string `mapstructure:"cypress_url"`
+	BrowserUseURL string `mapstructure:"browseruse_url"`
 }
 
 func (c *Config) GetDatabaseURL() string {

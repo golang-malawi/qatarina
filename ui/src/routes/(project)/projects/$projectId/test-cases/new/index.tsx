@@ -45,6 +45,8 @@ function NewTestCases() {
       tags.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file);
 
+      formData.append("runner", values.runner);
+
       body = formData;
     } else {
       // No file - send JSON
@@ -57,6 +59,7 @@ function NewTestCases() {
         description: values.description,
         is_draft: values.is_draft ?? false,
         tags,
+        runner: values.runner,
       };
     }
 
@@ -113,6 +116,7 @@ function NewTestCases() {
           feature_or_module: "Feature",
           kind: "",
           description: data?.test_case_template ?? "",
+          runner: "basi",
           tags: [],
           is_draft: false,
         }}

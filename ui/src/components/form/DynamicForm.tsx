@@ -19,6 +19,7 @@ import {
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
 import ReactMarkdown from "react-markdown";
+import SelectRunner from "./SelectRunner";
 
 export type FieldType =
   | "text"
@@ -35,6 +36,7 @@ export type FieldType =
   | "test-kind"
   | "feature-module"
   | "feature-module-type"
+  | "runner"
   | "custom"
   | "array"
   | "markdown-textarea"
@@ -224,6 +226,13 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
               {type === "feature-module-type" && (
                 <SelectFeatureModuleType
+                  value={field.state.value as string}
+                  onChange={(val) => field.handleChange(val)}
+                />
+              )}
+
+              {type === "runner" && (
+                <SelectRunner
                   value={field.state.value as string}
                   onChange={(val) => field.handleChange(val)}
                 />
