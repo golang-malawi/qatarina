@@ -1183,6 +1183,36 @@ func (q *Queries) GetEnvironment(ctx context.Context, id int32) (Environment, er
 	return i, err
 }
 
+const getFirstInstallation = `-- name: GetFirstInstallation :one
+SELECT installation_id, account_login
+FROM github_installations
+ORDER BY created_at ASC
+LIMIT 1
+`
+
+type GetFirstInstallationRow struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) GetFirstInstallation(ctx context.Context) (GetFirstInstallationRow, error) {
+	row := q.db.QueryRowContext(ctx, getFirstInstallation)
+	var i GetFirstInstallationRow
+	err := row.Scan(&i.InstallationID, &i.AccountLogin)
+	return i, err
+}
+
+const getInstallationIDByAccount = `-- name: GetInstallationIDByAccount :one
+SELECT installation_id FROM github_installations WHERE account_login = $1
+`
+
+func (q *Queries) GetInstallationIDByAccount(ctx context.Context, accountLogin string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getInstallationIDByAccount, accountLogin)
+	var installation_id int64
+	err := row.Scan(&installation_id)
+	return installation_id, err
+}
+
 const getLatestCodeByPrefix = `-- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
@@ -2152,6 +2182,39 @@ func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.N
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInstallations = `-- name: ListInstallations :many
+SELECT installation_id, account_login
+FROM github_installations
+`
+
+type ListInstallationsRow struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) ListInstallations(ctx context.Context) ([]ListInstallationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listInstallations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListInstallationsRow
+	for rows.Next() {
+		var i ListInstallationsRow
+		if err := rows.Scan(&i.InstallationID, &i.AccountLogin); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -3551,6 +3614,22 @@ func (q *Queries) UpdateUserLastLogin(ctx context.Context, arg UpdateUserLastLog
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const upsertGitHubInstallation = `-- name: UpsertGitHubInstallation :exec
+INSERT INTO github_installations (installation_id, account_login)
+VALUES ($1, $2)
+ON CONFLICT (installation_id) DO UPDATE SET account_login = EXCLUDED.account_login
+`
+
+type UpsertGitHubInstallationParams struct {
+	InstallationID int64
+	AccountLogin   string
+}
+
+func (q *Queries) UpsertGitHubInstallation(ctx context.Context, arg UpsertGitHubInstallationParams) error {
+	_, err := q.db.ExecContext(ctx, upsertGitHubInstallation, arg.InstallationID, arg.AccountLogin)
+	return err
 }
 
 const userExists = `-- name: UserExists :one

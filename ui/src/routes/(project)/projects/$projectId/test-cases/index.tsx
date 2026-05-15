@@ -2,11 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
   ButtonGroup,
+  Dialog,
   Flex,
   Heading,
   IconButton,
+  Input,
   Table,
   Tabs,
+  Text,
+  Checkbox,
+  Portal,
 } from "@chakra-ui/react";
 import {
   IconAlertTriangle,
@@ -17,7 +22,7 @@ import {
   IconTable,
 } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
@@ -38,7 +43,16 @@ import {
   rejectSuggestedTestCase,
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
+import { useProjectQuery } from "@/services/ProjectService";
 import { deleteTestCase } from "@/services/TestCaseService";
+import {
+  parseGitHubUrl,
+  importGitHubIssuesAsTestCases,
+  importGitHubPullRequestsAsTestCases,
+  listGitHubIssues,
+  listGitHubPullRequests,
+  type GitHubItem,
+} from "@/services/GitHubService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -83,6 +97,20 @@ export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+  const { data: projectData } = useProjectQuery(projectId);
+
+  // GitHub import modal state
+  const [githubModalOpen, setGithubModalOpen] = useState(false);
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubItems, setGithubItems] = useState<GitHubItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [filterType, setFilterType] = useState<"all" | "issue" | "pull_request">(
+    "all"
+  );
+  const [isLoadingGitHub, setIsLoadingGitHub] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
+  const [githubInstallUrl, setGithubInstallUrl] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const markDraftMutation = useMutation({
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
@@ -130,9 +158,9 @@ export default function ListProjectTestCases() {
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
 
-  // const { data: testCases } = useSuspenseQuery(
-  //   testCasesByProjectIdQueryOptions(projectId),
-  // );
+  const [activeTab, setActiveTab] = useState<
+    "all" | "completed" | "failing" | "scheduled" | "blocked" | "suggested"
+  >("all");
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -181,6 +209,146 @@ export default function ListProjectTestCases() {
     }
   };
 
+  const handleGitHubConnect = async () => {
+    if (!githubUrl.trim()) {
+      setGithubError("Please enter a GitHub repository URL");
+      return;
+    }
+  const parsed = parseGitHubUrl(githubUrl);
+  if (!parsed) {
+    setGithubError("Invalid GitHub URL. Use format: https://github.com/owner/repo");
+    return;
+  }
+
+  setIsLoadingGitHub(true);
+  setGithubError(null);
+  setGithubItems([]);
+  setSelectedItems(new Set());
+
+  try {
+    const [issues, prs] = await Promise.all([
+      listGitHubIssues(`${parsed.owner}/${parsed.repo}`),
+      listGitHubPullRequests(parsed.owner, parsed.repo),
+    ]);
+    setGithubItems([...issues, ...prs]);
+
+    if (issues.length + prs.length === 0) {
+      setGithubError("No open issues or pull requests found in this repository.");
+    }
+  } catch (err: any) {
+    setGithubError(err.message || "Failed to fetch GitHub items");
+    setGithubInstallUrl(err.installUrl || null);
+  } finally {
+    setIsLoadingGitHub(false);
+  }
+};
+
+  const handleImportGitHub = async () => {
+    if (selectedItems.size === 0) {
+      toaster.create({
+        title: "No items selected",
+        description: "Please select at least one issue or pull request to import",
+        type: "warning",
+      });
+      return;
+    }
+
+    const parsed = parseGitHubUrl(githubUrl);
+    if (!parsed) return;
+
+    setIsImporting(true);
+
+    try {
+      const selected = githubItems.filter((item) => selectedItems.has(item.id));
+      const issues = selected.filter((item) => item.type === "issue");
+      const prs = selected.filter((item) => item.type === "pull_request");
+
+      let importedCount = 0;
+      const project = `${parsed.owner}/${parsed.repo}`;
+
+      if (issues.length > 0) {
+        const result = await importGitHubIssuesAsTestCases(
+          project,
+          parseInt(projectId),
+          issues.map((item) => item.id)
+        );
+        importedCount += result.test_cases?.length || 0;
+      }
+
+      if (prs.length > 0) {
+        const result = await importGitHubPullRequestsAsTestCases(
+          project,
+          parseInt(projectId),
+          prs.map((item) => item.id)
+        );
+        importedCount += result.test_cases?.length || 0;
+      }
+
+      toaster.create({
+        title: "Import successful",
+        description: `Imported ${importedCount} item(s) as test cases`,
+        type: "success",
+      });
+
+      // Refresh test case list
+      await queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+      });
+
+      // Close modal and reset state
+      setGithubModalOpen(false);
+      setGithubUrl("");
+      setGithubItems([]);
+      setSelectedItems(new Set());
+      setFilterType("all");
+      setGithubError(null);
+    } catch (err: any) {
+      setGithubInstallUrl((err as any)?.installUrl ?? null);
+      toaster.create({
+        title: "Import failed",
+        description: err?.message || "Failed to import from GitHub",
+        type: "error",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleSelectItem = (id: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const filtered = getFilteredItems();
+    if (selectedItems.size === filtered.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filtered.map((item) => item.id)));
+    }
+  };
+
+  const getFilteredItems = () => {
+    if (filterType === "all") return githubItems;
+    return githubItems.filter((item) => item.type === filterType);
+  };
+
+  // Initialize GitHub URL from project settings when modal opens
+  useEffect(() => {
+    if (githubModalOpen && projectData?.github_url && !githubUrl) {
+      setGithubUrl(projectData.github_url);
+    }
+  }, [githubModalOpen, projectData?.github_url]);
+
+  const filteredItems = getFilteredItems();
+  const issueCount = githubItems.filter((item) => item.type === "issue").length;
+  const prCount = githubItems.filter((item) => item.type === "pull_request").length;
+
   return (
     <div>
       <Toaster />
@@ -217,6 +385,20 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
+        <Button
+          colorPalette="info"
+          size="sm"
+          onClick={() => {
+            // Pre-fill with project's github_url if available
+            if (projectData?.github_url && !githubUrl) {
+              setGithubUrl(projectData.github_url);
+            }
+            setGithubModalOpen(true);
+          }}
+        >
+          Import from GitHub
+        </Button>
+
         <Button colorPalette="success" size={"sm"}>
           Import from Google Sheets
         </Button>
@@ -241,7 +423,38 @@ export default function ListProjectTestCases() {
         </ButtonGroup>
       </Flex>
 
-      <Tabs.Root defaultValue="all">
+      {/* GitHub Import Modal */}
+      {githubModalOpen && (
+        <GitHubImportModal
+          isOpen={githubModalOpen}
+          onClose={() => setGithubModalOpen(false)}
+          githubUrl={githubUrl}
+          onUrlChange={setGithubUrl}
+          onConnect={handleGitHubConnect}
+          isLoading={isLoadingGitHub}
+          error={githubError}
+          installUrl={githubInstallUrl}
+          items={githubItems}
+          filteredItems={filteredItems}
+          filterType={filterType}
+          onFilterChange={setFilterType}
+          selectedItems={selectedItems}
+          onSelectItem={handleSelectItem}
+          onSelectAll={handleSelectAll}
+          issueCount={issueCount}
+          prCount={prCount}
+          onImport={handleImportGitHub}
+          isImporting={isImporting}
+          projectGitHubUrl={projectData?.github_url}
+          projectId={projectId}
+        />
+
+      )}
+
+      <Tabs.Root
+        defaultValue="all"
+        onValueChange={(details) => setActiveTab(details.value as any)}
+      >
         <Tabs.List>
           <Tabs.Trigger value="all">
             <IconList />
@@ -327,22 +540,367 @@ export default function ListProjectTestCases() {
           /> 
         </Tabs.Content>
         <Tabs.Content value="completed">
-          <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
+          {activeTab === "completed" && (
+            <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
+          )}
         </Tabs.Content>
         <Tabs.Content value="failing">
-          <FailingTestCasesTab projectID={projectId} userMap={userMap} />
+          {activeTab === "failing" && (
+            <FailingTestCasesTab projectID={projectId} userMap={userMap} />
+          )}
         </Tabs.Content>
         <Tabs.Content value="scheduled">
-          <ScheduledTestCasesTab projectID={projectId} userMap={userMap} />
+          {activeTab === "scheduled" && (
+            <ScheduledTestCasesTab projectID={projectId} userMap={userMap} />
+          )}
         </Tabs.Content>
         <Tabs.Content value="blocked">
-          <BlockedTestCasesTab projectID={projectId} userMap={userMap} />
+          {activeTab === "blocked" && (
+            <BlockedTestCasesTab projectID={projectId} userMap={userMap} />
+          )}
         </Tabs.Content>
         <Tabs.Content value="suggested">
-          <SuggestedTestCasesTab projectID={projectId}/>
+          {activeTab === "suggested" && (
+            <SuggestedTestCasesTab projectID={projectId} />
+          )}
         </Tabs.Content>
       </Tabs.Root>
     </div>
+  );
+}
+
+interface GitHubImportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  githubUrl: string;
+  onUrlChange: (url: string) => void;
+  onConnect: () => void;
+  isLoading: boolean;
+  error: string | null;
+  installUrl: string | null;
+  items: GitHubItem[];
+  filteredItems: GitHubItem[];
+  filterType: "all" | "issue" | "pull_request";
+  onFilterChange: (type: "all" | "issue" | "pull_request") => void;
+  selectedItems: Set<number>;
+  onSelectItem: (id: number) => void;
+  onSelectAll: () => void;
+  issueCount: number;
+  prCount: number;
+  onImport: () => void;
+  isImporting: boolean;
+  projectGitHubUrl?: string;
+  projectId: string;
+}
+
+function GitHubImportModal({
+  isOpen,
+  onClose,
+  githubUrl,
+  onUrlChange,
+  onConnect,
+  isLoading,
+  error,
+  installUrl,
+  items,
+  filteredItems,
+  filterType,
+  onFilterChange,
+  selectedItems,
+  onSelectItem,
+  onSelectAll,
+  issueCount,
+  prCount,
+  onImport,
+  isImporting,
+  projectGitHubUrl,
+  projectId,
+}: GitHubImportModalProps) {
+  const navigate = Route.useNavigate();
+  const allFiltered = filteredItems.length;
+  const allSelected = selectedItems.size;
+
+  return (
+      <Dialog.Root
+        open={isOpen}
+        onOpenChange={(openState: any) => {
+          if (typeof openState === "boolean") {
+            if (!openState) onClose();
+          } else if (openState?.open === false) {
+            onClose();
+          }
+        }}
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content bg="bg.surface" border="sm" borderColor="border.subtle" maxW="3xl">
+              <Dialog.Header>
+                <Dialog.Title>Import from GitHub</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <Button variant="ghost" size="sm">Close</Button>
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+          {!projectGitHubUrl && items.length === 0 ? (
+            <Flex direction="column" gap={4}>
+              <div
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#fef3c7",
+                  borderRadius: "4px",
+                  border: "1px solid #fcd34d",
+                  color: "#92400e",
+                }}
+              >
+                <Text fontSize="sm" fontWeight="500" mb={2}>
+                  📋 GitHub URL Not Configured
+                </Text>
+                <Text fontSize="sm" mb={3}>
+                  To streamline the import process, set up your GitHub repository URL in the project settings.
+                </Text>
+                <Button
+                  size="sm"
+                  colorPalette="info"
+                  variant="solid"
+                  onClick={() => navigate({ to: `/projects/${projectId}/settings` })}
+                >
+                  Go to Project Settings
+                </Button>
+                <Text fontSize="xs" color="inherit" mt={2}>
+                  Or, you can manually enter the URL below to continue.
+                </Text>
+              </div>
+              <div>
+                <label htmlFor="github-url" style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
+                  GitHub Repository URL
+                </label>
+                <Input
+                  id="github-url"
+                  placeholder="https://github.com/owner/repo"
+                  value={githubUrl}
+                  onChange={(e) => onUrlChange(e.target.value)}
+                  disabled={isLoading}
+                />
+                <Text fontSize="sm" color="fg.muted" mt={1}>
+                  Paste the full GitHub repository URL
+                </Text>
+              </div>
+
+              {error && (
+                <div style={{ padding: "8px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00" }}>
+                  <Text fontSize="sm">{error}</Text>
+                  {installUrl && (
+                    <div style={{ marginTop: "12px" }}>
+                      <Button
+                        colorPalette="blue"
+                        size="sm"
+                        variant="solid"
+                        cursor="pointer"
+                        onClick={() => {
+                          window.open(installUrl, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{ display: "inline-flex" }}
+                      >
+                        Install GitHub App
+                      </Button>
+                      <Text fontSize="xs" color="fg.muted" mt={2}>
+                        After installation, return here and click Connect again.
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button
+                colorPalette="info"
+                onClick={onConnect}
+                disabled={!githubUrl.trim() || isLoading}
+                loading={isLoading}
+              >
+                {isLoading ? "Connecting..." : "Connect & Load Issues/PRs"}
+              </Button>
+            </Flex>
+          ) : items.length === 0 ? (
+            <Flex direction="column" gap={4}>
+              <div>
+                <label htmlFor="github-url" style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
+                  GitHub Repository URL
+                </label>
+                <Input
+                  id="github-url"
+                  placeholder="https://github.com/owner/repo"
+                  value={githubUrl}
+                  onChange={(e) => onUrlChange(e.target.value)}
+                  disabled={isLoading}
+                />
+                <Text fontSize="sm" color="fg.muted" mt={1}>
+                  Paste the full GitHub repository URL
+                </Text>
+              </div>
+
+              {error && (
+                <div style={{ padding: "8px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00" }}>
+                  <Text fontSize="sm">{error}</Text>
+                  {installUrl && (
+                    <div style={{ marginTop: "12px" }}>
+                      <Button
+                        colorPalette="blue"
+                        size="sm"
+                        variant="solid"
+                        cursor="pointer"
+                        onClick={() => {
+                          // Native client-side window redirection handles external URLs safely
+                          window.open(installUrl, "_blank", "noopener,noreferrer");
+                        }}
+                        style={{ display: "inline-flex" }}
+                      >
+                        Install GitHub App
+                      </Button>
+                      <Text fontSize="xs" color="fg.muted" mt={2}>
+                        After installation, return here and click Connect again.
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button
+                colorPalette="info"
+                onClick={onConnect}
+                disabled={!githubUrl.trim() || isLoading}
+                loading={isLoading}
+              >
+                {isLoading ? "Connecting..." : "Connect & Load Issues/PRs"}
+              </Button>
+            </Flex>
+          ) : (
+            <Flex direction="column" gap={4}>
+              <div>
+                <Flex justify="space-between" align="center" mb={2}>
+                  <Heading size="sm">Select Items to Import</Heading>
+                  <Text fontSize="sm" color="fg.muted">
+                    {issueCount} issue{issueCount !== 1 ? "s" : ""}, {prCount} PR
+                    {prCount !== 1 ? "s" : ""}
+                  </Text>
+                </Flex>
+
+                {/* Filter buttons */}
+                <Flex gap={2} mb={4}>
+                  <Button
+                    size="sm"
+                    variant={filterType === "all" ? "solid" : "outline"}
+                    colorPalette={filterType === "all" ? "info" : "gray"}
+                    onClick={() => onFilterChange("all")}
+                  >
+                    All ({items.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filterType === "issue" ? "solid" : "outline"}
+                    colorPalette={filterType === "issue" ? "info" : "gray"}
+                    onClick={() => onFilterChange("issue")}
+                  >
+                    Issues ({issueCount})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filterType === "pull_request" ? "solid" : "outline"}
+                    colorPalette={filterType === "pull_request" ? "info" : "gray"}
+                    onClick={() => onFilterChange("pull_request")}
+                  >
+                    Pull Requests ({prCount})
+                  </Button>
+                </Flex>
+              </div>
+
+              {error && (
+                <div style={{ padding: "8px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00" }}>
+                  <Text fontSize="sm">{error}</Text>
+                </div>
+              )}
+
+              {/* Items table */}
+              <div style={{ maxHeight: "400px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "4px" }}>
+                <Table.Root>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeader width="50px">
+                        <Checkbox.Root
+                          checked={allSelected === allFiltered && allFiltered > 0}
+                          onCheckedChange={() => onSelectAll()}
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                        </Checkbox.Root>
+                      </Table.ColumnHeader>
+                      <Table.ColumnHeader>Type</Table.ColumnHeader>
+                      <Table.ColumnHeader flex="1">Title</Table.ColumnHeader>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {filteredItems.length > 0 ? (
+                      filteredItems.map((item) => (
+                        <Table.Row key={item.id}>
+                          <Table.Cell width="50px">
+                            <Checkbox.Root
+                              checked={selectedItems.has(item.id)}
+                              onCheckedChange={() => onSelectItem(item.id)}
+                            >
+                              <Checkbox.HiddenInput />
+                              <Checkbox.Control />
+                            </Checkbox.Root>
+                          </Table.Cell>
+                          <Table.Cell width="80px">
+                            <Text fontSize="sm" color="fg.muted">
+                              {item.type === "issue" ? "Issue" : "PR"}
+                            </Text>
+                          </Table.Cell>
+                          <Table.Cell flex="1">
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: "#0066cc" }}>
+                              {item.title}
+                            </a>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))
+                    ) : (
+                      <Table.Row>
+                        <Table.Cell colSpan={3}>
+                          <Text fontSize="sm" color="fg.muted" textAlign="center" py={4}>
+                            No items found
+                          </Text>
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
+                  </Table.Body>
+                </Table.Root>
+              </div>
+
+              <Text fontSize="sm" color="fg.muted">
+                Selected: {allSelected} of {allFiltered} item{allFiltered !== 1 ? "s" : ""}
+              </Text>
+            </Flex>
+          )}
+        </Dialog.Body>
+        <Dialog.Footer>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          {items.length > 0 && (
+            <Button
+              colorPalette="success"
+              onClick={onImport}
+              disabled={selectedItems.size === 0 || isImporting}
+              loading={isImporting}
+            >
+              {isImporting ? "Importing..." : `Import ${selectedItems.size} Item${selectedItems.size !== 1 ? "s" : ""}`}
+            </Button>
+          )}
+        </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 }
 

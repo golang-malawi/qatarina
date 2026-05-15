@@ -117,6 +117,15 @@ type Environment struct {
 	UpdatedAt   time.Time
 }
 
+type GithubInstallation struct {
+	InstallationID int64
+	AccountLogin   string
+	AccountType    string
+	UserID         sql.NullInt64
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
 type Invite struct {
 	ID            int32
 	SenderEmail   string
