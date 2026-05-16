@@ -262,6 +262,8 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 				return problemdetail.ServerErrorProblem(c, "failed to process script file")
 			}
 
+			writer.WriteField("runner", request.Runner)
+
 			writer.Close()
 
 			var runnerURL string
@@ -278,6 +280,9 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 				return problemdetail.BadRequest(c, "invalid runner specified")
 			}
 
+			// TO DO DELETE LOGGER
+			logger.Info(loggedmodule.ApiTestCases, "posting to runner", "url", runnerURL)
+
 			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
 			var output string
 			var state dbsqlc.TestRunState
@@ -288,13 +293,31 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			} else {
 				defer resp.Body.Close()
 				body, _ := io.ReadAll(resp.Body)
-				output = string(body)
+
+				// TO DO DELETE LOGGER MESSAGE
+				logger.Info(loggedmodule.ApiTestCases, "raw runner response", "body", string(body))
+
+				var msgs []schema.RunnerMessage
+				if err := json.Unmarshal(body, &msgs); err != nil {
+					// fallback: just keep raw body
+					output = string(body)
+				} else {
+					var logs []string
+					for _, m := range msgs {
+						logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
+					}
+					output = strings.Join(logs, "\n")
+				}
+
+				// decide pass/fail based on logs
 				if resp.StatusCode != 200 {
-					logger.Error(loggedmodule.ApiTestCases, "runner returned non-200 status", "status", resp.StatusCode, "output", output)
+					logger.Error(loggedmodule.ApiTestCases, "runner returned non-200 status",
+						"status", resp.StatusCode, "output", output)
 					state = dbsqlc.TestRunStateFailed
 				} else {
-					state = determineStateFromBasiOutput(output)
+					state = determineStateFromRunnerOutput(output)
 				}
+
 			}
 
 			runReq := &schema.TestRunRequest{
@@ -321,6 +344,7 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 				ActualResult:   output,
 				ExpectedResult: "Script assertions",
 				State:          state,
+				UserID:         int64(userID),
 			}
 
 			if _, err := testRunService.Commit(c.Context(), commitReq); err != nil {
@@ -817,26 +841,26 @@ func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 	}
 }
 
-// determineStateFromBasiOutput inspects the runner output and decides pass/fail
-func determineStateFromBasiOutput(output string) dbsqlc.TestRunState {
-	// Try to parse as JSON first
-	type RunnerResult struct {
-		Result string `json:"result"`
+// determineStateFromRunnerOutput inspects the runner output and decides pass/fail
+func determineStateFromRunnerOutput(output string) dbsqlc.TestRunState {
+	lower := strings.ToLower(output)
+
+	// treat common success phrases
+	if strings.Contains(lower, "pass") ||
+		strings.Contains(lower, "success") ||
+		strings.Contains(lower, "all tests passed") {
+		return dbsqlc.TestRunStatePassed
 	}
-	var result RunnerResult
-	if err := json.Unmarshal([]byte(output), &result); err == nil {
-		lowered := strings.ToLower(result.Result)
-		if lowered == "pass" || lowered == "passed" || lowered == "success" {
-			return dbsqlc.TestRunStatePassed
-		}
-		if lowered == "fail" || lowered == "failed" || lowered == "error" {
-			return dbsqlc.TestRunStateFailed
-		}
-	}
-	// Fallback to string contains
-	lowered := strings.ToLower(output)
-	if strings.Contains(lowered, "error") || strings.Contains(lowered, "fail") {
+
+	// treat common failure/error phrases
+	if strings.Contains(lower, "fail") ||
+		strings.Contains(lower, "error") ||
+		strings.Contains(lower, "stderr") ||
+		strings.Contains(lower, "assertion failed") ||
+		strings.Contains(lower, "exception") {
 		return dbsqlc.TestRunStateFailed
 	}
-	return dbsqlc.TestRunStatePassed
+
+	// fallback if nothing matched
+	return dbsqlc.TestRunStatePending
 }

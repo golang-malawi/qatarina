@@ -52,7 +52,7 @@ export const createTestCaseFields = (): FieldConfig[] => [
   },
   {
     name: "script_file",
-    label: "Attach Basi/Playwright Script",
+    label: "Attach Runner Script",
     type: "file",
     accept: ".basi, .yaml, yml",
     helperText: "Upload a Basi/Playwright script file for this test case"
