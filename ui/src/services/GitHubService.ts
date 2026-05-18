@@ -140,6 +140,16 @@ export async function importGitHubPullRequestsAsTestCases(
 /**
  * Check GitHub health/integration status
  */
+export async function getGitHubInstallUrl(): Promise<string | null> {
+  const res = await apiClient.request("get", "/v1/github/install-url");
+
+  if (res.error) {
+    return null;
+  }
+
+  return (res.data as any)?.install_url || null;
+}
+
 export async function checkGitHubHealth(): Promise<string> {
   const res = await apiClient.request("get", "/v1/github/health");
 

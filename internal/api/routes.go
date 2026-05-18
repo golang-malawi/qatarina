@@ -180,6 +180,7 @@ func (api *API) routes() {
 	githubIntegrationV1 := router.Group("/v1/github", authenticationMiddleware)
 	{
 		githubIntegrationV1.Get("/health", apiv1.GitHubHealth(api.GitHubService, api.logger))
+		githubIntegrationV1.Get("/install-url", apiv1.GitHubInstallURL(api.GitHubService, api.logger))
 		githubIntegrationV1.Post("/issues", apiv1.ListGitHubIssues(api.GitHubService, api.logger))
 		githubIntegrationV1.Post("/pull-requests", apiv1.ListGitHubPullRequests(api.GitHubService, api.logger))
 	}

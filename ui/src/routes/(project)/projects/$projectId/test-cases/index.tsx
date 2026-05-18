@@ -22,7 +22,7 @@ import {
   IconTable,
 } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
@@ -43,6 +43,7 @@ import {
   rejectSuggestedTestCase,
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
+import { useProjectQuery } from "@/services/ProjectService";
 import { deleteTestCase } from "@/services/TestCaseService";
 import {
   parseGitHubUrl,
@@ -50,6 +51,7 @@ import {
   importGitHubPullRequestsAsTestCases,
   listGitHubIssues,
   listGitHubPullRequests,
+  getGitHubInstallUrl,
   type GitHubItem,
 } from "@/services/GitHubService";
 
@@ -96,6 +98,7 @@ export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+  const { data: projectData } = useProjectQuery(projectId);
 
   // GitHub import modal state
   const [githubModalOpen, setGithubModalOpen] = useState(false);
@@ -109,6 +112,24 @@ export default function ListProjectTestCases() {
   const [githubError, setGithubError] = useState<string | null>(null);
   const [githubInstallUrl, setGithubInstallUrl] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => {
+    if (!githubModalOpen) {
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      const installUrl = await getGitHubInstallUrl();
+      if (mounted) {
+        setGithubInstallUrl(installUrl);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [githubModalOpen]);
 
   const markDraftMutation = useMutation({
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
@@ -208,10 +229,10 @@ export default function ListProjectTestCases() {
   };
 
   const handleGitHubConnect = async () => {
-  if (!githubUrl.trim()) {
-    setGithubError("Please enter a GitHub repository URL");
-    return;
-  }
+    if (!githubUrl.trim()) {
+      setGithubError("Please enter a GitHub repository URL");
+      return;
+    }
   const parsed = parseGitHubUrl(githubUrl);
   if (!parsed) {
     setGithubError("Invalid GitHub URL. Use format: https://github.com/owner/repo");
@@ -336,6 +357,13 @@ export default function ListProjectTestCases() {
     return githubItems.filter((item) => item.type === filterType);
   };
 
+  // Initialize GitHub URL from project settings when modal opens
+  useEffect(() => {
+    if (githubModalOpen && projectData?.github_url && !githubUrl) {
+      setGithubUrl(projectData.github_url);
+    }
+  }, [githubModalOpen, projectData?.github_url, githubUrl]);
+
   const filteredItems = getFilteredItems();
   const issueCount = githubItems.filter((item) => item.type === "issue").length;
   const prCount = githubItems.filter((item) => item.type === "pull_request").length;
@@ -376,7 +404,17 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
-        <Button colorPalette="info" size="sm" onClick={() => setGithubModalOpen(true)}>
+        <Button
+          colorPalette="info"
+          size="sm"
+          onClick={() => {
+            // Pre-fill with project's github_url if available
+            if (projectData?.github_url && !githubUrl) {
+              setGithubUrl(projectData.github_url);
+            }
+            setGithubModalOpen(true);
+          }}
+        >
           Import from GitHub
         </Button>
 
@@ -426,6 +464,8 @@ export default function ListProjectTestCases() {
           prCount={prCount}
           onImport={handleImportGitHub}
           isImporting={isImporting}
+          projectGitHubUrl={projectData?.github_url}
+          projectId={projectId}
         />
 
       )}
@@ -565,6 +605,8 @@ interface GitHubImportModalProps {
   prCount: number;
   onImport: () => void;
   isImporting: boolean;
+  projectGitHubUrl?: string;
+  projectId: string;
 }
 
 function GitHubImportModal({
@@ -587,7 +629,10 @@ function GitHubImportModal({
   prCount,
   onImport,
   isImporting,
+  projectGitHubUrl,
+  projectId,
 }: GitHubImportModalProps) {
+  const navigate = Route.useNavigate();
   const allFiltered = filteredItems.length;
   const allSelected = selectedItems.size;
 
@@ -613,7 +658,85 @@ function GitHubImportModal({
                 </Dialog.CloseTrigger>
               </Dialog.Header>
               <Dialog.Body>
-          {items.length === 0 ? (
+          {!projectGitHubUrl && items.length === 0 ? (
+            <Flex direction="column" gap={4}>
+              <div
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#fef3c7",
+                  borderRadius: "4px",
+                  border: "1px solid #fcd34d",
+                  color: "#92400e",
+                }}
+              >
+                <Text fontSize="sm" fontWeight="500" mb={2}>
+                  📋 GitHub URL Not Configured
+                </Text>
+                <Text fontSize="sm" mb={3}>
+                  To streamline the import process, set up your GitHub repository URL in the project settings.
+                </Text>
+                <Button
+                  size="sm"
+                  colorPalette="info"
+                  variant="solid"
+                  onClick={() => navigate({ to: `/projects/${projectId}/settings` })}
+                >
+                  Go to Project Settings
+                </Button>
+                <Text fontSize="xs" color="inherit" mt={2}>
+                  Or, you can manually enter the URL below to continue.
+                </Text>
+              </div>
+              <div>
+                <label htmlFor="github-url" style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
+                  GitHub Repository URL
+                </label>
+                <Input
+                  id="github-url"
+                  placeholder="https://github.com/owner/repo"
+                  value={githubUrl}
+                  onChange={(e) => onUrlChange(e.target.value)}
+                  disabled={isLoading}
+                />
+                <Text fontSize="sm" color="fg.muted" mt={1}>
+                  Paste the full GitHub repository URL
+                </Text>
+              </div>
+
+              {error && (
+                <div style={{ padding: "12px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <Text fontSize="sm">{error}</Text>
+                  {installUrl ? (
+                    <Button
+                      colorPalette="blue"
+                      size="sm"
+                      variant="solid"
+                      cursor="pointer"
+                      onClick={() => {
+                        window.open(installUrl, "_blank", "noopener,noreferrer");
+                      }}
+                      style={{ display: "flex", alignSelf: "flex-start" }}
+                    >
+                      Install GitHub App
+                    </Button>
+                  ) : (
+                    <Text fontSize="sm" color="fg.muted">
+                      The GitHub App install URL is not configured. Please ask your administrator to set `github.app_slug` in `qatarina.yaml`.
+                    </Text>
+                  )}
+                </div>
+              )}
+
+              <Button
+                colorPalette="info"
+                onClick={onConnect}
+                disabled={!githubUrl.trim() || isLoading}
+                loading={isLoading}
+              >
+                {isLoading ? "Connecting..." : "Connect & Load Issues/PRs"}
+              </Button>
+            </Flex>
+          ) : items.length === 0 ? (
             <Flex direction="column" gap={4}>
               <div>
                 <label htmlFor="github-url" style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
@@ -632,27 +755,25 @@ function GitHubImportModal({
               </div>
 
               {error && (
-                <div style={{ padding: "8px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00" }}>
+                <div style={{ padding: "12px", backgroundColor: "#fee", borderRadius: "4px", color: "#c00", display: "flex", flexDirection: "column", gap: "12px" }}>
                   <Text fontSize="sm">{error}</Text>
-                  {installUrl && (
-                    <div style={{ marginTop: "12px" }}>
-                      <Button
-                        colorPalette="blue"
-                        size="sm"
-                        variant="solid"
-                        cursor="pointer"
-                        onClick={() => {
-                          // Native client-side window redirection handles external URLs safely
-                          window.open(installUrl, "_blank", "noopener,noreferrer");
-                        }}
-                        style={{ display: "inline-flex" }}
-                      >
-                        Install GitHub App
-                      </Button>
-                      <Text fontSize="xs" color="fg.muted" mt={2}>
-                        After installation, return here and click Connect again.
-                      </Text>
-                    </div>
+                  {installUrl ? (
+                    <Button
+                      colorPalette="blue"
+                      size="sm"
+                      variant="solid"
+                      cursor="pointer"
+                      onClick={() => {
+                        window.open(installUrl, "_blank", "noopener,noreferrer");
+                      }}
+                      style={{ display: "flex", alignSelf: "flex-start" }}
+                    >
+                      Install GitHub App
+                    </Button>
+                  ) : (
+                    <Text fontSize="sm" color="fg.muted">
+                      The GitHub App install URL is not configured. Please ask your administrator to set `github.app_slug` in `qatarina.yaml`.
+                    </Text>
                   )}
                 </div>
               )}

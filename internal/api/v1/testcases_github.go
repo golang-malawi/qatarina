@@ -49,7 +49,7 @@ func ImportIssuesFromGitHubAsTestCases(githubService services.GitHubService, log
 				installURL := githubService.GitHubAppInstallURL()
 				return problemdetail.BadRequestWithContext(
 					c,
-					fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner),
+					fmt.Sprintf("GitHub App not installed for %s.", owner),
 					fiber.Map{"install_url": installURL},
 				)
 			}
@@ -96,7 +96,7 @@ func ImportPullRequestsFromGitHubAsTestCases(githubService services.GitHubServic
 				installURL := githubService.GitHubAppInstallURL()
 				return problemdetail.BadRequestWithContext(
 					c,
-					fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner),
+					fmt.Sprintf("GitHub App not installed for %s.", owner),
 					fiber.Map{"install_url": installURL},
 				)
 			}

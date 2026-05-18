@@ -42,6 +42,31 @@ func GitHubHealth(githubService services.GitHubService, logger logging.Logger) f
 	}
 }
 
+// GitHubInstallURL godoc
+//
+//	@ID             GitHubInstallURL
+//	@Summary        Get GitHub App install URL
+//	@Description    Returns the configured GitHub App install URL for the current deployment.
+//	@Tags           github
+//	@Accept         json
+//	@Produce        json
+//	@Success        200  {object}  map[string]any
+//	@Failure        400  {object}  problemdetail.ProblemDetail
+//	@Router         /v1/github/install-url [get]
+func GitHubInstallURL(githubService services.GitHubService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		installURL := githubService.GitHubAppInstallURL()
+		if installURL == "" {
+			logger.Error(loggedmodule.ApiGitHubIntegration, "GitHub App install URL not configured")
+			return problemdetail.BadRequest(c, "GitHub App install URL is not configured")
+		}
+
+		return c.JSON(fiber.Map{
+			"install_url": installURL,
+		})
+	}
+}
+
 func GitHubWebhook(installationStore services.GitHubService, secret string, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		signature := c.Get("X-Hub-Signature-256")
@@ -103,10 +128,10 @@ func ListGitHubIssues(gitHubService services.GitHubService, logger logging.Logge
 			if errors.Is(err, services.ErrInstallationNotFound) {
 				owner, _, parseErr := common.SplitProject(req.Project)
 				installURL := gitHubService.GitHubAppInstallURL()
-				message := fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner)
+				message := fmt.Sprintf("GitHub App not installed for %s.", owner)
 				context := fiber.Map{"install_url": installURL}
 				if parseErr != nil {
-					message = "GitHub App not installed for this account. Click here to install."
+					message = "GitHub App not installed for this account."
 				}
 				return problemdetail.BadRequestWithContext(c, message, context)
 			}
@@ -150,7 +175,7 @@ func ListGitHubPullRequests(gitHubService services.GitHubService, logger logging
 				installURL := gitHubService.GitHubAppInstallURL()
 				return problemdetail.BadRequestWithContext(
 					c,
-					fmt.Sprintf("GitHub App not installed for %s. Click here to install.", owner),
+					fmt.Sprintf("GitHub App not installed for %s.", owner),
 					fiber.Map{"install_url": installURL},
 				)
 			}
