@@ -3,8 +3,10 @@ package services
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"html/template"
+	"net"
 	"net/smtp"
 	"time"
 
@@ -38,6 +40,7 @@ type NotificationPayload struct {
 	DueDate           *time.Time
 	AssignedByName    string
 	AdditionalMessage string
+	BaseURL           string
 }
 
 // NotificationService defines methods for sending notifications
@@ -52,13 +55,15 @@ type NotificationService interface {
 type notificationServiceImpl struct {
 	logger  logging.Logger
 	smtpCfg config.SMTPConfiguration
+	baseURL string
 }
 
 // NewNotificationService creates a new notification service
-func NewNotificationService(logger logging.Logger, smtpCfg config.SMTPConfiguration) NotificationService {
+func NewNotificationService(logger logging.Logger, smtpCfg config.SMTPConfiguration, baseURL string) NotificationService {
 	return &notificationServiceImpl{
 		logger:  logger,
 		smtpCfg: smtpCfg,
+		baseURL: baseURL,
 	}
 }
 
@@ -88,6 +93,7 @@ func (n *notificationServiceImpl) SendTesterAssignedNotification(ctx context.Con
 		ProjectID:      projectID,
 		AssignedByName: assignedByName,
 		Role:           role,
+		BaseURL:        n.baseURL,
 	}
 	return n.SendNotification(ctx, payload)
 }
@@ -103,6 +109,7 @@ func (n *notificationServiceImpl) SendTestPlanAddedNotification(ctx context.Cont
 		ProjectID:      projectID,
 		TestPlanID:     testPlanID,
 		AssignedByName: assignedByName,
+		BaseURL:        n.baseURL,
 	}
 	return n.SendNotification(ctx, payload)
 }
@@ -119,6 +126,7 @@ func (n *notificationServiceImpl) SendTestCaseAssignedNotification(ctx context.C
 		ProjectID:      projectID,
 		TestCaseID:     testCaseID,
 		AssignedByName: assignedByName,
+		BaseURL:        n.baseURL,
 	}
 	return n.SendNotification(ctx, payload)
 }
@@ -134,6 +142,7 @@ func (n *notificationServiceImpl) SendTestPlanDueReminderNotification(ctx contex
 		ProjectID:      projectID,
 		TestPlanID:     testPlanID,
 		DueDate:        &dueDate,
+		BaseURL:        n.baseURL,
 	}
 	return n.SendNotification(ctx, payload)
 }
@@ -152,21 +161,133 @@ func (n *notificationServiceImpl) sendEmailWithTemplate(ctx context.Context, rec
 		return fmt.Errorf("failed to execute email template: %v", err)
 	}
 
-	msg := []byte(fmt.Sprintf(
-		"To: %s\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=\"UTF-8\"\r\n"+
-			"Subject: %s\r\n\r\n"+
-			"%s", recipientEmail, subject, body.String()))
+	// Build headers with From and optional Reply-To
+	headers := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n", n.smtpCfg.From, recipientEmail, subject)
+	if n.smtpCfg.ReplyTo != "" {
+		headers = fmt.Sprintf("%sReply-To: %s\r\n", headers, n.smtpCfg.ReplyTo)
+	}
+
+	msg := []byte(headers + "\r\n" + body.String())
 
 	addr := fmt.Sprintf("%s:%d", n.smtpCfg.Host, n.smtpCfg.Port)
+
+	// Use SMTPS (implicit TLS) if SSL is requested (commonly port 465)
+	if n.smtpCfg.SSL {
+		tlsConfig := &tls.Config{
+			ServerName: n.smtpCfg.Host,
+		}
+
+		conn, err := tls.Dial("tcp", addr, tlsConfig)
+		if err != nil {
+			n.logger.Error("failed to dial SMTPS", "addr", addr, "error", err)
+			return fmt.Errorf("failed to dial SMTPS: %w", err)
+		}
+
+		c, err := smtp.NewClient(conn, n.smtpCfg.Host)
+		if err != nil {
+			n.logger.Error("failed to create SMTP client", "error", err)
+			return fmt.Errorf("failed to create SMTP client: %w", err)
+		}
+		defer c.Close()
+
+		auth := smtp.PlainAuth("", n.smtpCfg.Username, n.smtpCfg.Password, n.smtpCfg.Host)
+		if err = c.Auth(auth); err != nil {
+			n.logger.Error("SMTP auth failed", "error", err)
+			return fmt.Errorf("SMTP auth failed: %w", err)
+		}
+
+		if err = c.Mail(n.smtpCfg.From); err != nil {
+			n.logger.Error("failed to set mail from", "from", n.smtpCfg.From, "error", err)
+			return fmt.Errorf("failed to set mail from: %w", err)
+		}
+		if err = c.Rcpt(recipientEmail); err != nil {
+			n.logger.Error("failed to set rcpt", "recipient", recipientEmail, "error", err)
+			return fmt.Errorf("failed to set rcpt: %w", err)
+		}
+
+		wc, err := c.Data()
+		if err != nil {
+			n.logger.Error("failed to get data writer", "error", err)
+			return fmt.Errorf("failed to get data writer: %w", err)
+		}
+		_, err = wc.Write(msg)
+		if err != nil {
+			n.logger.Error("failed to write message", "error", err)
+			_ = wc.Close()
+			return fmt.Errorf("failed to write message: %w", err)
+		}
+		if err = wc.Close(); err != nil {
+			n.logger.Error("failed to close data writer", "error", err)
+			return fmt.Errorf("failed to close data writer: %w", err)
+		}
+
+		if err = c.Quit(); err != nil {
+			n.logger.Error("failed to quit SMTP client", "error", err)
+			return fmt.Errorf("failed to quit SMTP client: %w", err)
+		}
+
+		return nil
+	}
+
+	// Plain SMTP (may start TLS via STARTTLS if server supports it)
 	auth := smtp.PlainAuth("", n.smtpCfg.Username, n.smtpCfg.Password, n.smtpCfg.Host)
 
-	err = smtp.SendMail(addr, auth, n.smtpCfg.From, []string{recipientEmail}, msg)
+	// Try to use StartTLS if server advertises it
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		n.logger.Error("SMTP send failed", "recipient", recipientEmail, "error", err)
-		return fmt.Errorf("failed to send notification email: %w", err)
+		n.logger.Error("failed to dial SMTP", "addr", addr, "error", err)
+		return fmt.Errorf("failed to dial SMTP: %w", err)
 	}
+	c, err := smtp.NewClient(conn, n.smtpCfg.Host)
+	if err != nil {
+		n.logger.Error("failed to create SMTP client", "error", err)
+		return fmt.Errorf("failed to create SMTP client: %w", err)
+	}
+	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		tlsConfig := &tls.Config{ServerName: n.smtpCfg.Host}
+		if err = c.StartTLS(tlsConfig); err != nil {
+			n.logger.Error("STARTTLS failed", "error", err)
+		}
+	}
+
+	if err = c.Auth(auth); err != nil {
+		n.logger.Error("SMTP auth failed", "error", err)
+		return fmt.Errorf("SMTP auth failed: %w", err)
+	}
+
+	if err = c.Mail(n.smtpCfg.From); err != nil {
+		n.logger.Error("failed to set mail from", "from", n.smtpCfg.From, "error", err)
+		return fmt.Errorf("failed to set mail from: %w", err)
+	}
+	if err = c.Rcpt(recipientEmail); err != nil {
+		n.logger.Error("failed to set rcpt", "recipient", recipientEmail, "error", err)
+		return fmt.Errorf("failed to set rcpt: %w", err)
+	}
+
+	wc, err := c.Data()
+	if err != nil {
+		n.logger.Error("failed to get data writer", "error", err)
+		return fmt.Errorf("failed to get data writer: %w", err)
+	}
+	_, err = wc.Write(msg)
+	if err != nil {
+		n.logger.Error("failed to write message", "error", err)
+		_ = wc.Close()
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+	if err = wc.Close(); err != nil {
+		n.logger.Error("failed to close data writer", "error", err)
+		return fmt.Errorf("failed to close data writer: %w", err)
+	}
+
+	if err = c.Quit(); err != nil {
+		n.logger.Error("failed to quit SMTP client", "error", err)
+		return fmt.Errorf("failed to quit SMTP client: %w", err)
+	}
+
+	return nil
 
 	return nil
 }

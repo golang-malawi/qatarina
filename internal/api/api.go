@@ -40,8 +40,8 @@ func NewAPI(config *config.Config) *API {
 	moduleService := services.NewModuleService(dbConn)
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
-	notificationService := services.NewNotificationService(logger, config.SMTP)
-	userService := services.NewUserService(dbConn, logger, config.SMTP)
+	notificationService := services.NewNotificationService(logger, config.SMTP, config.Server.BaseURL)
+	userService := services.NewUserService(dbConn, logger, config.SMTP, config)
 
 	return &API{
 		logger:                logger,

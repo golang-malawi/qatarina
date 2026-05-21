@@ -13,7 +13,7 @@ type CreateTestPlan struct {
 	Description    string               `json:"description" validate:"required"`
 	StartAt        string               `json:"start_at" validate:"required"`
 	ClosedAt       *string              `json:"closed_at"`
-	ScheduledEndAt string               `json:"scheduled_end_at"`
+	ScheduledEndAt string               `json:"scheduled_end_at" validate:"required"`
 	AssignedToID   int64                `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64                `json:"created_by_id" validate:"-"`
 	UpdatedByID    int64                `json:"updated_by_id" validate:"-"`
@@ -91,16 +91,16 @@ type TestPlanListResponse struct {
 }
 
 type UpdateTestPlan struct {
-	ProjectID      int64     `json:"project_id" validate:"required"`
-	Kind           string    `json:"kind" validate:"required"`
-	Description    string    `json:"description" validate:"required"`
-	StartAt        time.Time `json:"start_at" validate:"required"`
-	ClosedAt       time.Time `json:"closed_at"`
-	ScheduledEndAt time.Time `json:"scheduled_end_at"`
-	AssignedToID   int64     `json:"assigned_to_id" validate:"-"`
-	CreatedByID    int64     `json:"created_by_id" validate:"-"`
-	UpdatedByID    int64     `json:"updated_by_id" validate:"-"`
-	EnvironmentID  int64     `json:"environment_id" validate:"-"`
+	ProjectID      int64   `json:"project_id" validate:"required"`
+	Kind           string  `json:"kind" validate:"required"`
+	Description    string  `json:"description" validate:"required"`
+	StartAt        string  `json:"start_at" validate:"required"`
+	ClosedAt       *string `json:"closed_at"`
+	ScheduledEndAt string  `json:"scheduled_end_at" validate:"required"`
+	AssignedToID   int64   `json:"assigned_to_id" validate:"-"`
+	CreatedByID    int64   `json:"created_by_id" validate:"-"`
+	UpdatedByID    int64   `json:"updated_by_id" validate:"-"`
+	EnvironmentID  int64   `json:"environment_id" validate:"-"`
 }
 
 type TestCaseResponseItem struct {

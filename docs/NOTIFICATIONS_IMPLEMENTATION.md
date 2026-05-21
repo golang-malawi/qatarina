@@ -88,7 +88,7 @@ Updated `internal/api/api.go`:
      port: 587
      username: your-email@example.com
      password: your-password
-     from: noreply@qatarina.dev
+     from: noreply@baseUrl
    ```
 
 2. **Enable River Worker** (uncomment in `cmd/server.go`):

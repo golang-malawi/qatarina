@@ -52,7 +52,7 @@ smtp:
   port: 587
   username: your-email@gmail.com
   password: your-app-password
-  from: noreply@qatarina.dev
+  from: noreply@baseUrl
 ```
 
 ### 2. Enable River Worker (for scheduled reminders)
@@ -180,7 +180,7 @@ smtp:
   port: 587
   username: "your-email@example.com"
   password: "your-password"
-  from: "noreply@qatarina.dev"
+  from: "noreply@baseUrl"
 ```
 
 ### Notification Types

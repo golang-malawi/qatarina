@@ -13,8 +13,8 @@ import (
 )
 
 type TesterService interface {
-	Assign(ctx context.Context, projectID, userID int64, role string) error
-	AssignBulk(ctx context.Context, projectID int64, request *schema.BulkAssignTesters) error
+	Assign(ctx context.Context, projectID, userID int64, role string, assignedBy string) error
+	AssignBulk(ctx context.Context, projectID int64, request *schema.BulkAssignTesters, assignedBy string) error
 	FindAll(context.Context) ([]schema.Tester, error)
 	FindByProjectID(context.Context, int64) ([]schema.Tester, error)
 	Invite(context.Context, any) (any, error)
@@ -73,7 +73,7 @@ func (s *testerServiceImpl) Invite(context.Context, any) (any, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64, role string) error {
+func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64, role string, assignedBy string) error {
 	_, err := s.queries.AssignTesterToProject(ctx, dbsqlc.AssignTesterToProjectParams{
 		ProjectID: int32(projectID),
 		UserID:    int32(userID),
@@ -108,7 +108,7 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 			user.DisplayName.String,
 			project.Title,
 			projectID,
-			"System", // TODO: Get the actual user who assigned this tester
+			assignedBy,
 			role,
 		)
 		if notificationErr != nil {
@@ -119,12 +119,12 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 	return nil
 }
 
-func (s *testerServiceImpl) AssignBulk(ctx context.Context, projectID int64, request *schema.BulkAssignTesters) error {
+func (s *testerServiceImpl) AssignBulk(ctx context.Context, projectID int64, request *schema.BulkAssignTesters, assignedBy string) error {
 	if projectID != request.ProjectID {
 		return fmt.Errorf("projectIDs in arguments do not match")
 	}
 	for _, assignment := range request.Testers {
-		err := s.Assign(ctx, projectID, assignment.UserID, assignment.Role)
+		err := s.Assign(ctx, projectID, assignment.UserID, assignment.Role, assignedBy)
 		if err != nil {
 			return err
 		}

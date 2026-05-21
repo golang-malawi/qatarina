@@ -178,7 +178,9 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 		request.AssignedToID = userID
 		request.UpdatedByID = userID
 
-		_, err := testPlanService.Create(context.Background(), request)
+		assignedBy := authutil.GetAuthUsername(c)
+
+		_, err := testPlanService.Create(context.Background(), request, assignedBy)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
@@ -293,7 +295,8 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 			return problemdetail.BadRequest(c, "plan_id in request body and param do not match")
 		}
 
-		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request)
+		assignedBy := authutil.GetAuthUsername(c)
+		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request, assignedBy)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
