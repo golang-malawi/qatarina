@@ -24,14 +24,18 @@ type TesterService interface {
 }
 
 type testerServiceImpl struct {
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	queries             *dbsqlc.Queries
+	logger              logging.Logger
+	notificationService NotificationService
+	userService         UserService
 }
 
-func NewTesterService(db *dbsqlc.Queries, logger logging.Logger) TesterService {
+func NewTesterService(db *dbsqlc.Queries, logger logging.Logger, notificationService NotificationService, userService UserService) TesterService {
 	return &testerServiceImpl{
-		queries: db,
-		logger:  logger,
+		queries:             db,
+		logger:              logger,
+		notificationService: notificationService,
+		userService:         userService,
 	}
 }
 
@@ -80,6 +84,38 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 		s.logger.Error("tester-service", "failed to assign tester to project", "error", err, "project_id", projectID, "user_id", userID)
 		return err
 	}
+
+	// Send notification email asynchronously (non-blocking)
+	go func() {
+		// Get user information
+		user, err := s.queries.GetUser(ctx, int32(userID))
+		if err != nil {
+			s.logger.Error("tester-service", "failed to get user for notification", "error", err, "user_id", userID)
+			return
+		}
+
+		// Get project information
+		project, err := s.queries.GetProject(ctx, int32(projectID))
+		if err != nil {
+			s.logger.Error("tester-service", "failed to get project for notification", "error", err, "project_id", projectID)
+			return
+		}
+
+		// Send the notification
+		notificationErr := s.notificationService.SendTesterAssignedNotification(
+			ctx,
+			user.Email,
+			user.DisplayName.String,
+			project.Title,
+			projectID,
+			"System", // TODO: Get the actual user who assigned this tester
+			role,
+		)
+		if notificationErr != nil {
+			s.logger.Error("tester-service", "failed to send tester assignment notification", "error", notificationErr, "user_id", userID, "project_id", projectID)
+		}
+	}()
+
 	return nil
 }
 

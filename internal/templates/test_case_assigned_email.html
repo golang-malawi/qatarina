@@ -1,0 +1,76 @@
+<!-- templates/test_case_assigned_email.html -->
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #e74c3c;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background-color: #ecf0f1;
+        padding: 20px;
+        border-radius: 0 0 5px 5px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #7f8c8d;
+        text-align: center;
+      }
+      .button {
+        background-color: #e74c3c;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 5px;
+        display: inline-block;
+        margin-top: 15px;
+      }
+      .details {
+        background-color: white;
+        padding: 15px;
+        border-left: 4px solid #e74c3c;
+        margin: 15px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>New Test Case Assigned</h1>
+      </div>
+      <div class="content">
+        <p>Hi {{.RecipientName}},</p>
+        <p>You have been assigned a new test case to execute. Here are the details:</p>
+
+        <div class="details">
+          <p><strong>Project:</strong> {{.ProjectName}}</p>
+          <p><strong>Test Case:</strong> {{.TestCaseName}}</p>
+          <p><strong>Test Case Code:</strong> {{.TestCaseCode}}</p>
+          <p><strong>Assigned by:</strong> {{.AssignedByName}}</p>
+        </div>
+
+        <p>Please review the test case requirements and execute the test as per the specified steps. Click the button below to start testing:</p>
+        <p><a href="https://qatarina.dev/projects/{{.ProjectID}}/test-cases/{{.TestCaseID}}" class="button">View Test Case</a></p>
+
+        <p>Make sure to document your findings and mark the test case as complete or failed once you're done testing.</p>
+
+        <div class="footer">
+          <p>This is an automated message from Qatarina. Please do not reply to this email.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

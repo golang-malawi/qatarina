@@ -30,14 +30,16 @@ type TestPlanService interface {
 var _ TestPlanService = &testPlanService{}
 
 type testPlanService struct {
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	queries             *dbsqlc.Queries
+	logger              logging.Logger
+	notificationService NotificationService
 }
 
-func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanService {
+func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger, notificationService NotificationService) TestPlanService {
 	return &testPlanService{
-		queries: conn,
-		logger:  logger,
+		queries:             conn,
+		logger:              logger,
+		notificationService: notificationService,
 	}
 }
 
@@ -74,6 +76,13 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	if err != nil {
 		return nil, err
 	}
+
+	// Get project information for notifications
+	project, projErr := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if projErr != nil {
+		t.logger.Error("failed to get project for notification", "error", err, "project_id", request.ProjectID)
+	}
+
 	for _, assignedTestCase := range request.PlannedTests {
 		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
 		if err != nil {
@@ -102,6 +111,33 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 			if err != nil {
 				return nil, err
 			}
+
+			// Send test plan added notification asynchronously
+			if projErr == nil {
+				go func(uid int64, planID int64) {
+					// Get user information
+					user, err := t.queries.GetUser(ctx, int32(uid))
+					if err != nil {
+						t.logger.Error("failed to get user for test plan notification", "error", err, "user_id", uid)
+						return
+					}
+
+					// Send the notification
+					notificationErr := t.notificationService.SendTestPlanAddedNotification(
+						ctx,
+						user.Email,
+						user.DisplayName.String,
+						project.Title,
+						request.Description,
+						int64(project.ID),
+						planID,
+						"System", // TODO: Get the actual user who created the test plan
+					)
+					if notificationErr != nil {
+						t.logger.Error("failed to send test plan added notification", "error", notificationErr, "user_id", uid, "test_plan_id", planID)
+					}
+				}(userID, int64(testPlanID))
+			}
 		}
 	}
 
@@ -129,6 +165,13 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 		return nil, err
 	}
 	testPlanID := request.PlanID
+
+	// Get project information for notifications
+	project, projErr := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if projErr != nil {
+		t.logger.Error("failed to get project for notification", "error", err, "project_id", request.ProjectID)
+	}
+
 	for _, assignedTestCase := range request.PlannedTests {
 		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
 		if err != nil {
@@ -156,6 +199,36 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
 			if err != nil {
 				return nil, err
+			}
+
+			// Send notification email asynchronously
+			if projErr == nil {
+				go func(uid int64, planID int64, tcID string, tcName, tcCode string) {
+					// Get user information
+					user, err := t.queries.GetUser(ctx, int32(uid))
+					if err != nil {
+						t.logger.Error("failed to get user for test case assignment notification", "error", err, "user_id", uid)
+						return
+					}
+
+					// Send the notification
+					notificationErr := t.notificationService.SendTestCaseAssignedNotification(
+						ctx,
+						user.Email,
+						user.DisplayName.String,
+						project.Title,
+						tcName,
+						tcCode,
+						int64(project.ID),
+						tcID,
+						"System", // TODO: Get the actual user who assigned this test case
+					)
+
+					if notificationErr != nil {
+						t.logger.Error("failed to send test case assignment notification", "error", notificationErr, "user_id", uid, "test_case_id", tcID)
+					}
+				}(userID, int64(testPlanID), assignedTestCase.TestCaseID, testCase.Title, testCase.Code)
+
 			}
 		}
 	}

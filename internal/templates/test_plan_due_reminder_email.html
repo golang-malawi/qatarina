@@ -1,0 +1,79 @@
+<!-- templates/test_plan_due_reminder_email.html -->
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #f39c12;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background-color: #ecf0f1;
+        padding: 20px;
+        border-radius: 0 0 5px 5px;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #7f8c8d;
+        text-align: center;
+      }
+      .button {
+        background-color: #f39c12;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 5px;
+        display: inline-block;
+        margin-top: 15px;
+      }
+      .details {
+        background-color: white;
+        padding: 15px;
+        border-left: 4px solid #f39c12;
+        margin: 15px 0;
+      }
+      .warning {
+        color: #d35400;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Test Plan Due Date Reminder</h1>
+      </div>
+      <div class="content">
+        <p>Hi {{.RecipientName}},</p>
+        <p><span class="warning">⚠️ Reminder:</span> The test plan you are working on has an upcoming due date.</p>
+
+        <div class="details">
+          <p><strong>Project:</strong> {{.ProjectName}}</p>
+          <p><strong>Test Plan:</strong> {{.TestPlanName}}</p>
+          <p><strong>Due Date:</strong> {{.DueDate.Format "Jan 2, 2006 15:04 MST"}}</p>
+        </div>
+
+        <p>Please ensure that all test cases are completed and your findings are documented before the due date. If you are unable to complete the testing, please notify the project manager immediately.</p>
+        <p><a href="https://qatarina.dev/projects/{{.ProjectID}}/test-plans/{{.TestPlanID}}" class="button">View Test Plan</a></p>
+
+        <p>Thank you for your attention to detail and timely completion of your testing responsibilities.</p>
+
+        <div class="footer">
+          <p>This is an automated message from Qatarina. Please do not reply to this email.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
