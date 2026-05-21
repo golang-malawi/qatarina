@@ -278,14 +278,15 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 				Description:    "Default -- Ongoing Testing",
 				StartAt:        time.Now().Format(time.DateOnly),
 				ClosedAt:       nil,
-				ScheduledEndAt: "2099-01-01",
+				ScheduledEndAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02"),
 				AssignedToID:   int64(project.OwnerUserID),
 				CreatedByID:    int64(project.OwnerUserID),
 				UpdatedByID:    int64(project.OwnerUserID),
 				PlannedTests:   []schema.TestCaseAssignment{},
 			}
 
-			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan)
+			assignedBy := authutil.GetAuthUsername(ctx)
+			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan, assignedBy)
 			if err != nil {
 				logger.Error(loggedmodule.ApiProjects, "failed to create a default test plan for project", "projectID", project.ID, "error", err)
 			}
@@ -444,7 +445,8 @@ func AssignTesters(testerService services.TesterService, logger logging.Logger) 
 			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
 		}
 
-		if err := testerService.AssignBulk(context.Background(), projectID, &request); err != nil {
+		assignedBy := authutil.GetAuthUsername(c)
+		if err := testerService.AssignBulk(context.Background(), projectID, &request, assignedBy); err != nil {
 			logger.Error(loggedmodule.ApiProjects, "failed to assign testers to project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to assign testers")
 		}

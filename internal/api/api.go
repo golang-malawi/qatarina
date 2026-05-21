@@ -28,6 +28,7 @@ type API struct {
 	TestCaseImportService services.TestCaseImportService
 	OrgService            services.OrgService
 	EnvironmentService    services.EnvironmentService
+	NotificationService   services.NotificationService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -39,6 +40,8 @@ func NewAPI(config *config.Config) *API {
 	moduleService := services.NewModuleService(dbConn)
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
+	notificationService := services.NewNotificationService(logger, config.SMTP, config.Server.BaseURL)
+	userService := services.NewUserService(dbConn, logger, config.SMTP, config)
 
 	return &API{
 		logger:                logger,
@@ -47,15 +50,16 @@ func NewAPI(config *config.Config) *API {
 		AuthService:           services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:       projectService,
 		TestCasesService:      services.NewTestCaseService(rawDB.DB, dbConn, logger),
-		TestPlansService:      services.NewTestPlanService(dbConn, logger),
+		TestPlansService:      services.NewTestPlanService(dbConn, logger, notificationService),
 		TestRunsService:       services.NewTestRunService(rawDB.DB, dbConn, logger),
-		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
-		TesterService:         services.NewTesterService(dbConn, logger),
+		UserService:           userService,
+		TesterService:         services.NewTesterService(dbConn, logger, notificationService, userService),
 		ModuleService:         moduleService,
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
 		OrgService:            services.NewOrgService(dbConn, logger),
 		EnvironmentService:    environmentService,
+		NotificationService:   notificationService,
 	}
 }
 

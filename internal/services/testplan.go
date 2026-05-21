@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -14,13 +15,36 @@ import (
 	"github.com/google/uuid"
 )
 
+func parseDate(value string) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}, fmt.Errorf("date value is empty")
+	}
+
+	layouts := []string{
+		"2006-01-02",
+		"2006/01/02",
+		time.RFC3339,
+		"2006-01-02 15:04:05",
+		"2006/01/02 15:04:05",
+	}
+
+	for _, layout := range layouts {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("invalid date format: %q", value)
+}
+
 type TestPlanService interface {
 	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.ListTestRunsByPlanRow, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
-	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
-	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
+	Create(context.Context, *schema.CreateTestPlan, string) (*dbsqlc.GetTestPlanRow, error)
+	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest, string) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
@@ -30,38 +54,56 @@ type TestPlanService interface {
 var _ TestPlanService = &testPlanService{}
 
 type testPlanService struct {
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	queries             *dbsqlc.Queries
+	logger              logging.Logger
+	notificationService NotificationService
 }
 
-func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanService {
+func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger, notificationService NotificationService) TestPlanService {
 	return &testPlanService{
-		queries: conn,
-		logger:  logger,
+		queries:             conn,
+		logger:              logger,
+		notificationService: notificationService,
 	}
 }
 
 // Create implements TestPlanService.
-func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error) {
+func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan, assignedBy string) (*dbsqlc.GetTestPlanRow, error) {
+	startAt, err := parseDate(request.StartAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid start_at: %w", err)
+	}
 
-	// TODO: create the test plan
-	// TODO: create test-runs for the plan from assigned
+	scheduledEndAt, err := parseDate(request.ScheduledEndAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid scheduled_end_at: %w", err)
+	}
+
+	var closedAt sql.NullTime
+	if request.ClosedAt != nil && *request.ClosedAt != "" {
+		closedTime, cerr := parseDate(*request.ClosedAt)
+		if cerr != nil {
+			return nil, fmt.Errorf("invalid closed_at: %w", cerr)
+		}
+		closedAt = sql.NullTime{Time: closedTime, Valid: true}
+	}
+
 	testPlanParams := dbsqlc.CreateTestPlanParams{
-		ProjectID:     int32(request.ProjectID),
-		AssignedToID:  int32(request.AssignedToID),
-		CreatedByID:   int32(request.CreatedByID),
-		UpdatedByID:   int32(request.UpdatedByID),
-		Kind:          dbsqlc.TestKind(request.Kind),
-		Description:   sql.NullString{String: request.Description, Valid: true},
-		EnvironmentID: common.NewNullInt32(int32(request.EnvironmentID)),
-		// TODO: handle time fields
-		// StartAt:        sql.NullTime{Time: time.Now, Valid: true},
-		// ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
-		NumTestCases: 0,
-		NumFailures:  0,
-		IsComplete:   sql.NullBool{Bool: false, Valid: true},
-		IsLocked:     sql.NullBool{Bool: false, Valid: true},
-		HasReport:    sql.NullBool{Bool: false, Valid: true},
+		ProjectID:      int32(request.ProjectID),
+		AssignedToID:   int32(request.AssignedToID),
+		CreatedByID:    int32(request.CreatedByID),
+		UpdatedByID:    int32(request.UpdatedByID),
+		Kind:           dbsqlc.TestKind(request.Kind),
+		Description:    sql.NullString{String: request.Description, Valid: true},
+		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
+		StartAt:        sql.NullTime{Time: startAt, Valid: true},
+		ClosedAt:       closedAt,
+		ScheduledEndAt: sql.NullTime{Time: scheduledEndAt, Valid: true},
+		NumTestCases:   0,
+		NumFailures:    0,
+		IsComplete:     sql.NullBool{Bool: false, Valid: true},
+		IsLocked:       sql.NullBool{Bool: false, Valid: true},
+		HasReport:      sql.NullBool{Bool: false, Valid: true},
 		CreatedAt: sql.NullTime{
 			Time: time.Now(), Valid: true,
 		},
@@ -74,6 +116,13 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	if err != nil {
 		return nil, err
 	}
+
+	// Get project information for notifications
+	project, projErr := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if projErr != nil {
+		t.logger.Error("failed to get project for notification", "error", err, "project_id", request.ProjectID)
+	}
+
 	for _, assignedTestCase := range request.PlannedTests {
 		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
 		if err != nil {
@@ -87,8 +136,8 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				TestPlanID:   int32(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				OwnerID:      int32(request.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
+				TestedByID:   common.NewNullInt32(int32(userID)),
+				AssignedToID: common.NewNullInt32(int32(userID)),
 				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,
@@ -101,6 +150,33 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
 			if err != nil {
 				return nil, err
+			}
+
+			// Send test plan added notification asynchronously
+			if projErr == nil {
+				go func(uid int64, planID int64) {
+					// Get user information
+					user, err := t.queries.GetUser(ctx, int32(uid))
+					if err != nil {
+						t.logger.Error("failed to get user for test plan notification", "error", err, "user_id", uid)
+						return
+					}
+
+					// Send the notification
+					notificationErr := t.notificationService.SendTestPlanAddedNotification(
+						ctx,
+						user.Email,
+						user.DisplayName.String,
+						project.Title,
+						request.Description,
+						int64(project.ID),
+						planID,
+						assignedBy,
+					)
+					if notificationErr != nil {
+						t.logger.Error("failed to send test plan added notification", "error", notificationErr, "user_id", uid, "test_plan_id", planID)
+					}
+				}(userID, int64(testPlanID))
 			}
 		}
 	}
@@ -123,12 +199,19 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 }
 
 // AddTestCaseToPlan implements TestPlanService.
-func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest, assignedBy string) (*dbsqlc.GetTestPlanRow, error) {
 	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
 	if err != nil {
 		return nil, err
 	}
 	testPlanID := request.PlanID
+
+	// Get project information for notifications
+	project, projErr := t.queries.GetProject(ctx, int32(request.ProjectID))
+	if projErr != nil {
+		t.logger.Error("failed to get project for notification", "error", err, "project_id", request.ProjectID)
+	}
+
 	for _, assignedTestCase := range request.PlannedTests {
 		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
 		if err != nil {
@@ -142,8 +225,8 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 				TestPlanID:   int32(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				OwnerID:      int32(testPlan.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
+				TestedByID:   common.NewNullInt32(int32(userID)),
+				AssignedToID: common.NewNullInt32(int32(userID)),
 				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,
@@ -156,6 +239,36 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
 			if err != nil {
 				return nil, err
+			}
+
+			// Send notification email asynchronously
+			if projErr == nil {
+				go func(uid int64, planID int64, tcID string, tcName, tcCode string) {
+					// Get user information
+					user, err := t.queries.GetUser(ctx, int32(uid))
+					if err != nil {
+						t.logger.Error("failed to get user for test case assignment notification", "error", err, "user_id", uid)
+						return
+					}
+
+					// Send the notification
+					notificationErr := t.notificationService.SendTestCaseAssignedNotification(
+						ctx,
+						user.Email,
+						user.DisplayName.String,
+						project.Title,
+						tcName,
+						tcCode,
+						int64(project.ID),
+						tcID,
+						assignedBy,
+					)
+
+					if notificationErr != nil {
+						t.logger.Error("failed to send test case assignment notification", "error", notificationErr, "user_id", uid, "test_case_id", tcID)
+					}
+				}(userID, int64(testPlanID), assignedTestCase.TestCaseID, testCase.Title, testCase.Code)
+
 			}
 		}
 	}
@@ -234,14 +347,33 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 }
 
 func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestPlan) (bool, error) {
-	err := t.queries.UpdateTestPlan(ctx, dbsqlc.UpdateTestPlanParams{
+	startAt, err := parseDate(request.StartAt)
+	if err != nil {
+		return false, fmt.Errorf("invalid start_at: %w", err)
+	}
+
+	var closedAt sql.NullTime
+	if request.ClosedAt != nil && *request.ClosedAt != "" {
+		closedTime, cerr := parseDate(*request.ClosedAt)
+		if cerr != nil {
+			return false, fmt.Errorf("invalid closed_at: %w", cerr)
+		}
+		closedAt = sql.NullTime{Time: closedTime, Valid: true}
+	}
+
+	scheduledEndAt, err := parseDate(request.ScheduledEndAt)
+	if err != nil {
+		return false, fmt.Errorf("invalid scheduled_end_at: %w", err)
+	}
+
+	err = t.queries.UpdateTestPlan(ctx, dbsqlc.UpdateTestPlanParams{
 		ProjectID:      int32(request.ProjectID),
 		Kind:           dbsqlc.TestKind(request.Kind),
 		Description:    common.NullString(request.Description),
 		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
-		StartAt:        common.NullTime(request.StartAt),
-		ClosedAt:       common.NullTime(request.ClosedAt),
-		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
+		StartAt:        common.NullTime(startAt),
+		ClosedAt:       closedAt,
+		ScheduledEndAt: common.NullTime(scheduledEndAt),
 	})
 	if err != nil {
 		t.logger.Error("failed to update test plan", "error", err)

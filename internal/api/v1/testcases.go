@@ -464,7 +464,7 @@ func ListFailingTestCases(testCasesService services.TestCaseService, logger logg
 
 		testCases, err := testCasesService.FindAllFailing(c.Context(), int64(projectID))
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to fetch feailing test cases")
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch failing test cases")
 			return problemdetail.ServerErrorProblem(c, "failed to fetch failing test cases")
 		}
 

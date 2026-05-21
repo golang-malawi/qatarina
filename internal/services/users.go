@@ -52,13 +52,15 @@ type userServiceImpl struct {
 	queries *dbsqlc.Queries
 	logger  logging.Logger
 	smtpCfg config.SMTPConfiguration
+	cfg     *config.Config
 }
 
-func NewUserService(conn *dbsqlc.Queries, logger logging.Logger, smtpCfg config.SMTPConfiguration) UserService {
+func NewUserService(conn *dbsqlc.Queries, logger logging.Logger, smtpCfg config.SMTPConfiguration, cfg *config.Config) UserService {
 	return &userServiceImpl{
 		queries: conn,
 		logger:  logger,
 		smtpCfg: smtpCfg,
+		cfg:     cfg,
 	}
 }
 
@@ -218,7 +220,7 @@ func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail
 		Token     string
 		ExpiresAt string
 	}{
-		BaseURL:   "https://qatarina.dev", // TODO: get this from configuration
+		BaseURL:   u.cfg.Server.BaseURL,
 		Token:     token,
 		ExpiresAt: expiresAt.Format("Jan 2, 2006 15:04 MST"),
 	}

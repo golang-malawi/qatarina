@@ -120,7 +120,7 @@ func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse 
 		ProjectID:      int64(tr.ProjectID),
 		TestPlanID:     int64(tr.TestPlanID),
 		TestCaseID:     tr.TestCaseID.String(),
-		TestedByID:     tr.TestedByID,
+		TestedByID:     tr.TestedByID.Int32,
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),
 		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
