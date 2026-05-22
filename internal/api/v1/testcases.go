@@ -234,13 +234,9 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			}
 		}
 
-		testCase, err := testCaseService.Create(context.Background(), request)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
-		}
-
-		// if file uploaded, forward to runner
+		// If a script file was uploaded, run a pre-check against the runner first.
+		var precheckOutput string
+		var precheckState dbsqlc.TestRunState
 		if hasFile {
 			file, _ := fileHeader.Open()
 			defer file.Close()
@@ -263,7 +259,6 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			}
 
 			writer.WriteField("runner", request.Runner)
-
 			writer.Close()
 
 			var runnerURL string
@@ -280,46 +275,49 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 				return problemdetail.BadRequest(c, "invalid runner specified")
 			}
 
-			// TO DO DELETE LOGGER
-			logger.Info(loggedmodule.ApiTestCases, "posting to runner", "url", runnerURL)
-
+			// POST to runner as a pre-check
+			logger.Info(loggedmodule.ApiTestCases, "posting precheck to runner", "url", runnerURL)
 			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
-			var output string
-			var state dbsqlc.TestRunState
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestCases, "failed to post to runner", "error", err)
-				output = "Failed to connect to runner"
-				state = dbsqlc.TestRunStateFailed
+				return problemdetail.BadRequest(c, "failed to connect to runner for script validation")
+			}
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+
+			var msgs []schema.RunnerMessage
+			if err := json.Unmarshal(body, &msgs); err != nil {
+				precheckOutput = string(body)
 			} else {
-				defer resp.Body.Close()
-				body, _ := io.ReadAll(resp.Body)
-
-				// TO DO DELETE LOGGER MESSAGE
-				logger.Info(loggedmodule.ApiTestCases, "raw runner response", "body", string(body))
-
-				var msgs []schema.RunnerMessage
-				if err := json.Unmarshal(body, &msgs); err != nil {
-					// fallback: just keep raw body
-					output = string(body)
-				} else {
-					var logs []string
-					for _, m := range msgs {
-						logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
-					}
-					output = strings.Join(logs, "\n")
+				var logs []string
+				for _, m := range msgs {
+					logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
 				}
-
-				// decide pass/fail based on logs
-				if resp.StatusCode != 200 {
-					logger.Error(loggedmodule.ApiTestCases, "runner returned non-200 status",
-						"status", resp.StatusCode, "output", output)
-					state = dbsqlc.TestRunStateFailed
-				} else {
-					state = determineStateFromRunnerOutput(output)
-				}
-
+				precheckOutput = strings.Join(logs, "\n")
 			}
 
+			if resp.StatusCode != 200 {
+				logger.Error(loggedmodule.ApiTestCases, "runner precheck returned non-200 status", "status", resp.StatusCode, "output", precheckOutput)
+				return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", precheckOutput))
+			}
+
+			precheckState = determineStateFromRunnerOutput(precheckOutput)
+
+			// If precheck indicates failure, reject creation
+			if precheckState == dbsqlc.TestRunStateFailed {
+				return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", precheckOutput))
+			}
+		}
+
+		// Create the test case only after a successful pre-check (or if no file uploaded)
+		testCase, err := testCaseService.Create(context.Background(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
+		}
+
+		// If file uploaded, record a run/result using the precheck output
+		if hasFile {
 			runReq := &schema.TestRunRequest{
 				ProjectID:    int32(request.ProjectID),
 				TestPlanID:   0,
@@ -338,12 +336,12 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 
 			commitReq := &schema.CommitTestRunResult{
 				TestRunID:      createdRun.ID.String(),
-				Notes:          "Auto-executed on creation via script",
+				Notes:          "Precheck executed on creation via script",
 				IsClosed:       true,
 				TestedOn:       time.Now(),
-				ActualResult:   output,
+				ActualResult:   precheckOutput,
 				ExpectedResult: "Script assertions",
-				State:          state,
+				State:          precheckState,
 				UserID:         int64(userID),
 			}
 
@@ -355,6 +353,111 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 
 		return c.JSON(schema.NewTestCaseResponse(testCase))
 	}
+}
+
+// ValidateTestCaseScript godoc
+//
+//	@ID             ValidateTestCaseScript
+//	@Summary        Validate a runner script without creating a test case
+//	@Description    Validate a test script by sending it to the configured runner before creation
+//	@Tags           test-cases
+//	@Accept         multipart/form-data
+//	@Produce        json
+//	@Param          script_file formData file true "Script file"
+//	@Param          runner      formData string true "Runner"
+//	@Success        200 {object} map[string]interface{}
+//	@Failure        400 {object} problemdetail.ProblemDetail
+//	@Failure        500 {object} problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/validate-script [post]
+func ValidateTestCaseScript(logger logging.Logger, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		fileHeader, err := c.FormFile("script_file")
+		if err != nil || fileHeader == nil {
+			return problemdetail.BadRequest(c, "script file is required")
+		}
+
+		runner := c.FormValue("runner")
+		if runner == "" {
+			return problemdetail.BadRequest(c, "runner is required")
+		}
+
+		file, err := fileHeader.Open()
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to open script file", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to read script file")
+		}
+		defer file.Close()
+
+		output, state, status, err := postScriptToRunner(file, fileHeader.Filename, runner, cfg)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to validate script", "error", err)
+			return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %v", err))
+		}
+
+		if status != http.StatusOK || state == dbsqlc.TestRunStateFailed {
+			return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", output))
+		}
+
+		return c.JSON(fiber.Map{
+			"valid":  true,
+			"output": output,
+			"state":  string(state),
+		})
+	}
+}
+
+func postScriptToRunner(file multipart.File, filename, runner string, cfg *config.Config) (string, dbsqlc.TestRunState, int, error) {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	formFile, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	if _, err := io.Copy(formFile, file); err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	writer.WriteField("runner", runner)
+	if err := writer.Close(); err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	var runnerURL string
+	switch runner {
+	case "basi":
+		runnerURL = cfg.Runner.BasiURL
+	case "playwright":
+		runnerURL = cfg.Runner.PlaywrightURL
+	case "cypress":
+		runnerURL = cfg.Runner.CypressURL
+	case "browseruse":
+		runnerURL = cfg.Runner.BrowserUseURL
+	default:
+		return "", dbsqlc.TestRunStateFailed, 0, fmt.Errorf("invalid runner specified")
+	}
+
+	resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
+	if err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var output string
+	var msgs []schema.RunnerMessage
+	if err := json.Unmarshal(body, &msgs); err != nil {
+		output = string(body)
+	} else {
+		var logs []string
+		for _, m := range msgs {
+			logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
+		}
+		output = strings.Join(logs, "\n")
+	}
+
+	return output, determineStateFromRunnerOutput(output), resp.StatusCode, nil
 }
 
 // BulkCreateTestCases godoc

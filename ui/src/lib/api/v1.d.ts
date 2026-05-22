@@ -1315,6 +1315,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/validate-script": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate a runner script without creating a test case
+         * @description Validate a test script by sending it to the configured runner before creation
+         */
+        post: operations["ValidateTestCaseScript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans": {
         parameters: {
             query?: never;
@@ -1921,6 +1941,8 @@ export interface components {
             is_draft?: boolean;
             kind: string;
             project_id?: number;
+            /** @description "basi", "playwright", "cyprus", "browseruse" */
+            runner?: string;
             tags: string[];
             title: string;
         };
@@ -4871,6 +4893,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ValidateTestCaseScript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Runner */
+        requestBody: {
+            content: {
+                "multipart/form-data": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Bad Request */

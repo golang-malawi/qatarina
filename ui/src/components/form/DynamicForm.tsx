@@ -68,6 +68,7 @@ export interface FormConfig<T extends z.ZodTypeAny> {
   onSubmit: (values: z.infer<T>) => Promise<void> | void;
   submitText?: string;
   submitLoading?: boolean;
+  submitDisabled?: boolean;
   layout?: "vertical" | "horizontal";
   spacing?: number;
 }
@@ -81,6 +82,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   submitLoading,
   layout = "vertical",
   spacing = 4,
+  submitDisabled,
 }: FormConfig<T>) {
   const form = useForm({
     defaultValues: defaultValues || {},
@@ -429,7 +431,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
           variant="outline"
           colorPalette="brand"
           loading={isSubmitting}
-          disabled={isSubmitting}
+          disabled={isSubmitting || submitDisabled}
         >
           {submitText}
         </Button>

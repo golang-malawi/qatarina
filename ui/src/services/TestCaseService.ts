@@ -47,7 +47,23 @@ export async function getTestCaseById(testCaseID: string) {
 export async function createTestCase(
   data: components["schemas"]["schema.CreateTestCaseRequest"]
 ) {
-  return apiClient.request("post", "/v1/test-cases", { body: data });
+  return apiClient.request("post", "/v1/test-cases", { body: data as any });
+}
+
+export async function validateTestCaseScript(file: File, runner: string) {
+  const formData = new FormData();
+  formData.append("script_file", file);
+  formData.append("runner", runner);
+
+  const res = await apiClient.request("post", "/v1/test-cases/validate-script" as any, {
+    body: formData as any,
+  });
+
+  if (res.error) {
+    throw new Error(res.error.detail || "Script validation failed");
+  }
+
+  return res.data as { valid: boolean; output: string; state: string };
 }
 
 export async function importTestCasesFromFile(

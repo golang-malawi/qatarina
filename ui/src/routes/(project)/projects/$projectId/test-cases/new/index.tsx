@@ -1,10 +1,12 @@
-import { Box, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCreateTestCaseMutation } from "@/services/TestCaseService";
+import { useEffect, useMemo, useState } from "react";
+import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
-import { DynamicForm } from "@/components/form/DynamicForm";
+import { DynamicForm, FieldConfig } from "@/components/form/DynamicForm";
+import SelectRunner from "@/components/form/SelectRunner";
 import {
   testCaseCreationSchema,
   TestCaseCreationFormData,
@@ -24,11 +26,50 @@ function NewTestCases() {
   const createTestCaseMutation = useCreateTestCaseMutation();
   const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
 
+  const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
+  const [selectedRunner, setSelectedRunner] = useState("basi");
+  const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
+  const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
+
+  const validateAttachedScript = async (file: File, runner: string) => {
+    setScriptValidationStatus("validating");
+    setScriptValidationMessage("Scanning script file...");
+
+    try {
+      const result = await validateTestCaseScript(file, runner);
+      setScriptValidationStatus("success");
+      setScriptValidationMessage(result.output || "Script validated successfully.");
+    } catch (error) {
+      setScriptValidationStatus("failed");
+      setScriptValidationMessage((error as Error).message || "Script validation failed.");
+    }
+  };
+
+  useEffect(() => {
+    if (attachedScriptFile) {
+      validateAttachedScript(attachedScriptFile, selectedRunner);
+    } else {
+      setScriptValidationStatus("idle");
+      setScriptValidationMessage("");
+    }
+  }, [attachedScriptFile, selectedRunner]);
+
   async function handleSubmit(values: TestCaseCreationFormData) {
     const tags =
       typeof values.tags === "string"
         ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : values.tags || [];
+
+    if (values.script_file && scriptValidationStatus !== "success") {
+      toaster.create({
+        title: "Script validation required",
+        description:
+          "Please wait for script scanning to complete and pass before creating the test case.",
+        type: "warning",
+        duration: 4000,
+      });
+      return;
+    }
 
     let body:any;
 
@@ -97,6 +138,83 @@ function NewTestCases() {
     );
   }
 
+  const fields = useMemo<FieldConfig[]>(
+    () =>
+      createTestCaseFields().map((field) => {
+        if (field.name === "runner") {
+          return {
+            ...field,
+            customComponent: ({ value, onChange }) => (
+              <SelectRunner
+                value={(value as string) || "basi"}
+                onChange={(val) => {
+                  onChange(val);
+                  setSelectedRunner(val);
+                }}
+              />
+            ),
+          };
+        }
+
+        if (field.name === "script_file") {
+          return {
+            ...field,
+            type: "custom",
+            customComponent: ({ onChange }) => (
+              <Box>
+                <input
+                  type="file"
+                  accept={field.accept}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    onChange(file);
+                    setAttachedScriptFile(file);
+                  }}
+                />
+                <Box mt={2}>
+                  {scriptValidationStatus === "validating" && (
+                    <Alert.Root status="info" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          Scanning script file using {selectedRunner}. Please wait...
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+
+                  {scriptValidationStatus === "success" && (
+                    <Alert.Root status="success" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {scriptValidationMessage || "Script validated successfully."}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+
+                  {scriptValidationStatus === "failed" && (
+                    <Alert.Root status="error" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {scriptValidationMessage}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                </Box>
+              </Box>
+            ),
+          };
+        }
+
+        return field;
+      }),
+    [scriptValidationMessage, scriptValidationStatus],
+  );
+
   return (
     <Box p={6}>
       <Heading size="3xl" color="fg.heading">
@@ -104,10 +222,13 @@ function NewTestCases() {
       </Heading>
       <DynamicForm
         schema={testCaseCreationSchema}
-        fields={createTestCaseFields()}
+        fields={fields}
         onSubmit={handleSubmit}
         submitText="Create Test Case"
         submitLoading={createTestCaseMutation.isPending}
+        submitDisabled={
+          attachedScriptFile !== null && scriptValidationStatus !== "success"
+        }
         layout="vertical"
         spacing={4}
         defaultValues={{

@@ -304,6 +304,9 @@ components:
           type: string
         project_id:
           type: integer
+        runner:
+          description: '"basi", "playwright", "cyprus", "browseruse"'
+          type: string
         tags:
           items:
             type: string
@@ -3462,6 +3465,41 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Suggest a new Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/validate-script:
+    post:
+      description: Validate a test script by sending it to the configured runner before
+        creation
+      operationId: ValidateTestCaseScript
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: string
+        description: Runner
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Validate a runner script without creating a test case
       tags:
       - test-cases
   /v1/test-plans:
