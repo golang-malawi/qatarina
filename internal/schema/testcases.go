@@ -19,6 +19,11 @@ type CreateTestCaseRequest struct {
 	Runner          string   `json:"runner"` // "basi", "playwright", "cyprus", "browseruse"
 }
 
+type ExecuteTestCaseRequest struct {
+	TestPlanID int32  `json:"test_plan_id" validate:"-"`
+	Runner     string `json:"runner" validate:"-"` // optional, falls back to test case runner type
+}
+
 type TestCaseResponse struct {
 	ID              string   `json:"id"`
 	ProjectID       int64    `json:"project_id"`
@@ -163,6 +168,7 @@ type CreateSuggestedTestCaseRequest struct {
 	Description     string   `json:"description" validate:"required"`
 	Tags            []string `json:"tags"`
 	CreatedByID     int64    `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
 }
 
 type SugestedTestCaseResponse struct {

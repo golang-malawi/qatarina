@@ -55,7 +55,7 @@ export const createTestCaseFields = (): FieldConfig[] => [
     label: "Attach Runner Script",
     type: "custom",
     accept: ".basi, .yaml, yml",
-    helperText: "Upload a Basi/Playwright script file for this test case"
+    helperText: "Upload a Basi | Playwright | Cypress | Browseruse script file for this test case"
   },
   {
     name: "tags",

@@ -54,6 +54,83 @@ function NewTestCases() {
     }
   }, [attachedScriptFile, selectedRunner]);
 
+  const fields = useMemo<FieldConfig[]>(
+    () =>
+      createTestCaseFields().map((field) => {
+        if (field.name === "runner") {
+          return {
+            ...field,
+            customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
+              <SelectRunner
+                value={(value as string) || "basi"}
+                onChange={(val) => {
+                  onChange(val);
+                  setSelectedRunner(val);
+                }}
+              />
+            ),
+          };
+        }
+
+        if (field.name === "script_file") {
+          return {
+            ...field,
+            type: "custom",
+            customComponent: ({ onChange }: { onChange: (file: File | null) => void }) => (
+              <Box>
+                <input
+                  type="file"
+                  accept=".js,.ts,.py,.go,.java,.rb"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    onChange(file);
+                    setAttachedScriptFile(file);
+                  }}
+                />
+                <Box mt={2}>
+                  {scriptValidationStatus === "validating" && (
+                    <Alert.Root status="info" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          Scanning script file using {selectedRunner}. Please wait...
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+
+                  {scriptValidationStatus === "success" && (
+                    <Alert.Root status="success" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {scriptValidationMessage || "Script validated successfully."}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+
+                  {scriptValidationStatus === "failed" && (
+                    <Alert.Root status="error" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {scriptValidationMessage}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                </Box>
+              </Box>
+            ),
+          };
+        }
+
+        return field;
+      }),
+    [scriptValidationStatus, scriptValidationMessage, selectedRunner],
+  );
+
   async function handleSubmit(values: TestCaseCreationFormData) {
     const tags =
       typeof values.tags === "string"
@@ -137,83 +214,6 @@ function NewTestCases() {
       </Box>
     );
   }
-
-  const fields = useMemo<FieldConfig[]>(
-    () =>
-      createTestCaseFields().map((field) => {
-        if (field.name === "runner") {
-          return {
-            ...field,
-            customComponent: ({ value, onChange }) => (
-              <SelectRunner
-                value={(value as string) || "basi"}
-                onChange={(val) => {
-                  onChange(val);
-                  setSelectedRunner(val);
-                }}
-              />
-            ),
-          };
-        }
-
-        if (field.name === "script_file") {
-          return {
-            ...field,
-            type: "custom",
-            customComponent: ({ onChange }) => (
-              <Box>
-                <input
-                  type="file"
-                  accept={field.accept}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    onChange(file);
-                    setAttachedScriptFile(file);
-                  }}
-                />
-                <Box mt={2}>
-                  {scriptValidationStatus === "validating" && (
-                    <Alert.Root status="info" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description>
-                          Scanning script file using {selectedRunner}. Please wait...
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
-
-                  {scriptValidationStatus === "success" && (
-                    <Alert.Root status="success" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description>
-                          {scriptValidationMessage || "Script validated successfully."}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
-
-                  {scriptValidationStatus === "failed" && (
-                    <Alert.Root status="error" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description>
-                          {scriptValidationMessage}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
-                </Box>
-              </Box>
-            ),
-          };
-        }
-
-        return field;
-      }),
-    [scriptValidationMessage, scriptValidationStatus],
-  );
 
   return (
     <Box p={6}>

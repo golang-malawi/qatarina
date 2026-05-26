@@ -19,6 +19,12 @@ type TestRunRequest struct {
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
 	EnvironmentID int32  `json:"environment_id"`
+	// Feedback fields (optional) - for recording results at creation time
+	ActualResult   *string              `json:"actual_result,omitempty"`
+	ExpectedResult *string              `json:"expected_result,omitempty"`
+	Notes          *string              `json:"notes,omitempty"`
+	ResultState    *dbsqlc.TestRunState `json:"result_state,omitempty"` // passed, failed, or leave nil for pending
+	TestedOn       *time.Time           `json:"tested_on,omitempty"`
 }
 
 type BulkCommitTestResults struct {

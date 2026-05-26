@@ -81,6 +81,12 @@ type RunnerConfiguration struct {
 	PlaywrightURL string `mapstructure:"playwright_url"`
 	CypressURL    string `mapstructure:"cypress_url"`
 	BrowserUseURL string `mapstructure:"browseruse_url"`
+
+	// WebSocket endpoints for streaming
+	BasiWSURL       string `mapstructure:"basi_ws_url" envconfig:"QATARINA_RUNNER_BASI_WS_URL"`
+	PlaywrightWSURL string `mapstructure:"playwright_ws_url" envconfig:"QATARINA_RUNNER_PLAYWRIGHT_WS_URL"`
+	CypressWSURL    string `mapstructure:"cypress_ws_url" envconfig:"QATARINA_RUNNER_CYPRESS_WS_URL"`
+	BrowserUseWSURL string `mapstructure:"browseruse_ws_url" envconfig:"QATARINA_RUNNER_BROWSERUSE_WS_URL"`
 }
 
 func (c *Config) GetDatabaseURL() string {

@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Box,
-  Button,
   Card,
   Flex,
   Heading,
@@ -10,8 +9,9 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { IconListCheck, IconPlayerPlay, IconReport } from "@tabler/icons-react";
+import { IconPlayerPlay } from "@tabler/icons-react";
 import TestCaseGrid from "@/components/TestCaseGrid";
+import { useExecuteTestCaseMutation } from "@/services/TestExecutionService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/execute/"
@@ -20,19 +20,23 @@ export const Route = createFileRoute(
 });
 
 function ExecuteTestPlan() {
-  const { projectId, testPlanID } = Route.useParams();
+  const { testPlanID } = Route.useParams();
+  const mutation = useExecuteTestCaseMutation();
+
+  const handleExecute = (testCaseID: string) => {
+    mutation.mutate({
+      testCaseID,
+      testPlanID: Number(testPlanID),
+      runner: "playwright", // or whichever runner you want
+    });
+  };
 
   return (
     <Box w="full">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
         <Card.Body p={{ base: 5, md: 6 }}>
-          <Flex
-            direction={{ base: "column", lg: "row" }}
-            justify="space-between"
-            align={{ base: "start", lg: "center" }}
-            gap={4}
-          >
-            <Stack gap={2} maxW="3xl">
+          <Flex justify="space-between" align="center" gap={4}>
+            <Stack gap={2}>
               <HStack gap={2}>
                 <Icon as={IconPlayerPlay} color="brand.solid" />
                 <Heading size="lg" color="fg.heading">
@@ -40,31 +44,9 @@ function ExecuteTestPlan() {
                 </Heading>
               </HStack>
               <Text color="fg.subtle">
-                Run through test cases, capture outcomes, and keep execution
-                updates in sync for reporting.
+                Select a test case below and run it against the configured runner.
               </Text>
             </Stack>
-
-            <HStack gap={2} flexWrap="wrap">
-              <Link
-                to="/projects/$projectId/test-plans/$testPlanID/test-cases"
-                params={{ projectId, testPlanID }}
-              >
-                <Button variant="outline" size="sm">
-                  <IconListCheck />
-                  View Test Cases
-                </Button>
-              </Link>
-              <Link
-                to="/projects/$projectId/test-plans/$testPlanID/test-runs"
-                params={{ projectId, testPlanID }}
-              >
-                <Button variant="outline" size="sm">
-                  <IconReport />
-                  View Test Runs
-                </Button>
-              </Link>
-            </HStack>
           </Flex>
         </Card.Body>
       </Card.Root>
@@ -72,10 +54,20 @@ function ExecuteTestPlan() {
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
         <Card.Body p={{ base: 4, md: 5 }}>
           <Box overflowX="auto" minH="80">
-            <TestCaseGrid />
+            <TestCaseGrid
+              onExecute={handleExecute}
+              isExecuting={mutation.isPending}
+            />
           </Box>
         </Card.Body>
       </Card.Root>
+
+      {mutation.isError && (
+        <Text color="red.500">Error: {(mutation.error as Error).message}</Text>
+      )}
+      {mutation.isSuccess && (
+        <Text color="green.500">Run started! ID: {mutation.data.id}</Text>
+      )}
     </Box>
   );
 }

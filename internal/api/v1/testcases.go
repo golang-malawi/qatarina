@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -23,6 +22,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
+	"github.com/golang-malawi/qatarina/internal/runnerclient"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/internal/validation"
@@ -316,42 +316,108 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
 		}
 
-		// If file uploaded, record a run/result using the precheck output
-		if hasFile {
-			runReq := &schema.TestRunRequest{
-				ProjectID:    int32(request.ProjectID),
-				TestPlanID:   0,
-				TestCaseID:   testCase.ID.String(),
-				OwnerID:      int32(userID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
-				Code:         testCase.Code,
-			}
+		// Test case created successfully - no test run execution happens here
+		// Users can execute test cases from the test plan view using the Execute endpoint
+		return c.JSON(schema.NewTestCaseResponse(testCase))
+	}
+}
 
-			createdRun, err := testRunService.Create(c.Context(), runReq)
-			if err != nil {
-				logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
-				return problemdetail.ServerErrorProblem(c, "failed to create test run")
-			}
+// ExecuteTestCase godoc
+//
+//	@ID				ExecuteTestCase
+//	@Summary		Execute a Test Case and create a Test Run
+//	@Description	Execute a test case by running its script against the configured runner
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			test_case_id	path		string						true	"Test Case ID"
+//	@Param			request			body		schema.ExecuteTestCaseRequest	true	"Execution request data"
+//	@Success		202		{object}	schema.TestRunResponse
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		404		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{test_case_id}/execute [post]
+func ExecuteTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		caseID := c.Params("test_case_id")
+		userID := authutil.GetAuthUserID(c)
 
-			commitReq := &schema.CommitTestRunResult{
-				TestRunID:      createdRun.ID.String(),
-				Notes:          "Precheck executed on creation via script",
-				IsClosed:       true,
-				TestedOn:       time.Now(),
-				ActualResult:   precheckOutput,
-				ExpectedResult: "Script assertions",
-				State:          precheckState,
-				UserID:         int64(userID),
-			}
-
-			if _, err := testRunService.Commit(c.Context(), commitReq); err != nil {
-				logger.Error(loggedmodule.ApiTestRuns, "failed to commit test run result", "error", err)
-				return problemdetail.ServerErrorProblem(c, "failed to commit test run result")
-			}
+		// Fetch the test case to get its details
+		testCase, err := testCaseService.FindByID(c.Context(), caseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test case", "error", err)
+			return problemdetail.NotFound(c, "test case not found")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(testCase))
+		request := new(schema.ExecuteTestCaseRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		// Create a test run for this execution
+		testRunReq := &schema.TestRunRequest{
+			ProjectID:    testCase.ProjectID.Int32,
+			TestPlanID:   request.TestPlanID,
+			TestCaseID:   caseID,
+			OwnerID:      int32(userID),
+			TestedByID:   int32(userID),
+			AssignedToID: int32(userID),
+			Code:         testCase.Code,
+		}
+
+		createdRun, err := testRunService.Create(c.Context(), testRunReq)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create test run")
+		}
+
+		// Get WebSocket URL for the runner based on test case runner type
+		var wsURL string
+		runner := testCase.Runner.String // Get runner from test case
+		if runner == "" {
+			runner = request.Runner // Fall back to request runner
+		}
+
+		switch runner {
+		case "basi":
+			wsURL = cfg.Runner.BasiWSURL
+		case "playwright":
+			wsURL = cfg.Runner.PlaywrightWSURL
+		case "cypress":
+			wsURL = cfg.Runner.CypressWSURL
+		case "browseruse":
+			wsURL = cfg.Runner.BrowserUseWSURL
+		default:
+			logger.Error(loggedmodule.ApiTestCases, "invalid runner type", "runner", runner)
+			return problemdetail.BadRequest(c, "invalid runner specified")
+		}
+
+		// Start execution asynchronously (non-blocking)
+		go func() {
+			executionReq := &schema.TestRunRequest{
+				ProjectID:    testRunReq.ProjectID,
+				TestPlanID:   testRunReq.TestPlanID,
+				TestCaseID:   testRunReq.TestCaseID,
+				OwnerID:      testRunReq.OwnerID,
+				TestedByID:   testRunReq.TestedByID,
+				AssignedToID: testRunReq.AssignedToID,
+				Code:         testRunReq.Code,
+			}
+
+			// Stream runner execution and automatically commit results
+			err := runnerclient.StreamRunnerAndCommit(testRunService, executionReq, wsURL, userID)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to stream runner during execution", "error", err, "testRunID", createdRun.ID)
+			}
+		}()
+
+		// Return immediately with test run details (HTTP 202 Accepted)
+		// Client can connect to WebSocket to see live execution
+		return c.Status(fiber.StatusAccepted).JSON(schema.NewTestRunResponseFromEntity(createdRun))
 	}
 }
 

@@ -7,8 +7,7 @@ import { setStoredUser } from "@/context/UserStorage";
 
 const middleware: Middleware = {
   async onRequest({ request }) {
-    const headers  = createAuthHeaders();
-
+    const headers = createAuthHeaders();
     Object.entries(headers).forEach(([key, value]) => {
       request.headers.set(key, value as string);
     });
@@ -23,12 +22,20 @@ const middleware: Middleware = {
   },
 };
 
+// Raw fetch client
 export const apiClient = createFetchClient<paths>({
   baseUrl: getApiEndpoint(),
 });
-
 apiClient.use(middleware);
 
-const $api = createClient(apiClient)
+// React Query wrapper
+const $api = createClient(apiClient);
+export default $api;
 
-export default $api
+// Plain async function using raw fetch client
+export async function executeTestCase(testCaseID: string, testPlanID: string, runner: string) {
+  return apiClient.POST("/v1/test-cases/{test_case_id}/execute", {
+    params: { path: { test_case_id: testCaseID } },
+    body: { testPlanID, runner },
+  });
+}

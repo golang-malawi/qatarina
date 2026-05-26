@@ -227,11 +227,11 @@ WHERE p.project_id IS NULL;
 -- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
-    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested
+    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14
+    $8, $9, $10, $11, $12, $13, $14, $15
 )
 RETURNING id;
 
@@ -263,7 +263,8 @@ title = $5,
 description = $6,
 is_draft = $7,
 tags = $8,
-updated_at = $9
+updated_at = $9,
+runner = $10
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
