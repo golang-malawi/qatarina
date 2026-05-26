@@ -10,7 +10,6 @@ import {
   Heading,
   Spinner,
   Text,
-  Link as ChakraLink,
 } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { Toaster, toaster } from "@/components/ui/toaster";
@@ -189,6 +188,7 @@ function CreateNewTestPlan() {
             <Link
               to="/projects/$projectId/environments/new"
               params={{ projectId }}
+              search={{from: "test-plan-creation" }}
             >
               <Button size="sm" colorPalette="orange">
                 Create Environment
