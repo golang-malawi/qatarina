@@ -67,3 +67,4 @@ ui/src/routeTree.gen.ts
 *.exe
 *.log
 *.pem
+.continue/

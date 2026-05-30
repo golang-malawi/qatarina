@@ -1,11 +1,14 @@
 package api
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/services"
+	"github.com/google/go-github/v62/github"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 )
@@ -26,6 +29,7 @@ type API struct {
 	PageService           services.PageService
 	DashboardService      services.DashboardService
 	TestCaseImportService services.TestCaseImportService
+	GitHubService         services.GitHubService
 	OrgService            services.OrgService
 	EnvironmentService    services.EnvironmentService
 }
@@ -35,10 +39,25 @@ func NewAPI(config *config.Config) *API {
 	rawDB := config.OpenDB()
 	dbConn := dbsqlc.New(rawDB)
 	logger := logging.NewFromConfig(&config.Logging)
+	var ghClient *github.Client
+
+	installation, err := dbConn.GetFirstInstallation(context.Background())
+	if err != nil {
+		logger.Info("no installation found at startup, waiting for webhook", "error", err)
+	} else {
+		token, err := config.GetInstallationToken(installation.InstallationID)
+		if err != nil {
+			logger.Error("failed to get installation token", "error", err)
+			panic(err)
+		}
+
+		ghClient = services.NewGitHubClient(token)
+	}
 
 	moduleService := services.NewModuleService(dbConn)
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
+	testCaseService := services.NewTestCaseService(rawDB.DB, dbConn, logger)
 
 	return &API{
 		logger:                logger,
@@ -46,7 +65,7 @@ func NewAPI(config *config.Config) *API {
 		Config:                config,
 		AuthService:           services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:       projectService,
-		TestCasesService:      services.NewTestCaseService(rawDB.DB, dbConn, logger),
+		TestCasesService:      testCaseService,
 		TestPlansService:      services.NewTestPlanService(dbConn, logger),
 		TestRunsService:       services.NewTestRunService(rawDB.DB, dbConn, logger),
 		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
@@ -54,6 +73,7 @@ func NewAPI(config *config.Config) *API {
 		ModuleService:         moduleService,
 		DashboardService:      services.NewDashboardService(dbConn, logger),
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
+		GitHubService:         services.NewGitHubService(ghClient, projectService, testCaseService, dbConn, config, logger),
 		OrgService:            services.NewOrgService(dbConn, logger),
 		EnvironmentService:    environmentService,
 	}
