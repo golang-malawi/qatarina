@@ -1,18 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Box,
-  Button,
-  Heading,
-  Spinner,
-  Text,
-  Flex,
-} from "@chakra-ui/react";
+import { Box, Button, Heading, Spinner, Text, Flex } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getProjectEnvironments } from "@/services/EnvironmentService";
 import { List } from "@chakra-ui/react/list";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/environments/"
+  "/(project)/projects/$projectId/environments/",
 )({
   component: EnvironmentsPage,
 });
@@ -36,47 +29,48 @@ function EnvironmentsPage() {
     <Box>
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="md">Project Environments</Heading>
-        <Link 
-        to="/projects/$projectId/environments/new"
-        params={{projectId}}
+        <Link
+          to="/projects/$projectId/environments/new"
+          params={{ projectId }}
+          search={{ from: "_self" }}
         >
           <Button colorScheme="blue" size="sm">
             + Add Environment
           </Button>
-        </Link>    
-        </Flex>      
+        </Link>
+      </Flex>
 
       <List.Root gap={3}>
-        {environments.length === 0 ?(
-          <Text color="gray.500">
-            No environments yet for this project.
-          </Text>
-          ) : (
-            environments.map((env) =>(
-              <List.Item
-                key={env.id}
-                border="1px solid #ccc"
-                p={3}
-                borderRadius="md"
-          >
-            <Flex justify="space-between" align="center">
-              <Box>
-                <Text fontWeight="bold">{env.name}</Text>
-                {env.description && <Text>{env.description}</Text>}
-                {env.base_url && <Text color="blue.500">{env.base_url}</Text>}                
-              </Box>
+        {environments.length === 0 ? (
+          <Text color="gray.500">No environments yet for this project.</Text>
+        ) : (
+          environments.map((env) => (
+            <List.Item
+              key={env.id}
+              border="1px solid #ccc"
+              p={3}
+              borderRadius="md"
+            >
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Text fontWeight="bold">{env.name}</Text>
+                  {env.description && <Text>{env.description}</Text>}
+                  {env.base_url && <Text color="blue.500">{env.base_url}</Text>}
+                </Box>
 
-              <Link
-                to="/projects/$projectId/environments/$environmentId"
-                params={{projectId, environmentId: String(env.id)}}
-              >
-                <Button size="sm" mt={2}>View</Button>
-              </Link>
-              </Flex>          
-              </List.Item>
-            ))  
-          )}
+                <Link
+                  to="/projects/$projectId/environments/$environmentId"
+                  params={{ projectId, environmentId: String(env.id) }}
+                >
+                  <Button size="sm" mt={2}>
+                    View
+                  </Button>
+                </Link>
+              </Flex>
+            </List.Item>
+          ))
+        )}
       </List.Root>
-      </Box>
+    </Box>
   );
 }
