@@ -648,7 +648,7 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 
 func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error) {
 	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
-		AssignedToID:  int32(userID),
+		AssignedToID:  common.NewNullInt32(int32(userID)),
 		Limit:         limit,
 		Offset:        offset,
 		IncludeClosed: includeClosed,
@@ -681,8 +681,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			TestPlanID:            row.TestPlanID,
 			TestCaseID:            row.TestCaseID.String(),
 			OwnerID:               row.OwnerID,
-			TestedByID:            row.TestedByID,
-			AssignedToID:          row.AssignedToID,
+			TestedByID:            row.TestedByID.Int32,
+			AssignedToID:          row.AssignedToID.Int32,
 			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
 			ExternalIssueID:       row.ExternalIssueID.String,
 			ResultState:           row.ResultState,
@@ -835,7 +835,7 @@ func toTestCaseResponse(row dbsqlc.FindTestCasesByProjectIDRow) schema.TestCaseR
 		UpdatedAt:       common.FormatNullTime(row.UpdatedAt),
 		Status:          row.Status,
 		Result:          string(row.ResultState),
-		ExecutedBy:      int64(row.TestedByID),
+		ExecutedBy:      int64(row.TestedByID.Int32),
 		Notes:           row.Notes,
 	}
 }
