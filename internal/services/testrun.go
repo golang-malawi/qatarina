@@ -6,14 +6,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
-	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/google/uuid"
+	"github.com/spf13/afero"
 )
 
 type TestRunService interface {
@@ -44,11 +45,11 @@ type testRunService struct {
 	db          *sql.DB
 	queries     *dbsqlc.Queries
 	logger      logging.Logger
-	storage     storage.Storage
+	storage     afero.Fs
 	maxFileSize int64
 }
 
-func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, storage storage.Storage, maxFileSize int64) TestRunService {
+func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger, storage afero.Fs, maxFileSize int64) TestRunService {
 	return &testRunService{
 		db:          db,
 		queries:     conn,
@@ -271,15 +272,21 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 }
 
 func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	contentType, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
+	_, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
 	if err != nil {
 		return nil, err
 	}
 
 	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
 
-	if err := t.storage.Upload(ctx, storageKey, file.Content, contentType); err != nil {
-		return nil, fmt.Errorf("failed to save file to storage: %w", err)
+	f, err := t.storage.Create(storageKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file in storage: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, file.Content); err != nil {
+		return nil, fmt.Errorf("failed to write file content: %w", err)
 	}
 
 	attachmentID := uuid.New()
@@ -290,7 +297,7 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileType:        file.ContentType,
 		FileSize:        file.Size,
 		StorageKey:      storageKey,
-		StorageUrl:      t.storage.GetFileURL(storageKey),
+		StorageUrl:      storageKey,
 		CreatedAt:       common.NewNullTime(time.Now()),
 	})
 	if err != nil {
@@ -302,7 +309,7 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileName:   file.FileName,
 		FileType:   file.ContentType,
 		FileSize:   file.Size,
-		StorageUrl: t.storage.GetFileURL(storageKey),
+		StorageUrl: storageKey,
 	}, nil
 }
 

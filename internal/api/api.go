@@ -6,9 +6,9 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/services"
-	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	"github.com/spf13/afero"
 )
 
 type API struct {
@@ -29,10 +29,10 @@ type API struct {
 	TestCaseImportService services.TestCaseImportService
 	OrgService            services.OrgService
 	EnvironmentService    services.EnvironmentService
-	Storage               storage.Storage
+	Storage               afero.Fs
 }
 
-func NewAPI(config *config.Config, storageClient storage.Storage) *API {
+func NewAPI(config *config.Config, fs afero.Fs) *API {
 
 	rawDB := config.OpenDB()
 	dbConn := dbsqlc.New(rawDB)
@@ -50,7 +50,7 @@ func NewAPI(config *config.Config, storageClient storage.Storage) *API {
 		ProjectsService:       projectService,
 		TestCasesService:      services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestPlansService:      services.NewTestPlanService(dbConn, logger),
-		TestRunsService:       services.NewTestRunService(rawDB.DB, dbConn, logger, storageClient, config.Attachments.MaxFileSize),
+		TestRunsService:       services.NewTestRunService(rawDB.DB, dbConn, logger, fs, config.Attachments.MaxFileSize),
 		UserService:           services.NewUserService(dbConn, logger, config.SMTP),
 		TesterService:         services.NewTesterService(dbConn, logger),
 		ModuleService:         moduleService,
@@ -58,7 +58,7 @@ func NewAPI(config *config.Config, storageClient storage.Storage) *API {
 		TestCaseImportService: services.NewTestCaseImportService(projectService, logger, config.ImportFile),
 		OrgService:            services.NewOrgService(dbConn, logger),
 		EnvironmentService:    environmentService,
-		Storage:               storageClient,
+		Storage:               fs,
 	}
 }
 
