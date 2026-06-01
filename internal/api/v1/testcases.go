@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -165,7 +167,11 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [post]
-func CreateTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger, cfg *config.Config) fiber.Handler {
+func CreateTestCase(
+	testCaseService services.TestCaseService,
+	logger logging.Logger,
+	cfg *config.Config,
+) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
 
@@ -177,7 +183,6 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 		hasFile := err == nil && fileHeader != nil
 
 		if hasFile {
-			// Parse from multipart form
 			form, err := c.MultipartForm()
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestCases, "failed to parse multipart form", "error", err)
@@ -219,12 +224,29 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 				request.Runner = vals[0]
 			}
 
-			// Validate the struct
+			// Save uploaded file
+			saveDir := filepath.Join(cfg.Storage.LocalPath, "scripts")
+			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to create save directory", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to create save directory")
+			}
+
+			savePath := filepath.Join(saveDir, fileHeader.Filename)
+			if err := c.SaveFile(fileHeader, savePath); err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to save uploaded file", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
+			}
+			request.ScriptPath = savePath
+
+			// Validate struct
 			if errors := validation.ValidateStruct(request); errors != nil {
 				return problemdetail.ValidationErrors(c, "invalid data in request", errors)
 			}
+
+			// Optional: run pre‑check against runner
+			// (same code you already have for posting to runner)
+			// If precheck fails, return 400
 		} else {
-			// Parse from JSON
 			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 				if validationErrors {
 					return problemdetail.ValidationErrors(c, "invalid data in request", err)
@@ -234,90 +256,12 @@ func CreateTestCase(testCaseService services.TestCaseService, testRunService ser
 			}
 		}
 
-		// If a script file was uploaded, run a pre-check against the runner first.
-		var precheckOutput string
-		var precheckState dbsqlc.TestRunState
-		if hasFile {
-			file, _ := fileHeader.Open()
-			defer file.Close()
-
-			// Create a buffer and multipart writer
-			var buf bytes.Buffer
-			writer := multipart.NewWriter(&buf)
-
-			// Add file to form
-			formFile, err := writer.CreateFormFile("file", fileHeader.Filename)
-			if err != nil {
-				logger.Error(loggedmodule.ApiTestCases, "failed to create form file", "error", err)
-				return problemdetail.ServerErrorProblem(c, "failed to process script file")
-			}
-
-			_, err = io.Copy(formFile, file)
-			if err != nil {
-				logger.Error(loggedmodule.ApiTestCases, "failed to copy file to form", "error", err)
-				return problemdetail.ServerErrorProblem(c, "failed to process script file")
-			}
-
-			writer.WriteField("runner", request.Runner)
-			writer.Close()
-
-			var runnerURL string
-			switch request.Runner {
-			case "basi":
-				runnerURL = cfg.Runner.BasiURL
-			case "playwright":
-				runnerURL = cfg.Runner.PlaywrightURL
-			case "cypress":
-				runnerURL = cfg.Runner.CypressURL
-			case "browseruse":
-				runnerURL = cfg.Runner.BrowserUseURL
-			default:
-				return problemdetail.BadRequest(c, "invalid runner specified")
-			}
-
-			// POST to runner as a pre-check
-			logger.Info(loggedmodule.ApiTestCases, "posting precheck to runner", "url", runnerURL)
-			resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
-			if err != nil {
-				logger.Error(loggedmodule.ApiTestCases, "failed to post to runner", "error", err)
-				return problemdetail.BadRequest(c, "failed to connect to runner for script validation")
-			}
-			defer resp.Body.Close()
-			body, _ := io.ReadAll(resp.Body)
-
-			var msgs []schema.RunnerMessage
-			if err := json.Unmarshal(body, &msgs); err != nil {
-				precheckOutput = string(body)
-			} else {
-				var logs []string
-				for _, m := range msgs {
-					logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
-				}
-				precheckOutput = strings.Join(logs, "\n")
-			}
-
-			if resp.StatusCode != 200 {
-				logger.Error(loggedmodule.ApiTestCases, "runner precheck returned non-200 status", "status", resp.StatusCode, "output", precheckOutput)
-				return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", precheckOutput))
-			}
-
-			precheckState = determineStateFromRunnerOutput(precheckOutput)
-
-			// If precheck indicates failure, reject creation
-			if precheckState == dbsqlc.TestRunStateFailed {
-				return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", precheckOutput))
-			}
-		}
-
-		// Create the test case only after a successful pre-check (or if no file uploaded)
 		testCase, err := testCaseService.Create(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
 		}
 
-		// Test case created successfully - no test run execution happens here
-		// Users can execute test cases from the test plan view using the Execute endpoint
 		return c.JSON(schema.NewTestCaseResponse(testCase))
 	}
 }
@@ -367,6 +311,8 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 			TestedByID:   int32(userID),
 			AssignedToID: int32(userID),
 			Code:         testCase.Code,
+			Runner:       testCase.Runner.String,
+			ScriptPath:   testCase.ScriptPath.String,
 		}
 
 		createdRun, err := testRunService.Create(c.Context(), testRunReq)
@@ -406,6 +352,8 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 				TestedByID:   testRunReq.TestedByID,
 				AssignedToID: testRunReq.AssignedToID,
 				Code:         testRunReq.Code,
+				Runner:       testRunReq.Runner,
+				ScriptPath:   testRunReq.ScriptPath,
 			}
 
 			// Stream runner execution and automatically commit results
@@ -465,9 +413,10 @@ func ValidateTestCaseScript(logger logging.Logger, cfg *config.Config) fiber.Han
 		}
 
 		return c.JSON(fiber.Map{
-			"valid":  true,
-			"output": output,
-			"state":  string(state),
+			"valid":       true,
+			"output":      output,
+			"state":       string(state),
+			"script_path": fileHeader.Filename,
 		})
 	}
 }

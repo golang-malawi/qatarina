@@ -128,35 +128,14 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	if err != nil {
 		return nil, err
 	}
-	testPlanID := request.PlanID
+
 	for _, assignedTestCase := range request.PlannedTests {
-		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
+		err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+			TestPlanID: request.PlanID,
+			TestCaseID: uuid.MustParse(assignedTestCase.TestCaseID),
+		})
 		if err != nil {
 			return nil, err
-		}
-		for _, userID := range assignedTestCase.UserIds {
-			testRunID, _ := uuid.NewV7()
-			testRunParams := dbsqlc.CreateNewTestRunParams{
-				ID:           testRunID,
-				ProjectID:    int32(request.ProjectID),
-				TestPlanID:   sql.NullInt32{Int32: int32(testPlanID), Valid: true},
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				OwnerID:      int32(testPlan.CreatedByID),
-				TestedByID:   common.NewNullInt32(int32(userID)),
-				AssignedToID: int32(userID),
-				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
-				CreatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-				UpdatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-			}
-
-			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 

@@ -80,7 +80,7 @@ function NewTestCases() {
               <Box>
                 <input
                   type="file"
-                  accept=".js,.ts,.py,.go,.java,.rb"
+                  accept=".yaml,.yml,.basi"
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null;
                     onChange(file);

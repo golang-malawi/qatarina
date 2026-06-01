@@ -18,6 +18,7 @@ type Config struct {
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
 	Runner     RunnerConfiguration     `mapstructure:"runner"`
+	Storage    StorageConfiguration    `mapstructure:"storage"`
 }
 
 type DatabaseConfiguration struct {
@@ -89,6 +90,13 @@ type RunnerConfiguration struct {
 	BrowserUseWSURL string `mapstructure:"browseruse_ws_url" envconfig:"QATARINA_RUNNER_BROWSERUSE_WS_URL"`
 }
 
+type StorageConfiguration struct {
+	Driver    string `mapstructure:"driver" envconfig:"QATARINA_STORAGE_DRIVER"`
+	LocalPath string `mapstructure:"local_path" envconfig:"QATARINA_STORAGE_LOCAL_PATH"`
+	S3Bucket  string `mapstructure:"s3_bucket" envconfig:"QATARINA_STORAGE_S3_BUCKET"`
+	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
+}
+
 func (c *Config) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s", c.Database.Username, c.Database.Password, c.Database.Host, c.Database.Port, c.Database.Database, c.Database.Options)
 }
@@ -152,5 +160,11 @@ var DefaultConfig = Config{
 	},
 	Runner: RunnerConfiguration{
 		BasiURL: "http://localhost:8080/run?runner=basi",
+	},
+	Storage: StorageConfiguration{
+		Driver:    "local",
+		LocalPath: "./storage",
+		S3Bucket:  "",
+		S3Region:  "",
 	},
 }

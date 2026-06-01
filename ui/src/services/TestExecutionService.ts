@@ -42,3 +42,27 @@ export function useExecuteTestCaseMutation() {
     }) => executeTestCase(testCaseID, testPlanID, runner),
   });
 }
+
+// NEW: WebSocket connection helper
+export function connectToTestExecution(
+  testRunID: string,
+  onMessage: (msg: { type?: string; content?: string; state?: "passed" | "failed" | "pending" }) => void,
+  onError?: (err: Event) => void,
+  onClose?: () => void,
+): WebSocket {
+  const ws = new WebSocket(`ws://localhost:8080/ws/run?testRunID=${testRunID}`);
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      onMessage(msg);
+    } catch (e) {
+      console.error("Invalid message", e);
+    }
+  };
+
+  if (onError) ws.onerror = onError;
+  if (onClose) ws.onclose = onClose;
+
+  return ws;
+}

@@ -125,8 +125,8 @@ SELECT * FROM test_cases WHERE project_id = $1;
 -- name: ListTestCasesByPlan :many
 SELECT DISTINCT tc.*
 FROM test_cases tc
-INNER JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.test_plan_id = $1::bigint;
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = $1::bigint
+WHERE tc.project_id = (SELECT project_id FROM test_plans WHERE id = $1::bigint);
 
 -- name: GetTestCasesWithPlanInfo :many
 SELECT
@@ -227,11 +227,11 @@ WHERE p.project_id IS NULL;
 -- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
-    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner
+    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14, $15
+    $8, $9, $10, $11, $12, $13, $14, $15, $16
 )
 RETURNING id;
 
@@ -264,7 +264,8 @@ description = $6,
 is_draft = $7,
 tags = $8,
 updated_at = $9,
-runner = $10
+runner = $10,
+script_path = $11
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one

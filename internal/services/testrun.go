@@ -66,10 +66,17 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 		resultState = *request.ResultState
 	}
 
+	var planID sql.NullInt32
+	if request.TestPlanID > 0 {
+		planID = sql.NullInt32{Int32: request.TestPlanID, Valid: true}
+	} else {
+		planID = sql.NullInt32{Valid: false}
+	}
+
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
 		ID:            id,
 		ProjectID:     request.ProjectID,
-		TestPlanID:    sql.NullInt32{Int32: request.TestPlanID, Valid: request.TestPlanID != 0},
+		TestPlanID:    planID,
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
 		OwnerID:       request.OwnerID,
 		TestedByID:    common.NewNullInt32(request.TestedByID),

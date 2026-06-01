@@ -166,6 +166,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			CreatedAt:        common.NewNullTime(time.Now()),
 			UpdatedAt:        common.NewNullTime(time.Now()),
 			Runner:           common.NullString(request.Runner),
+			ScriptPath:       common.NullString(request.ScriptPath),
 		}
 
 		if strings.TrimSpace(request.Code) != "" {
@@ -248,6 +249,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		CreatedAt:        common.NewNullTime(time.Now()),
 		UpdatedAt:        common.NewNullTime(time.Now()),
 		Runner:           common.NullString(request.Runner),
+		ScriptPath:       common.NullString(request.ScriptPath),
 	}
 
 	if strings.TrimSpace(request.Code) != "" {
@@ -901,6 +903,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		UpdatedAt:       common.NewNullTime(time.Now()),
 		Suggested:       common.TrueNullBool(),
 		Runner:          common.NullString(req.Runner),
+		ScriptPath:      common.NullString(req.ScriptPath),
 	}
 
 	_, err = t.queries.CreateTestCase(ctx, params)

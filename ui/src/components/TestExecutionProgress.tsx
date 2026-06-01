@@ -1,4 +1,14 @@
-import { Box, Button, Card, Code, Flex, HStack, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Card,
+  Flex,
+  HStack,
+  Icon,
+  Spinner,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import { IconAlertCircle, IconCheck, IconClock, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { connectToTestExecution } from "@/services/TestExecutionService";
@@ -27,35 +37,29 @@ export function TestExecutionProgress({
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    // Connect to WebSocket for live execution logs
     try {
       const connection = connectToTestExecution(
         testRunID,
-        (message) => {
-          // Add message to logs
+        (message: { type?: string; content?: string; state?: "passed" | "failed" | "pending" }) => {
           const executionLog: ExecutionLog = {
             timestamp: new Date().toLocaleTimeString(),
-            type: message.type || "info",
+            type: (message.type as ExecutionLog["type"]) || "info",
             message: message.content || JSON.stringify(message),
           };
           setLogs((prev) => [...prev, executionLog]);
 
-          // Check if execution is complete
           if (message.state === "passed" || message.state === "failed") {
             setFinalState(message.state);
             setIsExecuting(false);
-            if (onComplete) {
-              onComplete(message.state);
-            }
+            onComplete?.(message.state);
           }
         },
-        (error) => {
+        (err: Event) => {
           setError("WebSocket connection error");
           setIsExecuting(false);
-          console.error("WebSocket error:", error);
+          console.error("WebSocket error:", err);
         },
         () => {
-          // Connection closed - mark as complete if still executing
           if (isExecuting) {
             setIsExecuting(false);
             setFinalState("pending");
@@ -77,15 +81,9 @@ export function TestExecutionProgress({
   }, [testRunID, onComplete]);
 
   const getStatusIcon = () => {
-    if (isExecuting) {
-      return <Icon as={IconClock} color="brand.solid" />;
-    }
-    if (finalState === "passed") {
-      return <Icon as={IconCheck} color="green.solid" />;
-    }
-    if (finalState === "failed") {
-      return <Icon as={IconX} color="red.solid" />;
-    }
+    if (isExecuting) return <Icon as={IconClock} color="brand.solid" />;
+    if (finalState === "passed") return <Icon as={IconCheck} color="green.solid" />;
+    if (finalState === "failed") return <Icon as={IconX} color="red.solid" />;
     return <Icon as={IconAlertCircle} color="orange.solid" />;
   };
 
@@ -124,11 +122,7 @@ export function TestExecutionProgress({
             <Stack align="end" gap={1}>
               <HStack gap={1}>
                 {isExecuting && <Spinner size="sm" />}
-                <Text
-                  fontSize="sm"
-                  fontWeight="medium"
-                  colorPalette={getStatusColor()}
-                >
+                <Text fontSize="sm" fontWeight="medium" colorPalette={getStatusColor()}>
                   {getStatusText()}
                 </Text>
               </HStack>
@@ -178,10 +172,10 @@ export function TestExecutionProgress({
                         log.type === "error"
                           ? "red.300"
                           : log.type === "success"
-                            ? "green.300"
-                            : log.type === "warning"
-                              ? "yellow.300"
-                              : "gray.300"
+                          ? "green.300"
+                          : log.type === "warning"
+                          ? "yellow.300"
+                          : "gray.300"
                       }
                     >
                       {log.message}

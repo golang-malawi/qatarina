@@ -19,6 +19,8 @@ type TestRunRequest struct {
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
 	EnvironmentID int32  `json:"environment_id"`
+	Runner        string `json:"runner,omitempty"`      // "basi", "playwright", "cypress", "browseruse"
+	ScriptPath    string `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
 	// Feedback fields (optional) - for recording results at creation time
 	ActualResult   *string              `json:"actual_result,omitempty"`
 	ExpectedResult *string              `json:"expected_result,omitempty"`
