@@ -59,7 +59,7 @@ function TestCaseInboxItem() {
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: { environments = [] } = {} } = $api.useQuery(
@@ -87,11 +87,13 @@ function TestCaseInboxItem() {
 
       const resultId = (response as any)?.result_id;
 
-      if (attachmentFile) {
+      if (attachmentFiles.length > 0) {
         if (!resultId) {
           throw new Error("Attachment upload failed because execution response did not return a result_id.");
         }
-        await uploadTestRunAttachment(resultId, attachmentFile);
+        for (const file of attachmentFiles) {
+          await uploadTestRunAttachment(resultId, file);
+  }
       }
     },
     onSuccess: () => {
@@ -102,7 +104,7 @@ function TestCaseInboxItem() {
       });
       setResultText("");
       setNotesText("");
-      setAttachmentFile(null);
+      setAttachmentFiles([]);
       if (attachmentInputRef.current) {
         attachmentInputRef.current.value = "";
       }
@@ -261,18 +263,19 @@ function TestCaseInboxItem() {
         />
         <Box mb="4">
           <Text mb="2" fontSize="sm" fontWeight="semibold">
-            Attach file
+            Attach files (optional)
           </Text>
           <Input
             id="attachmentFile"
             type="file"
+            multiple
             accept=".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg"
             ref={attachmentInputRef}
-            onChange={(e) => setAttachmentFile(e.currentTarget.files?.[0] || null)}
+            onChange={(e) => setAttachmentFiles(Array.from(e.currentTarget.files || []))}
           />
-          {attachmentFile && (
+          {attachmentFiles.length > 0 && (
             <Text mt="2" fontSize="sm" color="fg.muted">
-              Selected file: {attachmentFile.name}
+              Selected files: {attachmentFiles.map(f => f.name).join(", ")}
             </Text>
           )}
         </Box>

@@ -375,7 +375,7 @@ func CloseTestRun(testRunService services.TestRunService, logger logging.Logger)
 //	@Accept         multipart/form-data
 //	@Produce        json
 //	@Param          resultID    path        string  true    "Test Run Result ID"
-//	@Param          file        formData    file    true    "Attachment file"
+//	@Param          files        formData    file    true    "Attachment files(multiple allowed)"
 //	@Success        200         {object}    schema.AttachmentResponse
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        500         {object}    problemdetail.ProblemDetail
@@ -387,31 +387,42 @@ func UploadAttachment(testRunService services.TestRunService, logger logging.Log
 			return problemdetail.BadRequest(c, "missing resultID")
 		}
 
-		fileHeader, err := c.FormFile("file")
+		form, err := c.MultipartForm()
 		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to parse multipart form", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse form data")
+		}
+
+		files := form.File["files"]
+		if len(files) == 0 {
 			return problemdetail.BadRequest(c, "missing file in request")
 		}
 
-		file, err := fileHeader.Open()
-		if err != nil {
-			return problemdetail.ServerErrorProblem(c, "failed to open uploaded file")
-		}
-		defer file.Close()
+		var responses []schema.AttachmentResponse
+		for _, fileHeader := range files {
+			file, err := fileHeader.Open()
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to open uploaded file", "error", err)
+				continue
+			}
+			defer file.Close()
 
-		attachmentReq := &schema.AttachmentRequest{
-			FileName:    fileHeader.Filename,
-			ContentType: fileHeader.Header.Get("Content-Type"),
-			Size:        fileHeader.Size,
-			Content:     file,
+			attachmentReq := &schema.AttachmentRequest{
+				FileName:    fileHeader.Filename,
+				ContentType: fileHeader.Header.Get("Content-Type"),
+				Size:        fileHeader.Size,
+				Content:     file,
+			}
+
+			resp, err := testRunService.SaveAttachment(c.Context(), resultID, attachmentReq)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "error", err)
+				continue
+			}
+			responses = append(responses, *resp)
 		}
 
-		resp, err := testRunService.SaveAttachment(c.Context(), resultID, attachmentReq)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to save attachment")
-		}
-
-		return c.JSON(resp)
+		return c.JSON(responses)
 	}
 }
 

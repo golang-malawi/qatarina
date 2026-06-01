@@ -5434,7 +5434,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description Attachment file */
+        /** @description Attachment files(multiple allowed) */
         requestBody: {
             content: {
                 "multipart/form-data": Record<string, never>;

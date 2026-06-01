@@ -3911,7 +3911,7 @@ paths:
           multipart/form-data:
             schema:
               type: file
-        description: Attachment file
+        description: Attachment files(multiple allowed)
         required: true
       responses:
         "200":

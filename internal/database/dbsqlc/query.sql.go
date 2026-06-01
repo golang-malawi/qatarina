@@ -2657,15 +2657,26 @@ WHERE test_run_result_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListTestRunAttachments(ctx context.Context, testRunResultID uuid.UUID) ([]TestRunAttachment, error) {
+type ListTestRunAttachmentsRow struct {
+	ID              uuid.UUID
+	TestRunResultID uuid.UUID
+	FileName        string
+	FileType        string
+	FileSize        int64
+	StorageKey      string
+	StorageUrl      string
+	CreatedAt       sql.NullTime
+}
+
+func (q *Queries) ListTestRunAttachments(ctx context.Context, testRunResultID uuid.UUID) ([]ListTestRunAttachmentsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTestRunAttachments, testRunResultID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TestRunAttachment
+	var items []ListTestRunAttachmentsRow
 	for rows.Next() {
-		var i TestRunAttachment
+		var i ListTestRunAttachmentsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TestRunResultID,
