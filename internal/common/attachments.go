@@ -9,15 +9,15 @@ import (
 
 // AllowedFileTypes defines the MIME types permitted for file uploads.
 // Centralized here for easy management and reuse across the application.
-var AllowedFileTypes = map[string]bool{
-	"text/plain":      true,
-	"text/markdown":   true,
-	"application/pdf": true,
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": true, // .docx
-	"image/jpeg":               true,
-	"image/png":                true,
-	"image/svg+xml":            true,
-	"application/octet-stream": true, // For generic binary files
+var AllowedFileTypes = []string{
+	"text/plain",
+	"text/markdown",
+	"application/pdf",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+	"image/jpeg",
+	"image/png",
+	"image/svg+xml",
+	"application/octet-stream", // For generic binary files
 }
 
 // ValidateAttachment checks content type and size againist allowed rules.
@@ -34,7 +34,7 @@ func ValidateAttachment(fileName string, contentType string, size int64, maxSize
 		contentType = "application/octet-stream"
 	}
 
-	if !AllowedFileTypes[contentType] {
+	if !isAllowed(contentType) {
 		return "", fmt.Errorf("file type %s is not allowed", contentType)
 	}
 
@@ -42,4 +42,14 @@ func ValidateAttachment(fileName string, contentType string, size int64, maxSize
 		return "", fmt.Errorf("file size %d exceeds the maximum allowed size of %d bytes", size, maxSize)
 	}
 	return contentType, nil
+}
+
+// isAllowed checks if a MIME type is in the AllowedFileTypes slice.
+func isAllowed(mimeType string) bool {
+	for _, allowed := range AllowedFileTypes {
+		if mimeType == allowed {
+			return true
+		}
+	}
+	return false
 }
