@@ -11,6 +11,7 @@ import {
   Spinner,
   Text,
 } from "@chakra-ui/react";
+import { Link } from "@tanstack/react-router";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -96,11 +97,10 @@ function CreateNewTestPlan() {
     }
 
     if (!data.environment_id) {
-      toaster.create({
-        title: "Missing environment",
-        description:
-          "Please select an environment before creating the test plan.",
-        type: "error",
+      redirect({
+        to: "/projects/$projectId/environments/new",
+        params: { projectId },
+        search: { from: "test-plan-creation" },
       });
       return;
     }
@@ -169,6 +169,34 @@ function CreateNewTestPlan() {
       <Toaster />
       <Box p={6}>
         <Heading color="fg.heading">Create a Test Plan</Heading>
+        
+        {environments.length === 0 && (
+          <Box
+            mb={4}
+            p={4}
+            border="1px solid"
+            borderColor="orange.200"
+            borderRadius="md"
+            bg="orange.50"
+          >
+            <Text mb={2} fontWeight="500" color="orange.900">
+              No environments found for this project
+            </Text>
+            <Text mb={3} fontSize="sm" color="orange.800">
+              You need to create an environment before you can create a test plan.
+            </Text>
+            <Link
+              to="/projects/$projectId/environments/new"
+              params={{ projectId }}
+              search={{from: "test-plan-creation" }}
+            >
+              <Button size="sm" colorPalette="orange">
+                Create Environment
+              </Button>
+            </Link>
+          </Box>
+        )}
+
         <DynamicForm
           schema={testPlanCreationSchema}
           fields={testPlanCreationFields.map((f) =>

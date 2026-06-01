@@ -104,6 +104,15 @@ SET is_active = true
 WHERE id = $1
 RETURNING *;
 
+-- name: AddProjectTestCaseTemplate :exec
+UPDATE projects
+SET testcase_template = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: GetProjectTestCaseTemplate :one
+SELECT testcase_template FROM projects WHERE id = $1;
+
 -- name: ListTestCases :many
 SELECT * FROM test_cases ORDER BY created_at DESC;
 
@@ -183,6 +192,7 @@ FROM test_runs tr
 INNER JOIN test_cases tc ON tc.id = tr.test_case_id
 INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
 WHERE tr.assigned_to_id = $1
+    AND (sqlc.arg('include_closed') ::bool OR tr.is_closed = FALSE)
 ORDER BY tr.created_at DESC
 LIMIT $2 OFFSET $3;
 

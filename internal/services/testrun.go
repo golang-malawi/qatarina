@@ -67,8 +67,8 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 		TestPlanID:    request.TestPlanID,
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
 		OwnerID:       request.OwnerID,
-		TestedByID:    request.TestedByID,
-		AssignedToID:  request.AssignedToID,
+		TestedByID:    common.NewNullInt32(request.TestedByID),
+		AssignedToID:  common.NewNullInt32(request.AssignedToID),
 		Code:          request.Code,
 		CreatedAt:     common.NullTime(time.Now()),
 		UpdatedAt:     common.NullTime(time.Now()),
@@ -100,7 +100,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 
 	_, err = t.queries.CommitTestRunResult(ctx, dbsqlc.CommitTestRunResultParams{
 		ID:             uuid.MustParse(request.TestRunID),
-		TestedByID:     int32(request.UserID),
+		TestedByID:     common.NewNullInt32(int32(request.UserID)),
 		Notes:          request.Notes,
 		UpdatedAt:      common.NullTime(time.Now()),
 		ResultState:    request.State,
@@ -187,7 +187,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 	err = tx.ExecuteTestRun(ctx, dbsqlc.ExecuteTestRunParams{
 		ID:             runUUID,
 		ResultState:    dbsqlc.TestRunState(request.Status),
-		TestedByID:     int32(request.ExecutedBy),
+		TestedByID:     common.NewNullInt32(int32(request.ExecutedBy)),
 		Notes:          request.Notes,
 		ActualResult:   common.NullString(request.Result),
 		ExpectedResult: common.NullString(request.ExpectedResult),

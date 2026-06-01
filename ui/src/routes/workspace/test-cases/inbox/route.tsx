@@ -14,24 +14,28 @@ import {
   Heading,
   Button,
 } from "@chakra-ui/react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
+import React from "react";
 
 export const Route = createFileRoute("/workspace/test-cases/inbox")({
   loader: ({ context: { queryClient } }) =>{
-    queryClient.ensureQueryData(findTestCaseInboxQueryOptions);
+    queryClient.ensureQueryData(findTestCaseInboxQueryOptions(false));
     queryClient.ensureQueryData(findTestCaseSummaryQueryOptions);
   },
   component: TestCasePageInbox,
 });
 
 function TestCasePageInbox() {
+  const[includeClosed, setIncludeClosed] = React.useState(false);
+
   const {
     data: testCases,
     isPending: isPendingInbox,
     error: errorInbox,
-  } = useSuspenseQuery(findTestCaseInboxQueryOptions);
+  } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed));
 
   const {data: projects} = useSuspenseQuery(findProjectsQueryOptions);
   const projectMap: Record<number, string> = {};
@@ -93,6 +97,7 @@ function TestCasePageInbox() {
           cursor: "pointer",
         }}
         transition="background 0.2s"
+        opacity={tc.is_closed ? 0.5 : 1}
       >
         <Link
           to="/workspace/test-cases/inbox/$testCaseId"
@@ -150,7 +155,15 @@ function TestCasePageInbox() {
             mt={4}
             variant="outline"
             focusRingColor="brand.focusRing"
+            flex="1"
           />
+          <Checkbox
+            mt={4}
+            checked={includeClosed}
+            onCheckedChange={(e) => setIncludeClosed(e.checked as boolean)}
+          >
+            Show closed test cases
+          </Checkbox>
         </Box>       
 
         <Box>{testCaseRows}</Box>
@@ -163,3 +176,11 @@ function TestCasePageInbox() {
     </Flex>
   );
 }
+
+
+
+
+
+
+
+

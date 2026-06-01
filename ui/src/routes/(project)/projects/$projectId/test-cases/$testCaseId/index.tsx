@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Tabs,
   Box,
@@ -22,15 +22,19 @@ import { assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { toaster } from "@/components/ui/toaster";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
 )({
   component: ViewTestCase,
+  validateSearch: (search: {tab?: string}) => search,
 });
 
 function ViewTestCase() {
   const { projectId, testCaseId } = Route.useParams();
+  const search = Route.useSearch();
+  const defaultTab = search.tab === "usage" ? "usage" : "description";
 
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
@@ -40,6 +44,8 @@ function ViewTestCase() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
+
+  const navigate = useNavigate();
 
   /** Optimistic UI state */
   const [optimisticAssignment, setOptimisticAssignment] = useState<{
@@ -89,7 +95,7 @@ function ViewTestCase() {
         </Text>
       </Stack>
 
-      <Tabs.Root defaultValue="description">
+      <Tabs.Root defaultValue={defaultTab}>
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           {/* <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
@@ -367,11 +373,27 @@ function ViewTestCase() {
                       });
 
                       setAssignOpen(false);
-                    } catch (err) {
+
+                      toaster.success({
+                        title: "Assignment successful",
+                        description: "Test case assigned to plan and testers.",
+                      });
+
+                      navigate({
+                        to: "/projects/$projectId/test-cases",
+                        params: { projectId },
+                      });
+                    } catch (err: any) {
                       console.error("Failed to assign test case:", err);
-                      alert("Failed to assign test case to test plan.");
+
+                     
+                      toaster.error({
+                        title: "Assignment failed",
+                        description: err?.message || "Could not assign test case to plan.",
+                      });
                     }
                   }}
+                   
                 >
                   Confirm assignment
                 </Button>

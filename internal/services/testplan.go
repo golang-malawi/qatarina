@@ -87,8 +87,8 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				TestPlanID:   int32(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				OwnerID:      int32(request.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
+				TestedByID:   common.NewNullInt32(int32(userID)),
+				AssignedToID: common.NewNullInt32(int32(userID)),
 				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,
@@ -142,8 +142,8 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 				TestPlanID:   int32(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				OwnerID:      int32(testPlan.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
+				TestedByID:   common.NewNullInt32(int32(userID)),
+				AssignedToID: common.NewNullInt32(int32(userID)),
 				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,

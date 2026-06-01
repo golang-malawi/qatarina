@@ -8,6 +8,11 @@ import { toaster } from "@/components/ui/toaster";
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/environments/new/"
 )({
+  validateSearch: (search) => {
+    return {
+      from: (search as any)?.from as string | undefined,
+    };
+  },
   component: CreateEnvironmentPage,
 });
 
@@ -41,6 +46,7 @@ const environmentFields: FieldConfig[] = [
 
 function CreateEnvironmentPage(){
   const {projectId} = Route.useParams();
+  const { from } = Route.useSearch();
   const navigate = useNavigate();
   const mutation = useCreateEnvironmentMutation();
 
@@ -58,7 +64,13 @@ function CreateEnvironmentPage(){
           type: "success",
           duration: 5000,
         });
-        navigate({to: "/projects/$projectId/environments", params: {projectId}});
+
+        // If coming from test plan creation, redirect back to it
+        if (from === "test-plan-creation") {
+          navigate({to: "/projects/$projectId/test-plans/new", params: {projectId}});
+        } else {
+          navigate({to: "/projects/$projectId/environments", params: {projectId}});
+        }
       }
     } catch {
       toaster.create({

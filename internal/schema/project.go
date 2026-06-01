@@ -84,3 +84,12 @@ func NewProjectResponseList(projects []dbsqlc.Project) []ProjectResponse {
 
 type ImportProjectRequest struct {
 }
+
+type AddProjectTestCaseTemplateRequest struct {
+	ProjectID        int64  `json:"project_id" validate:"required"`
+	TestCaseTemplate string `json:"test_case_template" validate:"required"`
+}
+
+type ProjectTestCaseTemplateResponse struct {
+	TestCaseTemplate string `json:"test_case_template"`
+}
