@@ -2,6 +2,8 @@
 CREATE TABLE test_run_attachments (
     id UUID PRIMARY KEY,
     test_run_result_id UUID NOT NULL REFERENCES test_run_results(id) ON DELETE CASCADE,
+    project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, 
+    uploaded_by INT NOT NULL REFERENCES users(id) ON DELETE SET NULL,    
     file_name TEXT NOT NULL,
     file_type TEXT NOT NULL,
     file_size BIGINT NOT NULL,
