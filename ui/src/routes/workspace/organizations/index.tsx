@@ -1,14 +1,20 @@
-import { Box, Heading, Table, Button, Flex } from "@chakra-ui/react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Table,
+} from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
-
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
+
 countries.registerLocale(enLocale);
 
-export const Route = createFileRoute("/(app)/orgs/")({
+export const Route = createFileRoute("/workspace/organizations/")({
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData($api.queryOptions("get", "/v1/orgs")),
   component: OrgsPage,
@@ -58,13 +64,11 @@ function OrgsPage() {
   };
 
   return (
-    <Box>
+    <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="3xl">Organizations</Heading>
-        <Link to="/orgs/new">
-          <Button bg="black" color="white">
-            + Create Organization
-          </Button>
+        <Heading size="lg" color="fg.heading">Organizations</Heading>
+        <Link to="/workspace/organizations/new">
+          <Button colorPalette="brand">+ Create Organization</Button>
         </Link>
       </Flex>
 
@@ -89,36 +93,25 @@ function OrgsPage() {
               </Table.Cell>
               <Table.Cell>
                 {org.website_url ? (
-                  <a
-                    href={org.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={org.website_url} target="_blank" rel="noopener noreferrer">
                     {org.website_url}
                   </a>
-                ) : (
-                  "N/A"
-                )}
+                ) : "N/A"}
               </Table.Cell>
               <Table.Cell>
                 {new Date(org.created_at).toLocaleDateString()}
               </Table.Cell>
               <Table.Cell>
                 <Flex gap={2}>
-                  <Link to="/orgs/$id" params={{ id: org.id.toString() }}>
-                    <Button size="sm" bg="black" color="white">
-                      View
-                    </Button>
+                  <Link to="/workspace/organizations/$id" params={{ id: org.id.toString() }}>
+                    <Button size="sm" colorPalette="brand">View</Button>
                   </Link>
-                  <Link to="/orgs/$id/edit" params={{ id: org.id.toString() }}>
-                    <Button size="sm" bg="black" color="white">
-                      Edit
-                    </Button>
+                  <Link to="/workspace/organizations/$id/edit" params={{ id: org.id.toString() }}>
+                    <Button size="sm" colorPalette="brand">Edit</Button>
                   </Link>
                   <Button
                     size="sm"
-                    bg="black"
-                    color="white"
+                    colorPalette="brand"
                     loading={deleteMutation.isPending}
                     onClick={() => handleDelete(org.id, org.name)}
                   >

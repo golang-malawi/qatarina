@@ -15,12 +15,12 @@ import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 countries.registerLocale(enLocale);
 
-export const Route = createFileRoute("/(app)/orgs/$id/")({
+export const Route = createFileRoute("/workspace/organizations/$id/")({
   component: OrgDetailPage,
 });
 
 function OrgDetailPage() {
-  const { id } = useParams({ from: "/(app)/orgs/$id/" });
+  const { id } = useParams({ from: "/workspace/organizations/$id/" });
   const { data: org, isLoading } = useGetOrgQuery(id);
 
   const userId = org?.created_by ? String(org.created_by) : undefined;

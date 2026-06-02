@@ -7,12 +7,12 @@ import { DynamicForm } from "@/components/form/DynamicForm";
 import { orgSchema } from "@/data/forms/org-schemas";
 import { orgFields } from "@/data/forms/org-field-configs";
 
-export const Route = createFileRoute("/(app)/orgs/$id/edit/")({
+export const Route = createFileRoute("/workspace/organizations/$id/edit/")({
   component: EditOrgPage,
 });
 
 function EditOrgPage() {
-  const { id } = useParams({ from: "/(app)/orgs/$id/edit/" });
+  const { id } = useParams({ from: "/workspace/organizations/$id/edit/" });
   const { data: org, isLoading } = useGetOrgQuery(id);
   const updateOrgMutation = useUpdateOrgMutation();
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ function EditOrgPage() {
           type: "success",
           duration: 3000,
         });
-        navigate({ to: `/orgs/${id}` });
+        navigate({ to: `/workspace/organizations/${id}` });
       }
     } catch {
       toaster.create({

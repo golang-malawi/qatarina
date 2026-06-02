@@ -8,7 +8,7 @@ import { DynamicForm } from "@/components/form/DynamicForm";
 import { orgSchema } from "@/data/forms/org-schemas";
 import { orgFields } from "@/data/forms/org-field-configs";
 
-export const Route = createFileRoute("/(app)/orgs/new/")({
+export const Route = createFileRoute("/workspace/organizations/new/")({
   component: CreateNewOrg,
 });
 
@@ -36,7 +36,7 @@ function CreateNewOrg() {
           type: "success",
           duration: 3000,
         });
-        redirect({ to: "/orgs" });
+        redirect({ to: "/workspace/organizations" });
       }
     } catch (err: any){
       if (err.name === "CancelledError"){
