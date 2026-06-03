@@ -232,11 +232,12 @@ func CreateTestCase(
 			}
 
 			savePath := filepath.Join(saveDir, fileHeader.Filename)
-			if err := c.SaveFile(fileHeader, savePath); err != nil {
-				logger.Error(loggedmodule.ApiTestCases, "failed to save uploaded file", "error", err)
-				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
-			}
-			request.ScriptPath = savePath
+
+			// Normalize to forward slashes for runner compatibility
+			normalizedPath := filepath.ToSlash(savePath)
+
+			// Store the absolute normalized path
+			request.ScriptPath = normalizedPath
 
 			// Validate struct
 			if errors := validation.ValidateStruct(request); errors != nil {
@@ -286,7 +287,6 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 		caseID := c.Params("test_case_id")
 		userID := authutil.GetAuthUserID(c)
 
-		// Fetch the test case to get its details
 		testCase, err := testCaseService.FindByID(c.Context(), caseID)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test case", "error", err)
@@ -302,7 +302,6 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		// Create a test run for this execution
 		testRunReq := &schema.TestRunRequest{
 			ProjectID:    testCase.ProjectID.Int32,
 			TestPlanID:   request.TestPlanID,
@@ -323,9 +322,9 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 
 		// Get WebSocket URL for the runner based on test case runner type
 		var wsURL string
-		runner := testCase.Runner.String // Get runner from test case
+		runner := testCase.Runner.String
 		if runner == "" {
-			runner = request.Runner // Fall back to request runner
+			runner = request.Runner
 		}
 
 		switch runner {
@@ -344,27 +343,19 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 
 		// Start execution asynchronously (non-blocking)
 		go func() {
-			executionReq := &schema.TestRunRequest{
-				ProjectID:    testRunReq.ProjectID,
-				TestPlanID:   testRunReq.TestPlanID,
-				TestCaseID:   testRunReq.TestCaseID,
-				OwnerID:      testRunReq.OwnerID,
-				TestedByID:   testRunReq.TestedByID,
-				AssignedToID: testRunReq.AssignedToID,
-				Code:         testRunReq.Code,
-				Runner:       testRunReq.Runner,
-				ScriptPath:   testRunReq.ScriptPath,
-			}
-
-			// Stream runner execution and automatically commit results
-			err := runnerclient.StreamRunnerAndCommit(testRunService, executionReq, wsURL, userID)
+			err := runnerclient.StreamRunnerAndCommit(
+				testRunService,
+				createdRun.ID.String(),
+				testRunReq,
+				wsURL,
+				userID,
+			)
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestRuns, "failed to stream runner during execution", "error", err, "testRunID", createdRun.ID)
 			}
 		}()
 
 		// Return immediately with test run details (HTTP 202 Accepted)
-		// Client can connect to WebSocket to see live execution
 		return c.Status(fiber.StatusAccepted).JSON(schema.NewTestRunResponseFromEntity(createdRun))
 	}
 }
@@ -981,4 +972,40 @@ func determineStateFromRunnerOutput(output string) dbsqlc.TestRunState {
 
 	// fallback if nothing matched
 	return dbsqlc.TestRunStatePending
+}
+
+// GetScriptTestPlanTestCases godoc
+//
+// @ID          GetScriptTestPlanTestCases
+// @Summary     List all script-based test cases of a test plan
+// @Description Returns only test cases that have a runner and script_path set
+// @Tags        test-cases, test-plans
+// @Accept      json
+// @Produce     json
+// @Param       testPlanID path int true "Test Plan ID"
+// @Success     200 {object} schema.TestCaseListResponse
+// @Failure     400 {object} problemdetail.ProblemDetail
+// @Failure     500 {object} problemdetail.ProblemDetail
+// @Router      /v1/test-plans/{testPlanID}/script-test-cases [get]
+func GetScriptTestPlanTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID == 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
+		testCases, err := testCaseService.FindScriptCasesByPlanID(c.Context(), int64(testPlanID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info(loggedmodule.ApiTestPlans, "no script test cases found", "error", err)
+				return c.JSON(schema.TestCaseListResponse{})
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to fetch script test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch script test cases")
+		}
+
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
+		})
+	}
 }

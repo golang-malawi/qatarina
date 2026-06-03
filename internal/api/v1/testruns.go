@@ -403,7 +403,7 @@ func ExecuteTestRun(testRunService services.TestRunService, testCaseService serv
 		}
 
 		// Stream execution and commit results
-		err = runnerclient.StreamRunnerAndCommit(testRunService, runReq, wsURL, int64(userID))
+		err = runnerclient.StreamRunnerAndCommit(testRunService, pathID, runReq, wsURL, int64(userID))
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to stream runner", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to execute runner stream")

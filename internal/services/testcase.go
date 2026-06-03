@@ -87,6 +87,9 @@ type TestCaseService interface {
 	AcceptSuggested(ctx context.Context, testCaseID string) error
 	// RejectSuggested is used to reject a suggested test case
 	RejectSuggested(ctx context.Context, testCaseID string) error
+
+	// FindScriptCasesByPlanID is used to list all script test cases assigned to a test plan
+	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -936,4 +939,8 @@ func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID st
 	id := uuid.MustParse(testCaseID)
 	_, err := t.queries.DeleteTestCase(ctx, id)
 	return err
+}
+
+func (t *testCaseServiceImpl) FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListScriptTestCasesByPlan(ctx, int64(testPlanID))
 }

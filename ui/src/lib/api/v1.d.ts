@@ -1447,6 +1447,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/script-test-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all script-based test cases of a test plan
+         * @description Returns only test cases that have a runner and script_path set
+         */
+        get: operations["GetScriptTestPlanTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-cases": {
         parameters: {
             query?: never;
@@ -1971,6 +1991,7 @@ export interface components {
             kind: string;
             project_id: number;
             runner?: string;
+            script_path?: string;
             tags?: string[];
             title: string;
         };
@@ -1982,8 +2003,10 @@ export interface components {
             is_draft?: boolean;
             kind: string;
             project_id?: number;
-            /** @description "basi", "playwright", "cyprus", "browseruse" */
+            /** @description "basi", "playwright", "cypress", "browseruse" */
             runner?: string;
+            /** @description optional; used for "playwright" and "cypress" runner types */
+            script_path?: string;
             tags: string[];
             title: string;
         };
@@ -2179,6 +2202,8 @@ export interface components {
             notes?: string;
             project_id?: number;
             result?: string;
+            runner?: string;
+            script_path?: string;
             status?: string;
             suggested?: boolean;
             tags?: string[];
@@ -2240,6 +2265,10 @@ export interface components {
             project_id: number;
             /** @description passed, failed, or leave nil for pending */
             result_state?: string;
+            /** @description "basi", "playwright", "cypress", "browseruse" */
+            runner?: string;
+            /** @description optional; used for "playwright" and "cypress" runner types */
+            script_path?: string;
             test_case_id: string;
             test_plan_id: number;
             tested_by_id: number;
@@ -5370,6 +5399,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetScriptTestPlanTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
                 };
             };
             /** @description Bad Request */

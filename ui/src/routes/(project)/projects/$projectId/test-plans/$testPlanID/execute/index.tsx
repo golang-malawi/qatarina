@@ -12,6 +12,7 @@ import {
 import { IconPlayerPlay } from "@tabler/icons-react";
 import TestCaseGrid from "@/components/TestCaseGrid";
 import { useExecuteTestCaseMutation } from "@/services/TestExecutionService";
+import { useScriptTestCasesQuery } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/execute/"
@@ -22,6 +23,9 @@ export const Route = createFileRoute(
 function ExecuteTestPlan() {
   const { testPlanID } = Route.useParams();
   const mutation = useExecuteTestCaseMutation();
+
+  // Fetch script-based test cases
+  const { data, isLoading, isError } = useScriptTestCasesQuery(Number(testPlanID));
 
   const handleExecute = (testCaseID: string) => {
     mutation.mutate({
@@ -54,10 +58,14 @@ function ExecuteTestPlan() {
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
         <Card.Body p={{ base: 4, md: 5 }}>
           <Box overflowX="auto" minH="80">
-            <TestCaseGrid
-              onExecute={handleExecute}
-              isExecuting={mutation.isPending}
-            />
+            {isLoading && <Text>Loading script test cases...</Text>}
+            {isError && <Text color="red.500">Failed to load test cases</Text>}
+            {data && (
+              <TestCaseGrid
+                testCases={data.test_cases} // pass fetched cases
+                onExecute={handleExecute}
+              />
+            )}
           </Box>
         </Card.Body>
       </Card.Root>

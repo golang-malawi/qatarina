@@ -166,3 +166,15 @@ export async function rejectSuggestedTestCase(testCaseID: string) {
     params: { path: { testCaseID } },
   });
 }
+
+export function useScriptTestCasesQuery(testPlanID: number) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/script-test-cases", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export async function getScriptTestCasesByTestPlanID(testPlanID: number) {
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}/script-test-cases", {
+    params: { path: { testPlanID } },
+  });
+}

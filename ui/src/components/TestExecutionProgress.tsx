@@ -11,11 +11,10 @@ import {
 } from "@chakra-ui/react";
 import { IconAlertCircle, IconCheck, IconClock, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { connectToTestExecution } from "@/services/TestExecutionService";
 
 interface ExecutionLog {
   timestamp: string;
-  type: "info" | "success" | "error" | "warning";
+  type: "info" | "success" | "error" | "warning" | "status";
   message: string;
 }
 
@@ -38,34 +37,53 @@ export function TestExecutionProgress({
 
   useEffect(() => {
     try {
-      const connection = connectToTestExecution(
-        testRunID,
-        (message: { type?: string; content?: string; state?: "passed" | "failed" | "pending" }) => {
+      // Connect directly to backend stream endpoint
+      const connection = new WebSocket(
+        `${import.meta.env.VITE_API_BASE_URL}/v1/test-runs/${testRunID}/stream`
+      );
+
+      connection.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
           const executionLog: ExecutionLog = {
             timestamp: new Date().toLocaleTimeString(),
-            type: (message.type as ExecutionLog["type"]) || "info",
-            message: message.content || JSON.stringify(message),
+            type: (msg.type as ExecutionLog["type"]) || "info",
+            message: msg.content || JSON.stringify(msg),
           };
           setLogs((prev) => [...prev, executionLog]);
 
-          if (message.state === "passed" || message.state === "failed") {
-            setFinalState(message.state);
-            setIsExecuting(false);
-            onComplete?.(message.state);
+          if (msg.type === "status") {
+            if (msg.content.includes("passed")) {
+              setFinalState("passed");
+              setIsExecuting(false);
+              onComplete?.("passed");
+            } else if (msg.content.includes("failed")) {
+              setFinalState("failed");
+              setIsExecuting(false);
+              onComplete?.("failed");
+            } else {
+              setFinalState("pending");
+              setIsExecuting(false);
+              onComplete?.("pending");
+            }
           }
-        },
-        (err: Event) => {
-          setError("WebSocket connection error");
+        } catch (err) {
+          console.error("Failed to parse log message", err);
+        }
+      };
+
+      connection.onerror = (err) => {
+        setError("WebSocket connection error");
+        setIsExecuting(false);
+        console.error("WebSocket error:", err);
+      };
+
+      connection.onclose = () => {
+        if (isExecuting && !finalState) {
+          setFinalState("pending");
           setIsExecuting(false);
-          console.error("WebSocket error:", err);
-        },
-        () => {
-          if (isExecuting) {
-            setIsExecuting(false);
-            setFinalState("pending");
-          }
-        },
-      );
+        }
+      };
 
       setWs(connection);
 
@@ -175,6 +193,8 @@ export function TestExecutionProgress({
                           ? "green.300"
                           : log.type === "warning"
                           ? "yellow.300"
+                          : log.type === "status"
+                          ? "blue.300"
                           : "gray.300"
                       }
                     >
@@ -189,7 +209,15 @@ export function TestExecutionProgress({
           {/* Footer */}
           <HStack justify="end" gap={2}>
             {!isExecuting && (
-              <Button size="sm" variant="outline" colorPalette="gray">
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="gray"
+                onClick={() => {
+                  const text = logs.map((l) => `[${l.timestamp}] ${l.message}`).join("\n");
+                  navigator.clipboard.writeText(text);
+                }}
+              >
                 Copy Logs
               </Button>
             )}

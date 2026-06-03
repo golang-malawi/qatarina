@@ -39,3 +39,10 @@ export async function executeTestCase(testCaseID: string, testPlanID: string, ru
     body: { testPlanID, runner },
   });
 }
+
+// Query hook for test cases in a specific test plan
+export function useTestPlanTestCasesQuery(testPlanID: number) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/test-cases", {
+    params: { path: { testPlanID } },
+  });
+}

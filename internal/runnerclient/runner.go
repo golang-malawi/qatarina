@@ -12,15 +12,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func StreamRunnerAndCommit(testRunService services.TestRunService, runReq *schema.TestRunRequest, runnerURL string, userID int64) error {
-	// Create run first
-	createdRun, err := testRunService.Create(context.Background(), runReq)
-	if err != nil {
-		return err
-	}
-
+func StreamRunnerAndCommit(testRunService services.TestRunService, runID string, runReq *schema.TestRunRequest, runnerURL string, userID int64) error {
 	// Connect to runner WebSocket
-	conn, _, err := websocket.DefaultDialer.Dial(runnerURL+"?file="+runReq.Code, nil)
+	fmt.Println("Runner ScriptPath:", runReq.ScriptPath) // TODO DELETE DEBUG LOG
+
+	conn, _, err := websocket.DefaultDialer.Dial(runnerURL+"?file="+runReq.ScriptPath, nil)
 	if err != nil {
 		return err
 	}
@@ -36,8 +32,8 @@ func StreamRunnerAndCommit(testRunService services.TestRunService, runReq *schem
 		}
 		logs = append(logs, fmt.Sprintf("[%s] %s", msg.Type, msg.Content))
 
-		// Push logs live to frontend via SSE/WebSocket
-		testRunService.PublishLog(createdRun.ID.String(), msg)
+		// Push logs live to frontend
+		testRunService.PublishLog(runID, msg)
 
 		if msg.Type == "stderr" {
 			finalState = dbsqlc.TestRunStateFailed
@@ -49,7 +45,7 @@ func StreamRunnerAndCommit(testRunService services.TestRunService, runReq *schem
 	}
 
 	commitReq := &schema.CommitTestRunResult{
-		TestRunID:      createdRun.ID.String(),
+		TestRunID:      runID,
 		Notes:          "Executed via runner stream",
 		IsClosed:       true,
 		TestedOn:       time.Now(),
@@ -64,7 +60,7 @@ func StreamRunnerAndCommit(testRunService services.TestRunService, runReq *schem
 		return err
 	}
 
-	testRunService.PublishLog(createdRun.ID.String(), schema.RunnerMessage{
+	testRunService.PublishLog(runID, schema.RunnerMessage{
 		Type:    "status",
 		Content: fmt.Sprintf("Run completed with state: %s", finalState),
 	})

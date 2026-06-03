@@ -25,16 +25,22 @@ interface ExecutingTestCase {
   title: string;
 }
 
-// Props for external control
 interface TestCaseGridProps {
+  testCases?: Array<{
+    id?: string;
+    code?: string;
+    title?: string;
+    description?: string;
+    kind?: string;
+    tags?: string[];
+  }>;
   onExecute?: (testCaseID: string) => void;
-  isExecuting?: boolean;
 }
 
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type TestCase = NonNullable<TestCaseListResponse["test_cases"]>[number];
 
-export default function TestCaseGrid({ onExecute, isExecuting }: TestCaseGridProps) {
+export default function TestCaseGrid({ testCases, onExecute }: TestCaseGridProps) {
   const { testPlanID } = useParams({
     from: "/(project)/projects/$projectId/test-plans/$testPlanID/execute/",
   });
@@ -75,9 +81,13 @@ export default function TestCaseGrid({ onExecute, isExecuting }: TestCaseGridPro
       type: state === "passed" ? "success" : state === "failed" ? "error" : "info",
       duration: 5000,
     });
+    setExecutingTestCase(null);
   };
 
-  if (isLoading) {
+  const testCasesData = data as TestCaseListResponse | undefined;
+  const cases: TestCase[] = testCases ?? testCasesData?.test_cases ?? [];
+
+  if (!testCases && isLoading) {
     return (
       <Flex justify="center" align="center" minH="200px">
         <Stack align="center" gap={2}>
@@ -88,7 +98,7 @@ export default function TestCaseGrid({ onExecute, isExecuting }: TestCaseGridPro
     );
   }
 
-  if (error) {
+  if (!testCases && error) {
     return (
       <Box p={4} bg="red.subtle" borderRadius="md">
         <HStack gap={2}>
@@ -101,9 +111,6 @@ export default function TestCaseGrid({ onExecute, isExecuting }: TestCaseGridPro
     );
   }
 
-  const testCasesData = data as TestCaseListResponse | undefined;
-  const cases: TestCase[] = testCasesData?.test_cases ?? [];
-
   if (cases.length === 0) {
     return (
       <Box p={6} textAlign="center">
@@ -112,103 +119,98 @@ export default function TestCaseGrid({ onExecute, isExecuting }: TestCaseGridPro
     );
   }
 
-  if (executingTestCase?.testRunID) {
-    return (
-      <Stack gap={4}>
-        <TestExecutionProgress
-          testRunID={executingTestCase.testRunID}
-          testCaseTitle={executingTestCase.title}
-          onComplete={handleExecutionComplete}
-        />
-        <Button variant="outline" onClick={() => setExecutingTestCase(null)}>
-          Back to Test Cases
-        </Button>
-      </Stack>
-    );
-  }
-
   return (
-    <Box overflowX="auto">
-      <Table.Root variant="outline" size="sm">
-        <Table.Header bg="bg.subtle">
-          <Table.Row>
-            <Table.ColumnHeader w="80px">Code</Table.ColumnHeader>
-            <Table.ColumnHeader flex={2}>Title</Table.ColumnHeader>
-            <Table.ColumnHeader flex={2}>Description</Table.ColumnHeader>
-            <Table.ColumnHeader w="120px">Kind</Table.ColumnHeader>
-            <Table.ColumnHeader w="200px">Tags</Table.ColumnHeader>
-            <Table.ColumnHeader w="100px" textAlign="center">Action</Table.ColumnHeader>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {cases.map((testCase) => (
-            <Table.Row key={testCase.id ?? ""} _hover={{ bg: "bg.muted" }}>
-              <Table.Cell>
-                <Text fontSize="sm" fontFamily="monospace">
-                  {testCase.code || "—"}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <Text fontSize="sm" fontWeight="medium">
-                  {testCase.title}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <Text fontSize="sm" color="fg.muted" lineClamp={2}>
-                  {testCase.description}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <Badge size="sm" variant="subtle">
-                  {testCase.kind}
-                </Badge>
-              </Table.Cell>
-              <Table.Cell>
-                <HStack gap={1}>
-                  {testCase.tags?.slice(0, 2).map((tag: string, idx: number) => (
-                    <Badge key={idx} size="xs" variant="subtle">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {testCase.tags && testCase.tags.length > 2 && (
-                    <Badge size="xs" variant="subtle">
-                      +{testCase.tags.length - 2}
-                    </Badge>
-                  )}
-                </HStack>
-              </Table.Cell>
-              <Table.Cell textAlign="center">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  colorPalette="brand"
-                  disabled={
-                    isExecuting ||
-                    executeTestCaseMutation.isPending ||
-                    executingTestCase?.testCaseID === testCase.id
-                  }
-                  loading={
-                    isExecuting ||
-                    (executeTestCaseMutation.isPending &&
-                      executingTestCase?.testCaseID === testCase.id)
-                  }
-                  onClick={() => {
-                    if (onExecute) {
-                      onExecute(testCase.id ?? "");
-                    } else {
-                      handleExecuteTestCase(testCase.id ?? "", testCase.title ?? "");
-                    }
-                  }}
-                >
-                  <Icon>
-                    <IconPlayerPlay />
-                  </Icon>
-                </Button>
-              </Table.Cell>
+    <Stack gap={6}>
+      <Box overflowX="auto">
+        <Table.Root variant="outline" size="sm">
+          <Table.Header bg="bg.subtle">
+            <Table.Row>
+              <Table.ColumnHeader w="80px">Code</Table.ColumnHeader>
+              <Table.ColumnHeader flex={2}>Title</Table.ColumnHeader>
+              <Table.ColumnHeader flex={2}>Description</Table.ColumnHeader>
+              <Table.ColumnHeader w="120px">Kind</Table.ColumnHeader>
+              <Table.ColumnHeader w="200px">Tags</Table.ColumnHeader>
+              <Table.ColumnHeader w="100px" textAlign="center">Action</Table.ColumnHeader>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
-    </Box>
+          </Table.Header>
+          <Table.Body>
+            {cases.map((testCase) => (
+              <Table.Row key={testCase.id ?? ""} _hover={{ bg: "bg.muted" }}>
+                <Table.Cell>
+                  <Text fontSize="sm" fontFamily="monospace">
+                    {testCase.code || "—"}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" fontWeight="medium">
+                    {testCase.title}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" color="fg.muted" lineClamp={2}>
+                    {testCase.description}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge size="sm" variant="subtle">
+                    {testCase.kind}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <HStack gap={1}>
+                    {testCase.tags?.slice(0, 2).map((tag: string, idx: number) => (
+                      <Badge key={idx} size="xs" variant="subtle">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {testCase.tags && testCase.tags.length > 2 && (
+                      <Badge size="xs" variant="subtle">
+                        +{testCase.tags.length - 2}
+                      </Badge>
+                    )}
+                  </HStack>
+                </Table.Cell>
+                <Table.Cell textAlign="center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorPalette="brand"
+                    disabled={
+                      executingTestCase?.testCaseID === testCase.id || executeTestCaseMutation.isPending
+                    }
+                    loading={executingTestCase?.testCaseID === testCase.id}
+                    onClick={() => {
+                      if (onExecute) {
+                        onExecute(testCase.id ?? "");
+                      } else {
+                        handleExecuteTestCase(testCase.id ?? "", testCase.title ?? "");
+                      }
+                    }}
+                  >
+                    {executingTestCase?.testCaseID === testCase.id ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Icon>
+                        <IconPlayerPlay />
+                      </Icon>
+                    )}
+                  </Button>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Box>
+
+      {executingTestCase?.testRunID && (
+        <Box>
+          <TestExecutionProgress
+            testRunID={executingTestCase.testRunID}
+            testCaseTitle={executingTestCase.title}
+            onComplete={handleExecutionComplete}
+          />
+        </Box>
+      )}
+    </Stack>
   );
 }

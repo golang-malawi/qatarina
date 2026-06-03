@@ -123,10 +123,18 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT DISTINCT tc.*
+SELECT tc.*
 FROM test_cases tc
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = $1::bigint
-WHERE tc.project_id = (SELECT project_id FROM test_plans WHERE id = $1::bigint);
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1;
+
+-- name: ListScriptTestCasesByPlan :many
+SELECT tc.*
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1
+  AND tc.script_path IS NOT NULL
+  AND tc.runner IS NOT NULL;
 
 -- name: GetTestCasesWithPlanInfo :many
 SELECT
@@ -333,6 +341,11 @@ SET is_complete = TRUE,
 closed_at = $2,
 updated_at = $2
 WHERE id = $1;
+
+-- name: AddTestCaseToPlan :exec
+INSERT INTO test_plan_cases (test_plan_id, test_case_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
 
 -- name: ChangeEnvironment :exec
 UPDATE test_plans

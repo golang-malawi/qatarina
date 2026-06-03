@@ -277,6 +277,8 @@ components:
           type: integer
         runner:
           type: string
+        script_path:
+          type: string
         tags:
           items:
             type: string
@@ -307,7 +309,10 @@ components:
         project_id:
           type: integer
         runner:
-          description: '"basi", "playwright", "cyprus", "browseruse"'
+          description: '"basi", "playwright", "cypress", "browseruse"'
+          type: string
+        script_path:
+          description: optional; used for "playwright" and "cypress" runner types
           type: string
         tags:
           items:
@@ -738,6 +743,10 @@ components:
           type: integer
         result:
           type: string
+        runner:
+          type: string
+        script_path:
+          type: string
         status:
           type: string
         suggested:
@@ -873,6 +882,12 @@ components:
           - TestRunStatePassed
           - TestRunStateFailed
           - TestRunStateBlocked
+        runner:
+          description: '"basi", "playwright", "cypress", "browseruse"'
+          type: string
+        script_path:
+          description: optional; used for "playwright" and "cypress" runner types
+          type: string
         test_case_id:
           type: string
         test_plan_id:
@@ -3860,6 +3875,45 @@ paths:
           description: Internal Server Error
       summary: Change environment of a Test Plan
       tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/script-test-cases:
+    get:
+      description: Returns only test cases that have a runner and script_path set
+      operationId: GetScriptTestPlanTestCases
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all script-based test cases of a test plan
+      tags:
+      - test-cases
       - test-plans
   /v1/test-plans/{testPlanID}/test-cases:
     get:

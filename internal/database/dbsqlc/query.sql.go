@@ -32,6 +32,22 @@ func (q *Queries) AddProjectTestCaseTemplate(ctx context.Context, arg AddProject
 	return err
 }
 
+const addTestCaseToPlan = `-- name: AddTestCaseToPlan :exec
+INSERT INTO test_plan_cases (test_plan_id, test_case_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddTestCaseToPlanParams struct {
+	TestPlanID int64
+	TestCaseID uuid.UUID
+}
+
+func (q *Queries) AddTestCaseToPlan(ctx context.Context, arg AddTestCaseToPlanParams) error {
+	_, err := q.db.ExecContext(ctx, addTestCaseToPlan, arg.TestPlanID, arg.TestCaseID)
+	return err
+}
+
 const archiveProject = `-- name: ArchiveProject :one
 UPDATE projects
 SET is_active = false
@@ -2260,6 +2276,55 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 	return items, nil
 }
 
+const listScriptTestCasesByPlan = `-- name: ListScriptTestCasesByPlan :many
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1
+  AND tc.script_path IS NOT NULL
+  AND tc.runner IS NOT NULL
+`
+
+func (q *Queries) ListScriptTestCasesByPlan(ctx context.Context, testPlanID int64) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listScriptTestCasesByPlan, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.ParentTestCaseID,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.Suggested,
+			&i.Runner,
+			&i.ScriptPath,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestCases = `-- name: ListTestCases :many
 SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path FROM test_cases ORDER BY created_at DESC
 `
@@ -2491,14 +2556,14 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-SELECT DISTINCT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path
 FROM test_cases tc
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = $1::bigint
-WHERE tc.project_id = (SELECT project_id FROM test_plans WHERE id = $1::bigint)
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1
 `
 
-func (q *Queries) ListTestCasesByPlan(ctx context.Context, dollar_1 int64) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, dollar_1)
+func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, testPlanID)
 	if err != nil {
 		return nil, err
 	}

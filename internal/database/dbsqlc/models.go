@@ -315,6 +315,11 @@ type TestPlan struct {
 	EnvironmentID sql.NullInt32
 }
 
+type TestPlanCase struct {
+	TestPlanID int64
+	TestCaseID uuid.UUID
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID
