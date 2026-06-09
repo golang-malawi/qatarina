@@ -54,9 +54,8 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 		Kind:          dbsqlc.TestKind(request.Kind),
 		Description:   sql.NullString{String: request.Description, Valid: true},
 		EnvironmentID: common.NewNullInt32(int32(request.EnvironmentID)),
-		// TODO: handle time fields
-		// StartAt:        sql.NullTime{Time: time.Now, Valid: true},
-		// ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
+		StartAt:        sql.NullTime{Time: request.StartAt, Valid: true},
+		ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
 		NumTestCases: 0,
 		NumFailures:  0,
 		IsComplete:   sql.NullBool{Bool: false, Valid: true},
