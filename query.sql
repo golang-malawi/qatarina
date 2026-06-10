@@ -123,10 +123,18 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT DISTINCT tc.*
+SELECT tc.*
 FROM test_cases tc
-INNER JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tr.test_plan_id = $1::bigint;
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1;
+
+-- name: ListScriptTestCasesByPlan :many
+SELECT tc.*
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+WHERE pc.test_plan_id = $1
+  AND tc.script_path IS NOT NULL
+  AND tc.runner IS NOT NULL;
 
 -- name: GetTestCasesWithPlanInfo :many
 SELECT
@@ -227,11 +235,11 @@ WHERE p.project_id IS NULL;
 -- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
-    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested
+    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14
+    $8, $9, $10, $11, $12, $13, $14, $15, $16
 )
 RETURNING id;
 
@@ -263,7 +271,9 @@ title = $5,
 description = $6,
 is_draft = $7,
 tags = $8,
-updated_at = $9
+updated_at = $9,
+runner = $10,
+script_path = $11
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
@@ -331,6 +341,11 @@ SET is_complete = TRUE,
 closed_at = $2,
 updated_at = $2
 WHERE id = $1;
+
+-- name: AddTestCaseToPlan :exec
+INSERT INTO test_plan_cases (test_plan_id, test_case_id)
+VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
 
 -- name: ChangeEnvironment :exec
 UPDATE test_plans
@@ -408,8 +423,8 @@ id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_
 result_state, is_closed, assignee_can_change_code, notes,reactions, tested_on, expected_result, environment_id
 )
 VALUES (
-$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', $11
+@id, @project_id, NULLIF(@test_plan_id, 0), @test_case_id, @owner_id, @tested_by_id, @assigned_to_id, @code, @created_at, @updated_at,
+'pending', false, false, 'None', '{}'::jsonb, now(), 'Test to Pass', @environment_id
 )
 RETURNING id;
 

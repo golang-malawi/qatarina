@@ -21,7 +21,7 @@ type TestRunService interface {
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestRun, error)
 	Commit(context.Context, *schema.CommitTestRunResult) (*dbsqlc.TestRun, error)
 	CommitBulk(context.Context, *schema.BulkCommitTestResults) (bool, error)
-	Create(context.Context, *schema.TestRunRequest) (bool, error)
+	Create(context.Context, *schema.TestRunRequest) (*dbsqlc.TestRun, error)
 	GetOneTestRun(context.Context, string) (*dbsqlc.TestRun, error)
 	// CreateFromFailedTest records tests without necessarily first creating TestCases.
 	//
@@ -35,42 +35,108 @@ type TestRunService interface {
 	IsTestPlanActive(ctx context.Context, planID int64) (bool, error)
 	IsTestCaseActive(ctx context.Context, caseID string) (bool, error)
 	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
+	SubscribeToLogs(runID string) (<-chan schema.RunnerMessage, error)
+	PublishLog(runID string, msg schema.RunnerMessage) error
 }
 
 type testRunService struct {
 	db      *sql.DB
 	queries *dbsqlc.Queries
 	logger  logging.Logger
+
+	subscribers map[string][]chan schema.RunnerMessage
 }
 
 func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) TestRunService {
 	return &testRunService{
-		db:      db,
-		queries: conn,
-		logger:  logger,
+		db:          db,
+		queries:     conn,
+		logger:      logger,
+		subscribers: make(map[string][]chan schema.RunnerMessage),
 	}
 }
 
 // Create implements TestRunService
-func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (bool, error) {
+func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (*dbsqlc.TestRun, error) {
+	id := uuid.New()
+
+	// Determine result state: use provided state, or default to pending if no feedback provided
+	resultState := dbsqlc.TestRunStatePending
+	if request.ResultState != nil {
+		resultState = *request.ResultState
+	}
+
+	var planID sql.NullInt32
+	if request.TestPlanID > 0 {
+		planID = sql.NullInt32{Int32: request.TestPlanID, Valid: true}
+	} else {
+		planID = sql.NullInt32{Valid: false}
+	}
+
 	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
-		ID:            uuid.New(),
+		ID:            id,
 		ProjectID:     request.ProjectID,
-		TestPlanID:    request.TestPlanID,
+		TestPlanID:    planID,
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
 		OwnerID:       request.OwnerID,
 		TestedByID:    common.NewNullInt32(request.TestedByID),
-		AssignedToID:  common.NewNullInt32(request.AssignedToID),
+		AssignedToID:  request.AssignedToID,
 		Code:          request.Code,
 		CreatedAt:     common.NullTime(time.Now()),
 		UpdatedAt:     common.NullTime(time.Now()),
 		EnvironmentID: common.NewNullInt32(request.EnvironmentID),
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to create page %w", err)
+		return nil, fmt.Errorf("failed to create test run: %w", err)
 	}
 
-	return true, nil
+	// If feedback is provided (actual_result or result_state), record it immediately
+	if request.ActualResult != nil || request.ResultState != nil {
+		testedOn := time.Now().UTC()
+		if request.TestedOn != nil {
+			testedOn = *request.TestedOn
+		}
+
+		// Extract pointer values with defaults
+		actualResult := ""
+		if request.ActualResult != nil {
+			actualResult = *request.ActualResult
+		}
+		expectedResult := ""
+		if request.ExpectedResult != nil {
+			expectedResult = *request.ExpectedResult
+		}
+		notes := ""
+		if request.Notes != nil {
+			notes = *request.Notes
+		}
+
+		// Prepare commit data with feedback
+		commitRequest := &schema.CommitTestRunResult{
+			UserID:         int64(request.TestedByID),
+			TestRunID:      id.String(),
+			ActualResult:   actualResult,
+			ExpectedResult: expectedResult,
+			Notes:          notes,
+			State:          resultState,
+			TestedOn:       testedOn,
+			IsClosed:       false,
+		}
+
+		// Commit the results
+		_, err = t.Commit(ctx, commitRequest)
+		if err != nil {
+			// Log error but don't fail - test run was created successfully
+			t.logger.Error("failed to commit initial feedback", "error", err, "testRunID", id)
+		}
+	}
+
+	run, err := t.queries.GetTestRun(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch created test run: %w", err)
+	}
+
+	return &run, nil
 }
 
 // FindAll implements TestRunService.
@@ -113,7 +179,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 		Status:     request.State,
 		Result:     request.ActualResult,
 		Notes:      common.NullString(request.Notes),
-		ExecutedBy: int32(request.UserID),
+		ExecutedBy: common.NewNullInt32(int32(request.UserID)),
 		ExecutedAt: request.TestedOn,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -196,7 +262,7 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 		Status:     dbsqlc.TestRunState(request.Status),
 		Result:     request.Result,
 		Notes:      common.NullString(request.Notes),
-		ExecutedBy: int32(request.ExecutedBy),
+		ExecutedBy: common.NewNullInt32(int32(request.ExecutedBy)),
 		ExecutedAt: time.Now(),
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -261,4 +327,25 @@ func (t *testRunService) CloseTestRun(ctx context.Context, testRunID string) (*d
 		return nil, fmt.Errorf("failed to fetch closed test run: %w", err)
 	}
 	return &closedRun, nil
+}
+
+func (t *testRunService) SubscribeToLogs(runID string) (<-chan schema.RunnerMessage, error) {
+	ch := make(chan schema.RunnerMessage, 100) // buffered channel to avoid blocking
+	t.subscribers[runID] = append(t.subscribers[runID], ch)
+	return ch, nil
+}
+
+func (t *testRunService) PublishLog(runID string, msg schema.RunnerMessage) error {
+	subs, ok := t.subscribers[runID]
+	if !ok {
+		return nil
+	}
+	for _, ch := range subs {
+		select {
+		case ch <- msg:
+		default:
+			t.logger.Warn("subscriber channel full, skipping log message", "runID", runID)
+		}
+	}
+	return nil
 }

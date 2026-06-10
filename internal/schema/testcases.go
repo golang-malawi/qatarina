@@ -16,6 +16,13 @@ type CreateTestCaseRequest struct {
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
 	ProjectID       int64    `json:"project_id" validate:"-"`
+	Runner          string   `json:"runner"`                // "basi", "playwright", "cypress", "browseruse"
+	ScriptPath      string   `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
+}
+
+type ExecuteTestCaseRequest struct {
+	TestPlanID int32  `json:"test_plan_id" validate:"-"`
+	Runner     string `json:"runner" validate:"-"` // optional, falls back to test case runner type
 }
 
 type TestCaseResponse struct {
@@ -36,6 +43,8 @@ type TestCaseResponse struct {
 	ExecutedBy      int64    `json:"executed_by"`
 	Notes           string   `json:"notes"`
 	Suggested       bool     `json:"suggested"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path,omitempty"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
@@ -162,6 +171,8 @@ type CreateSuggestedTestCaseRequest struct {
 	Description     string   `json:"description" validate:"required"`
 	Tags            []string `json:"tags"`
 	CreatedByID     int64    `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path,omitempty"`
 }
 
 type SugestedTestCaseResponse struct {

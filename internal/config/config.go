@@ -17,6 +17,8 @@ type Config struct {
 	Logging    LoggingConfiguration    `mapstructure:"logging"`
 	Platform   PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
+	Runner     RunnerConfiguration     `mapstructure:"runner"`
+	Storage    StorageConfiguration    `mapstructure:"storage"`
 }
 
 type DatabaseConfiguration struct {
@@ -73,6 +75,26 @@ type PlatformConfiguration struct {
 
 type ImportFileConfiguration struct {
 	MaxRows int `mapstructure:"max_rows"`
+}
+
+type RunnerConfiguration struct {
+	BasiURL       string `mapstructure:"basi_url" envconfig:"QATARINA_RUNNER_BASI_URL"`
+	PlaywrightURL string `mapstructure:"playwright_url"`
+	CypressURL    string `mapstructure:"cypress_url"`
+	BrowserUseURL string `mapstructure:"browseruse_url"`
+
+	// WebSocket endpoints for streaming
+	BasiWSURL       string `mapstructure:"basi_ws_url" envconfig:"QATARINA_RUNNER_BASI_WS_URL"`
+	PlaywrightWSURL string `mapstructure:"playwright_ws_url" envconfig:"QATARINA_RUNNER_PLAYWRIGHT_WS_URL"`
+	CypressWSURL    string `mapstructure:"cypress_ws_url" envconfig:"QATARINA_RUNNER_CYPRESS_WS_URL"`
+	BrowserUseWSURL string `mapstructure:"browseruse_ws_url" envconfig:"QATARINA_RUNNER_BROWSERUSE_WS_URL"`
+}
+
+type StorageConfiguration struct {
+	Driver    string `mapstructure:"driver" envconfig:"QATARINA_STORAGE_DRIVER"`
+	LocalPath string `mapstructure:"local_path" envconfig:"QATARINA_STORAGE_LOCAL_PATH"`
+	S3Bucket  string `mapstructure:"s3_bucket" envconfig:"QATARINA_STORAGE_S3_BUCKET"`
+	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -135,5 +157,14 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+	},
+	Runner: RunnerConfiguration{
+		BasiURL: "http://localhost:8080/run?runner=basi",
+	},
+	Storage: StorageConfiguration{
+		Driver:    "local",
+		LocalPath: "./storage",
+		S3Bucket:  "",
+		S3Region:  "",
 	},
 }

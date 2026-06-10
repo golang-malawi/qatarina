@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import {
   Box,
-  Button,
   Card,
   Flex,
   Heading,
@@ -10,8 +9,11 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { IconListCheck, IconPlayerPlay, IconReport } from "@tabler/icons-react";
+import { IconPlayerPlay } from "@tabler/icons-react";
+import { useState } from "react";
 import TestCaseGrid from "@/components/TestCaseGrid";
+import { useExecuteTestCaseMutation } from "@/services/TestExecutionService";
+import { useScriptTestCasesQuery } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/execute/"
@@ -20,19 +22,42 @@ export const Route = createFileRoute(
 });
 
 function ExecuteTestPlan() {
-  const { projectId, testPlanID } = Route.useParams();
+  const { testPlanID } = Route.useParams();
+  const mutation = useExecuteTestCaseMutation();
+  const [runStatus, setRunStatus] = useState<"started" | "passed" | "failed" | "pending" | null>(null);
+  const [latestRunID, setLatestRunID] = useState<string | null>(null);
+
+  // Fetch script-based test cases
+  const { data, isLoading, isError } = useScriptTestCasesQuery(Number(testPlanID));
+
+  const handleExecute = (testCaseID: string) => {
+    setRunStatus("started");
+    mutation.mutate(
+      {
+        testCaseID,
+        testPlanID: Number(testPlanID),
+        runner: "playwright", // or whichever runner you want
+      },
+      {
+        onSuccess: (data) => {
+          if (data?.id) {
+            setLatestRunID(data.id);
+          }
+        },
+      },
+    );
+  };
+
+  const handleExecutionComplete = (state: "passed" | "failed" | "pending") => {
+    setRunStatus(state);
+  };
 
   return (
     <Box w="full">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
         <Card.Body p={{ base: 5, md: 6 }}>
-          <Flex
-            direction={{ base: "column", lg: "row" }}
-            justify="space-between"
-            align={{ base: "start", lg: "center" }}
-            gap={4}
-          >
-            <Stack gap={2} maxW="3xl">
+          <Flex justify="space-between" align="center" gap={4}>
+            <Stack gap={2}>
               <HStack gap={2}>
                 <Icon as={IconPlayerPlay} color="brand.solid" />
                 <Heading size="lg" color="fg.heading">
@@ -40,31 +65,9 @@ function ExecuteTestPlan() {
                 </Heading>
               </HStack>
               <Text color="fg.subtle">
-                Run through test cases, capture outcomes, and keep execution
-                updates in sync for reporting.
+                Select a test case below and run it against the configured runner.
               </Text>
             </Stack>
-
-            <HStack gap={2} flexWrap="wrap">
-              <Link
-                to="/projects/$projectId/test-plans/$testPlanID/test-cases"
-                params={{ projectId, testPlanID }}
-              >
-                <Button variant="outline" size="sm">
-                  <IconListCheck />
-                  View Test Cases
-                </Button>
-              </Link>
-              <Link
-                to="/projects/$projectId/test-plans/$testPlanID/test-runs"
-                params={{ projectId, testPlanID }}
-              >
-                <Button variant="outline" size="sm">
-                  <IconReport />
-                  View Test Runs
-                </Button>
-              </Link>
-            </HStack>
           </Flex>
         </Card.Body>
       </Card.Root>
@@ -72,10 +75,30 @@ function ExecuteTestPlan() {
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
         <Card.Body p={{ base: 4, md: 5 }}>
           <Box overflowX="auto" minH="80">
-            <TestCaseGrid />
+            {isLoading && <Text>Loading script test cases...</Text>}
+            {isError && <Text color="red.500">Failed to load test cases</Text>}
+            {data && (
+              <TestCaseGrid
+                testCases={data.test_cases} // pass fetched cases
+                onExecute={handleExecute}
+                onExecutionComplete={handleExecutionComplete}
+              />
+            )}
           </Box>
         </Card.Body>
       </Card.Root>
+
+      {mutation.isError && (
+        <Text color="red.500">Error: {(mutation.error as Error).message}</Text>
+      )}
+      {mutation.isPending && runStatus === "started" && latestRunID && (
+        <Text color="blue.500">Run started... ID: {latestRunID}</Text>
+      )}
+      {runStatus && runStatus !== "started" && (
+        <Text color={runStatus === "passed" ? "green.500" : runStatus === "failed" ? "red.500" : "orange.500"}>
+          Run finished: {runStatus}
+        </Text>
+      )}
     </Box>
   );
 }

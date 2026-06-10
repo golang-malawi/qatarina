@@ -8,10 +8,13 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
+	"github.com/golang-malawi/qatarina/internal/runnerclient"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
@@ -106,11 +109,11 @@ func GetOneTestRun(testRunService services.TestRunService, logger logging.Logger
 //
 //	@ID				CreateTestRun
 //	@Summary		Create a new Test Run
-//	@Description	Create a new Test Run
+//	@Description	Create a new Test Run. Optional: provide feedback (actual_result, result_state) to record results immediately (GitHub Actions-like workflow)
 //	@Tags			test-runs
 //	@Accept			json
 //	@Produce		json
-//	@Param			request	body		interface{}	true	"Test Run data"
+//	@Param			request	body		schema.TestRunRequest	true	"Test Run data (feedback fields optional)"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
@@ -127,7 +130,7 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		}
 
-		_, err := testRunService.Create(c.Context(), request)
+		testRun, err := testRunService.Create(c.Context(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
@@ -135,6 +138,7 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		return c.JSON(fiber.Map{
 			"message": "Test run created",
+			"testRun": testRun,
 		})
 	}
 }
@@ -228,6 +232,46 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 	}
 }
 
+// RecordTestRunFeedback godoc
+//
+//	@ID				RecordTestRunFeedback
+//	@Summary		Record feedback/results for a Test Run (GitHub Actions-like workflow)
+//	@Description	Record test execution feedback with outcome (passed/failed). This transitions the test run from pending to completed status based on the provided feedback.
+//	@Tags			test-runs
+//	@Accept			json
+//	@Produce		json
+//	@Param			testRunID	path		string		true	"Test Run ID"
+//	@Param			request		body		schema.CommitTestRunResult	true	"Feedback data (actual_result, result_state, notes, etc.)"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-runs/{testRunID}/feedback [post]
+func RecordTestRunFeedback(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		request := new(schema.CommitTestRunResult)
+		_, err := common.ParseBodyThenValidate(ctx, request)
+		if err != nil {
+			return problemdetail.ValidationErrors(ctx, "invalid feedback data", err)
+		}
+
+		testRunID := ctx.Params("testRunID", "")
+		if request.TestRunID != testRunID {
+			logger.Debug(loggedmodule.ApiTestRuns, "cannot record feedback with mismatching ids", "param", testRunID, "requestBodyID", request.TestRunID)
+			return problemdetail.BadRequest(ctx, "'test_run_id' in request body and parameter does not match")
+		}
+		request.UserID = authutil.GetAuthUserID(ctx)
+
+		testRun, err := testRunService.Commit(context.Background(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to record feedback", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to record feedback")
+		}
+		return ctx.JSON(fiber.Map{
+			"testRun": testRun,
+		})
+	}
+}
+
 func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		request := new(schema.BulkCommitTestResults)
@@ -261,7 +305,7 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-runs/{testRunID}/execute [post]
-func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+func ExecuteTestRun(testRunService services.TestRunService, testCaseService services.TestCaseService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		pathID := c.Params("testRunID")
 
@@ -298,12 +342,12 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test run already closed")
 		}
 
-		if tr.AssignedToID.Valid && tr.AssignedToID.Int32 != int32(userID) {
+		if tr.AssignedToID != 0 && tr.AssignedToID != int32(userID) {
 			return problemdetail.BadRequest(c, "cannot execute another user's test run")
 		}
 
 		// Check if test plan is active
-		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID))
+		planActive, err := testRunService.IsTestPlanActive(c.Context(), int64(tr.TestPlanID.Int32))
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestRuns, "db error fetching test plan", "testPlanID", tr.TestPlanID, "testRunID", pathID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "error fetching test plan")
@@ -323,14 +367,51 @@ func ExecuteTestRun(testRunService services.TestRunService, logger logging.Logge
 			return problemdetail.BadRequest(c, "test case is inactive")
 		}
 
-		executed, err := testRunService.Execute(context.Background(), request)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestRuns, "failed to execute test run", "testRunID", pathID)
-			return problemdetail.ServerErrorProblem(c, "failed to execute test run")
+		// Build a run request for the runner
+		runReq := &schema.TestRunRequest{
+			ProjectID:    tr.ProjectID,
+			TestPlanID:   tr.TestPlanID.Int32,
+			TestCaseID:   tr.TestCaseID.String(),
+			OwnerID:      tr.OwnerID,
+			TestedByID:   int32(userID),
+			AssignedToID: tr.AssignedToID,
+			Code:         tr.Code,
 		}
 
+		// Pick the correct WebSocket URL based on runner type
+		var wsURL string
+		tc, err := testCaseService.FindByID(c.Context(), tr.TestCaseID.String())
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to fetch test case for runner info")
+		}
+
+		if !tc.Runner.Valid {
+			return problemdetail.BadRequest(c, "runner not set for this test case")
+		}
+
+		switch tc.Runner.String {
+		case "basi":
+			wsURL = cfg.Runner.BasiWSURL
+		case "playwright":
+			wsURL = cfg.Runner.PlaywrightWSURL
+		case "cypress":
+			wsURL = cfg.Runner.CypressWSURL
+		case "browseruse":
+			wsURL = cfg.Runner.BrowserUseWSURL
+		default:
+			return problemdetail.BadRequest(c, "invalid runner specified")
+		}
+
+		// Stream execution and commit results
+		err = runnerclient.StreamRunnerAndCommit(testRunService, pathID, runReq, wsURL, int64(userID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to stream runner", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to execute runner stream")
+		}
+
+		updatedRun, _ := testRunService.GetOneTestRun(c.Context(), pathID)
 		return c.JSON(fiber.Map{
-			"test_run": schema.NewTestRunResponseFromEntity(executed),
+			"test_run": schema.NewTestRunResponseFromEntity(updatedRun),
 		})
 	}
 }
@@ -363,4 +444,21 @@ func CloseTestRun(testRunService services.TestRunService, logger logging.Logger)
 			"test_run": schema.NewTestRunResponseFromEntity(tr),
 		})
 	}
+}
+
+func StreamTestRunLogs(testRunService services.TestRunService, logger logging.Logger) fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		runID := c.Params("testRunID")
+		// Subsribe to logs for this run
+		ch, err := testRunService.SubscribeToLogs(runID)
+		if err != nil {
+			logger.Error("failed to subscribe to logs", "error", err)
+			return
+		}
+		for msg := range ch {
+			if err := c.WriteJSON(msg); err != nil {
+				break
+			}
+		}
+	})
 }

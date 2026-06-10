@@ -19,6 +19,7 @@ import {
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
 import ReactMarkdown from "react-markdown";
+import SelectRunner from "./SelectRunner";
 
 export type FieldType =
   | "text"
@@ -35,9 +36,11 @@ export type FieldType =
   | "test-kind"
   | "feature-module"
   | "feature-module-type"
+  | "runner"
   | "custom"
   | "array"
-  | "markdown-textarea";
+  | "markdown-textarea"
+  | "file";
 
 export interface FieldConfig {
   name: string;
@@ -55,6 +58,7 @@ export interface FieldConfig {
     onBlur: () => void;
   }) => ReactNode;
   fields?: FieldConfig[]; // for array type
+  accept?: string;
 }
 
 export interface FormConfig<T extends z.ZodTypeAny> {
@@ -64,6 +68,7 @@ export interface FormConfig<T extends z.ZodTypeAny> {
   onSubmit: (values: z.infer<T>) => Promise<void> | void;
   submitText?: string;
   submitLoading?: boolean;
+  submitDisabled?: boolean;
   layout?: "vertical" | "horizontal";
   spacing?: number;
 }
@@ -77,6 +82,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   submitLoading,
   layout = "vertical",
   spacing = 4,
+  submitDisabled,
 }: FormConfig<T>) {
   const form = useForm({
     defaultValues: defaultValues || {},
@@ -227,6 +233,13 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
+              {type === "runner" && (
+                <SelectRunner
+                  value={field.state.value as string}
+                  onChange={(val) => field.handleChange(val)}
+                />
+              )}
+
               {type === "custom" && customComponent && (
                 <>
                   {customComponent({
@@ -331,6 +344,18 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 </label>
               )}
 
+              {type === "file" &&(
+                <Input
+                type="file"
+                accept={fieldConfig.accept}
+                onBlur={field.handleBlur}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  field.handleChange(file);
+                }}
+              />
+              )}
+
               {[
                 "text",
                 "email",
@@ -406,7 +431,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
           variant="outline"
           colorPalette="brand"
           loading={isSubmitting}
-          disabled={isSubmitting}
+          disabled={isSubmitting || submitDisabled}
         >
           {submitText}
         </Button>

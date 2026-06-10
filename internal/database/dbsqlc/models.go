@@ -267,8 +267,10 @@ type TestCase struct {
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
-	ProjectID sql.NullInt32
-	Suggested sql.NullBool
+	ProjectID  sql.NullInt32
+	Suggested  sql.NullBool
+	Runner     sql.NullString
+	ScriptPath sql.NullString
 }
 
 type TestCaseSequence struct {
@@ -313,6 +315,11 @@ type TestPlan struct {
 	EnvironmentID sql.NullInt32
 }
 
+type TestPlanCase struct {
+	TestPlanID int64
+	TestCaseID uuid.UUID
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID
@@ -323,11 +330,11 @@ type TestPlansCase struct {
 type TestRun struct {
 	ID                    uuid.UUID
 	ProjectID             int32
-	TestPlanID            int32
+	TestPlanID            sql.NullInt32
 	TestCaseID            uuid.UUID
 	OwnerID               int32
 	TestedByID            sql.NullInt32
-	AssignedToID          sql.NullInt32
+	AssignedToID          int32
 	AssigneeCanChangeCode sql.NullBool
 	Code                  string
 	ExternalIssueID       sql.NullString
@@ -349,7 +356,7 @@ type TestRunResult struct {
 	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
-	ExecutedBy int32
+	ExecutedBy sql.NullInt32
 	ExecutedAt time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time

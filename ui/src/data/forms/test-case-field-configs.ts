@@ -40,6 +40,24 @@ export const createTestCaseFields = (): FieldConfig[] => [
     required: true,
   },
   {
+    name: "runner",
+      label: "Runner",
+      type: "runner",
+      options: [
+        { label: "Basi", value: "basi" },
+        { label: "Playwright", value: "playwright" },
+        { label: "Cypress", value: "cypress" },
+        { label: "BrowserUse", value: "browseruse" },
+      ],
+  },
+  {
+    name: "script_file",
+    label: "Attach Runner Script",
+    type: "custom",
+    accept: ".basi, .yaml, yml",
+    helperText: "Upload a Basi | Playwright | Cypress | Browseruse script file for this test case"
+  },
+  {
     name: "tags",
     label: "Tags",
     type: "text",
@@ -51,5 +69,5 @@ export const createTestCaseFields = (): FieldConfig[] => [
     label: "Is Draft",
     type: "checkbox",
     helperText: "Mark this test case as a draft",
-  },
+  }
 ];

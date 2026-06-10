@@ -47,7 +47,23 @@ export async function getTestCaseById(testCaseID: string) {
 export async function createTestCase(
   data: components["schemas"]["schema.CreateTestCaseRequest"]
 ) {
-  return apiClient.request("post", "/v1/test-cases", { body: data });
+  return apiClient.request("post", "/v1/test-cases", { body: data as any });
+}
+
+export async function validateTestCaseScript(file: File, runner: string) {
+  const formData = new FormData();
+  formData.append("script_file", file);
+  formData.append("runner", runner);
+
+  const res = await apiClient.request("post", "/v1/test-cases/validate-script" as any, {
+    body: formData as any,
+  });
+
+  if (res.error) {
+    throw new Error(res.error.detail || "Script validation failed");
+  }
+
+  return res.data as { valid: boolean; output: string; state: string };
 }
 
 export async function importTestCasesFromFile(
@@ -148,5 +164,17 @@ export async function approveSuggestedTestCase(testCaseID: string) {
 export async function rejectSuggestedTestCase(testCaseID: string) {
   return apiClient.request("delete", "/v1/test-cases/{testCaseID}/reject", {
     params: { path: { testCaseID } },
+  });
+}
+
+export function useScriptTestCasesQuery(testPlanID: number) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/script-test-cases", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export async function getScriptTestCasesByTestPlanID(testPlanID: number) {
+  return apiClient.request("get", "/v1/test-plans/{testPlanID}/script-test-cases", {
+    params: { path: { testPlanID } },
   });
 }

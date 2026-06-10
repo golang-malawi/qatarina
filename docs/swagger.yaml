@@ -275,6 +275,10 @@ components:
           type: string
         project_id:
           type: integer
+        runner:
+          type: string
+        script_path:
+          type: string
         tags:
           items:
             type: string
@@ -304,6 +308,12 @@ components:
           type: string
         project_id:
           type: integer
+        runner:
+          description: '"basi", "playwright", "cypress", "browseruse"'
+          type: string
+        script_path:
+          description: optional; used for "playwright" and "cypress" runner types
+          type: string
         tags:
           items:
             type: string
@@ -413,6 +423,14 @@ components:
           type: integer
         updated_at:
           type: string
+      type: object
+    schema.ExecuteTestCaseRequest:
+      properties:
+        runner:
+          description: optional, falls back to test case runner type
+          type: string
+        test_plan_id:
+          type: integer
       type: object
     schema.ExecuteTestRunRequest:
       properties:
@@ -725,6 +743,10 @@ components:
           type: integer
         result:
           type: string
+        runner:
+          type: string
+        script_path:
+          type: string
         status:
           type: string
         suggested:
@@ -829,6 +851,59 @@ components:
             $ref: '#/components/schemas/schema.TestRunResponse'
           type: array
           uniqueItems: false
+      type: object
+    schema.TestRunRequest:
+      properties:
+        actual_result:
+          description: Feedback fields (optional) - for recording results at creation
+            time
+          type: string
+        assigned_to_id:
+          type: integer
+        code:
+          type: string
+        created_at:
+          type: string
+        environment_id:
+          type: integer
+        expected_result:
+          type: string
+        notes:
+          type: string
+        owner_id:
+          type: integer
+        project_id:
+          type: integer
+        result_state:
+          description: passed, failed, or leave nil for pending
+          type: string
+          x-enum-varnames:
+          - TestRunStatePending
+          - TestRunStatePassed
+          - TestRunStateFailed
+          - TestRunStateBlocked
+        runner:
+          description: '"basi", "playwright", "cypress", "browseruse"'
+          type: string
+        script_path:
+          description: optional; used for "playwright" and "cypress" runner types
+          type: string
+        test_case_id:
+          type: string
+        test_plan_id:
+          type: integer
+        tested_by_id:
+          type: integer
+        tested_on:
+          type: string
+        updated_at:
+          type: string
+      required:
+      - owner_id
+      - project_id
+      - test_case_id
+      - test_plan_id
+      - tested_by_id
       type: object
     schema.TestRunResponse:
       properties:
@@ -2999,9 +3074,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/schema.CreateTestCaseRequest'
-        description: Create Test Case data
-        required: true
+              type: file
+          multipart/form-data:
+            schema:
+              type: file
+        description: Script file
       responses:
         "200":
           content:
@@ -3022,6 +3099,53 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create a new Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{test_case_id}/execute:
+    post:
+      description: Execute a test case by running its script against the configured
+        runner
+      operationId: ExecuteTestCase
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: test_case_id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ExecuteTestCaseRequest'
+        description: Execution request data
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestRunResponse'
+          description: Accepted
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Execute a Test Case and create a Test Run
       tags:
       - test-cases
   /v1/test-cases/{testCaseID}:
@@ -3462,6 +3586,41 @@ paths:
       summary: Suggest a new Test Case
       tags:
       - test-cases
+  /v1/test-cases/validate-script:
+    post:
+      description: Validate a test script by sending it to the configured runner before
+        creation
+      operationId: ValidateTestCaseScript
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: string
+        description: Runner
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Validate a runner script without creating a test case
+      tags:
+      - test-cases
   /v1/test-plans:
     get:
       description: List all Test Plans
@@ -3717,6 +3876,45 @@ paths:
       summary: Change environment of a Test Plan
       tags:
       - test-plans
+  /v1/test-plans/{testPlanID}/script-test-cases:
+    get:
+      description: Returns only test cases that have a runner and script_path set
+      operationId: GetScriptTestPlanTestCases
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all script-based test cases of a test plan
+      tags:
+      - test-cases
+      - test-plans
   /v1/test-plans/{testPlanID}/test-cases:
     get:
       description: List all tests of a test plan
@@ -3904,14 +4102,15 @@ paths:
       tags:
       - test-runs
     post:
-      description: Create a new Test Run
+      description: 'Create a new Test Run. Optional: provide feedback (actual_result,
+        result_state) to record results immediately (GitHub Actions-like workflow)'
       operationId: CreateTestRun
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-        description: Test Run data
+              $ref: '#/components/schemas/schema.TestRunRequest'
+        description: Test Run data (feedback fields optional)
         required: true
       responses:
         "200":
@@ -4165,6 +4364,48 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Execute a Test Run
+      tags:
+      - test-runs
+  /v1/test-runs/{testRunID}/feedback:
+    post:
+      description: Record test execution feedback with outcome (passed/failed). This
+        transitions the test run from pending to completed status based on the provided
+        feedback.
+      operationId: RecordTestRunFeedback
+      parameters:
+      - description: Test Run ID
+        in: path
+        name: testRunID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CommitTestRunResult'
+        description: Feedback data (actual_result, result_state, notes, etc.)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Record feedback/results for a Test Run (GitHub Actions-like workflow)
       tags:
       - test-runs
   /v1/test-runs/query:

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -86,6 +87,9 @@ type TestCaseService interface {
 	AcceptSuggested(ctx context.Context, testCaseID string) error
 	// RejectSuggested is used to reject a suggested test case
 	RejectSuggested(ctx context.Context, testCaseID string) error
+
+	// FindScriptCasesByPlanID is used to list all script test cases assigned to a test plan
+	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -164,6 +168,8 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			CreatedByID:      1,
 			CreatedAt:        common.NewNullTime(time.Now()),
 			UpdatedAt:        common.NewNullTime(time.Now()),
+			Runner:           common.NullString(request.Runner),
+			ScriptPath:       common.NullString(request.ScriptPath),
 		}
 
 		if strings.TrimSpace(request.Code) != "" {
@@ -229,6 +235,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 	if err != nil {
 		return nil, err
 	}
+	userID, _ := strconv.Atoi(request.CreatedByID)
 	uuidVal, _ := uuid.NewV7()
 	params := dbsqlc.CreateTestCaseParams{
 		ID:               uuidVal,
@@ -241,9 +248,11 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		ParentTestCaseID: sql.NullInt32{},
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
-		CreatedByID:      1,
+		CreatedByID:      int32(userID),
 		CreatedAt:        common.NewNullTime(time.Now()),
 		UpdatedAt:        common.NewNullTime(time.Now()),
+		Runner:           common.NullString(request.Runner),
+		ScriptPath:       common.NullString(request.ScriptPath),
 	}
 
 	if strings.TrimSpace(request.Code) != "" {
@@ -553,7 +562,7 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 
 // FindAllByProjectID implements TestCaseService.
 func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID int64) ([]schema.TestCaseResponseItem, error) {
-	rows, err := t.queries.GetTestCasesWithPlanInfo(ctx, int32(testPlanID))
+	rows, err := t.queries.GetTestCasesWithPlanInfo(ctx, sql.NullInt32{Int32: int32(testPlanID), Valid: true})
 	if err != nil {
 		return nil, err
 	}
@@ -678,11 +687,11 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			TestCaseUpdatedAt:     row.TestCaseUpdatedAt.Time,
 			ProjectID:             int64(row.ProjectID.Int32),
 			TestRunID:             row.TestRunID.String(),
-			TestPlanID:            row.TestPlanID,
+			TestPlanID:            row.TestPlanID.Int32,
 			TestCaseID:            row.TestCaseID.String(),
 			OwnerID:               row.OwnerID,
 			TestedByID:            row.TestedByID.Int32,
-			AssignedToID:          row.AssignedToID.Int32,
+			AssignedToID:          row.AssignedToID,
 			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
 			ExternalIssueID:       row.ExternalIssueID.String,
 			ResultState:           row.ResultState,
@@ -731,7 +740,7 @@ func (t *testCaseServiceImpl) UnMarkAsDraft(ctx context.Context, testCaseID stri
 }
 
 func (t *testCaseServiceImpl) GetExecutionSummaryByUser(ctx context.Context, userID int64) ([]schema.TestCaseExecutionSummary, error) {
-	rows, err := t.queries.GetTestCaseExecutionSummary(ctx, int32(userID))
+	rows, err := t.queries.GetTestCaseExecutionSummary(ctx, common.NewNullInt32(int32(userID)))
 	if err != nil {
 		return nil, err
 	}
@@ -896,6 +905,8 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		CreatedAt:       common.NewNullTime(time.Now()),
 		UpdatedAt:       common.NewNullTime(time.Now()),
 		Suggested:       common.TrueNullBool(),
+		Runner:          common.NullString(req.Runner),
+		ScriptPath:      common.NullString(req.ScriptPath),
 	}
 
 	_, err = t.queries.CreateTestCase(ctx, params)
@@ -928,4 +939,8 @@ func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID st
 	id := uuid.MustParse(testCaseID)
 	_, err := t.queries.DeleteTestCase(ctx, id)
 	return err
+}
+
+func (t *testCaseServiceImpl) FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListScriptTestCasesByPlan(ctx, int64(testPlanID))
 }

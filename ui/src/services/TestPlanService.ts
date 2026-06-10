@@ -134,6 +134,24 @@ export async function changeTestPlanEnvironment(
   return response.data;
 }
 
+// Query hook for test cases in a specific test plan
+export function useTestPlanTestCasesQuery(testPlanID: number) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/test-cases", {
+    params: { path: { testPlanID } },
+  });
+}
+
+// Optional plain async function if you want to fetch outside React Query
+export async function getTestPlanTestCases(testPlanID: number) {
+  const res = await apiClient.request(
+    "get",
+    "/v1/test-plans/{testPlanID}/test-cases",
+    { params: { path: { testPlanID } } }
+  );
+  return res.data as components["schemas"]["schema.TestCaseListResponse"];
+}
+
+
 // export async function removeTestersFromTestPlan(
 //   testPlanID: string,
 //   userIDs: string[]
