@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Box,
   Button,
   Badge,
   Container,
   Heading,
+  Input,
   Menu,
   Text,
   Textarea,
@@ -24,7 +25,10 @@ import {
   markTestCaseAsDraft,
   unmarkTestCaseAsDraft,
 } from "@/services/TestCaseService";
-import { executeTestRun } from "@/services/TestRunService";
+import {
+  executeTestRun,
+  uploadTestRunAttachment,
+} from "@/services/TestRunService";
 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
@@ -53,6 +57,8 @@ function TestCaseInboxItem() {
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: { environments = [] } = {} } = $api.useQuery(
     "get",
@@ -68,7 +74,7 @@ function TestCaseInboxItem() {
         throw new Error("Missing required test case data.");
       }
 
-      return executeTestRun(testRunId, {
+      const response = await executeTestRun(testRunId, {
         id: testRunId,
         status,
         result: resultText,
@@ -76,6 +82,17 @@ function TestCaseInboxItem() {
         expected_result: expectedResult,
         environment_id: tc.environment_id,
       });
+
+      const resultId = (response as any)?.result_id;
+
+      if (attachmentFiles.length > 0) {
+        if (!resultId) {
+          throw new Error("Attachment upload failed because execution response did not return a result_id.");
+        }
+        for (const file of attachmentFiles) {
+          await uploadTestRunAttachment(resultId, file);
+  }
+      }
     },
     onSuccess: () => {
       toaster.create({
@@ -85,6 +102,10 @@ function TestCaseInboxItem() {
       });
       setResultText("");
       setNotesText("");
+      setAttachmentFiles([]);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
 
       queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
       queryClient.invalidateQueries({queryKey: ["testCases", "inbox", testCaseId] });
@@ -249,6 +270,25 @@ function TestCaseInboxItem() {
           onChange={(e) => setNotesText(e.target.value)}
           mb="4"
         />
+        <Box mb="4">
+          <Text mb="2" fontSize="sm" fontWeight="semibold">
+            Attach files (optional)
+          </Text>
+          <Input
+            id="attachmentFile"
+            type="file"
+            multiple
+            accept=".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg"
+            ref={attachmentInputRef}
+            onChange={(e) => setAttachmentFiles(Array.from(e.currentTarget.files || []))}
+          />
+          {attachmentFiles.length > 0 && (
+            <Text mt="2" fontSize="sm" color="fg.muted">
+              Selected files: {attachmentFiles.map(f => f.name).join(", ")}
+            </Text>
+          )}
+        </Box>
+
         <Button
           type="button"
           variant="outline"
