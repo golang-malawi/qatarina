@@ -35,6 +35,14 @@ export function TestExecutionProgress({
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
+  const isExecutingRef = useRef(isExecuting);
+  const finalStateRef = useRef(finalState);
+
+  useEffect(() => {
+    isExecutingRef.current = isExecuting;
+    finalStateRef.current = finalState;
+  }, [isExecuting, finalState]);
+
   useEffect(() => {
     try {
       // Connect directly to backend stream endpoint
@@ -67,19 +75,19 @@ export function TestExecutionProgress({
               onComplete?.("pending");
             }
           }
-        } catch (err) {
-          console.error("Failed to parse log message", err);
+        } catch (error) {
+          console.error("Failed to parse log message", error);
         }
       };
 
-      connection.onerror = (err) => {
+      connection.onerror = (error) => {
         setError("WebSocket connection error");
         setIsExecuting(false);
-        console.error("WebSocket error:", err);
+        console.error("WebSocket error:", error);
       };
 
       connection.onclose = () => {
-        if (isExecuting && !finalState) {
+        if (isExecutingRef.current && !finalStateRef.current) {
           setFinalState("pending");
           setIsExecuting(false);
         }
@@ -92,7 +100,7 @@ export function TestExecutionProgress({
           connection.close();
         }
       };
-    } catch (err) {
+} catch {
       setError("Failed to connect to execution stream");
       setIsExecuting(false);
     }
