@@ -41,6 +41,7 @@ function TestPlanTestRunsPage() {
   const { projectId, testPlanID } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
+  const [envFilter, setEnvFilter] = useState<number | "all">("all");
   const [closingRunId, setClosingRunId] = useState<string | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -48,40 +49,54 @@ function TestPlanTestRunsPage() {
     queryFn: () => getTestRunsByPlan(testPlanID),
   });
 
+  // Fetch environments for this project
+const { data: envData } = $api.useQuery(
+  "get",
+  "/v1/projects/{projectID}/environments",
+  {
+    params: { path: { projectID: projectId } },
+  },
+);
+
+const environments = envData?.environments ?? [];
+
   const allRuns = useMemo(() => {
     const runs = data?.test_runs;
     return Array.isArray(runs) ? (runs as TestRunItem[]) : [];
   }, [data?.test_runs]);
-  // TODO(wakisa): re-add environments to this view - they are being fetched but not used
-  /* const { data: { environments = [] } = {} } */
+ 
   $api.useQuery("get", "/v1/projects/{projectID}/environments", {
     params: { path: { projectID: projectId } },
   });
   const filteredRuns = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+  const term = searchTerm.trim().toLowerCase();
 
-    return allRuns.filter((run) => {
-      const runState = getResultState(run.result_state);
-      const matchesFilter = resultFilter === "all" || runState === resultFilter;
+  return allRuns.filter((run) => {
+    const runState = getResultState(run.result_state);
+    const matchesFilter = resultFilter === "all" || runState === resultFilter;
 
-      if (!matchesFilter) return false;
-      if (!term) return true;
+    const matchesEnv =
+      envFilter === "all" || run.environment_id === envFilter;
 
-      const searchable = [
-        run.id,
-        run.code,
-        run.test_case_title,
-        run.executed_by,
-        run.result_state,
-        run.notes,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    if (!matchesFilter || !matchesEnv) return false;
 
-      return searchable.includes(term);
-    });
-  }, [allRuns, resultFilter, searchTerm]);
+    if (!term) return true;
+
+    const searchable = [
+      run.id,
+      run.code,
+      run.test_case_title,
+      run.executed_by,
+      run.result_state,
+      run.notes,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return searchable.includes(term);
+  });
+}, [allRuns, resultFilter, envFilter, searchTerm]);
 
   const closedRuns = allRuns.filter((run) => run.is_closed).length;
   const openRuns = allRuns.length - closedRuns;
@@ -169,6 +184,31 @@ function TestPlanTestRunsPage() {
                 ),
               )}
             </HStack>
+
+              <HStack gap={2} flexWrap="wrap">
+                <Button
+                  size="xs"
+                  variant={envFilter === "all" ? "solid" : "outline"}
+                  colorPalette={envFilter === "all" ? "brand" : "gray"}
+                  onClick={() => setEnvFilter("all")}
+                >
+                  All Environments
+                </Button>
+
+                {environments.map((env) => (
+                  <Button
+                    key={env.id}
+                    size="xs"
+                    variant={envFilter === env.id ? "solid" : "outline"}
+                    colorPalette={envFilter === env.id ? "brand" : "gray"}
+                    onClick={() => setEnvFilter(env.id!)}
+                  >
+                    {env.name}
+                  </Button>
+                ))}
+              </HStack>
+
+
           </Stack>
         </Card.Body>
       </Card.Root>
@@ -259,6 +299,13 @@ function TestPlanTestRunsPage() {
                       <DetailItem
                         label="Actual Result"
                         value={run.actual_result}
+                      />
+                      <DetailItem
+                        label="Environment"
+                        value={
+                          environments.find((e) => e.id === run.environment_id)?.name ||
+                          "Unknown"
+                        }
                       />
                     </Grid>
 

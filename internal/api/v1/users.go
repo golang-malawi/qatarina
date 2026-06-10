@@ -240,7 +240,7 @@ func DeleteUser(userService services.UserService, logger logging.Logger) fiber.H
 		userID, err := strconv.Atoi(userIDParam)
 		if err != nil {
 			logger.Error("Failed to retrieve user id", "error", err)
-			problemdetail.BadRequest(c, "failed to process request id")
+			return problemdetail.BadRequest(c, "failed to process request id")
 		}
 
 		err = userService.Delete(c.Context(), int32(userID))

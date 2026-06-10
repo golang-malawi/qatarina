@@ -268,7 +268,6 @@ export default function ListProjectTestCases() {
             &nbsp;Suggested
           </Tabs.Trigger>
         </Tabs.List>
-
         <Tabs.Content value="all">
           <AppDataTable<TestCase, TestCaseListResponse>
             // @ts-expect-error TODO(sevenreup)
@@ -297,7 +296,11 @@ export default function ListProjectTestCases() {
                 onClick: (row) =>
                   row.id && markDraftMutation.mutate(String(row.id)),
               },
-              { name: "use", label: "Use in Test Session" },
+              { name: "use", 
+                label: "Use in Test Session",
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
+              },
               {
                 name: "delete",
                 label: "Delete",

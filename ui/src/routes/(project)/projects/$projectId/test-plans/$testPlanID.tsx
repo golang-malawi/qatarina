@@ -15,6 +15,10 @@ import {
   Separator,
   Stack,
   Text,
+  Select,
+  createListCollection,
+  Field,
+  Portal,
 } from "@chakra-ui/react";
 import {
   IconCheck,
@@ -25,7 +29,7 @@ import {
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { closeTestPlan, useTestPlanQuery } from "@/services/TestPlanService";
 import { MetricCard } from "@/components/ui/metric-card";
 import { toaster } from "@/components/ui/toaster";
@@ -34,6 +38,8 @@ import { PageHeaderCard } from "@/components/ui/page-header-card";
 import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
+import $api from "@/lib/api/query";
+import { changeTestPlanEnvironment } from "@/services/TestPlanService";
 
 type TestPlanData = components["schemas"]["schema.TestPlanResponseItem"];
 
@@ -69,6 +75,46 @@ function ViewTestPlan() {
     isLoading: boolean;
     error: unknown;
     refetch: () => Promise<unknown>;
+  };
+
+  // Fetch environments
+  const { data: envData } = $api.useQuery(
+    "get",
+    "/v1/projects/{projectID}/environments",
+    {
+      params: { path: { projectID: projectId } },
+    },
+  );
+  const environments = envData?.environments ?? [];
+
+  // Active environment state
+  const [activeEnv, setActiveEnv] = useState<number | null>(null);
+
+   useEffect(() => {
+    if (testPlan?.environment_id) {
+      setActiveEnv(testPlan.environment_id);
+    }
+  }, [testPlan?.environment_id]);
+
+   // Build collection for composable Select
+  const envOptions = createListCollection({
+    items: environments.map((env) => ({
+      label: env.name,
+      value: String(env.id),
+    })),
+  });
+
+  // Persist environment change to backend
+  const handleEnvChange = async (envId: number) => {
+    setActiveEnv(envId);
+    try {
+      await changeTestPlanEnvironment(Number(testPlanID), envId);
+      toaster.success({ title: "Environment updated" });
+      await refetch(); 
+    } catch (err) {
+      toaster.error({ title: "Failed to update environment" });
+      console.error(err);
+    }
   };
 
   const navItems: NavItem[] = [
@@ -233,6 +279,46 @@ function ViewTestPlan() {
           helperText="People on this plan"
         />
       </Grid>
+
+      {/* Environment selector */}
+      <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
+        <Card.Body p={{ base: 3, md: 4 }}>
+          <Field.Root>
+            <Field.Label>Active Environment</Field.Label>
+            <Select.Root
+              collection={envOptions}
+              value={activeEnv ? [String(activeEnv)] : []}
+              onValueChange={(e) => handleEnvChange(Number(e.value[0]))}
+            >
+              <Select.HiddenSelect />
+              <Select.Control>
+                <Select.Trigger>
+                  <Select.ValueText placeholder="Select Environment" />
+                </Select.Trigger>
+                <Select.IndicatorGroup>
+                  <Select.Indicator />
+                  <Select.ClearTrigger />
+                </Select.IndicatorGroup>
+              </Select.Control>
+              <Portal>
+                <Select.Positioner>
+                  <Select.Content>
+                    {envOptions.items.map((item) => (
+                      <Select.Item key={item.value} item={item}>
+                        {item.label}
+                        <Select.ItemIndicator />
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Portal>
+            </Select.Root>
+            <Field.HelperText>
+              Choose the environment to execute test cases in
+            </Field.HelperText>
+          </Field.Root>
+        </Card.Body>
+      </Card.Root>
 
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={6}>
         <Card.Body p={{ base: 4, md: 5 }}>
