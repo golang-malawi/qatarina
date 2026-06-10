@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import {
   Box,
   Card,
@@ -10,6 +10,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { IconPlayerPlay } from "@tabler/icons-react";
+import { useState } from "react";
 import TestCaseGrid from "@/components/TestCaseGrid";
 import { useExecuteTestCaseMutation } from "@/services/TestExecutionService";
 import { useScriptTestCasesQuery } from "@/services/TestCaseService";
@@ -23,16 +24,32 @@ export const Route = createFileRoute(
 function ExecuteTestPlan() {
   const { testPlanID } = Route.useParams();
   const mutation = useExecuteTestCaseMutation();
+  const [runStatus, setRunStatus] = useState<"started" | "passed" | "failed" | "pending" | null>(null);
+  const [latestRunID, setLatestRunID] = useState<string | null>(null);
 
   // Fetch script-based test cases
   const { data, isLoading, isError } = useScriptTestCasesQuery(Number(testPlanID));
 
   const handleExecute = (testCaseID: string) => {
-    mutation.mutate({
-      testCaseID,
-      testPlanID: Number(testPlanID),
-      runner: "playwright", // or whichever runner you want
-    });
+    setRunStatus("started");
+    mutation.mutate(
+      {
+        testCaseID,
+        testPlanID: Number(testPlanID),
+        runner: "playwright", // or whichever runner you want
+      },
+      {
+        onSuccess: (data) => {
+          if (data?.id) {
+            setLatestRunID(data.id);
+          }
+        },
+      },
+    );
+  };
+
+  const handleExecutionComplete = (state: "passed" | "failed" | "pending") => {
+    setRunStatus(state);
   };
 
   return (
@@ -64,6 +81,7 @@ function ExecuteTestPlan() {
               <TestCaseGrid
                 testCases={data.test_cases} // pass fetched cases
                 onExecute={handleExecute}
+                onExecutionComplete={handleExecutionComplete}
               />
             )}
           </Box>
@@ -73,8 +91,13 @@ function ExecuteTestPlan() {
       {mutation.isError && (
         <Text color="red.500">Error: {(mutation.error as Error).message}</Text>
       )}
-      {mutation.isSuccess && (
-        <Text color="green.500">Run started! ID: {mutation.data.id}</Text>
+      {mutation.isPending && runStatus === "started" && latestRunID && (
+        <Text color="blue.500">Run started... ID: {latestRunID}</Text>
+      )}
+      {runStatus && runStatus !== "started" && (
+        <Text color={runStatus === "passed" ? "green.500" : runStatus === "failed" ? "red.500" : "orange.500"}>
+          Run finished: {runStatus}
+        </Text>
       )}
     </Box>
   );

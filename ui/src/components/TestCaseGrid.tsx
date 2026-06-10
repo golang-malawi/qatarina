@@ -35,12 +35,13 @@ interface TestCaseGridProps {
     tags?: string[];
   }>;
   onExecute?: (testCaseID: string) => void;
+  onExecutionComplete?: (state: "passed" | "failed" | "pending") => void;
 }
 
 type TestCaseListResponse = components["schemas"]["schema.TestCaseListResponse"];
 type TestCase = NonNullable<TestCaseListResponse["test_cases"]>[number];
 
-export default function TestCaseGrid({ testCases, onExecute }: TestCaseGridProps) {
+export default function TestCaseGrid({ testCases, onExecute, onExecutionComplete }: TestCaseGridProps) {
   const { testPlanID } = useParams({
     from: "/(project)/projects/$projectId/test-plans/$testPlanID/execute/",
   });
@@ -81,6 +82,7 @@ export default function TestCaseGrid({ testCases, onExecute }: TestCaseGridProps
       type: state === "passed" ? "success" : state === "failed" ? "error" : "info",
       duration: 5000,
     });
+    onExecutionComplete?.(state);
     setExecutingTestCase(null);
   };
 
@@ -188,7 +190,10 @@ export default function TestCaseGrid({ testCases, onExecute }: TestCaseGridProps
                     }}
                   >
                     {executingTestCase?.testCaseID === testCase.id ? (
-                      <Spinner size="sm" />
+                      <HStack gap={2}>
+                        <Spinner size="sm" />
+                        <Text>Executing</Text>
+                      </HStack>
                     ) : (
                       <Icon>
                         <IconPlayerPlay />
