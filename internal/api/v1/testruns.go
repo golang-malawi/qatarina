@@ -342,7 +342,7 @@ func ExecuteTestRun(testRunService services.TestRunService, testCaseService serv
 			return problemdetail.BadRequest(c, "test run already closed")
 		}
 
-		if tr.AssignedToID.Valid && tr.AssignedToID.Int32 != int32(userID) {
+		if tr.AssignedToID != 0 && tr.AssignedToID != int32(userID) {
 			return problemdetail.BadRequest(c, "cannot execute another user's test run")
 		}
 
