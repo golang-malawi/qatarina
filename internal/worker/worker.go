@@ -12,6 +12,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/golang-malawi/qatarina/internal/worker/jobs"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,8 +20,14 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 )
 
-func StartRiverWorker(cfg *config.Config, queries *dbsqlc.Queries, logger logging.Logger) (*river.Client[pgx.Tx], error) {
+func StartRiverWorker(cfg *config.Config, queries *dbsqlc.Queries, notificationService services.NotificationService) (*river.Client[pgx.Tx], error) {
 	workers := river.NewWorkers()
+	logger := logging.NewFromConfig(&cfg.Logging)
+	// Register all workers, including digest worker
+	if err := jobs.RegisterWorkers(workers, queries, logger, notificationService); err != nil {
+		return nil, err
+	}
+
 	// river.AddWorker(workers, jobs.NewBulkMailerWorker(apiServer.DocsMailer()))
 
 	dbPool, err := pgxpool.New(context.Background(), cfg.GetDatabaseURL())
@@ -45,15 +52,13 @@ func StartRiverWorker(cfg *config.Config, queries *dbsqlc.Queries, logger loggin
 
 	// Launch digest scheduler loop (every 1 hour)
 	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
+		ticker := time.NewTicker(1 * time.Hour) // hourly digest notifications
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				ctx := context.Background()
-				if err := jobs.ScheduleDigestNotifications(ctx, riverClient, queries, logger); err != nil {
-					logger.Error("failed to schedule digest notifications", "error", err)
-				}
+
+		for range ticker.C {
+			ctx := context.Background()
+			if err := jobs.ScheduleDigestNotifications(ctx, riverClient, queries, logger); err != nil {
+				logger.Error("failed to schedule digest notifications", "error", err)
 			}
 		}
 	}()
