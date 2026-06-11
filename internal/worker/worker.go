@@ -10,17 +10,20 @@ import (
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/config"
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/worker/jobs"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 )
 
-func StartRiverWorker(config *config.Config) (*river.Client[pgx.Tx], error) {
+func StartRiverWorker(cfg *config.Config, queries *dbsqlc.Queries, logger logging.Logger) (*river.Client[pgx.Tx], error) {
 	workers := river.NewWorkers()
-	//river.AddWorker(workers, jobs.NewBulkMailerWorker(apiServer.DocsMailer()))
+	// river.AddWorker(workers, jobs.NewBulkMailerWorker(apiServer.DocsMailer()))
 
-	dbPool, err := pgxpool.New(context.Background(), config.GetDatabaseURL())
+	dbPool, err := pgxpool.New(context.Background(), cfg.GetDatabaseURL())
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +43,27 @@ func StartRiverWorker(config *config.Config) (*river.Client[pgx.Tx], error) {
 		return nil, err
 	}
 
+	// Launch digest scheduler loop (every 1 hour)
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ctx := context.Background()
+				if err := jobs.ScheduleDigestNotifications(ctx, riverClient, queries, logger); err != nil {
+					logger.Error("failed to schedule digest notifications", "error", err)
+				}
+			}
+		}
+	}()
+
+	// Handle graceful shutdown
 	sigintOrTerm := make(chan os.Signal, 1)
 	signal.Notify(sigintOrTerm, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-sigintOrTerm
-		// fmt.Printf("Received SIGINT/SIGTERM; initiating soft stop (try to wait for jobs to finish)\n")
 
 		softStopCtx, softStopCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer softStopCtxCancel()
@@ -55,28 +73,18 @@ func StartRiverWorker(config *config.Config) (*river.Client[pgx.Tx], error) {
 			panic(err)
 		}
 
-		if err == nil {
-			os.Exit(-1)
-			return
-		}
-
+		// Escalate to hard stop if needed
 		go func() {
 			select {
 			case <-sigintOrTerm:
-				// fmt.Printf("Received SIGINT/SIGTERM again; initiating hard stop (cancel everything)\n")
 				softStopCtxCancel()
 			case <-softStopCtx.Done():
-				// fmt.Printf("Soft stop timeout; initiating hard stop (cancel everything)\n")
 			}
 		}()
 
 		hardStopCtx, hardStopCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer hardStopCtxCancel()
 
-		// As long as all jobs respect context cancellation, StopAndCancel will
-		// always work. However, in the case of a bug where a job blocks despite
-		// being cancelled, it may be necessary to either ignore River's stop
-		// result (what's shown here) or have a supervisor kill the process.
 		err = riverClient.StopAndCancel(hardStopCtx)
 		if err != nil && errors.Is(err, context.DeadlineExceeded) {
 			fmt.Printf("Hard stop timeout; ignoring stop procedure and exiting unsafely\n")
@@ -85,10 +93,7 @@ func StartRiverWorker(config *config.Config) (*river.Client[pgx.Tx], error) {
 			panic(err)
 		}
 
-		if err == nil {
-			os.Exit(-1)
-			return
-		}
+		os.Exit(-1)
 	}()
 
 	return riverClient, nil

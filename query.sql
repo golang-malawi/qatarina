@@ -651,3 +651,24 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
+
+-- name: InsertNotification :exec
+INSERT INTO user_notifications (user_id, type, payload, created_at, is_sent)
+VALUES ($1, $2, $3, $4, $5);
+
+-- name: GetPendingNotifications :many
+SELECT id, user_id, type, payload, created_at
+FROM user_notifications
+WHERE user_id = $1 AND is_sent = false;
+
+-- name: MarkNotificationsSent :exec
+UPDATE user_notifications
+SET is_sent = true
+WHERE user_id = $1 AND is_sent = false;
+
+-- name: ListUsersWithPendingNotifications :many
+SELECT DISTINCT u.id, u.email, u.display_name
+FROM users u
+JOIN user_notifications n ON u.id = n.user_id
+WHERE n.is_sent = FALSE;
+

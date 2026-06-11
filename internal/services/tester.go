@@ -3,10 +3,12 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -85,7 +87,7 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 		return err
 	}
 
-	// Send notification email asynchronously (non-blocking)
+	// Instead of sending immediately, insert into user_notifications for digest batching
 	go func() {
 		// Get user information
 		user, err := s.queries.GetUser(ctx, int32(userID))
@@ -101,18 +103,27 @@ func (s *testerServiceImpl) Assign(ctx context.Context, projectID, userID int64,
 			return
 		}
 
-		// Send the notification
-		notificationErr := s.notificationService.SendTesterAssignedNotification(
-			ctx,
-			user.Email,
-			user.DisplayName.String,
-			project.Title,
-			projectID,
-			assignedBy,
-			role,
-		)
-		if notificationErr != nil {
-			s.logger.Error("tester-service", "failed to send tester assignment notification", "error", notificationErr, "user_id", userID, "project_id", projectID)
+		// Build notification payload
+		payload := map[string]interface{}{
+			"type":          "tester_assigned",
+			"recipientName": user.DisplayName.String,
+			"projectName":   project.Title,
+			"projectID":     projectID,
+			"assignedBy":    assignedBy,
+			"role":          role,
+		}
+
+		// Insert into notifications table
+		payloadBytes, _ := json.Marshal(payload)
+		err = s.queries.InsertNotification(ctx, dbsqlc.InsertNotificationParams{
+			UserID:    int32(userID),
+			Type:      "tester_assigned",
+			Payload:   payloadBytes,
+			CreatedAt: common.NullTime(time.Now()),
+			IsSent:    common.FalseNullBool(),
+		})
+		if err != nil {
+			s.logger.Error("tester-service", "failed to create user notification", "error", err, "user_id", userID)
 		}
 	}()
 

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -152,7 +153,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				return nil, err
 			}
 
-			// Send test plan added notification asynchronously
+			// Batch notification instead of immediate send
 			if projErr == nil {
 				go func(uid int64, planID int64) {
 					// Get user information
@@ -162,20 +163,28 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 						return
 					}
 
-					// Send the notification
-					notificationErr := t.notificationService.SendTestPlanAddedNotification(
-						ctx,
-						user.Email,
-						user.DisplayName.String,
-						project.Title,
-						request.Description,
-						int64(project.ID),
-						planID,
-						assignedBy,
-					)
-					if notificationErr != nil {
-						t.logger.Error("failed to send test plan added notification", "error", notificationErr, "user_id", uid, "test_plan_id", planID)
+					payload := map[string]interface{}{
+						"type":            "test_plan_added",
+						"recipientName":   user.DisplayName.String,
+						"projectName":     project.Title,
+						"planDescription": request.Description,
+						"projectID":       request.ProjectID,
+						"testPlanID":      planID,
+						"assignedBy":      assignedBy,
 					}
+					payloadBytes, _ := json.Marshal(payload)
+
+					err = t.queries.InsertNotification(ctx, dbsqlc.InsertNotificationParams{
+						UserID:    int32(uid),
+						Type:      "test_plan_added",
+						Payload:   payloadBytes,
+						CreatedAt: common.NullTime(time.Now()),
+						IsSent:    common.FalseNullBool(),
+					})
+					if err != nil {
+						t.logger.Error("failed to create user notification", "error", err, "user_id", uid)
+					}
+
 				}(userID, int64(testPlanID))
 			}
 		}
@@ -241,7 +250,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 				return nil, err
 			}
 
-			// Send notification email asynchronously
+			// Batch notification instead of immediate send
 			if projErr == nil {
 				go func(uid int64, planID int64, tcID string, tcName, tcCode string) {
 					// Get user information
@@ -251,21 +260,29 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 						return
 					}
 
-					// Send the notification
-					notificationErr := t.notificationService.SendTestCaseAssignedNotification(
-						ctx,
-						user.Email,
-						user.DisplayName.String,
-						project.Title,
-						tcName,
-						tcCode,
-						int64(project.ID),
-						tcID,
-						assignedBy,
-					)
+					payload := map[string]interface{}{
+						"type":          "test_case_assigned",
+						"recipientName": user.DisplayName.String,
+						"projectName":   project.Title,
+						"testCaseID":    tcID,
+						"testCaseName":  tcName,
+						"testCaseCode":  tcCode,
+						"projectID":     project.ID,
+						"planID":        planID,
+						"assignedBy":    assignedBy,
+					}
+					payloadBytes, _ := json.Marshal(payload)
 
-					if notificationErr != nil {
-						t.logger.Error("failed to send test case assignment notification", "error", notificationErr, "user_id", uid, "test_case_id", tcID)
+					err = t.queries.InsertNotification(ctx, dbsqlc.InsertNotificationParams{
+						UserID:    int32(uid),
+						Type:      "test_case_assigned",
+						Payload:   payloadBytes,
+						CreatedAt: common.NullTime(time.Now()),
+						IsSent:    common.FalseNullBool(),
+					})
+
+					if err != nil {
+						t.logger.Error("failed to create user notification", "error", err, "user_id", uid)
 					}
 				}(userID, int64(testPlanID), assignedTestCase.TestCaseID, testCase.Title, testCase.Code)
 

@@ -8,6 +8,7 @@ package dbsqlc
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -1294,6 +1295,49 @@ func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
 	return i, err
 }
 
+const getPendingNotifications = `-- name: GetPendingNotifications :many
+SELECT id, user_id, type, payload, created_at
+FROM user_notifications
+WHERE user_id = $1 AND is_sent = false
+`
+
+type GetPendingNotificationsRow struct {
+	ID        int32
+	UserID    int32
+	Type      string
+	Payload   json.RawMessage
+	CreatedAt sql.NullTime
+}
+
+func (q *Queries) GetPendingNotifications(ctx context.Context, userID int32) ([]GetPendingNotificationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPendingNotifications, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPendingNotificationsRow
+	for rows.Next() {
+		var i GetPendingNotificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Type,
+			&i.Payload,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProject = `-- name: GetProject :one
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects WHERE id = $1
 `
@@ -2021,6 +2065,30 @@ type InitTestCaseSequenceParams struct {
 
 func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequenceParams) error {
 	_, err := q.db.ExecContext(ctx, initTestCaseSequence, arg.ProjectID, arg.Prefix)
+	return err
+}
+
+const insertNotification = `-- name: InsertNotification :exec
+INSERT INTO user_notifications (user_id, type, payload, created_at, is_sent)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertNotificationParams struct {
+	UserID    int32
+	Type      string
+	Payload   json.RawMessage
+	CreatedAt sql.NullTime
+	IsSent    sql.NullBool
+}
+
+func (q *Queries) InsertNotification(ctx context.Context, arg InsertNotificationParams) error {
+	_, err := q.db.ExecContext(ctx, insertNotification,
+		arg.UserID,
+		arg.Type,
+		arg.Payload,
+		arg.CreatedAt,
+		arg.IsSent,
+	)
 	return err
 }
 
@@ -2987,6 +3055,53 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const listUsersWithPendingNotifications = `-- name: ListUsersWithPendingNotifications :many
+SELECT DISTINCT u.id, u.email, u.display_name
+FROM users u
+JOIN user_notifications n ON u.id = n.user_id
+WHERE n.is_sent = FALSE
+`
+
+type ListUsersWithPendingNotificationsRow struct {
+	ID          int32
+	Email       string
+	DisplayName sql.NullString
+}
+
+func (q *Queries) ListUsersWithPendingNotifications(ctx context.Context) ([]ListUsersWithPendingNotificationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUsersWithPendingNotifications)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersWithPendingNotificationsRow
+	for rows.Next() {
+		var i ListUsersWithPendingNotificationsRow
+		if err := rows.Scan(&i.ID, &i.Email, &i.DisplayName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markNotificationsSent = `-- name: MarkNotificationsSent :exec
+UPDATE user_notifications
+SET is_sent = true
+WHERE user_id = $1 AND is_sent = false
+`
+
+func (q *Queries) MarkNotificationsSent(ctx context.Context, userID int32) error {
+	_, err := q.db.ExecContext(ctx, markNotificationsSent, userID)
+	return err
 }
 
 const searchProject = `-- name: SearchProject :many

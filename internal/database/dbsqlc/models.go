@@ -7,6 +7,7 @@ package dbsqlc
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -395,4 +396,13 @@ type User struct {
 	CreatedAt        sql.NullTime
 	UpdatedAt        sql.NullTime
 	DeletedAt        sql.NullTime
+}
+
+type UserNotification struct {
+	ID        int32
+	UserID    int32
+	Type      string
+	Payload   json.RawMessage
+	CreatedAt sql.NullTime
+	IsSent    sql.NullBool
 }

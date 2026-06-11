@@ -15,5 +15,6 @@ func RegisterWorkers(
 	notificationService services.NotificationService,
 ) error {
 	river.AddWorker(workers, NewTestPlanDueReminderWorker(queries, logger, notificationService))
+	river.AddWorker(workers, NewDigestWorker(queries, logger, notificationService)) // NEW
 	return nil
 }
