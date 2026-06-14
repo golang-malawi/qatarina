@@ -334,7 +334,7 @@ type TestRun struct {
 	TestCaseID            uuid.UUID
 	OwnerID               int32
 	TestedByID            sql.NullInt32
-	AssignedToID          int32
+	AssignedToID          sql.NullInt32
 	AssigneeCanChangeCode sql.NullBool
 	Code                  string
 	ExternalIssueID       sql.NullString

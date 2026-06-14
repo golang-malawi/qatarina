@@ -9,8 +9,13 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { IconAlertCircle, IconCheck, IconClock, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconClock,
+  IconX,
+} from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
 
 interface ExecutionLog {
   timestamp: string;
@@ -31,7 +36,9 @@ export function TestExecutionProgress({
 }: TestExecutionProgressProps) {
   const [logs, setLogs] = useState<ExecutionLog[]>([]);
   const [isExecuting, setIsExecuting] = useState(true);
-  const [finalState, setFinalState] = useState<"passed" | "failed" | "pending" | null>(null);
+  const [finalState, setFinalState] = useState<
+    "passed" | "failed" | "pending" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
@@ -47,7 +54,7 @@ export function TestExecutionProgress({
     try {
       // Connect directly to backend stream endpoint
       const connection = new WebSocket(
-        `${import.meta.env.VITE_API_BASE_URL}/v1/test-runs/${testRunID}/stream`
+        `${import.meta.env.VITE_API_BASE_URL}/v1/test-runs/${testRunID}/stream`,
       );
 
       connection.onmessage = (event) => {
@@ -100,7 +107,7 @@ export function TestExecutionProgress({
           connection.close();
         }
       };
-} catch {
+    } catch {
       setError("Failed to connect to execution stream");
       setIsExecuting(false);
     }
@@ -108,7 +115,8 @@ export function TestExecutionProgress({
 
   const getStatusIcon = () => {
     if (isExecuting) return <Icon as={IconClock} color="brand.solid" />;
-    if (finalState === "passed") return <Icon as={IconCheck} color="green.solid" />;
+    if (finalState === "passed")
+      return <Icon as={IconCheck} color="green.solid" />;
     if (finalState === "failed") return <Icon as={IconX} color="red.solid" />;
     return <Icon as={IconAlertCircle} color="orange.solid" />;
   };
@@ -148,7 +156,11 @@ export function TestExecutionProgress({
             <Stack align="end" gap={1}>
               <HStack gap={1}>
                 {isExecuting && <Spinner size="sm" />}
-                <Text fontSize="sm" fontWeight="medium" colorPalette={getStatusColor()}>
+                <Text
+                  fontSize="sm"
+                  fontWeight="medium"
+                  colorPalette={getStatusColor()}
+                >
                   {getStatusText()}
                 </Text>
               </HStack>
@@ -198,12 +210,12 @@ export function TestExecutionProgress({
                         log.type === "error"
                           ? "red.300"
                           : log.type === "success"
-                          ? "green.300"
-                          : log.type === "warning"
-                          ? "yellow.300"
-                          : log.type === "status"
-                          ? "blue.300"
-                          : "gray.300"
+                            ? "green.300"
+                            : log.type === "warning"
+                              ? "yellow.300"
+                              : log.type === "status"
+                                ? "blue.300"
+                                : "gray.300"
                       }
                     >
                       {log.message}
@@ -222,7 +234,9 @@ export function TestExecutionProgress({
                 variant="outline"
                 colorPalette="gray"
                 onClick={() => {
-                  const text = logs.map((l) => `[${l.timestamp}] ${l.message}`).join("\n");
+                  const text = logs
+                    .map((l) => `[${l.timestamp}] ${l.message}`)
+                    .join("\n");
                   navigator.clipboard.writeText(text);
                 }}
               >

@@ -308,7 +308,7 @@ type CreateNewTestRunParams struct {
 	TestCaseID    uuid.UUID
 	OwnerID       int32
 	TestedByID    sql.NullInt32
-	AssignedToID  int32
+	AssignedToID  sql.NullInt32
 	Code          string
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
@@ -2437,7 +2437,7 @@ type ListTestCasesByAssignedUserRow struct {
 	TestPlanID            sql.NullInt32
 	OwnerID               int32
 	TestedByID            sql.NullInt32
-	AssignedToID          int32
+	AssignedToID          sql.NullInt32
 	AssigneeCanChangeCode sql.NullBool
 	ExternalIssueID       sql.NullString
 	ResultState           TestRunState
@@ -2917,7 +2917,7 @@ type ListTestRunsByPlanRow struct {
 	TestCaseID     uuid.UUID
 	OwnerID        int32
 	TestedByID     sql.NullInt32
-	AssignedToID   int32
+	AssignedToID   sql.NullInt32
 	Code           string
 	ResultState    TestRunState
 	IsClosed       sql.NullBool

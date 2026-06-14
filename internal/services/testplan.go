@@ -88,7 +88,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				OwnerID:      int32(request.CreatedByID),
 				TestedByID:   common.NewNullInt32(int32(userID)),
-				AssignedToID: int32(userID),
+				AssignedToID: common.NewNullInt32(int32(userID)),
 				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
 				CreatedAt: sql.NullTime{
 					Time: time.Now(), Valid: true,

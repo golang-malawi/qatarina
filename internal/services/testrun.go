@@ -80,7 +80,7 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 		TestCaseID:    uuid.MustParse(request.TestCaseID),
 		OwnerID:       request.OwnerID,
 		TestedByID:    common.NewNullInt32(request.TestedByID),
-		AssignedToID:  request.AssignedToID,
+		AssignedToID:  common.NewNullInt32(request.AssignedToID),
 		Code:          request.Code,
 		CreatedAt:     common.NullTime(time.Now()),
 		UpdatedAt:     common.NullTime(time.Now()),

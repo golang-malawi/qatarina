@@ -691,7 +691,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			TestCaseID:            row.TestCaseID.String(),
 			OwnerID:               row.OwnerID,
 			TestedByID:            row.TestedByID.Int32,
-			AssignedToID:          row.AssignedToID,
+			AssignedToID:          row.AssignedToID.Int32,
 			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
 			ExternalIssueID:       row.ExternalIssueID.String,
 			ResultState:           row.ResultState,
