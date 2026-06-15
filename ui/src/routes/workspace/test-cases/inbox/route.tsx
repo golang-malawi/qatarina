@@ -31,6 +31,11 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 function TestCasePageInbox() {
   const[includeClosed, setIncludeClosed] = React.useState(false);
 
+  const match = useMatch({
+    from: "/workspace/test-cases/inbox/$testCaseId/",
+    shouldThrow: false,
+  });
+
   const {
     data: testCases,
     isPending: isPendingInbox,
@@ -128,11 +133,6 @@ function TestCasePageInbox() {
       );
     }
   );
-
-  const match = useMatch({
-    from: "/workspace/test-cases/inbox/$testCaseId/",
-    shouldThrow: false,
-  });
 
   return (
     <Flex h="100vh">
