@@ -277,10 +277,10 @@ export default function ListProjectTestCases() {
             showGlobalFilter
             filterPlaceholder="Search test cases"
             dataAccessor={(response) =>
-              (response?.test_cases ?? response?.data?.test_cases ?? []) as TestCase[]
+              (response?.test_cases ?? []) as TestCase[]
             }
             paginationAccessor={(response) => {
-              const pagination = response?.pagination ?? response?.data?.pagination;
+              const pagination = response?.pagination;
               if (!pagination) return undefined;
               return {
                 total: pagination.total ?? 0,

@@ -345,20 +345,9 @@ export function AppDataTable<TData, TResponse>({
     [navigate, resolveActions, rowActionsLabel],
   );
 
-  React.useEffect(() => {
-    setPagination((current) => ({ ...current, pageIndex: 0 }));
-  }, [sortBy, sortOrder, globalFilter]);
 
-  React.useEffect(() => {
-    if (!isServerMode || !enablePagination) return;
-    const maxPageIndex = Math.max(0, pageCount - 1);
-    setPagination((current) => {
-      if (current.pageIndex > maxPageIndex) {
-        return { ...current, pageIndex: maxPageIndex };
-      }
-      return current;
-    });
-  }, [isServerMode, enablePagination, pageCount]);
+
+
 
   const builtColumns = React.useMemo(() => {
     const columnDefs: ColumnDef<TData, unknown>[] = [];
@@ -492,13 +481,13 @@ export function AppDataTable<TData, TResponse>({
     getFilteredRowModel: isServerMode ? undefined : getFilteredRowModel(),
     getSortedRowModel: isServerMode ? undefined : getSortedRowModel(),
     getPaginationRowModel: isServerMode ? undefined : getPaginationRowModel(),
-    manualPagination: isServerMode,
+    manualPagination: enablePagination,
     manualSorting: isServerMode,
     manualFiltering: isServerMode,
     enableSorting,
     enableRowSelection,
     globalFilterFn: isServerMode ? undefined : "includesString",
-    pageCount: isServerMode && enablePagination ? pageCount : undefined,
+    pageCount: enablePagination ? pageCount : undefined,
     getRowId,
   });
 
@@ -703,6 +692,7 @@ export function AppDataTable<TData, TResponse>({
                 value={table.getState().pagination.pageSize}
                 onChange={(event) => {
                   table.setPageSize(Number(event.target.value));
+                  table.setPageIndex(0);
                 }}
               >
                 {[5, 10, 20, 50].map((size) => (
@@ -732,7 +722,7 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Previous page"
               size="sm"
               variant="ghost"
-              onClick={() => table.previousPage()}
+              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex - 1)}
               disabled={!table.getCanPreviousPage()}
             >
               <LuChevronLeft />
@@ -741,7 +731,7 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Next page"
               size="sm"
               variant="ghost"
-              onClick={() => table.nextPage()}
+              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex + 1)}
               disabled={!table.getCanNextPage()}
             >
               <LuChevronRight />
