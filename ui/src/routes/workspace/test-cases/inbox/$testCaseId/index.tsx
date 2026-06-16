@@ -11,7 +11,7 @@ import {
   Code,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   findTestCaseInboxByIdQueryOptions,
 } from "@/data/queries/test-cases";
@@ -41,6 +41,7 @@ export const Route = createFileRoute(
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: testCase } = useSuspenseQuery(
     findTestCaseInboxByIdQueryOptions(testCaseId),
@@ -158,18 +159,15 @@ function TestCaseInboxItem() {
           </Button>
         </Menu.Trigger>
         <Menu.Content bg="bg.surface" border="sm" borderColor="border.subtle">
-          <Menu.Item value="">View</Menu.Item>
-          <Menu.Item value="">Create a Copy</Menu.Item>
+          <Menu.Item value="" onClick={() => navigate({ to: `/projects/${tc.project_id}/test-cases/${testCaseId}/` })}>
+            View
+          </Menu.Item>
           <Menu.Item
             value="toggle-draft"
             disabled={toggleDraftMutation.isPending}
             onClick={() => toggleDraftMutation.mutate()}
           >
             {isDraft ? "Unmark as Draft" : "Mark as Draft"}
-          </Menu.Item>
-          <Menu.Item value="">Use in Test Plan</Menu.Item>
-          <Menu.Item value="" color="fg.error">
-            Delete
           </Menu.Item>
         </Menu.Content>
       </Menu.Root>
