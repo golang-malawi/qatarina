@@ -142,15 +142,18 @@ function resolveData<TData>(response: any): TData[] {
   if (!response) return [];
   if (Array.isArray(response)) return response as TData[];
   if (Array.isArray(response.data)) return response.data as TData[];
+  if (Array.isArray(response.data?.data)) return response.data.data as TData[];
   if (Array.isArray(response.items)) return response.items as TData[];
   if (Array.isArray(response.results)) return response.results as TData[];
   if (Array.isArray(response.test_cases)) return response.test_cases as TData[];
+  if (Array.isArray(response.data?.test_cases)) return response.data.test_cases as TData[];
   return [];
 }
 
 function resolvePagination(response: any): PaginationInfo | undefined {
   if (!response) return undefined;
   if (response.pagination) return response.pagination as PaginationInfo;
+  if (response.data?.pagination) return response.data.pagination as PaginationInfo;
   return undefined;
 }
 
