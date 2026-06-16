@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
   ButtonGroup,
+  Box,
   Flex,
   Heading,
   IconButton,
@@ -17,10 +18,11 @@ import {
   IconTable,
 } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   TestCaseListQueryParams,
   testCasesByProjectIdQueryOptions,
@@ -83,6 +85,7 @@ export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+  const [moduleFilter, setModuleFilter] = useState<string>("");
 
   const markDraftMutation = useMutation({
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
@@ -119,10 +122,11 @@ export default function ListProjectTestCases() {
         sortBy,
         sortOrder,
         search,
+        module: moduleFilter,
       }),
       enabled: !!projectId,
     }),
-    [projectId],
+    [projectId, moduleFilter],
   );
 
   const { data: usersData } = useUsersQuery();
@@ -204,6 +208,7 @@ export default function ListProjectTestCases() {
           <Button variant={"outline"} colorPalette="brand" size={"sm"}>
             Add Test Cases
           </Button>
+
         </Link>
         <Button colorPalette="success" size="sm" onClick={handleImportClick}>
           Import from Excel
@@ -241,7 +246,14 @@ export default function ListProjectTestCases() {
         </ButtonGroup>
       </Flex>
 
-      <Tabs.Root defaultValue="all">
+      <Box mt={2}>
+  <SelectFeatureModule
+    projectId={projectId}
+    value={moduleFilter}
+    onChange={setModuleFilter}
+  />
+</Box>
+<Tabs.Root defaultValue="all">
         <Tabs.List>
           <Tabs.Trigger value="all">
             <IconList />

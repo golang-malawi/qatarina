@@ -101,6 +101,7 @@ type TestCaseQueryParams struct {
 	Kind      string
 	IsDraft   *bool
 	Suggested *bool
+	Module    string
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
