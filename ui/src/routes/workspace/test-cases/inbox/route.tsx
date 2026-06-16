@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet,  useMatch } from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
 import React from "react";
 
@@ -30,6 +30,11 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 
 function TestCasePageInbox() {
   const[includeClosed, setIncludeClosed] = React.useState(false);
+
+  const match = useMatch({
+    from: "/workspace/test-cases/inbox/$testCaseId/",
+    shouldThrow: false,
+  });
 
   const {
     data: testCases,
@@ -171,7 +176,25 @@ function TestCasePageInbox() {
 
       {/* Right Pane - Details */}
       <Box flex="1" p={6} bg="bg.canvas">
-        <Outlet />
+        {match ? (
+          <Outlet />
+        ) : (
+          <Flex
+          direction="column"
+          align="center"
+          justify="center"
+          h="100%"
+          color="fg.subtle"
+          textAlign="center"
+          >
+            <Heading size="md" mb={4}>
+              Select a Test Case
+            </Heading>
+            <Text fontSize="lg">
+              Choose a test case from the left to record results here.
+            </Text>
+          </Flex>
+        )}
       </Box>
     </Flex>
   );
