@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Heading, Box, Spinner, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
+import { useState, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
+import SelectRunner from "@/components/form/SelectRunner";
+import { validateTestCaseScript } from "@/services/TestCaseService";
 import {
   useTestCaseQuery,
   useUpdateTestCaseMutation,
@@ -20,6 +22,10 @@ function EditTestCase() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { projectId, testCaseId } = Route.useParams();
+    const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
+    const [selectedRunner, setSelectedRunner] = useState("basi");
+    const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
+    const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
@@ -35,47 +41,45 @@ function EditTestCase() {
   if (error) return <Text color="fg.error">Error loading test case</Text>;
   if (!data) return <Text color="fg.muted">No test case found</Text>;
 
-  const schema = z.object({
-    id: z.string().uuid(),
-    title: z.string().min(1, "Title is required"),
-    code: z.string().optional(),
-    description: z.string().optional(),
-    kind: z.string().min(1, "Kind is required"),
-    feature_or_module: z.string().optional(),
-    is_draft: z.boolean().optional(),
-    tags: z.array(z.object({value: z.string() })).optional(),
-  });
 
-  const fields: FieldConfig[] = [
-    { name: "title", label: "Title", type: "text", required: true },
-    { name: "code", label: "Code", type: "text" },
-    { name: "description", label: "Description", type: "markdown-textarea" },
-    { name: "kind", label: "Kind", type: "test-kind", required: true },
-    { name: "feature_or_module", label: "Feature/Module", type: "feature-module" },
-    { name: "is_draft", label: "Draft?", type: "checkbox" },
-    {
-      name: "tags",
-      label: "Tags",
-      type: "array",
-      fields: [{ name: "value", label: "Tag", type: "text" }],
-    },
-  ];
 
-  const handleSubmit = async (values: z.infer<typeof schema>) => {
+const handleSubmit = async (values: z.infer<typeof schema>) => {
     setSubmitting(true);
     try {
+      let body:any;
+      if (values.script_file) {
+        const formData = new FormData();
+        formData.append("project_id", projectId);
+        formData.append("id", values.id);
+        formData.append("kind", values.kind ?? "");
+        formData.append("code", values.code ?? "");
+        formData.append("feature_or_module", values.feature_or_module ?? "");
+        formData.append("title", values.title ?? "");
+        formData.append("description", values.description ?? "");
+        formData.append("is_draft", (values.is_draft ?? false).toString());
+        if (values.tags && values.tags.length) {
+        (values.tags as any[]).forEach((tag) => formData.append("tags", tag));
+      }
+        formData.append("script_file", values.script_file as any);
+        formData.append("runner", values.runner ?? "");
+        body = formData;
+      } else {
+        body = {
+          project_id: Number(projectId),
+          id: values.id,
+          kind: values.kind,
+          code: values.code ?? "",
+          feature_or_module: values.feature_or_module ?? "",
+          title: values.title,
+          description: values.description,
+          is_draft: values.is_draft ?? false,
+          ...(values.tags && values.tags.length ? { tags: values.tags.map(t => t.value) } : {}),
+          runner: values.runner,
+        };
+      }
       await updateMutation.mutateAsync({
         params: { path: { testCaseID: values.id } },
-        body: {
-          ...values,
-          code: values.code ?? "",
-          description: values.description ?? "",
-          feature_or_module: values.feature_or_module ?? "",
-          title: values.title ?? "",
-          kind: values.kind ?? "",
-          is_draft: values.is_draft ?? false,
-          tags: values.tags?.map(t => t.value) ?? [],
-        },
+        body,
       });
 
       queryClient.invalidateQueries({
