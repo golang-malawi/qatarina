@@ -108,15 +108,16 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	}
 
 	for _, assignedTestCase := range request.PlannedTests {
-		// Add link between test plan and test case
-		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-			TestPlanID: request.PlanID,
-			TestCaseID: uuid.MustParse(assignedTestCase.TestCaseID),
-		}); err != nil {
-			return nil, err
+		for _, uid := range assignedTestCase.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   request.PlanID,
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				AssignedToID: common.NewNullInt64(uid),
+			}); err != nil {
+				return nil, err
+			}
 		}
-
-		}
+	}
 
 	return &testPlan, nil
 }
@@ -138,9 +139,10 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	cases, err := t.queries.GetTestCasesWithTestersByPlan(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
+	// ✅ Use ListTestCasesByPlan to get assigned cases
+	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
+		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
 	// Get test run statistics
@@ -175,16 +177,22 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
+	// Build response test cases
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
-			ID:                   tc.TestCaseID.String(),
+			ID:                   tc.ID.String(),
 			Title:                tc.Title,
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   plan.ID,
 				Name: plan.Description.String,
 			},
-			AssignedTesterIDs: tc.TesterIds,
+			AssignedTesterIDs: func() []int64 {
+				if tc.AssignedToID.Valid {
+					return []int64{int64(tc.AssignedToID.Int64)}
+				}
+				return []int64{}
+			}(),
 		})
 	}
 

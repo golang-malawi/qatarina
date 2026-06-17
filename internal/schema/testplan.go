@@ -23,7 +23,7 @@ type CreateTestPlan struct {
 
 type TestCaseAssignment struct {
 	TestCaseID string  `json:"test_case_id"`
-	UserIds    []int64 `json:"user_ids"`
+	UserIDs    []int64 `json:"user_ids"`
 }
 
 type AssignTestsToPlanRequest struct {

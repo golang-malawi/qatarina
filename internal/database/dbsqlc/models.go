@@ -316,8 +316,9 @@ type TestPlan struct {
 }
 
 type TestPlanCase struct {
-	TestPlanID int64
-	TestCaseID uuid.UUID
+	TestPlanID   int64
+	TestCaseID   uuid.UUID
+	AssignedToID sql.NullInt64
 }
 
 type TestPlansCase struct {

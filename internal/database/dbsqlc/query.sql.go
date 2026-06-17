@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const addProjectTestCaseTemplate = `-- name: AddProjectTestCaseTemplate :exec
@@ -33,18 +32,19 @@ func (q *Queries) AddProjectTestCaseTemplate(ctx context.Context, arg AddProject
 }
 
 const addTestCaseToPlan = `-- name: AddTestCaseToPlan :exec
-INSERT INTO test_plan_cases (test_plan_id, test_case_id)
-VALUES ($1, $2)
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id)
+VALUES ($1, $2, $3)
 ON CONFLICT DO NOTHING
 `
 
 type AddTestCaseToPlanParams struct {
-	TestPlanID int64
-	TestCaseID uuid.UUID
+	TestPlanID   int64
+	TestCaseID   uuid.UUID
+	AssignedToID sql.NullInt64
 }
 
 func (q *Queries) AddTestCaseToPlan(ctx context.Context, arg AddTestCaseToPlanParams) error {
-	_, err := q.db.ExecContext(ctx, addTestCaseToPlan, arg.TestPlanID, arg.TestCaseID)
+	_, err := q.db.ExecContext(ctx, addTestCaseToPlan, arg.TestPlanID, arg.TestCaseID, arg.AssignedToID)
 	return err
 }
 
@@ -2371,85 +2371,58 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 
 const listTestCasesByAssignedUser = `-- name: ListTestCasesByAssignedUser :many
 SELECT 
-tc.id As test_case_id,
-tc.kind,
-tc.code,
-tc.feature_or_module,
-tc.title,
-tc.description,
-tc.parent_test_case_id,
-tc.is_draft,
-tc.tags,
-tc.created_by_id,
-tc.created_at AS test_case_created_at,
-tc.updated_at AS test_case_updated_at,
-tc.project_id,
-
-tr.id AS test_run_id,
-tr.test_plan_id,
-tr.owner_id,
-tr.tested_by_id,
-tr.assigned_to_id,
-tr.assignee_can_change_code,
-tr.external_issue_id,
-tr.result_state,
-tr.is_closed,
-tr.notes,
-tr.actual_result,
-tr.expected_result,
-tr.reactions,
-tr.tested_on,
-tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at,
-
-tp.environment_id
-FROM test_runs tr
-INNER JOIN test_cases tc ON tc.id = tr.test_case_id
-INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
-WHERE tr.assigned_to_id = $1
-    AND ($4 ::bool OR tr.is_closed = FALSE)
-ORDER BY tr.created_at DESC
+    tc.id AS test_case_id,
+    tc.kind,
+    tc.code,
+    tc.feature_or_module,
+    tc.title,
+    tc.description,
+    tc.is_draft,
+    tc.tags,
+    tc.created_by_id,
+    tc.created_at AS test_case_created_at,
+    tc.updated_at AS test_case_updated_at,
+    tc.project_id,
+    pc.test_plan_id,
+    pc.assigned_to_id,
+    tp.environment_id,
+    COALESCE(tr.is_closed, false) AS is_closed
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr 
+    ON tr.test_case_id = tc.id 
+   AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND ($4::bool OR COALESCE(tr.is_closed, false) = false)
+ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
 type ListTestCasesByAssignedUserParams struct {
-	AssignedToID  sql.NullInt32
+	AssignedToID  sql.NullInt64
 	Limit         int32
 	Offset        int32
 	IncludeClosed bool
 }
 
 type ListTestCasesByAssignedUserRow struct {
-	TestCaseID            uuid.UUID
-	Kind                  TestKind
-	Code                  string
-	FeatureOrModule       sql.NullString
-	Title                 string
-	Description           string
-	ParentTestCaseID      sql.NullInt32
-	IsDraft               sql.NullBool
-	Tags                  []string
-	CreatedByID           int32
-	TestCaseCreatedAt     sql.NullTime
-	TestCaseUpdatedAt     sql.NullTime
-	ProjectID             sql.NullInt32
-	TestRunID             uuid.UUID
-	TestPlanID            sql.NullInt32
-	OwnerID               int32
-	TestedByID            sql.NullInt32
-	AssignedToID          sql.NullInt32
-	AssigneeCanChangeCode sql.NullBool
-	ExternalIssueID       sql.NullString
-	ResultState           TestRunState
-	IsClosed              sql.NullBool
-	Notes                 string
-	ActualResult          sql.NullString
-	ExpectedResult        sql.NullString
-	Reactions             pqtype.NullRawMessage
-	TestedOn              time.Time
-	RunCreatedAt          sql.NullTime
-	RunUpdatedAt          sql.NullTime
-	EnvironmentID         sql.NullInt32
+	TestCaseID        uuid.UUID
+	Kind              TestKind
+	Code              string
+	FeatureOrModule   sql.NullString
+	Title             string
+	Description       string
+	IsDraft           sql.NullBool
+	Tags              []string
+	CreatedByID       int32
+	TestCaseCreatedAt sql.NullTime
+	TestCaseUpdatedAt sql.NullTime
+	ProjectID         sql.NullInt32
+	TestPlanID        int64
+	AssignedToID      sql.NullInt64
+	EnvironmentID     sql.NullInt32
+	IsClosed          bool
 }
 
 func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]ListTestCasesByAssignedUserRow, error) {
@@ -2473,30 +2446,16 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.FeatureOrModule,
 			&i.Title,
 			&i.Description,
-			&i.ParentTestCaseID,
 			&i.IsDraft,
 			pq.Array(&i.Tags),
 			&i.CreatedByID,
 			&i.TestCaseCreatedAt,
 			&i.TestCaseUpdatedAt,
 			&i.ProjectID,
-			&i.TestRunID,
 			&i.TestPlanID,
-			&i.OwnerID,
-			&i.TestedByID,
 			&i.AssignedToID,
-			&i.AssigneeCanChangeCode,
-			&i.ExternalIssueID,
-			&i.ResultState,
-			&i.IsClosed,
-			&i.Notes,
-			&i.ActualResult,
-			&i.ExpectedResult,
-			&i.Reactions,
-			&i.TestedOn,
-			&i.RunCreatedAt,
-			&i.RunUpdatedAt,
 			&i.EnvironmentID,
+			&i.IsClosed,
 		); err != nil {
 			return nil, err
 		}
@@ -2556,21 +2515,41 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path, pc.assigned_to_id
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 WHERE pc.test_plan_id = $1
 `
 
-func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]TestCase, error) {
+type ListTestCasesByPlanRow struct {
+	ID               uuid.UUID
+	Kind             TestKind
+	Code             string
+	FeatureOrModule  sql.NullString
+	Title            string
+	Description      string
+	ParentTestCaseID sql.NullInt32
+	IsDraft          sql.NullBool
+	Tags             []string
+	CreatedByID      int32
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	ProjectID        sql.NullInt32
+	Suggested        sql.NullBool
+	Runner           sql.NullString
+	ScriptPath       sql.NullString
+	AssignedToID     sql.NullInt64
+}
+
+func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]ListTestCasesByPlanRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTestCasesByPlan, testPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TestCase
+	var items []ListTestCasesByPlanRow
 	for rows.Next() {
-		var i TestCase
+		var i ListTestCasesByPlanRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Kind,
@@ -2588,6 +2567,7 @@ func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]
 			&i.Suggested,
 			&i.Runner,
 			&i.ScriptPath,
+			&i.AssignedToID,
 		); err != nil {
 			return nil, err
 		}
