@@ -22,6 +22,7 @@ export const testPlanCreationFields: FieldConfig[] = [
   createFieldConfig('start_at', 'Start Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan should start',
+    type: "date",
   }),
   createFieldConfig('environment_id', 'Environment', 'select', {
     placeholder: 'Select environment',
@@ -31,10 +32,12 @@ export const testPlanCreationFields: FieldConfig[] = [
   createFieldConfig('scheduled_end_at', 'Scheduled End Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan is scheduled to end',
+    type: "date",
   }),
   createFieldConfig('closed_at', 'Closed Date', 'text', {
     placeholder: 'YYYY-MM-DD (optional)',
     helperText: 'When the test plan was actually closed (optional)',
+    type: "date",
   }),
 ];
 
@@ -53,13 +56,16 @@ export const testPlanUpdateFields: FieldConfig[] = [
   createFieldConfig('start_at', 'Start Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan should start',
+    type: "date",
   }),
   createFieldConfig('scheduled_end_at', 'Scheduled End Date', 'text', {
     placeholder: 'YYYY-MM-DD',
     helperText: 'When the test plan is scheduled to end',
+    type: "date",
   }),
   createFieldConfig('closed_at', 'Closed Date', 'text', {
     placeholder: 'YYYY-MM-DD (optional)',
     helperText: 'When the test plan was actually closed (optional)',
+    type: "date",
   }),
 ]; 

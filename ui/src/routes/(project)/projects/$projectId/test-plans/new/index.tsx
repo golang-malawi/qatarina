@@ -105,21 +105,26 @@ function CreateNewTestPlan() {
       return;
     }
 
+    const toISODate = (dateStr: string) => new Date(dateStr + "T00:00:00").toISOString();
+
+
+
     const res = await createTestPlanMutation.mutateAsync({
       body: {
         project_id: parseInt(projectId!),
         environment_id: Number(data.environment_id),
         kind: data.kind,
         description: data.description,
-        start_at: data.start_at,
-        closed_at: data.closed_at,
-        scheduled_end_at: data.scheduled_end_at,
+        start_at: new Date(data.start_at).toISOString(),
+        closed_at: data.closed_at ? toISODate(data.closed_at) : undefined,
+        scheduled_end_at: new Date(data.scheduled_end_at).toISOString(),
         planned_tests: selectedTestCases.map((tc) => ({
           test_case_id: tc.test_case_id,
           user_ids: tc.user_ids.map(Number),
         })),
       },
     });
+
 
     if (res) {
       toaster.create({
