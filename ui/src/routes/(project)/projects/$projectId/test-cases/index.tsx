@@ -121,8 +121,7 @@ export default function ListProjectTestCases() {
         pageSize,
         sortBy,
         sortOrder,
-        search,
-        module: moduleFilter,
+        search: moduleFilter || search,
       }),
       enabled: !!projectId,
     }),
@@ -246,14 +245,7 @@ export default function ListProjectTestCases() {
         </ButtonGroup>
       </Flex>
 
-      <Box mt={2}>
-  <SelectFeatureModule
-    projectId={projectId}
-    value={moduleFilter}
-    onChange={setModuleFilter}
-  />
-</Box>
-<Tabs.Root defaultValue="all">
+      <Tabs.Root defaultValue="all">
         <Tabs.List>
           <Tabs.Trigger value="all">
             <IconList />
@@ -281,6 +273,14 @@ export default function ListProjectTestCases() {
           </Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="all">
+  <Box mt={2}>
+    <SelectFeatureModule
+      projectId={projectId}
+      value={moduleFilter}
+      onChange={setModuleFilter}
+    />
+  </Box>
+
           <AppDataTable<TestCase, TestCaseListResponse>
             // @ts-expect-error TODO(sevenreup)
             query={queryFactory}
