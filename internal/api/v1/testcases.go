@@ -504,38 +504,96 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 
 // UpdateTestCase godoc
 //
-//	@ID				UpdateTestCase
-//	@Summary		Update a Test Case
-//	@Description	Update a Test Case
-//	@Tags			test-cases
-//	@Accept			json
-//	@Produce		json
-//	@Param			testCaseID	path		string		true	"Test Case ID"
-//	@Param			request		body		schema.UpdateTestCaseRequest	true	"Test Case update data"
-//	@Success		200			{object}	schema.TestCaseResponse
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-cases/{testCaseID} [post]
-func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+//	@ID             UpdateTestCase
+//	@Summary        Update a Test Case
+//	@Description    Update a Test Case
+//	@Tags           test-cases
+//	@Accept         json,multipart/form-data
+//	@Produce        json
+//	@Param          testCaseID  path        string      true    "Test Case ID"
+//	@Param          request     body        schema.UpdateTestCaseRequest    true    "Test Case update data"
+//	@Param          script_file formData    file    false   "Script file"
+//	@Success        200         {object}    schema.TestCaseResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID} [post]
+func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateTestCaseRequest)
-		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
-			if validationErrors {
-				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+		fileHeader, err := c.FormFile("script_file")
+		hasFile := err == nil && fileHeader != nil
+
+		if hasFile {
+			form, err := c.MultipartForm()
+			if err != nil {
+				logger.Error("failed to parse multipart form", "error", err)
+				return problemdetail.BadRequest(c, "failed to parse multipart form")
 			}
-			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
-			return problemdetail.BadRequest(c, "failed to parse data in request")
+
+			if vals, ok := form.Value["id"]; ok && len(vals) > 0 {
+				request.ID = vals[0]
+			}
+			if vals, ok := form.Value["kind"]; ok && len(vals) > 0 {
+				request.Kind = vals[0]
+			}
+			if vals, ok := form.Value["code"]; ok && len(vals) > 0 {
+				request.Code = vals[0]
+			}
+			if vals, ok := form.Value["feature_or_module"]; ok && len(vals) > 0 {
+				request.FeatureOrModule = vals[0]
+			}
+			if vals, ok := form.Value["title"]; ok && len(vals) > 0 {
+				request.Title = vals[0]
+			}
+			if vals, ok := form.Value["description"]; ok && len(vals) > 0 {
+				request.Description = vals[0]
+			}
+			if vals, ok := form.Value["is_draft"]; ok && len(vals) > 0 {
+				if draft, err := strconv.ParseBool(vals[0]); err == nil {
+					request.IsDraft = draft
+				}
+			}
+			if vals, ok := form.Value["tags"]; ok {
+				request.Tags = vals
+			} else {
+				request.Tags = []string{}
+			}
+			if vals, ok := form.Value["runner"]; ok && len(vals) > 0 {
+				request.Runner = vals[0]
+			}
+
+			saveDir := filepath.Join(cfg.Storage.LocalPath, "scripts")
+			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+				logger.Error("failed to create save directory", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to create save directory")
+			}
+
+			savePath := filepath.Join(saveDir, fileHeader.Filename)
+			normalizedPath := filepath.ToSlash(savePath)
+			request.ScriptPath = normalizedPath
+
+			if err := c.SaveFile(fileHeader, savePath); err != nil {
+				logger.Error("failed to save uploaded file", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
+			}
+
+		} else {
+			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+				if validationErrors {
+					return problemdetail.ValidationErrors(c, "invalid data in request", err)
+				}
+				logger.Error("failed to parse request data", "error", err)
+				return problemdetail.BadRequest(c, "failed to parse data in request")
+			}
 		}
 
-		_, err := testCaseService.Update(context.Background(), request)
+		updated, err := testCaseService.Update(context.Background(), request)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			logger.Error("failed to update test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update test case")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test cases updated",
-		})
+		return c.JSON(schema.NewTestCaseResponse(updated))
 	}
 }
 

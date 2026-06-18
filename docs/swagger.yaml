@@ -1058,6 +1058,10 @@ components:
           type: boolean
         kind:
           type: string
+        runner:
+          type: string
+        script_path:
+          type: string
         tags:
           items:
             type: string

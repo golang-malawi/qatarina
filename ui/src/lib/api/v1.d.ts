@@ -2342,6 +2342,8 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            runner?: string;
+            script_path?: string;
             tags?: string[];
             title: string;
         };

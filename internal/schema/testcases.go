@@ -83,6 +83,8 @@ type UpdateTestCaseRequest struct {
 	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path"`
 }
 
 type BulkCreateTestCases struct {

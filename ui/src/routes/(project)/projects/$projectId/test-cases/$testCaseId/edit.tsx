@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
 import SelectRunner from "@/components/form/SelectRunner";
@@ -10,12 +10,14 @@ import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 import {
   useTestCaseQuery,
   useUpdateTestCaseMutation,
+  validateTestCaseScript,
 } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 import { useQueryClient } from "@tanstack/react-query";
 
 const schema = testCaseCreationSchema.extend({
   id: z.string(),
+  script_path: z.string().optional(),
 });
 
 export const Route = createFileRoute(
@@ -28,10 +30,10 @@ function EditTestCase() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { projectId, testCaseId } = Route.useParams();
-    const [, setAttachedScriptFile] = useState<File | null>(null);
+    const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
     const [selectedRunner, setSelectedRunner] = useState("basi");
-    const [scriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
-    const [scriptValidationMessage] = useState<string>("");
+    const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
+    const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const fields = useMemo<FieldConfig[]>(() =>
@@ -104,6 +106,28 @@ function EditTestCase() {
     [scriptValidationStatus, scriptValidationMessage, selectedRunner]
   );
 
+  const validateAttachedScript = async (file: File, runner: string) => {
+    setScriptValidationStatus("validating");
+    setScriptValidationMessage("Scanning script file...");
+    try {
+      const result = await validateTestCaseScript(file, runner);
+      setScriptValidationStatus("success");
+      setScriptValidationMessage(result.output || "Script validated successfully.");
+    } catch (error) {
+      setScriptValidationStatus("failed");
+      setScriptValidationMessage((error as Error).message || "Script validation failed.");
+    }
+  };
+
+  useEffect(() => {
+    if (attachedScriptFile) {
+      validateAttachedScript(attachedScriptFile, selectedRunner);
+    } else {
+      setScriptValidationStatus("idle");
+      setScriptValidationMessage("");
+    }
+  }, [attachedScriptFile, selectedRunner]);
+
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
   const updateMutation = useUpdateTestCaseMutation();
 
@@ -121,64 +145,59 @@ function EditTestCase() {
 
 const handleSubmit = async (values: z.infer<typeof schema>) => {
     setSubmitting(true);
-    try {
-      let body:any;
-      if (false) {
-        const formData = new FormData();
-        formData.append("project_id", projectId);
-        formData.append("id", values.id);
-        formData.append("kind", values.kind ?? "");
-        formData.append("code", values.code ?? "");
-        const featureOrModule = values.feature_or_module?.trim() || data?.feature_or_module?.trim() || "Feature";
-        formData.append("feature_or_module", featureOrModule ?? "");
-        formData.append("title", values.title ?? "");
-        formData.append("description", values.description ?? "");
-        formData.append("is_draft", (values.is_draft ?? false).toString());
-        if (values.tags && values.tags.length) {
-        (values.tags as any[]).forEach((tag) => formData.append("tags", tag));
-      }
-        formData.append("script_file", values.script_file as any);
-        formData.append("runner", values.runner ?? "");
-        body = formData;
-      } else {
-        const tagsArray = values.tags ?? [];
-        const featureOrModule = values.feature_or_module?.trim() || data?.feature_or_module?.trim() || "Feature";
-        body = {
-          project_id: Number(projectId),
-          id: values.id,
-          kind: values.kind,
-          code: values.code ?? "",
-          feature_or_module: featureOrModule ?? "",
-          title: values.title,
-          description: values.description,
-          is_draft: values.is_draft ?? false,
-          ...(tagsArray.length ? { tags: tagsArray } : {}),
-          runner: values.runner,
-        };
-      }
-      await updateMutation.mutateAsync({
-        params: { path: { testCaseID: values.id } },
-        body,
-      });
+    // normalize tags
+    const tagsArray: string[] = Array.isArray(values.tags)
+      ? values.tags
+      : (values.tags ? (values.tags as any).split(",").map((t: string) => t.trim()) : []);
+    const featureOrModule = values.feature_or_module?.trim() || data?.feature_or_module?.trim() || "Feature";
 
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-      });
-
-      toaster.success({ title: "Test case updated successfully" });
-
-      navigate({
-        to: "/projects/$projectId/test-cases",
-        params: { projectId},
-      });
-    } catch (err: any) {
-      toaster.error({
-        title: "Failed to update test case",
-        description: err?.message,
-      });
-    } finally {
+    // precheck script validation
+    if (values.script_file && scriptValidationStatus !== "success") {
+      toaster.error({ title: "Script validation required", description: "Please wait for validation to succeed." });
       setSubmitting(false);
+      return;
     }
+
+    let body: any;
+    if (values.script_file) {
+      const formData = new FormData();
+      formData.append("project_id", projectId.toString());
+      formData.append("id", values.id);
+      formData.append("kind", values.kind ?? "");
+      formData.append("code", values.code ?? "");
+      formData.append("feature_or_module", featureOrModule);
+      formData.append("title", values.title ?? "");
+      formData.append("description", values.description ?? "");
+      formData.append("is_draft", (values.is_draft ?? false).toString());
+      tagsArray.forEach((tag) => formData.append("tags", tag));
+      formData.append("script_file", values.script_file as any);
+      formData.append("runner", values.runner ?? "");
+      body = formData;
+    } else {
+      body = {
+        project_id: Number(projectId),
+        id: values.id,
+        kind: values.kind,
+        code: values.code ?? "",
+        feature_or_module: featureOrModule,
+        title: values.title,
+        description: values.description,
+        is_draft: values.is_draft ?? false,
+        ...(tagsArray.length ? { tags: tagsArray } : {}),
+        runner: values.runner,
+        script_path: data?.script_path ?? "",
+      };
+    }
+
+    await updateMutation.mutateAsync({
+      params: { path: { testCaseID: values.id } },
+      body,
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases"] });
+    toaster.success({ title: "Test case updated successfully" });
+    navigate({ to: "/projects/$projectId/test-cases", params: { projectId } });
+    setSubmitting(false);
   };
 
   return (
@@ -199,6 +218,7 @@ const handleSubmit = async (values: z.infer<typeof schema>) => {
           is_draft: data.is_draft ?? false,
           tags: data.tags ?? [],
           runner: data.runner ?? "basi",
+          script_path: data.script_path ?? "",
         }}
         onSubmit={handleSubmit}
         submitText="Update Test Case"

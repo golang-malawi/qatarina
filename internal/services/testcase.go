@@ -610,6 +610,8 @@ func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTest
 		IsDraft:         common.NewNullBool(req.IsDraft),
 		Tags:            req.Tags,
 		UpdatedAt:       common.NullTime(time.Now()),
+		Runner:          common.NullString(req.Runner),
+		ScriptPath:      common.NullString(req.ScriptPath),
 	}
 
 	if err := t.queries.UpdateTestCase(ctx, params); err != nil {
