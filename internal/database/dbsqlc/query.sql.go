@@ -185,7 +185,8 @@ UPDATE test_runs SET
     notes = $6,
     tested_on = $7,
     actual_result = $8,
-    expected_result = $9
+    expected_result = $9,
+    environment_id = $10
 WHERE id = $1
 RETURNING id
 `
@@ -200,6 +201,7 @@ type CommitTestRunResultParams struct {
 	TestedOn       time.Time
 	ActualResult   sql.NullString
 	ExpectedResult sql.NullString
+	EnvironmentID  sql.NullInt32
 }
 
 func (q *Queries) CommitTestRunResult(ctx context.Context, arg CommitTestRunResultParams) (uuid.UUID, error) {
@@ -213,6 +215,7 @@ func (q *Queries) CommitTestRunResult(ctx context.Context, arg CommitTestRunResu
 		arg.TestedOn,
 		arg.ActualResult,
 		arg.ExpectedResult,
+		arg.EnvironmentID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -2370,31 +2373,32 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 }
 
 const listTestCasesByAssignedUser = `-- name: ListTestCasesByAssignedUser :many
-SELECT 
-    tc.id AS test_case_id,
-    tc.kind,
-    tc.code,
-    tc.feature_or_module,
-    tc.title,
-    tc.description,
-    tc.is_draft,
-    tc.tags,
-    tc.created_by_id,
-    tc.created_at AS test_case_created_at,
-    tc.updated_at AS test_case_updated_at,
-    tc.project_id,
-    pc.test_plan_id,
-    pc.assigned_to_id,
-    tp.environment_id,
-    COALESCE(tr.is_closed, false) AS is_closed
+SELECT
+  tc.id AS test_case_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at AS test_case_created_at,
+  tc.updated_at AS test_case_updated_at,
+  tc.project_id,
+  pc.test_plan_id,
+  pc.assigned_to_id,
+  tp.environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,  
+  MAX(tr.result_state) AS result_state,              
+  MAX(tr.actual_result) AS actual_result             
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr 
-    ON tr.test_case_id = tc.id 
-   AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
-  AND ($4::bool OR COALESCE(tr.is_closed, false) = false)
+AND ($4::bool OR COALESCE(tr.is_closed, false) = false)
+GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
 ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -2423,6 +2427,8 @@ type ListTestCasesByAssignedUserRow struct {
 	AssignedToID      sql.NullInt64
 	EnvironmentID     sql.NullInt32
 	IsClosed          bool
+	ResultState       interface{}
+	ActualResult      interface{}
 }
 
 func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestCasesByAssignedUserParams) ([]ListTestCasesByAssignedUserRow, error) {
@@ -2456,6 +2462,8 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 			&i.AssignedToID,
 			&i.EnvironmentID,
 			&i.IsClosed,
+			&i.ResultState,
+			&i.ActualResult,
 		); err != nil {
 			return nil, err
 		}

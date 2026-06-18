@@ -1946,7 +1946,7 @@ export interface components {
             actual_result: string;
             expected_result?: string;
             is_closed?: boolean;
-            notes: string;
+            notes?: string;
             /** @description State is the result of the test run */
             result_state: string;
             test_run_id: string;

@@ -181,7 +181,6 @@ components:
           type: string
       required:
       - actual_result
-      - notes
       - result_state
       - test_run_id
       - tested_on

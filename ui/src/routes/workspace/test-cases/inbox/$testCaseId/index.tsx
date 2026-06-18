@@ -77,13 +77,16 @@ function TestCaseInboxItem() {
 
   // Step 2: record the result immediately
   return executeTestRun(run.id, {
-    id: run.id,
-    status,
-    result: resultText,
-    notes: notesText,
-    expected_result: tc.description,
-    environment_id: tc.environment_id,
-  });
+  test_run_id: run.id,            
+  result_state: status,           
+  actual_result: resultText,      
+  notes: notesText,
+  expected_result: tc.description,
+  environment_id: tc.environment_id,
+  tested_on: new Date().toISOString(),
+  is_closed: false,                
+});
+
 },
     onSuccess: () => {
       toaster.create({

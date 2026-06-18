@@ -163,31 +163,32 @@ GROUP BY tc.id, tp.id, tp.description;
 SELECT * FROM test_cases WHERE created_by_id = $1;
 
 -- name: ListTestCasesByAssignedUser :many
-SELECT 
-    tc.id AS test_case_id,
-    tc.kind,
-    tc.code,
-    tc.feature_or_module,
-    tc.title,
-    tc.description,
-    tc.is_draft,
-    tc.tags,
-    tc.created_by_id,
-    tc.created_at AS test_case_created_at,
-    tc.updated_at AS test_case_updated_at,
-    tc.project_id,
-    pc.test_plan_id,
-    pc.assigned_to_id,
-    tp.environment_id,
-    COALESCE(tr.is_closed, false) AS is_closed
+SELECT
+  tc.id AS test_case_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at AS test_case_created_at,
+  tc.updated_at AS test_case_updated_at,
+  tc.project_id,
+  pc.test_plan_id,
+  pc.assigned_to_id,
+  tp.environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,  
+  MAX(tr.result_state) AS result_state,              
+  MAX(tr.actual_result) AS actual_result             
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr 
-    ON tr.test_case_id = tc.id 
-   AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
-  AND (sqlc.arg(include_closed)::bool OR COALESCE(tr.is_closed, false) = false)
+AND (sqlc.arg(include_closed)::bool OR COALESCE(tr.is_closed, false) = false)
+GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
 ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -424,7 +425,8 @@ UPDATE test_runs SET
     notes = $6,
     tested_on = $7,
     actual_result = $8,
-    expected_result = $9
+    expected_result = $9,
+    environment_id = $10
 WHERE id = $1
 RETURNING id;
 
