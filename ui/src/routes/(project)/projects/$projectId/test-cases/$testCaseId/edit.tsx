@@ -31,7 +31,7 @@ function EditTestCase() {
   const queryClient = useQueryClient();
   const { projectId, testCaseId } = Route.useParams();
     const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-    const [selectedRunner, setSelectedRunner] = useState("basi");
+    const [selectedRunner, setSelectedRunner] = useState("");
     const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
     const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);

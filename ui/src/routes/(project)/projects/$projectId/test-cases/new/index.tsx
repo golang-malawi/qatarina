@@ -27,7 +27,7 @@ function NewTestCases() {
   const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
 
   const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-  const [selectedRunner, setSelectedRunner] = useState("basi");
+  const [selectedRunner, setSelectedRunner] = useState("");
   const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
   const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
 
@@ -62,7 +62,7 @@ function NewTestCases() {
             ...field,
             customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
               <SelectRunner
-                value={(value as string) || "basi"}
+                value={(value as string) || ""}
                 onChange={(val) => {
                   onChange(val);
                   setSelectedRunner(val);
