@@ -27,10 +27,10 @@ export default function SelectFeatureModule({
       try {
         const moduleService = new ModuleService();
         const modules: Module[] = await moduleService.getModulesByProjectId(projectId);
-        const items = modules.map((module) => ({
+        const items = [{ label: "All", value: "" }].concat(modules.map((module) => ({
           label: module.name,
-          value: module.id,
-        }));
+          value: module.name,
+        })));
         setFeatureModules(createListCollection({ items }));
       } catch (error) {
         console.error("Failed to fetch project modules:", error);

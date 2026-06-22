@@ -15,6 +15,7 @@ export type TestCaseListQueryParams = {
   search?: string;
   kind?: string;
   isDraft?: boolean;
+  module?: string;
 };
 
 export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
