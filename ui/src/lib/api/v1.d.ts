@@ -1884,6 +1884,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         "dbsqlc.TestKind": string;
+        /** @description passed, failed, or leave nil for pending */
         "dbsqlc.TestRunState": string;
         "problemdetail.ProblemDetail": {
             context?: unknown;
@@ -1901,34 +1902,20 @@ export interface components {
             test_plan_id: number;
         };
         "schema.AssignedTestCase": {
-            actual_result?: string;
             assigned_to_id?: number;
-            assignee_can_change_code?: boolean;
             code?: string;
             created_at?: string;
             created_by_id?: number;
             description?: string;
             environment_id?: number;
-            expected_result?: string;
-            external_issue_id?: string;
             feature_or_module?: string;
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
-            notes?: string;
-            owner_id?: number;
-            parent_test_case_id?: number;
             project_id?: number;
-            reactions?: number[];
-            result_state?: components["schemas"]["dbsqlc.TestRunState"];
             tags?: string[];
-            test_case_created_at?: string;
-            test_case_updated_at?: string;
             test_plan_id?: number;
-            test_run_id?: string;
-            tested_by_id?: number;
-            tested_on?: string;
             title?: string;
             updated_at?: string;
         };
@@ -1959,7 +1946,7 @@ export interface components {
             actual_result: string;
             expected_result?: string;
             is_closed?: boolean;
-            notes: string;
+            notes?: string;
             /** @description State is the result of the test run */
             result_state: string;
             test_run_id: string;
@@ -2263,8 +2250,7 @@ export interface components {
             notes?: string;
             owner_id: number;
             project_id: number;
-            /** @description passed, failed, or leave nil for pending */
-            result_state?: string;
+            result_state?: components["schemas"]["dbsqlc.TestRunState"];
             /** @description "basi", "playwright", "cypress", "browseruse" */
             runner?: string;
             /** @description optional; used for "playwright" and "cypress" runner types */

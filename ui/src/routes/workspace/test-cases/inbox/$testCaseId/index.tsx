@@ -8,7 +8,6 @@ import {
   Menu,
   Text,
   Textarea,
-  Code,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -22,10 +21,10 @@ import {
 } from "@tanstack/react-query";
 import {
   markTestCaseAsDraft,
-  unmarkTestCaseAsDraft,
+  unmarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { executeTestRun } from "@/services/TestRunService";
-
+import { executeTestCase } from "@/services/TestExecutionService";
+import { executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import ReactMarkdown from "react-markdown";
@@ -49,8 +48,6 @@ function TestCaseInboxItem() {
 
   const tc = testCase;
   const isDraft = tc.is_draft;
-  const testRunId = tc.test_run_id;
-  const expectedResult = tc.expected_result ?? tc.description;
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
@@ -63,21 +60,35 @@ function TestCaseInboxItem() {
 
   const env = environments.find((e: any) => e.id === tc.environment_id);
 
-  const executeMutation = useMutation({
+    const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-      if (!testRunId || !expectedResult || !resultText) {
-        throw new Error("Missing required test case data.");
-      }
+  if (!resultText) {
+    throw new Error("Observed behaviour (result) is required.");
+  }
+  if (!tc.id) {
+    throw new Error("Test case ID is missing.");
+  }
 
-      return executeTestRun(testRunId, {
-        id: testRunId,
-        status,
-        result: resultText,
-        notes: notesText,
-        expected_result: expectedResult,
-        environment_id: tc.environment_id,
-      });
-    },
+  // Step 1: create a new run
+  const run = await executeTestCase(tc.id, tc.test_plan_id);
+
+  if (!run.id) {
+    throw new Error("Run ID is missing.");
+  }
+
+  // Step 2: record the result immediately
+  return executeTestRun(run.id, {
+  test_run_id: run.id,            
+  result_state: status,           
+  actual_result: resultText,      
+  notes: notesText,
+  expected_result: tc.description,
+  environment_id: tc.environment_id,
+  tested_on: new Date().toISOString(),
+  is_closed: false,                
+});
+
+},
     onSuccess: () => {
       toaster.create({
         title: "Success",
@@ -88,7 +99,7 @@ function TestCaseInboxItem() {
       setNotesText("");
 
       queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
-      queryClient.invalidateQueries({queryKey: ["testCases", "inbox", testCaseId] });
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox", testCaseId] });
       queryClient.invalidateQueries({ queryKey: ["testCases", "summary"] });
     },
     onError: () => {
@@ -133,20 +144,20 @@ function TestCaseInboxItem() {
     return (
       <Box>
         <Heading size="lg" color="fg.heading">
-          {tc.title} 
-          </Heading>
-          <Badge colorScheme="gray" ml={2}>
-            Closed
-          </Badge>
-          <Text mt={2}>{tc.description}</Text>
-          <Text mt={4} color="fg.subtle">
-            This test case is closed. Results can no longer be recorded.
-          </Text>
-        </Box>
-      );
-    }
+          {tc.title}
+        </Heading>
+        <Badge colorScheme="gray" ml={2}>
+          Closed
+        </Badge>
+        <Text mt={2}>{tc.description}</Text>
+        <Text mt={4} color="fg.subtle">
+          This test case is closed. Results can no longer be recorded.
+        </Text>
+      </Box>
+    );
+  }
 
-  return (
+    return (
     <Box>
       <Heading size="lg" color="fg.heading">
         {tc.title}
@@ -181,39 +192,7 @@ function TestCaseInboxItem() {
             Description
           </Heading>
           {tc.description ? (
-            <ReactMarkdown
-            components={{
-              h1: (props) => <Heading size="lg" mb={2} {...props} />,
-              h2: (props) => <Heading size="md" mb={2} {...props} />,
-              h3: (props) => <Heading size="sm" mb={2} {...props} />,
-              p: (props) => <Text mb={2} {...props} />,
-              code: (props) => <Code colorScheme="yellow" {...props} />,
-              ul: (props) => (
-                <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
-              ),
-              ol: (props) => (
-                <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
-              ),
-              li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-              blockquote: (props) => (
-                <blockquote
-                  style={{
-                    paddingLeft: "1rem",
-                    borderLeft: "4px solid #CBD5E0",
-                    color: "#4A5568",
-                    fontStyle: "italic",
-                    margin: "0.5rem 0",
-                  }}
-                  {...props}
-                />
-              ),
-              a: (props) => (
-                <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
-              ),
-            }}
-          >
-            {tc.description}
-          </ReactMarkdown>
+            <ReactMarkdown>{tc.description}</ReactMarkdown>
           ) : (
             <Text color="fg.subtle">No description provided.</Text>
           )}
@@ -251,10 +230,8 @@ function TestCaseInboxItem() {
           type="button"
           variant="outline"
           colorPalette="success"
-          onClick={() => {
-            executeMutation.mutate({ status: "passed" });
-          }}
-          disabled={isDraft || !testRunId}
+          onClick={() => executeMutation.mutate({ status: "passed" })}
+          disabled={isDraft}
           loading={executeMutation.isPending}
         >
           Record Successful Test
@@ -266,7 +243,7 @@ function TestCaseInboxItem() {
           colorPalette="danger"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
-          disabled={isDraft || !testRunId}
+          disabled={isDraft}
         >
           Record Failed Test
         </Button>

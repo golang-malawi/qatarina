@@ -61,7 +61,7 @@ type TestCaseService interface {
 
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
-	// FindAllAssignedTo is used to fetch only the testcases that are assigned to a logged in user
+	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
 	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error)
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
@@ -562,27 +562,33 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 
 // FindAllByProjectID implements TestCaseService.
 func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanID int64) ([]schema.TestCaseResponseItem, error) {
-	rows, err := t.queries.GetTestCasesWithPlanInfo(ctx, sql.NullInt32{Int32: int32(testPlanID), Valid: true})
+	rows, err := t.queries.ListTestCasesByPlan(ctx, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	// fetch the plan to enrich with description
+	plan, err := t.queries.GetTestPlan(ctx, testPlanID)
 	if err != nil {
 		return nil, err
 	}
 
 	cases := make([]schema.TestCaseResponseItem, 0, len(rows))
 	for _, r := range rows {
-		assigned := r.PlanID.Valid
-		var planSummary *schema.TestPlanSummary
-		if assigned {
-			planSummary = &schema.TestPlanSummary{
-				ID:   r.PlanID.Int64,
-				Name: r.PlanName.String,
-			}
-		}
 		cases = append(cases, schema.TestCaseResponseItem{
-			ID:                   r.TestCaseID.String(),
+			ID:                   r.ID.String(),
 			Title:                r.Title,
-			IsAssignedToTestPlan: assigned,
-			TestPlan:             planSummary,
-			AssignedTesterIDs:    r.TesterIds,
+			IsAssignedToTestPlan: true,
+			TestPlan: &schema.TestPlanSummary{
+				ID:   int64(plan.ID),
+				Name: plan.Description.String,
+			},
+			AssignedTesterIDs: func() []int64 {
+				if r.AssignedToID.Valid {
+					return []int64{int64(r.AssignedToID.Int64)}
+				}
+				return []int64{}
+			}(),
 		})
 	}
 	return cases, nil
@@ -656,13 +662,13 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 }
 
 func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error) {
+
 	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
-		AssignedToID:  common.NewNullInt32(int32(userID)),
+		AssignedToID:  common.NewNullInt64(userID),
 		Limit:         limit,
 		Offset:        offset,
 		IncludeClosed: includeClosed,
 	})
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return []schema.AssignedTestCase{}, nil
@@ -670,40 +676,25 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 		return nil, fmt.Errorf("failed to load assigned test cases: %v", err)
 	}
 
-	res := make([]schema.AssignedTestCase, 0)
+	res := make([]schema.AssignedTestCase, 0, len(rows))
 	for _, row := range rows {
 		res = append(res, schema.AssignedTestCase{
-			ID:                    row.TestCaseID.String(),
-			Kind:                  row.Kind,
-			Code:                  row.Code,
-			FeatureOrModule:       row.FeatureOrModule.String,
-			Title:                 row.Title,
-			Description:           row.Description,
-			ParentTestCaseID:      int(row.ParentTestCaseID.Int32),
-			IsDraft:               row.IsDraft.Bool,
-			Tags:                  row.Tags,
-			CreatedByID:           row.CreatedByID,
-			TestCaseCreatedAt:     row.TestCaseCreatedAt.Time,
-			TestCaseUpdatedAt:     row.TestCaseUpdatedAt.Time,
-			ProjectID:             int64(row.ProjectID.Int32),
-			TestRunID:             row.TestRunID.String(),
-			TestPlanID:            row.TestPlanID.Int32,
-			TestCaseID:            row.TestCaseID.String(),
-			OwnerID:               row.OwnerID,
-			TestedByID:            row.TestedByID.Int32,
-			AssignedToID:          row.AssignedToID.Int32,
-			AssigneeCanChangeCode: row.AssigneeCanChangeCode.Bool,
-			ExternalIssueID:       row.ExternalIssueID.String,
-			ResultState:           row.ResultState,
-			IsClosed:              row.IsClosed.Bool,
-			Notes:                 row.Notes,
-			ActualResult:          row.ActualResult.String,
-			ExpectedResult:        row.ExpectedResult.String,
-			Reactions:             row.Reactions.RawMessage,
-			TestedOn:              &row.TestedOn,
-			CreatedAt:             row.RunCreatedAt.Time,
-			UpdatedAt:             row.RunUpdatedAt.Time,
-			EnvironmentID:         row.EnvironmentID.Int32,
+			ID:              row.TestCaseID.String(),
+			Kind:            row.Kind,
+			Code:            row.Code,
+			FeatureOrModule: row.FeatureOrModule.String,
+			Title:           row.Title,
+			Description:     row.Description,
+			IsDraft:         row.IsDraft.Bool,
+			Tags:            row.Tags,
+			CreatedByID:     row.CreatedByID,
+			CreatedAt:       row.TestCaseCreatedAt.Time,
+			UpdatedAt:       row.TestCaseUpdatedAt.Time,
+			ProjectID:       int64(row.ProjectID.Int32),
+			TestPlanID:      int32(row.TestPlanID),
+			AssignedToID:    int32(row.AssignedToID.Int64),
+			EnvironmentID:   row.EnvironmentID.Int32,
+			IsClosed:        row.IsClosed,
 		})
 	}
 	return res, nil

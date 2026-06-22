@@ -13,6 +13,7 @@ components:
       - TestKindUserInterface
       - TestKindScenario
     dbsqlc.TestRunState:
+      description: passed, failed, or leave nil for pending
       type: string
       x-enum-varnames:
       - TestRunStatePending
@@ -59,12 +60,8 @@ components:
       type: object
     schema.AssignedTestCase:
       properties:
-        actual_result:
-          type: string
         assigned_to_id:
           type: integer
-        assignee_can_change_code:
-          type: boolean
         code:
           type: string
         created_at:
@@ -75,10 +72,6 @@ components:
           type: string
         environment_id:
           type: integer
-        expected_result:
-          type: string
-        external_issue_id:
-          type: string
         feature_or_module:
           type: string
         id:
@@ -89,38 +82,15 @@ components:
           type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
-        notes:
-          type: string
-        owner_id:
-          type: integer
-        parent_test_case_id:
-          type: integer
         project_id:
           type: integer
-        reactions:
-          items:
-            type: integer
-          type: array
-          uniqueItems: false
-        result_state:
-          $ref: '#/components/schemas/dbsqlc.TestRunState'
         tags:
           items:
             type: string
           type: array
           uniqueItems: false
-        test_case_created_at:
-          type: string
-        test_case_updated_at:
-          type: string
         test_plan_id:
           type: integer
-        test_run_id:
-          type: string
-        tested_by_id:
-          type: integer
-        tested_on:
-          type: string
         title:
           type: string
         updated_at:
@@ -211,7 +181,6 @@ components:
           type: string
       required:
       - actual_result
-      - notes
       - result_state
       - test_run_id
       - tested_on
@@ -875,13 +844,7 @@ components:
         project_id:
           type: integer
         result_state:
-          description: passed, failed, or leave nil for pending
-          type: string
-          x-enum-varnames:
-          - TestRunStatePending
-          - TestRunStatePassed
-          - TestRunStateFailed
-          - TestRunStateBlocked
+          $ref: '#/components/schemas/dbsqlc.TestRunState'
         runner:
           description: '"basi", "playwright", "cypress", "browseruse"'
           type: string

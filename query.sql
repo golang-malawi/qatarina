@@ -123,7 +123,7 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT tc.*
+SELECT tc.*, pc.assigned_to_id
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 WHERE pc.test_plan_id = $1;
@@ -163,45 +163,33 @@ GROUP BY tc.id, tp.id, tp.description;
 SELECT * FROM test_cases WHERE created_by_id = $1;
 
 -- name: ListTestCasesByAssignedUser :many
-SELECT 
-tc.id As test_case_id,
-tc.kind,
-tc.code,
-tc.feature_or_module,
-tc.title,
-tc.description,
-tc.parent_test_case_id,
-tc.is_draft,
-tc.tags,
-tc.created_by_id,
-tc.created_at AS test_case_created_at,
-tc.updated_at AS test_case_updated_at,
-tc.project_id,
-
-tr.id AS test_run_id,
-tr.test_plan_id,
-tr.owner_id,
-tr.tested_by_id,
-tr.assigned_to_id,
-tr.assignee_can_change_code,
-tr.external_issue_id,
-tr.result_state,
-tr.is_closed,
-tr.notes,
-tr.actual_result,
-tr.expected_result,
-tr.reactions,
-tr.tested_on,
-tr.created_at AS run_created_at,
-tr.updated_at AS run_updated_at,
-
-tp.environment_id
-FROM test_runs tr
-INNER JOIN test_cases tc ON tc.id = tr.test_case_id
-INNER JOIN test_plans tp ON tp.id = tr.test_plan_id
-WHERE tr.assigned_to_id = $1
-    AND (sqlc.arg('include_closed') ::bool OR tr.is_closed = FALSE)
-ORDER BY tr.created_at DESC
+SELECT
+  tc.id AS test_case_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at AS test_case_created_at,
+  tc.updated_at AS test_case_updated_at,
+  tc.project_id,
+  pc.test_plan_id,
+  pc.assigned_to_id,
+  tp.environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,  
+  MAX(tr.result_state) AS result_state,              
+  MAX(tr.actual_result) AS actual_result             
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+AND (sqlc.arg(include_closed)::bool OR COALESCE(tr.is_closed, false) = false)
+GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
+ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: IsTestCaseLinkedToProject :one
@@ -343,8 +331,8 @@ updated_at = $2
 WHERE id = $1;
 
 -- name: AddTestCaseToPlan :exec
-INSERT INTO test_plan_cases (test_plan_id, test_case_id)
-VALUES ($1, $2)
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id)
+VALUES ($1, $2, $3)
 ON CONFLICT DO NOTHING;
 
 -- name: ChangeEnvironment :exec
@@ -437,7 +425,8 @@ UPDATE test_runs SET
     notes = $6,
     tested_on = $7,
     actual_result = $8,
-    expected_result = $9
+    expected_result = $9,
+    environment_id = $10
 WHERE id = $1
 RETURNING id;
 

@@ -75,33 +75,11 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 		return nil, err
 	}
 	for _, assignedTestCase := range request.PlannedTests {
-		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
-		if err != nil {
+		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+			TestPlanID: int64(testPlanID),
+			TestCaseID: uuid.MustParse(assignedTestCase.TestCaseID),
+		}); err != nil {
 			return nil, err
-		}
-		for _, userID := range assignedTestCase.UserIds {
-			testRunID, _ := uuid.NewV7()
-			testRunParams := dbsqlc.CreateNewTestRunParams{
-				ID:           testRunID,
-				ProjectID:    int32(request.ProjectID),
-				TestPlanID:   sql.NullInt32{Int32: int32(testPlanID), Valid: true},
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				OwnerID:      int32(request.CreatedByID),
-				TestedByID:   common.NewNullInt32(int32(userID)),
-				AssignedToID: common.NewNullInt32(int32(userID)),
-				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
-				CreatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-				UpdatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-			}
-
-			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 
@@ -130,12 +108,14 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	}
 
 	for _, assignedTestCase := range request.PlannedTests {
-		err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-			TestPlanID: request.PlanID,
-			TestCaseID: uuid.MustParse(assignedTestCase.TestCaseID),
-		})
-		if err != nil {
-			return nil, err
+		for _, uid := range assignedTestCase.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   request.PlanID,
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				AssignedToID: common.NewNullInt64(uid),
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -159,9 +139,10 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	cases, err := t.queries.GetTestCasesWithTestersByPlan(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
+	// ✅ Use ListTestCasesByPlan to get assigned cases
+	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
+		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
 	// Get test run statistics
@@ -196,16 +177,22 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
+	// Build response test cases
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
-			ID:                   tc.TestCaseID.String(),
+			ID:                   tc.ID.String(),
 			Title:                tc.Title,
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   plan.ID,
 				Name: plan.Description.String,
 			},
-			AssignedTesterIDs: tc.TesterIds,
+			AssignedTesterIDs: func() []int64 {
+				if tc.AssignedToID.Valid {
+					return []int64{int64(tc.AssignedToID.Int64)}
+				}
+				return []int64{}
+			}(),
 		})
 	}
 
