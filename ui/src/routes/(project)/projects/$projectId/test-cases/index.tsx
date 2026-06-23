@@ -217,10 +217,6 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
-        <Button colorPalette="success" size={"sm"}>
-          Import from Google Sheets
-        </Button>
-
         <ButtonGroup>
           <IconButton
             aria-label="List view"
