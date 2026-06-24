@@ -1,29 +1,36 @@
-import { createFileRoute, Link} from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Box, Flex, Button, Heading, Text, Stack, Spinner } from "@chakra-ui/react";
 import { useProjectQuery } from "@/services/ProjectService";
 
-export const Route = createFileRoute("/(project)/projects/$projectId/")({
+// Route for the Overview page
+export const Route = createFileRoute("/(project)/projects/$projectId/overview/")({
   component: ViewProject,
+});
+
+// Redirect route: when someone visits /projects/:projectId, send them to /overview
+export const RedirectRoute = createFileRoute("/(project)/projects/$projectId")({
+  beforeLoad: ({ params }) => {
+    return { redirect: Route.to, params }; 
+  },
 });
 
 function ViewProject() {
   const { projectId } = Route.useParams();
   const { data: project, isLoading, error } = useProjectQuery(projectId!);
-  
+
   if (isLoading) return <Spinner color="brand.solid" />;
   if (error) return <Text color="fg.error">Error loading project.</Text>;
-  // const matchRoute = useMatchRoute();
 
   const navItems = [
-    { label: "Summary", path: `/projects/$projectId` },
-    { label: "Test Cases", path: `/projects/$projectId/test-cases` },
-    { label: "Test Plans", path: `/projects/$projectId/test-plans` },
-    { label: "Features/Modules", path: `/projects/$projectId/Features` },
-    { label: "Testers", path: `/projects/$projectId/testers` },
-    { label: "Reports", path: `/projects/$projectId/reports` },
-    { label: "Insights", path: `/projects/$projectId/insights` },
-    { label: "Settings", path: `/projects/$projectId/settings` },
-    {label: "Environments", path: `/projects/$projectId/environments`},
+    { label: "Summary", path: Route.to },
+    { label: "Test Cases", path: "/projects/$projectId/test-cases" },
+    { label: "Test Plans", path: "/projects/$projectId/test-plans" },
+    { label: "Features/Modules", path: "/projects/$projectId/Features" },
+    { label: "Testers", path: "/projects/$projectId/testers" },
+    { label: "Reports", path: "/projects/$projectId/reports" },
+    { label: "Insights", path: "/projects/$projectId/insights" },
+    { label: "Settings", path: "/projects/$projectId/settings" },
+    { label: "Environments", path: "/projects/$projectId/environments" },
   ];
 
   return (
@@ -37,14 +44,9 @@ function ViewProject() {
         overflowX="auto"
       >
         {navItems.map((item) => {
-          const isActive = false;
-          // TODO: const isActive = matchRoute({item.path.replace("$projectId", projectId));
+          const isActive = false; // TODO: use matchRoute for active state
           return (
-            <Link
-              key={item.label}
-              to={item.path}
-              params={{ projectId }}
-            >
+            <Link key={item.label} to={item.path} params={{ projectId }}>
               <Button
                 variant={isActive ? "solid" : "ghost"}
                 colorPalette="brand"
@@ -64,7 +66,7 @@ function ViewProject() {
         <Text mb={4} color="fg.subtle">
           Here’s how the testing process works in this project:
         </Text>
-         <Stack gap={3}>
+        <Stack gap={3}>
           <Text>• Create <strong>Test Cases</strong> for the project.</Text>
           <Text>• Add those test cases into a <strong>Test Plan</strong>.</Text>
           <Text>• Assign users to execute the test cases in the plan.</Text>
