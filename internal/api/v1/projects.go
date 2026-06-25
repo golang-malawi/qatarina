@@ -201,12 +201,12 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 		}
 		testPlans, err := testPlanService.FindAllByProjectID(context.Background(), projectID)
 		if err != nil {
-			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch test plans for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(fiber.Map{
-			"test_plans": schema.NewTestPlanListResponse(testPlans),
+		return c.JSON(schema.TestPlanListResponse{
+			TestPlans: testPlans,
 		})
 	}
 }

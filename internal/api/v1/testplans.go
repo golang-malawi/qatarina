@@ -31,14 +31,13 @@ import (
 //	@Router			/v1/test-plans [get]
 func ListTestPlans(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		testPlans, err := testPlanService.FindAll(context.Background())
+		testPlans, err := testPlanService.FindAll(c.Context())
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to fetch test plans", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to fetch test plans")
 		}
-		return c.JSON(fiber.Map{
-			"test_plans": testPlans,
+		return c.JSON(schema.TestPlanListResponse{
+			TestPlans: testPlans,
 		})
 	}
 }
@@ -66,15 +65,14 @@ func SearchTestPlans(testPlanService services.TestPlanService, logger logging.Lo
 		testPlans, err := testPlanService.FindAllByProjectID(c.Context(), int64(projectID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				logger.Info(loggedmodule.ApiTestPlans, "test plan not found", "error", err)
 				return c.JSON(schema.TestPlanListResponse{})
 			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to find test plan", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to find a test plan")
 		}
-
-		return c.JSON(testPlans)
-
+		return c.JSON(schema.TestPlanListResponse{
+			TestPlans: testPlans,
+		})
 	}
 }
 
