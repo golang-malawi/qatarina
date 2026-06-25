@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"context"
+	"database/sql"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -58,31 +60,25 @@ type TestPlanResponseItem struct {
 	TestCases       []TestCaseResponseItem `json:"test_cases"`
 }
 
-func NewTestPlanListResponse(items []dbsqlc.TestPlan) []TestPlanResponseItem {
+func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, ctx context.Context) []TestPlanResponseItem {
 	res := make([]TestPlanResponseItem, 0)
 	for _, e := range items {
+		stats, _ := queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(e.ID), Valid: true})
 		res = append(res, TestPlanResponseItem{
-			ID:             e.ID,
-			ProjectID:      e.ProjectID,
-			EnvironmentID:  e.EnvironmentID.Int32,
-			AssignedToID:   e.AssignedToID,
-			CreatedByID:    e.CreatedByID,
-			UpdatedByID:    e.UpdatedByID,
-			Kind:           string(e.Kind),
-			Description:    e.Description.String,
-			StartAt:        e.StartAt.Time.Format(time.DateTime),
-			ClosedAt:       e.ClosedAt.Time.Format(time.DateTime),
-			ScheduledEndAt: e.ScheduledEndAt.Time.Format(time.DateTime),
-			NumTestCases:   e.NumTestCases,
-			NumFailures:    e.NumFailures,
-			IsComplete:     e.IsComplete.Bool,
-			IsLocked:       e.IsLocked.Bool,
-			HasReport:      e.HasReport.Bool,
-			CreatedAt:      e.CreatedAt.Time.Format(time.DateTime),
-			UpdatedAt:      e.UpdatedAt.Time.Format(time.DateTime),
+			ID:              e.ID,
+			ProjectID:       e.ProjectID,
+			Kind:            string(e.Kind),
+			Description:     e.Description.String,
+			NumTestCases:    e.NumTestCases,
+			PassedCount:     stats.PassedCount,
+			FailedCount:     stats.FailedCount,
+			PendingCount:    stats.PendingCount,
+			AssignedTesters: stats.AssignedTestersCount,
+			IsComplete:      e.IsComplete.Bool,
+			IsLocked:        e.IsLocked.Bool,
+			HasReport:       e.HasReport.Bool,
 		})
 	}
-
 	return res
 }
 
