@@ -108,9 +108,7 @@ function TestCasePage() {
           <Link to="/workspace/test-cases/new">
             <Button colorPalette="brand">Create New</Button>
           </Link>
-          <Button colorPalette="success">Import from Excel</Button>
-          <Button colorPalette="success">Import from Google Sheets</Button>
-        </HStack>
+          <Button colorPalette="success">Import from Excel</Button>        </HStack>
       </Flex>
 
       <AppDataTable<TestCase, TestCaseListResponse>
