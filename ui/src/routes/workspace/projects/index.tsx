@@ -29,6 +29,7 @@ import { Link } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import { useMemo, useState } from "react";
+import { Route as ProjectOverviewRoute } from "@/routes/(project)/projects/$projectId/overview";
 
 type ProjectRecord = {
   id?: number;
@@ -311,7 +312,7 @@ function ProjectsPage() {
 
                     <Flex wrap="wrap" gap={2}>
                       {hasId ? (
-                        <Link to="/projects/$projectId" params={{ projectId }}>
+                        <Link to={ProjectOverviewRoute.to} params={{ projectId }}>
                           <Button
                             variant="outline"
                             colorPalette="brand"
