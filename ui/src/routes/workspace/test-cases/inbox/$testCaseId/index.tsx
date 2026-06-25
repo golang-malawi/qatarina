@@ -6,6 +6,7 @@ import {
   Container,
   Heading,
   Menu,
+  Flex,
   Text,
   Textarea,
 } from "@chakra-ui/react";
@@ -159,9 +160,12 @@ function TestCaseInboxItem() {
 
     return (
     <Box>
-      <Heading size="lg" color="fg.heading">
-        {tc.title}
-      </Heading>
+      <Flex alignItems="center" justifyContent="space-between">
+        <Heading size="lg" color="fg.heading">
+          {tc.title}
+        </Heading>
+        <Button size="sm" variant="solid" colorPalette="brand" onClick={() => navigate({ to: `/projects/${tc.project_id}/test-plans/${tc.test_plan_id}/` })}>Go to Test Plan</Button>
+      </Flex>
       <Menu.Root>
         <Menu.Trigger asChild>
           <Button size="sm" variant="outline" colorPalette="brand">
