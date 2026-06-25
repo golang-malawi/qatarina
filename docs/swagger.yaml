@@ -98,6 +98,8 @@ components:
       type: object
     schema.AssignedTestCaseListResponse:
       properties:
+        pagination:
+          $ref: '#/components/schemas/schema.Pagination'
         test_cases:
           items:
             $ref: '#/components/schemas/schema.AssignedTestCase'
@@ -161,6 +163,8 @@ components:
       properties:
         actual_result:
           type: string
+        environment_id:
+          type: integer
         expected_result:
           type: string
         is_closed:
@@ -1365,6 +1369,22 @@ paths:
     get:
       description: List Test Cases assigned to the current user
       operationId: ListAssignedTestCases
+      parameters:
+      - description: Page number (1-based)
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        schema:
+          type: integer
+      - description: Include closed test cases
+        in: query
+        name: includeClosed
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:

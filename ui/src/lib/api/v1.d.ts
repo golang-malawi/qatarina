@@ -1920,6 +1920,7 @@ export interface components {
             updated_at?: string;
         };
         "schema.AssignedTestCaseListResponse": {
+            pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
         };
         "schema.BulkAssignTesters": {
@@ -1944,6 +1945,7 @@ export interface components {
         };
         "schema.CommitTestRunResult": {
             actual_result: string;
+            environment_id?: number;
             expected_result?: string;
             is_closed?: boolean;
             notes?: string;
@@ -2512,7 +2514,14 @@ export interface operations {
     };
     ListAssignedTestCases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description Include closed test cases */
+                includeClosed?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;

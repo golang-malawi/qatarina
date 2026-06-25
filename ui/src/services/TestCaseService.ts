@@ -26,9 +26,15 @@ export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getInboxTestCases(params?: { includeClosed?: boolean }) {
-  return apiClient.request("get", "/v1/me/test-cases/inbox", { 
-    params: { query: { includeClosed: params?.includeClosed ?? false } } as any,
+export async function getInboxTestCases(params?: { includeClosed?: boolean; page?: number; pageSize?: number }) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox", {
+    params: {
+      query: {
+        includeClosed: params?.includeClosed ?? false,
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+      },
+    },
   });
 }
 
