@@ -1,6 +1,6 @@
-import { 
+import {
   findTestCaseInboxQueryOptions,
-  findTestCaseSummaryQueryOptions, 
+  findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import { components } from "@/lib/api/v1";
 import {
@@ -16,38 +16,46 @@ import {
 } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet,  useMatch } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
 import React from "react";
 
 export const Route = createFileRoute("/workspace/test-cases/inbox")({
-  loader: ({ context: { queryClient } }) =>{
-    queryClient.ensureQueryData(findTestCaseInboxQueryOptions(false));
+  loader: ({ context: { queryClient } }) => {
+    queryClient.ensureQueryData(findTestCaseInboxQueryOptions(false, 1, 10));
     queryClient.ensureQueryData(findTestCaseSummaryQueryOptions);
   },
   component: TestCasePageInbox,
 });
 
 function TestCasePageInbox() {
-  const[includeClosed, setIncludeClosed] = React.useState(false);
+  const [includeClosed, setIncludeClosed] = React.useState(false);
+  const [page, setPage] = React.useState(1);
+  const [pageSize] = React.useState(10); // fixed page size for now
 
   const match = useMatch({
     from: "/workspace/test-cases/inbox/$testCaseId/",
     shouldThrow: false,
   });
 
+  // Fetch inbox test cases with pagination
   const {
-    data: testCases,
+    data: testCasesResponse,
     isPending: isPendingInbox,
     error: errorInbox,
-  } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed));
+  } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed, page, pageSize));
 
-  const {data: projects} = useSuspenseQuery(findProjectsQueryOptions);
+  const testCases = testCasesResponse?.test_cases ?? [];
+  const pagination = (testCasesResponse as any)?.pagination; // until OpenAPI types regenerated
+
+  // Fetch projects for mapping project IDs to titles
+  const { data: projects } = useSuspenseQuery(findProjectsQueryOptions);
   const projectMap: Record<number, string> = {};
   (projects?.projects ?? []).forEach((p: any) => {
     projectMap[p.id] = p.title;
   });
 
+  // Fetch summary counts
   const {
     data: summary,
     isPending: isPendingSummary,
@@ -70,9 +78,10 @@ function TestCasePageInbox() {
     );
   }
 
+  // Build summary map for usage/success/failure counts
   const summaryMap = new Map<
     string,
-    {usage_count: number; success_count: number; failure_count: number}
+    { usage_count: number; success_count: number; failure_count: number }
   >();
   (summary ?? []).forEach((s) => {
     summaryMap.set(s.test_case_id ?? "", {
@@ -82,54 +91,52 @@ function TestCasePageInbox() {
     });
   });
 
-  const testCaseRows = (testCases?.test_cases ?? []).map(
+  // Render each test case row
+  const testCaseRows = testCases.map(
     (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => {
-      const counts = 
-      summaryMap.get(tc.id ?? "") ?? {
-        usage_count: 0,
-        success_count: 0,
-        failure_count: 0,
-      };
+      const counts =
+        summaryMap.get(tc.id ?? "") ?? {
+          usage_count: 0,
+          success_count: 0,
+          failure_count: 0,
+        };
 
       return (
-      <Box
-        key={idx}
-        p={4}
-        borderBottom="sm"
-        borderColor="border.subtle"
-        _hover={{
-          bg: "bg.subtle",
-          cursor: "pointer",
-        }}
-        transition="background 0.2s"
-        opacity={tc.is_closed ? 0.5 : 1}
-      >
-        <Link
-          to="/workspace/test-cases/inbox/$testCaseId"
-          params={{ testCaseId: tc.id ?? "" }}
-          title={tc.description}
+        <Box
+          key={tc.id ?? idx}
+          p={4}
+          borderBottom="sm"
+          borderColor="border.subtle"
+          _hover={{ bg: "bg.subtle", cursor: "pointer" }}
+          transition="background 0.2s"
+          opacity={tc.is_closed ? 0.5 : 1}
         >
-          <Flex direction="column">
-            <Text fontWeight="semibold" fontSize="md">
-              {tc.title}
-            </Text>
-            <Text fontSize="sm" color="fg.subtle">
-              {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
-            </Text>
-          </Flex>
-          <Stack direction="row" mt={2} gap={2}>
-            <Badge colorPalette="info" variant="subtle">
-              {counts.usage_count} tests performed
-            </Badge>
-            <Badge colorPalette="success" variant="subtle">
-              Success: {counts.success_count}
-            </Badge>
-            <Badge colorPalette="danger" variant="subtle">
-              Failed: {counts.failure_count}
-            </Badge>
-          </Stack>
-        </Link>
-      </Box>
+          <Link
+            to="/workspace/test-cases/inbox/$testCaseId"
+            params={{ testCaseId: tc.id ?? "" }}
+            title={tc.description}
+          >
+            <Flex direction="column">
+              <Text fontWeight="semibold" fontSize="md">
+                {tc.title}
+              </Text>
+              <Text fontSize="sm" color="fg.subtle">
+                {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
+              </Text>
+            </Flex>
+            <Stack direction="row" mt={2} gap={2}>
+              <Badge colorPalette="info" variant="subtle">
+                {counts.usage_count} tests performed
+              </Badge>
+              <Badge colorPalette="success" variant="subtle">
+                Success: {counts.success_count}
+              </Badge>
+              <Badge colorPalette="danger" variant="subtle">
+                Failed: {counts.failure_count}
+              </Badge>
+            </Stack>
+          </Link>
+        </Box>
       );
     }
   );
@@ -150,10 +157,10 @@ function TestCasePageInbox() {
           </Heading>
 
           <Link to="/workspace/test-cases/inbox/suggest">
-          <Button mt={4} colorPalette="brand">
-            Suggest Test Case
-          </Button>
-        </Link>
+            <Button mt={4} colorPalette="brand">
+              Suggest Test Case
+            </Button>
+          </Link>
 
           <Input
             placeholder="Search for Test Cases..."
@@ -169,9 +176,47 @@ function TestCasePageInbox() {
           >
             Show closed test cases
           </Checkbox>
-        </Box>       
+        </Box>
 
-        <Box>{testCaseRows}</Box>
+        <Box>
+          {testCaseRows.length > 0 ? (
+            testCaseRows
+          ) : (
+            <Box p={6} textAlign="center" color="fg.subtle">
+              No test cases found.
+            </Box>
+          )}
+        </Box>
+
+        {/* Pagination Controls */}
+        <Box p={4} borderTop="sm" borderColor="border.subtle">
+          <Flex justify="space-between" align="center">
+            <Button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <Text>
+              Page {page} of{" "}
+              {Math.ceil((pagination?.total ?? 0) / pageSize)}
+            </Text>
+            <Button
+              onClick={() =>
+                setPage((p) =>
+                  p < Math.ceil((pagination?.total ?? 0) / pageSize)
+                    ? p + 1
+                    : p
+                )
+              }
+              disabled={
+                page >= Math.ceil((pagination?.total ?? 0) / pageSize)
+              }
+            >
+              Next
+            </Button>
+          </Flex>
+        </Box>
       </Box>
 
       {/* Right Pane - Details */}
@@ -180,12 +225,12 @@ function TestCasePageInbox() {
           <Outlet />
         ) : (
           <Flex
-          direction="column"
-          align="center"
-          justify="center"
-          h="100%"
-          color="fg.subtle"
-          textAlign="center"
+            direction="column"
+            align="center"
+            justify="center"
+            h="100%"
+            color="fg.subtle"
+            textAlign="center"
           >
             <Heading size="md" mb={4}>
               Select a Test Case
@@ -199,10 +244,3 @@ function TestCasePageInbox() {
     </Flex>
   );
 }
-
-
-
-
-
-
-

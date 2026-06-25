@@ -109,7 +109,8 @@ type Pagination struct {
 }
 
 type AssignedTestCaseListResponse struct {
-	TestCases []AssignedTestCase `json:"test_cases"`
+	TestCases  []AssignedTestCase `json:"test_cases"`
+	Pagination *Pagination        `json:"pagination,omitempty"`
 }
 
 type AssignedTestCase struct {
