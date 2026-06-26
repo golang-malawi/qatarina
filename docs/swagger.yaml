@@ -161,6 +161,8 @@ components:
       properties:
         actual_result:
           type: string
+        environment_id:
+          type: integer
         expected_result:
           type: string
         is_closed:
@@ -328,6 +330,7 @@ components:
       - description
       - kind
       - project_id
+      - scheduled_end_at
       - start_at
       type: object
     schema.DashboardProjectRecord:
