@@ -26,11 +26,11 @@ import {
   markTestCaseAsDraft,
   unmarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { executeTestCase } from "@/services/TestExecutionService";
-import { executeTestRun } from "@/services/TestRunService"; 
+import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
   "/workspace/test-cases/inbox/$testCaseId/",
@@ -44,6 +44,8 @@ function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const auth = useAuth();               
+  const currentUser = auth.user;        
 
   const { data: testCase } = useSuspenseQuery(
     findTestCaseInboxByIdQueryOptions(testCaseId),
@@ -63,35 +65,39 @@ function TestCaseInboxItem() {
 
   const env = environments.find((e: any) => e.id === tc.environment_id);
 
-    const executeMutation = useMutation({
+  const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-  if (!resultText) {
-    throw new Error("Observed behaviour (result) is required.");
-  }
-  if (!tc.id) {
-    throw new Error("Test case ID is missing.");
-  }
+      if (!resultText) throw new Error("Observed behaviour (result) is required.");
+      if (!tc.id) throw new Error("Test case ID is missing.");
+      if (!currentUser?.user_id) throw new Error("User ID is missing.");
+      if (!tc.project_id || !tc.test_plan_id) {
+        throw new Error("Project ID or Test Plan ID is missing.");
+      }
 
-  // Step 1: create a new run
-  const run = await executeTestCase(tc.id, tc.test_plan_id);
+      // Step 1: create a new manual run
+      const run = await createTestRun({
+        test_case_id: tc.id,
+        test_plan_id: tc.test_plan_id,
+        project_id: tc.project_id,
+        owner_id: currentUser.user_id,
+        tested_by_id: currentUser.user_id,
+        assigned_to_id: currentUser.user_id,
+      });
 
-  if (!run.id) {
-    throw new Error("Run ID is missing.");
-  }
+      if (!run?.id) throw new Error("Run ID is missing.");
 
-  // Step 2: record the result immediately
-  return executeTestRun(run.id, {
-  test_run_id: run.id,            
-  result_state: status,           
-  actual_result: resultText,      
-  notes: notesText,
-  expected_result: tc.description,
-  environment_id: tc.environment_id,
-  tested_on: new Date().toISOString(),
-  is_closed: false,                
-});
-
-},
+      // Step 2: record the result immediately
+      return executeTestRun(run.id, {
+        test_run_id: run.id,
+        result_state: status,
+        actual_result: resultText,
+        notes: notesText,
+        expected_result: tc.description,
+        environment_id: tc.environment_id,
+        tested_on: new Date().toISOString(),
+        is_closed: false,
+      });
+    },
     onSuccess: () => {
       toaster.create({
         title: "Success",
@@ -147,7 +153,7 @@ function TestCaseInboxItem() {
     },
   });
 
-    if (tc.is_closed) {
+  if (tc.is_closed) {
     return (
       <Box>
         <Heading size="lg" color="fg.heading">
@@ -164,7 +170,7 @@ function TestCaseInboxItem() {
     );
   }
 
-    return (
+  return (
     <Box>
       <Flex alignItems="center" justifyContent="space-between">
         <Heading size="lg" color="fg.heading">
