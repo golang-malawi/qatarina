@@ -14,6 +14,8 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   findTestCaseInboxByIdQueryOptions,
+  findTestCaseInboxQueryOptions,
+  findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
@@ -99,10 +101,14 @@ function TestCaseInboxItem() {
       setResultText("");
       setNotesText("");
 
-      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
-      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox", testCaseId] });
-      queryClient.invalidateQueries({ queryKey: ["testCases", "summary"] });
-    },
+      queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
+      queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
+      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId));
+
+      // Optional: force refetch for instant UI update
+      queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
+      queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
+        },
     onError: () => {
       toaster.create({
         title: "Error",
