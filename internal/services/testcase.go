@@ -62,7 +62,7 @@ type TestCaseService interface {
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
-	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error)
+	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error)
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -455,109 +455,21 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		pageSize = 100
 	}
 
-	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
-	sortMap := map[string]string{
-		"created_at": "created_at",
-		"createdat":  "created_at",
-		"updated_at": "updated_at",
-		"updatedat":  "updated_at",
-		"code":       "code",
-		"title":      "title",
-		"kind":       "kind",
-		"is_draft":   "is_draft",
-		"isdraft":    "is_draft",
-	}
-	sortColumn, ok := sortMap[sortKey]
-	if !ok || sortColumn == "" {
-		sortColumn = "created_at"
-	}
-	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
-	if sortOrder != "asc" {
-		sortOrder = "desc"
-	}
-
-	conditions := []string{"project_id = $1"}
-	args := []interface{}{int32(projectID)}
-	argPos := 2
-
-	search := strings.TrimSpace(params.Search)
-	if search != "" {
-		conditions = append(conditions, fmt.Sprintf("(code ILIKE $%d OR title ILIKE $%d OR description ILIKE $%d OR feature_or_module ILIKE $%d)", argPos, argPos, argPos, argPos))
-		args = append(args, "%"+search+"%")
-		argPos++
-	}
-
-	if params.Kind != "" {
-		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
-		args = append(args, params.Kind)
-		argPos++
-	}
-
-	if params.IsDraft != nil {
-		conditions = append(conditions, fmt.Sprintf("is_draft = $%d", argPos))
-		args = append(args, *params.IsDraft)
-		argPos++
-	}
-
-	if params.Suggested != nil {
-		conditions = append(conditions, fmt.Sprintf("suggested = $%d", argPos))
-		args = append(args, *params.Suggested)
-		argPos++
-	} else {
-		// Default: exclude suggested cases
-		conditions = append(conditions, "(suggested IS NULL OR suggested = false)")
-	}
-
-	whereClause := strings.Join(conditions, " AND ")
-
-	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM test_cases WHERE %s", whereClause)
-	if err := t.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
-	limit := pageSize
-	offset := (page - 1) * pageSize
-	args = append(args, limit, offset)
-	limitPos := argPos
-	offsetPos := argPos + 1
-
-	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
-FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
-
-	rows, err := t.db.QueryContext(ctx, query, args...)
+	rows, err := t.queries.TestCaseListByProjectPaged(ctx, dbsqlc.TestCaseListByProjectPagedParams{
+		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
+		RowLimit:  int32(pageSize),
+		RowOffset: int32((page - 1) * pageSize),
+	})
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
 
-	items := []dbsqlc.TestCase{}
-	for rows.Next() {
-		var item dbsqlc.TestCase
-		if err := rows.Scan(
-			&item.ID,
-			&item.Kind,
-			&item.Code,
-			&item.FeatureOrModule,
-			&item.Title,
-			&item.Description,
-			&item.ParentTestCaseID,
-			&item.IsDraft,
-			pq.Array(&item.Tags),
-			&item.CreatedByID,
-			&item.CreatedAt,
-			&item.UpdatedAt,
-			&item.ProjectID,
-		); err != nil {
-			return nil, 0, err
-		}
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
+	total, err := t.queries.TestCaseCountByProjectPaged(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
+	if err != nil {
 		return nil, 0, err
 	}
 
-	return items, total, nil
+	return rows, total, nil
 }
 
 // FindAllByProjectID implements TestCaseService.
@@ -661,25 +573,24 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
-func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, error) {
-
-	rows, err := t.queries.ListTestCasesByAssignedUser(ctx, dbsqlc.ListTestCasesByAssignedUserParams{
-		AssignedToID:  common.NewNullInt64(userID),
-		Limit:         limit,
-		Offset:        offset,
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error) {
+	rows, err := t.queries.TestCaseListByAssignedUser(ctx, dbsqlc.TestCaseListByAssignedUserParams{
+		UserID:        common.NewNullInt64(userID),
+		RowLimit:      limit,
+		RowOffset:     offset,
 		IncludeClosed: includeClosed,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return []schema.AssignedTestCase{}, nil
+			return []schema.AssignedTestCase{}, 0, nil
 		}
-		return nil, fmt.Errorf("failed to load assigned test cases: %v", err)
+		return nil, 0, fmt.Errorf("failed to load assigned test cases: %v", err)
 	}
 
 	res := make([]schema.AssignedTestCase, 0, len(rows))
 	for _, row := range rows {
 		res = append(res, schema.AssignedTestCase{
-			ID:              row.TestCaseID.String(),
+			ID:              row.ID.String(),
 			Kind:            row.Kind,
 			Code:            row.Code,
 			FeatureOrModule: row.FeatureOrModule.String,
@@ -688,8 +599,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			IsDraft:         row.IsDraft.Bool,
 			Tags:            row.Tags,
 			CreatedByID:     row.CreatedByID,
-			CreatedAt:       row.TestCaseCreatedAt.Time,
-			UpdatedAt:       row.TestCaseUpdatedAt.Time,
+			CreatedAt:       row.CreatedAt.Time,
+			UpdatedAt:       row.UpdatedAt.Time,
 			ProjectID:       int64(row.ProjectID.Int32),
 			TestPlanID:      int32(row.TestPlanID),
 			AssignedToID:    int32(row.AssignedToID.Int64),
@@ -697,7 +608,17 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			IsClosed:        row.IsClosed,
 		})
 	}
-	return res, nil
+
+	// Count query
+	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
+		UserID:        common.NewNullInt64(userID),
+		IncludeClosed: includeClosed,
+	})
+	if err != nil {
+		return res, 0, err
+	}
+
+	return res, total, nil
 }
 
 func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {

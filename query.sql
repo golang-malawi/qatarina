@@ -179,15 +179,16 @@ SELECT
   pc.test_plan_id,
   pc.assigned_to_id,
   tp.environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,  
-  MAX(tr.result_state) AS result_state,              
-  MAX(tr.actual_result) AS actual_result             
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
-AND (sqlc.arg(include_closed)::bool OR COALESCE(tr.is_closed, false) = false)
+  AND (
+    sqlc.arg(include_closed)::bool = true
+    OR COALESCE(tr.is_closed, false) = false
+  )
 GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
 ORDER BY tc.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -231,6 +232,82 @@ VALUES (
 )
 RETURNING id;
 
+-- name: FindTestCasesByProjectID :many
+SELECT
+  tc.id,
+  tc.project_id,
+  tc.created_by_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_at,
+  tc.updated_at,
+  CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
+  tr.result_state,
+  tr.is_closed,
+  tr.tested_by_id,
+  tr.notes
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = sqlc.arg(project_id)
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND (tr.is_closed = sqlc.arg(is_closed) OR sqlc.arg(is_closed) IS NULL)
+  AND tr.result_state = ANY(sqlc.arg(result_states)::test_run_state[]);
+
+-- name: TestCaseCountByProjectPaged :one
+SELECT COUNT(*)
+FROM test_cases
+WHERE project_id = sqlc.arg(project_id)
+  AND (suggested IS NULL OR suggested = false);
+
+-- name: TestCaseListByAssignedUser :many
+SELECT
+  tc.id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at,
+  tc.updated_at,
+  tc.project_id,
+  pc.test_plan_id AS test_plan_id,
+  pc.assigned_to_id AS assigned_to_id,
+  tp.environment_id AS environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
+GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
+ORDER BY tc.created_at DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
+-- name: TestCaseCountByAssignedUser :one
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false);
+
+-- name: TestCaseListByProjectPaged :many
+SELECT *
+FROM test_cases
+WHERE project_id = sqlc.arg(project_id)
+  AND (suggested IS NULL OR suggested = false)
+ORDER BY created_at DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
 -- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
@@ -273,20 +350,6 @@ UPDATE test_cases
 SET is_draft = $2, updated_at = NOW()
 WHERE id = $1;
 
--- name: FindTestCasesByProjectID :many
-SELECT tc.id, tc.project_id, tc.created_by_id, tc.kind, tc.code,
-       tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags,
-       tc.created_at, tc.updated_at, tc.suggested,
-       CASE WHEN tr.is_closed THEN 'closed' ELSE 'open' END AS status,
-       tr.id AS run_id, tr.result_state, tr.is_closed,
-       tr.tested_by_id, tr.notes
-FROM test_cases tc
-JOIN test_runs tr ON tr.test_case_id = tc.id
-WHERE tc.project_id = @project_id
-  AND (tc.suggested IS NULL OR tc.suggested = false)
-  AND (tr.is_closed = @is_closed OR @is_closed IS NULL)
-  AND tr.result_state = ANY(@result_states::test_run_state[]);
-  
 -- name: FindAllSuggestedByProject :many
 SELECT * FROM test_cases WHERE project_id = $1 AND suggested = $2;
 
