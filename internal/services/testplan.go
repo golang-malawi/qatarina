@@ -137,13 +137,12 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	// Use ListTestCasesByPlan to get assigned cases
+	// Updated query: ListTestCasesByPlan now aggregates assigned testers
 	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
-	// Get test run statistics
 	runStats, err := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
@@ -175,7 +174,7 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
-	// Build response test cases
+	// Build response test cases with multiple assigned testers
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
@@ -185,12 +184,7 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 				ID:   plan.ID,
 				Name: plan.Description.String,
 			},
-			AssignedTesterIDs: func() []int64 {
-				if tc.AssignedToID.Valid {
-					return []int64{int64(tc.AssignedToID.Int64)}
-				}
-				return []int64{}
-			}(),
+			AssignedTesterIDs: tc.AssignedTesterIds,
 		})
 	}
 
