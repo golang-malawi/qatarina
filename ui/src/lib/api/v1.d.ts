@@ -2008,7 +2008,7 @@ export interface components {
             kind: string;
             planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
-            scheduled_end_at?: string;
+            scheduled_end_at: string;
             start_at: string;
             updated_by_id?: number;
         };

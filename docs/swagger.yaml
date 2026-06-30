@@ -332,6 +332,7 @@ components:
       - description
       - kind
       - project_id
+      - scheduled_end_at
       - start_at
       type: object
     schema.DashboardProjectRecord:
