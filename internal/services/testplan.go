@@ -70,11 +70,14 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	}
 
 	for _, assignedTestCase := range request.PlannedTests {
-		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-			TestPlanID: int64(testPlanID),
-			TestCaseID: uuid.MustParse(assignedTestCase.TestCaseID),
-		}); err != nil {
-			return nil, err
+		for _, uid := range assignedTestCase.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   int64(testPlanID),
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				AssignedToID: common.NewNullInt64(uid),
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
