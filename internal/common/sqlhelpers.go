@@ -64,6 +64,13 @@ func FormatSqlDateTime(t interface{}) string {
 	return ""
 }
 
+func ZeroOrTime(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
+}
+
 // func ParseDate(dateStr string) sql.NullTime {
 // 	t, err := time.Parse("2006-01-02", dateStr)
 // 	if err != nil {
