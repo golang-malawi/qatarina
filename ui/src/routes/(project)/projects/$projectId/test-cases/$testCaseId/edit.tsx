@@ -3,6 +3,7 @@ import { Heading, Box, Spinner, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
+import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   useTestCaseQuery,
   useUpdateTestCaseMutation,
@@ -51,7 +52,18 @@ function EditTestCase() {
     { name: "code", label: "Code", type: "text" },
     { name: "description", label: "Description", type: "markdown-textarea" },
     { name: "kind", label: "Kind", type: "test-kind", required: true },
-    { name: "feature_or_module", label: "Feature/Module", type: "feature-module" },
+    {
+      name: "feature_or_module",
+      label: "Feature/Module",
+      type: "custom",
+      customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
+        <SelectFeatureModule
+          projectId={projectId}
+          value={(value as string) || ""}
+          onChange={onChange}
+        />
+      ),
+    },
     { name: "is_draft", label: "Draft?", type: "checkbox" },
     {
       name: "tags",

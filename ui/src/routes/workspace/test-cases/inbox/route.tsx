@@ -30,6 +30,12 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 
 function TestCasePageInbox() {
   const [includeClosed, setIncludeClosed] = React.useState(false);
+  const [moduleFilter, setModuleFilter] = React.useState<string>("");
+
+  const match = useMatch({
+    from: "/workspace/test-cases/inbox/$testCaseId/",
+    shouldThrow: false,
+  });
 
   const {
     data: testCases,
@@ -42,6 +48,7 @@ function TestCasePageInbox() {
   (projects?.projects ?? []).forEach((p: any) => {
     projectMap[p.id] = p.title;
   });
+  const moduleOptions = Array.from(new Set((testCases?.test_cases ?? []).map((tc) => tc.feature_or_module).filter(Boolean))).map((v) => ({ label: v, value: v }));
 
   const {
     data: summary,
@@ -77,7 +84,8 @@ function TestCasePageInbox() {
     });
   });
 
-  const testCaseRows = (testCases?.test_cases ?? []).map(
+  const filteredTestCases = (testCases?.test_cases ?? []).filter(tc => !moduleFilter || tc.feature_or_module === moduleFilter);
+  const testCaseRows = filteredTestCases.map(
     (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => {
       const counts =
         summaryMap.get(tc.id ?? "") ?? {
@@ -164,7 +172,15 @@ function TestCasePageInbox() {
           >
             Show closed test cases
           </Checkbox>
-        </Box>
+          <Box mt={2}>
+            <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
+              <option value="">All</option>
+              {moduleOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </Box>
+        </Box>       
 
         <Box>{testCaseRows}</Box>
       </Box>

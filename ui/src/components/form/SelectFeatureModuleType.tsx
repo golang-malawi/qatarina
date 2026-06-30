@@ -24,7 +24,7 @@ export default function SelectFeatureModuleType({
 }: SelectFeatureModuleTypeProps) {
   return (
     <Field.Root>
-      <Field.Label>Type</Field.Label>
+
       <Select.Root
         collection={typeOptions}
         value={[value]}
@@ -53,9 +53,7 @@ export default function SelectFeatureModuleType({
           </Select.Positioner>
         </Portal>
       </Select.Root>
-      <Field.HelperText>
-        Choose whether it's a Feature, Component, or Module
-      </Field.HelperText>
+
     </Field.Root>
   );
 }
