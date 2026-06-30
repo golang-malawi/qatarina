@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet,  useMatch } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
 import React from "react";
 
@@ -43,7 +43,7 @@ function TestCasePageInbox() {
     error: errorInbox,
   } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed));
 
-  const {data: projects} = useSuspenseQuery(findProjectsQueryOptions);
+  const { data: projects } = useSuspenseQuery(findProjectsQueryOptions);
   const projectMap: Record<number, string> = {};
   (projects?.projects ?? []).forEach((p: any) => {
     projectMap[p.id] = p.title;
@@ -74,7 +74,7 @@ function TestCasePageInbox() {
 
   const summaryMap = new Map<
     string,
-    {usage_count: number; success_count: number; failure_count: number}
+    { usage_count: number; success_count: number; failure_count: number }
   >();
   (summary ?? []).forEach((s) => {
     summaryMap.set(s.test_case_id ?? "", {
@@ -87,52 +87,52 @@ function TestCasePageInbox() {
   const filteredTestCases = (testCases?.test_cases ?? []).filter(tc => !moduleFilter || tc.feature_or_module === moduleFilter);
   const testCaseRows = filteredTestCases.map(
     (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => {
-      const counts = 
-      summaryMap.get(tc.id ?? "") ?? {
-        usage_count: 0,
-        success_count: 0,
-        failure_count: 0,
-      };
+      const counts =
+        summaryMap.get(tc.id ?? "") ?? {
+          usage_count: 0,
+          success_count: 0,
+          failure_count: 0,
+        };
 
       return (
-      <Box
-        key={idx}
-        p={4}
-        borderBottom="sm"
-        borderColor="border.subtle"
-        _hover={{
-          bg: "bg.subtle",
-          cursor: "pointer",
-        }}
-        transition="background 0.2s"
-        opacity={tc.is_closed ? 0.5 : 1}
-      >
-        <Link
-          to="/workspace/test-cases/inbox/$testCaseId"
-          params={{ testCaseId: tc.id ?? "" }}
-          title={tc.description}
+        <Box
+          key={idx}
+          p={4}
+          borderBottom="sm"
+          borderColor="border.subtle"
+          _hover={{
+            bg: "bg.subtle",
+            cursor: "pointer",
+          }}
+          transition="background 0.2s"
+          opacity={tc.is_closed ? 0.5 : 1}
         >
-          <Flex direction="column">
-            <Text fontWeight="semibold" fontSize="md">
-              {tc.title}
-            </Text>
-            <Text fontSize="sm" color="fg.subtle">
-              {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
-            </Text>
-          </Flex>
-          <Stack direction="row" mt={2} gap={2}>
-            <Badge colorPalette="info" variant="subtle">
-              {counts.usage_count} tests performed
-            </Badge>
-            <Badge colorPalette="success" variant="subtle">
-              Success: {counts.success_count}
-            </Badge>
-            <Badge colorPalette="danger" variant="subtle">
-              Failed: {counts.failure_count}
-            </Badge>
-          </Stack>
-        </Link>
-      </Box>
+          <Link
+            to="/workspace/test-cases/inbox/$testCaseId"
+            params={{ testCaseId: tc.id ?? "" }}
+            title={tc.description}
+          >
+            <Flex direction="column">
+              <Text fontWeight="semibold" fontSize="md">
+                {tc.title}
+              </Text>
+              <Text fontSize="sm" color="fg.subtle">
+                {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
+              </Text>
+            </Flex>
+            <Stack direction="row" mt={2} gap={2}>
+              <Badge colorPalette="info" variant="subtle">
+                {counts.usage_count} tests performed
+              </Badge>
+              <Badge colorPalette="success" variant="subtle">
+                Success: {counts.success_count}
+              </Badge>
+              <Badge colorPalette="danger" variant="subtle">
+                Failed: {counts.failure_count}
+              </Badge>
+            </Stack>
+          </Link>
+        </Box>
       );
     }
   );
@@ -153,10 +153,10 @@ function TestCasePageInbox() {
           </Heading>
 
           <Link to="/workspace/test-cases/inbox/suggest">
-          <Button mt={4} colorPalette="brand">
-            Suggest Test Case
-          </Button>
-        </Link>
+            <Button mt={4} colorPalette="brand">
+              Suggest Test Case
+            </Button>
+          </Link>
 
           <Input
             placeholder="Search for Test Cases..."
@@ -187,34 +187,8 @@ function TestCasePageInbox() {
 
       {/* Right Pane - Details */}
       <Box flex="1" p={6} bg="bg.canvas">
-        {match ? (
-          <Outlet />
-        ) : (
-          <Flex
-          direction="column"
-          align="center"
-          justify="center"
-          h="100%"
-          color="fg.subtle"
-          textAlign="center"
-          >
-            <Heading size="md" mb={4}>
-              Select a Test Case
-            </Heading>
-            <Text fontSize="lg">
-              Choose a test case from the left to record results here.
-            </Text>
-          </Flex>
-        )}
+        <Outlet />
       </Box>
     </Flex>
   );
 }
-
-
-
-
-
-
-
-

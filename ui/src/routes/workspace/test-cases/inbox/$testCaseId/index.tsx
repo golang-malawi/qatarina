@@ -6,14 +6,16 @@ import {
   Container,
   Heading,
   Menu,
+  Flex,
   Text,
   Textarea,
-  Code,
 } from "@chakra-ui/react";
 import { IconChevronDown } from "@tabler/icons-react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   findTestCaseInboxByIdQueryOptions,
+  findTestCaseInboxQueryOptions,
+  findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
   useSuspenseQuery,
@@ -22,13 +24,13 @@ import {
 } from "@tanstack/react-query";
 import {
   markTestCaseAsDraft,
-  unmarkTestCaseAsDraft,
+  unmarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { executeTestRun } from "@/services/TestRunService";
-
+import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
   "/workspace/test-cases/inbox/$testCaseId/",
@@ -41,6 +43,9 @@ export const Route = createFileRoute(
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const auth = useAuth();               
+  const currentUser = auth.user;        
 
   const { data: testCase } = useSuspenseQuery(
     findTestCaseInboxByIdQueryOptions(testCaseId),
@@ -48,8 +53,6 @@ function TestCaseInboxItem() {
 
   const tc = testCase;
   const isDraft = tc.is_draft;
-  const testRunId = tc.test_run_id;
-  const expectedResult = tc.expected_result ?? tc.description;
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
@@ -64,17 +67,35 @@ function TestCaseInboxItem() {
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
-      if (!testRunId || !expectedResult || !resultText) {
-        throw new Error("Missing required test case data.");
+      if (!resultText) throw new Error("Observed behaviour (result) is required.");
+      if (!tc.id) throw new Error("Test case ID is missing.");
+      if (!currentUser?.user_id) throw new Error("User ID is missing.");
+      if (!tc.project_id || !tc.test_plan_id) {
+        throw new Error("Project ID or Test Plan ID is missing.");
       }
 
-      return executeTestRun(testRunId, {
-        id: testRunId,
-        status,
-        result: resultText,
+      // Step 1: create a new manual run
+      const run = await createTestRun({
+        test_case_id: tc.id,
+        test_plan_id: tc.test_plan_id,
+        project_id: tc.project_id,
+        owner_id: currentUser.user_id,
+        tested_by_id: currentUser.user_id,
+        assigned_to_id: currentUser.user_id,
+      });
+
+      if (!run?.id) throw new Error("Run ID is missing.");
+
+      // Step 2: record the result immediately
+      return executeTestRun(run.id, {
+        test_run_id: run.id,
+        result_state: status,
+        actual_result: resultText,
         notes: notesText,
-        expected_result: expectedResult,
+        expected_result: tc.description,
         environment_id: tc.environment_id,
+        tested_on: new Date().toISOString(),
+        is_closed: false,
       });
     },
     onSuccess: () => {
@@ -86,10 +107,14 @@ function TestCaseInboxItem() {
       setResultText("");
       setNotesText("");
 
-      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
-      queryClient.invalidateQueries({queryKey: ["testCases", "inbox", testCaseId] });
-      queryClient.invalidateQueries({ queryKey: ["testCases", "summary"] });
-    },
+      queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
+      queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
+      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId));
+
+      // Optional: force refetch for instant UI update
+      queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
+      queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
+        },
     onError: () => {
       toaster.create({
         title: "Error",
@@ -128,28 +153,31 @@ function TestCaseInboxItem() {
     },
   });
 
-    if (tc.is_closed) {
+  if (tc.is_closed) {
     return (
       <Box>
         <Heading size="lg" color="fg.heading">
-          {tc.title} 
-          </Heading>
-          <Badge colorScheme="gray" ml={2}>
-            Closed
-          </Badge>
-          <Text mt={2}>{tc.description}</Text>
-          <Text mt={4} color="fg.subtle">
-            This test case is closed. Results can no longer be recorded.
-          </Text>
-        </Box>
-      );
-    }
+          {tc.title}
+        </Heading>
+        <Badge colorScheme="gray" ml={2}>
+          Closed
+        </Badge>
+        <Text mt={2}>{tc.description}</Text>
+        <Text mt={4} color="fg.subtle">
+          This test case is closed. Results can no longer be recorded.
+        </Text>
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      <Heading size="lg" color="fg.heading">
-        {tc.title}
-      </Heading>
+      <Flex alignItems="center" justifyContent="space-between">
+        <Heading size="lg" color="fg.heading">
+          {tc.title}
+        </Heading>
+        <Button size="sm" variant="solid" colorPalette="brand" onClick={() => navigate({ to: `/projects/${tc.project_id}/test-plans/${tc.test_plan_id}/` })}>Go to Test Plan</Button>
+      </Flex>
       <Menu.Root>
         <Menu.Trigger asChild>
           <Button size="sm" variant="outline" colorPalette="brand">
@@ -158,18 +186,15 @@ function TestCaseInboxItem() {
           </Button>
         </Menu.Trigger>
         <Menu.Content bg="bg.surface" border="sm" borderColor="border.subtle">
-          <Menu.Item value="">View</Menu.Item>
-          <Menu.Item value="">Create a Copy</Menu.Item>
+          <Menu.Item value="" onClick={() => navigate({ to: `/projects/${tc.project_id}/test-cases/${testCaseId}/` })}>
+            View
+          </Menu.Item>
           <Menu.Item
             value="toggle-draft"
             disabled={toggleDraftMutation.isPending}
             onClick={() => toggleDraftMutation.mutate()}
           >
             {isDraft ? "Unmark as Draft" : "Mark as Draft"}
-          </Menu.Item>
-          <Menu.Item value="">Use in Test Plan</Menu.Item>
-          <Menu.Item value="" color="fg.error">
-            Delete
           </Menu.Item>
         </Menu.Content>
       </Menu.Root>
@@ -183,39 +208,7 @@ function TestCaseInboxItem() {
             Description
           </Heading>
           {tc.description ? (
-            <ReactMarkdown
-            components={{
-              h1: (props) => <Heading size="lg" mb={2} {...props} />,
-              h2: (props) => <Heading size="md" mb={2} {...props} />,
-              h3: (props) => <Heading size="sm" mb={2} {...props} />,
-              p: (props) => <Text mb={2} {...props} />,
-              code: (props) => <Code colorScheme="yellow" {...props} />,
-              ul: (props) => (
-                <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
-              ),
-              ol: (props) => (
-                <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
-              ),
-              li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-              blockquote: (props) => (
-                <blockquote
-                  style={{
-                    paddingLeft: "1rem",
-                    borderLeft: "4px solid #CBD5E0",
-                    color: "#4A5568",
-                    fontStyle: "italic",
-                    margin: "0.5rem 0",
-                  }}
-                  {...props}
-                />
-              ),
-              a: (props) => (
-                <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
-              ),
-            }}
-          >
-            {tc.description}
-          </ReactMarkdown>
+            <ReactMarkdown>{tc.description}</ReactMarkdown>
           ) : (
             <Text color="fg.subtle">No description provided.</Text>
           )}
@@ -253,10 +246,8 @@ function TestCaseInboxItem() {
           type="button"
           variant="outline"
           colorPalette="success"
-          onClick={() => {
-            executeMutation.mutate({ status: "passed" });
-          }}
-          disabled={isDraft || !testRunId}
+          onClick={() => executeMutation.mutate({ status: "passed" })}
+          disabled={isDraft}
           loading={executeMutation.isPending}
         >
           Record Successful Test
@@ -268,7 +259,7 @@ function TestCaseInboxItem() {
           colorPalette="danger"
           onClick={() => executeMutation.mutate({ status: "failed" })}
           loading={executeMutation.isPending}
-          disabled={isDraft || !testRunId}
+          disabled={isDraft}
         >
           Record Failed Test
         </Button>

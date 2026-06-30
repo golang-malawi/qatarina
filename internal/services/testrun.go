@@ -166,6 +166,7 @@ func (t *testRunService) Commit(ctx context.Context, request *schema.CommitTestR
 		TestedOn:       request.TestedOn,
 		ActualResult:   common.NullString(request.ActualResult),
 		ExpectedResult: common.NullString(cmp.Or(request.ExpectedResult, testRun.ExpectedResult.String)),
+		EnvironmentID:  common.NewNullInt32(request.EnvironmentID),
 	})
 
 	if err != nil {

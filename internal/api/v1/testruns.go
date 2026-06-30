@@ -136,10 +136,7 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test run created",
-			"testRun": testRun,
-		})
+		return c.JSON(schema.NewTestRunResponseFromEntity(testRun))
 	}
 }
 
@@ -226,9 +223,8 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 			logger.Error(loggedmodule.ApiTestRuns, "failed to commit test-run results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
-		return ctx.JSON(fiber.Map{
-			"testRun": testRun,
-		})
+
+		return ctx.JSON(schema.NewTestRunResponseFromEntity(testRun))
 	}
 }
 
@@ -266,9 +262,8 @@ func RecordTestRunFeedback(testRunService services.TestRunService, logger loggin
 			logger.Error(loggedmodule.ApiTestRuns, "failed to record feedback", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to record feedback")
 		}
-		return ctx.JSON(fiber.Map{
-			"testRun": testRun,
-		})
+
+		return ctx.JSON(schema.NewTestRunResponseFromEntity(testRun))
 	}
 }
 

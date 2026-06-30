@@ -30,7 +30,7 @@ export const findTestCaseInboxQueryOptions = (includeClosed: boolean) =>
       const res = await getInboxTestCases({ includeClosed });
       return (res?.data ?? res) as AssignedTestCaseListResponse;
     },
-});
+  });
 
 export const findTestCaseInboxByIdQueryOptions = (id: string) =>
   queryOptions({
@@ -64,6 +64,17 @@ export const testCasesByProjectIdQueryOptions = (
 ) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
     params: { path: { projectID }, query: params },
+    queryKey: [
+      "projectTestCases",
+      projectID,
+      params?.page,
+      params?.pageSize,
+      params?.sortBy,
+      params?.sortOrder,
+      params?.search,
+      params?.kind,
+      params?.isDraft,
+    ],
   });
 
 export const findTestCaseSummaryQueryOptions = $api.queryOptions(

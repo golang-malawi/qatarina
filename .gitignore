@@ -63,6 +63,7 @@ production.yml
 /uploads/
 node_modules/
 ui/src/routeTree.gen.ts
+archive-jqPOyq
 
 *.exe
 *.log
