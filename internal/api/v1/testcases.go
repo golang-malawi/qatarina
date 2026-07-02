@@ -167,11 +167,7 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [post]
-func CreateTestCase(
-	testCaseService services.TestCaseService,
-	logger logging.Logger,
-	cfg *config.Config,
-) fiber.Handler {
+func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
 
@@ -233,20 +229,20 @@ func CreateTestCase(
 
 			savePath := filepath.Join(saveDir, fileHeader.Filename)
 
-			// Normalize to forward slashes for runner compatibility
-			normalizedPath := filepath.ToSlash(savePath)
+			// Normalize to forward slashes and store relative path
+			normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+			request.ScriptPath = normalizedRelative
 
-			// Store the absolute normalized path
-			request.ScriptPath = normalizedPath
+			// Save file physically
+			if err := c.SaveFile(fileHeader, savePath); err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to save uploaded file", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
+			}
 
 			// Validate struct
 			if errors := validation.ValidateStruct(request); errors != nil {
 				return problemdetail.ValidationErrors(c, "invalid data in request", errors)
 			}
-
-			// Optional: run pre‑check against runner
-			// (same code you already have for posting to runner)
-			// If precheck fails, return 400
 		} else {
 			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 				if validationErrors {
@@ -302,6 +298,14 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
+		// Resolve relative script path to absolute path
+		var resolvedScriptPath string
+		if testCase.ScriptPath.Valid && testCase.ScriptPath.String != "" {
+			resolvedScriptPath = filepath.Join(cfg.Storage.LocalPath, testCase.ScriptPath.String)
+		} else {
+			resolvedScriptPath = "" // fallback if no script path
+		}
+
 		testRunReq := &schema.TestRunRequest{
 			ProjectID:    testCase.ProjectID.Int32,
 			TestPlanID:   request.TestPlanID,
@@ -311,7 +315,7 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 			AssignedToID: int32(userID),
 			Code:         testCase.Code,
 			Runner:       testCase.Runner.String,
-			ScriptPath:   testCase.ScriptPath.String,
+			ScriptPath:   resolvedScriptPath,
 		}
 
 		createdRun, err := testRunService.Create(c.Context(), testRunReq)
@@ -403,11 +407,14 @@ func ValidateTestCaseScript(logger logging.Logger, cfg *config.Config) fiber.Han
 			return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", output))
 		}
 
+		// Build relative path for consistency
+		normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+
 		return c.JSON(fiber.Map{
 			"valid":       true,
 			"output":      output,
 			"state":       string(state),
-			"script_path": fileHeader.Filename,
+			"script_path": normalizedRelative,
 		})
 	}
 }
@@ -569,9 +576,12 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			}
 
 			savePath := filepath.Join(saveDir, fileHeader.Filename)
-			normalizedPath := filepath.ToSlash(savePath)
-			request.ScriptPath = normalizedPath
 
+			// Normalize to forward slashes and store relative path
+			normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+			request.ScriptPath = normalizedRelative
+
+			// Save file physically
 			if err := c.SaveFile(fileHeader, savePath); err != nil {
 				logger.Error("failed to save uploaded file", "error", err)
 				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
