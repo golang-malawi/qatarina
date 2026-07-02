@@ -142,15 +142,18 @@ function resolveData<TData>(response: any): TData[] {
   if (!response) return [];
   if (Array.isArray(response)) return response as TData[];
   if (Array.isArray(response.data)) return response.data as TData[];
+  if (Array.isArray(response.data?.data)) return response.data.data as TData[];
   if (Array.isArray(response.items)) return response.items as TData[];
   if (Array.isArray(response.results)) return response.results as TData[];
   if (Array.isArray(response.test_cases)) return response.test_cases as TData[];
+  if (Array.isArray(response.data?.test_cases)) return response.data.test_cases as TData[];
   return [];
 }
 
 function resolvePagination(response: any): PaginationInfo | undefined {
   if (!response) return undefined;
   if (response.pagination) return response.pagination as PaginationInfo;
+  if (response.data?.pagination) return response.data.pagination as PaginationInfo;
   return undefined;
 }
 
@@ -342,20 +345,9 @@ export function AppDataTable<TData, TResponse>({
     [navigate, resolveActions, rowActionsLabel],
   );
 
-  React.useEffect(() => {
-    setPagination((current) => ({ ...current, pageIndex: 0 }));
-  }, [sortBy, sortOrder, globalFilter]);
 
-  React.useEffect(() => {
-    if (!isServerMode || !enablePagination) return;
-    const maxPageIndex = Math.max(0, pageCount - 1);
-    setPagination((current) => {
-      if (current.pageIndex > maxPageIndex) {
-        return { ...current, pageIndex: maxPageIndex };
-      }
-      return current;
-    });
-  }, [isServerMode, enablePagination, pageCount]);
+
+
 
   const builtColumns = React.useMemo(() => {
     const columnDefs: ColumnDef<TData, unknown>[] = [];
@@ -489,13 +481,13 @@ export function AppDataTable<TData, TResponse>({
     getFilteredRowModel: isServerMode ? undefined : getFilteredRowModel(),
     getSortedRowModel: isServerMode ? undefined : getSortedRowModel(),
     getPaginationRowModel: isServerMode ? undefined : getPaginationRowModel(),
-    manualPagination: isServerMode,
+    manualPagination: enablePagination,
     manualSorting: isServerMode,
     manualFiltering: isServerMode,
     enableSorting,
     enableRowSelection,
     globalFilterFn: isServerMode ? undefined : "includesString",
-    pageCount: isServerMode && enablePagination ? pageCount : undefined,
+    pageCount: enablePagination ? pageCount : undefined,
     getRowId,
   });
 
@@ -700,6 +692,7 @@ export function AppDataTable<TData, TResponse>({
                 value={table.getState().pagination.pageSize}
                 onChange={(event) => {
                   table.setPageSize(Number(event.target.value));
+                  table.setPageIndex(0);
                 }}
               >
                 {[5, 10, 20, 50].map((size) => (
@@ -729,7 +722,7 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Previous page"
               size="sm"
               variant="ghost"
-              onClick={() => table.previousPage()}
+              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex - 1)}
               disabled={!table.getCanPreviousPage()}
             >
               <LuChevronLeft />
@@ -738,7 +731,7 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Next page"
               size="sm"
               variant="ghost"
-              onClick={() => table.nextPage()}
+              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex + 1)}
               disabled={!table.getCanNextPage()}
             >
               <LuChevronRight />

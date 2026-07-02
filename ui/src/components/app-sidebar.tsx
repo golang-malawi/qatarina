@@ -28,6 +28,8 @@ import { findProjectsQueryOptions } from "@/data/queries/projects";
 import { Avatar } from "./ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { THEME_OPTIONS, useColorMode } from "./ui/color-mode";
+import { Route as ProjectOverviewRoute } from "@/routes/(project)/projects/$projectId/overview";
+import { MainLinkItems, ProjectLinkItems } from "@/lib/navigation";
 
 interface NavLinkProps {
   item: NavItem;
@@ -122,7 +124,7 @@ const ContextSwitcher = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { isMobile } = useSidebar();
-  const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
+  const projectMatch = location.pathname.match(/^\/projects\/([^/]+)(?:\/overview)?/);
   const activeProjectId = projectMatch?.[1];
   const activeProject = activeProjectId
     ? projects.find((project) => String(project.id) === activeProjectId)
@@ -278,7 +280,10 @@ const ContextSwitcher = ({
                       key={project.id}
                       value={`project-${project.id}`}
                       onClick={() =>
-                        navigate({ to: `/projects/${project.id}` })
+                        navigate({ 
+                          to: ProjectOverviewRoute.to,
+                          params: { projectId: String(project.id) }
+                        })
                       }
                       borderRadius="md"
                       bg={isActive ? "bg.subtle" : "transparent"}
@@ -390,6 +395,8 @@ const NavLink: React.FC<NavLinkProps> = ({ item, expanded }) => {
 const NavLinkItem = ({ item }: { item: NavItem }) => {
   const { isCollapsed } = useSidebar();
   const location = useLocation();
+  const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
+  const projectId = projectMatch?.[1];
   const isActive =
     location.pathname === item.path ||
     location.pathname.startsWith(item.path + "/");
@@ -414,7 +421,7 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
       }}
       transition="all 0.2s"
     >
-      <Link to={item.path}>
+      <Link to={item.path} params={projectId ? { projectId } : undefined}>
         {item.icon && (
           <Icon
             fontSize="16"
@@ -444,11 +451,15 @@ interface SidebarProps extends BoxProps {
   header?: ReactNode;
 }
 
-const SidebarContent = ({ items, header, ...rest }: SidebarProps) => {
+const SidebarContent = ({ header, ...rest }: SidebarProps) => {
   const { isCollapsed } = useSidebar();
+  const location = useLocation();
+  const inProject = location.pathname.startsWith("/projects/");
   const visibleItems = useMemo(
-    () => items.filter((item) => !HIDDEN_PATHS.has(item.path)),
-    [items],
+    () => (inProject ? ProjectLinkItems : MainLinkItems).filter(
+      (item) => !HIDDEN_PATHS.has(item.path)
+    ),
+    [inProject]
   );
 
   const groupedItems = useMemo(() => {

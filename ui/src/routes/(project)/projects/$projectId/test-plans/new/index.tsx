@@ -106,20 +106,23 @@ function CreateNewTestPlan() {
     }
 
     const res = await createTestPlanMutation.mutateAsync({
-      body: {
-        project_id: parseInt(projectId!),
-        environment_id: Number(data.environment_id),
-        kind: data.kind,
-        description: data.description,
-        start_at: data.start_at,
-        closed_at: data.closed_at,
-        scheduled_end_at: data.scheduled_end_at,
-        planned_tests: selectedTestCases.map((tc) => ({
-          test_case_id: tc.test_case_id,
-          user_ids: tc.user_ids.map(Number),
-        })),
-      },
-    });
+    body: {
+      project_id: parseInt(projectId!),
+      environment_id: Number(data.environment_id),
+      kind: data.kind,
+      description: data.description,
+
+      // Convert plain date strings to RFC3339
+      start_at: new Date(data.start_at).toISOString(), // always required
+      scheduled_end_at: new Date(data.scheduled_end_at).toISOString(), // always required
+      closed_at: data.closed_at ? new Date(data.closed_at).toISOString() : undefined,
+
+      planned_tests: selectedTestCases.map((tc) => ({
+        test_case_id: tc.test_case_id,
+        user_ids: tc.user_ids.map(Number),
+      })),
+    },
+  });
 
     if (res) {
       toaster.create({
@@ -134,21 +137,8 @@ function CreateNewTestPlan() {
     }
   }
 
-  function openAssignModal(testCaseId: number) {
-    const exists = selectedTestCases.some(
-      (t) => t.test_case_id === testCaseId.toString(),
-    );
-
-    if (!exists) {
-      toaster.create({
-        title: "Test Case not selected",
-        description: "Please select the test case before assigning testers.",
-        type: "error",
-      });
-      return;
-    }
-
-    setActiveTestCaseId(testCaseId.toString());
+  function openAssignModal(testCaseId: string) {
+    setActiveTestCaseId(testCaseId);
   }
 
   function validateTestCaseAssignments(
@@ -283,7 +273,7 @@ function CreateNewTestPlan() {
                   size="sm"
                   colorPalette="brand"
                   variant="outline"
-                  onClick={() => openAssignModal(Number(testCase.id!))}
+                  onClick={() => openAssignModal(testCase.id!.toString())}
                 >
                   Assign testers
                 </Button>
@@ -341,14 +331,20 @@ function CreateNewTestPlan() {
         <CheckboxGroup
           value={activeTestCase?.user_ids.map(String) ?? []}
           onValueChange={(value) => {
-            setSelectedTestCases((prev) =>
-              prev.map((t) =>
-                t.test_case_id === activeTestCaseId
-                  ? { ...t, user_ids: value.map(Number) }
-                  : t,
-              ),
-            );
+            setSelectedTestCases((prev) => {
+              const exists = prev.find((t) => t.test_case_id === activeTestCaseId);
+              if (exists) {
+                return prev.map((t) =>
+                  t.test_case_id === activeTestCaseId
+                    ? { ...t, user_ids: value.map(Number) }
+                    : t
+                );
+              }
+              // If not already in selectedTestCases, add it
+              return [...prev, { test_case_id: activeTestCaseId!, user_ids: value.map(Number) }];
+            });
           }}
+
         >
           <Fieldset.Root>
             <Fieldset.Legend fontSize="sm">Select testers</Fieldset.Legend>

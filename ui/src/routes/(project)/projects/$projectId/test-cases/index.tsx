@@ -217,10 +217,6 @@ export default function ListProjectTestCases() {
           onChange={handleFileChange}
         />
 
-        <Button colorPalette="success" size={"sm"}>
-          Import from Google Sheets
-        </Button>
-
         <ButtonGroup>
           <IconButton
             aria-label="List view"
@@ -276,6 +272,18 @@ export default function ListProjectTestCases() {
             defaultSort={{ key: "created_at", desc: true }}
             showGlobalFilter
             filterPlaceholder="Search test cases"
+            dataAccessor={(response) =>
+              (response?.test_cases ?? []) as TestCase[]
+            }
+            paginationAccessor={(response) => {
+              const pagination = response?.pagination;
+              if (!pagination) return undefined;
+              return {
+                total: pagination.total ?? 0,
+                page: pagination.page ?? 1,
+                pageSize: pagination.pageSize ?? 10,
+              };
+            }}
             rowActions={[
               {
                 name: "view",

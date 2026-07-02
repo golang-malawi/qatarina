@@ -25,6 +25,10 @@ func NewNullInt32(i int32) sql.NullInt32 {
 	return sql.NullInt32{Int32: i, Valid: i != 0}
 }
 
+func NewNullInt64(i int64) sql.NullInt64 {
+	return sql.NullInt64{Int64: i, Valid: i != 0}
+}
+
 func NewNullTime(t time.Time) sql.NullTime {
 	return sql.NullTime{Time: t, Valid: true}
 }
@@ -58,6 +62,13 @@ func FormatSqlDateTime(t interface{}) string {
 		}
 	}
 	return ""
+}
+
+func ZeroOrTime(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
 }
 
 // func ParseDate(dateStr string) sql.NullTime {
