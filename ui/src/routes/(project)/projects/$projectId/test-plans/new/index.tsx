@@ -137,21 +137,8 @@ function CreateNewTestPlan() {
     }
   }
 
-  function openAssignModal(testCaseId: number) {
-    const exists = selectedTestCases.some(
-      (t) => t.test_case_id === testCaseId.toString(),
-    );
-
-    if (!exists) {
-      toaster.create({
-        title: "Test Case not selected",
-        description: "Please select the test case before assigning testers.",
-        type: "error",
-      });
-      return;
-    }
-
-    setActiveTestCaseId(testCaseId.toString());
+  function openAssignModal(testCaseId: string) {
+    setActiveTestCaseId(testCaseId);
   }
 
   function validateTestCaseAssignments(
@@ -286,7 +273,7 @@ function CreateNewTestPlan() {
                   size="sm"
                   colorPalette="brand"
                   variant="outline"
-                  onClick={() => openAssignModal(Number(testCase.id!))}
+                  onClick={() => openAssignModal(testCase.id!.toString())}
                 >
                   Assign testers
                 </Button>
@@ -344,14 +331,20 @@ function CreateNewTestPlan() {
         <CheckboxGroup
           value={activeTestCase?.user_ids.map(String) ?? []}
           onValueChange={(value) => {
-            setSelectedTestCases((prev) =>
-              prev.map((t) =>
-                t.test_case_id === activeTestCaseId
-                  ? { ...t, user_ids: value.map(Number) }
-                  : t,
-              ),
-            );
+            setSelectedTestCases((prev) => {
+              const exists = prev.find((t) => t.test_case_id === activeTestCaseId);
+              if (exists) {
+                return prev.map((t) =>
+                  t.test_case_id === activeTestCaseId
+                    ? { ...t, user_ids: value.map(Number) }
+                    : t
+                );
+              }
+              // If not already in selectedTestCases, add it
+              return [...prev, { test_case_id: activeTestCaseId!, user_ids: value.map(Number) }];
+            });
           }}
+
         >
           <Fieldset.Root>
             <Fieldset.Legend fontSize="sm">Select testers</Fieldset.Legend>
