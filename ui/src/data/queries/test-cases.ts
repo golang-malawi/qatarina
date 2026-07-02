@@ -23,11 +23,15 @@ export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
     params: { query: params },
   });
 
-export const findTestCaseInboxQueryOptions = (includeClosed: boolean) =>
+export const findTestCaseInboxQueryOptions = (
+  includeClosed: boolean,
+  page: number,
+  pageSize: number
+) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", includeClosed],
+    queryKey: ["testCases", "inbox", includeClosed, page, pageSize],
     queryFn: async (): Promise<AssignedTestCaseListResponse> => {
-      const res = await getInboxTestCases({ includeClosed });
+      const res = await getInboxTestCases({ includeClosed, page, pageSize });
       return (res?.data ?? res) as AssignedTestCaseListResponse;
     },
   });
