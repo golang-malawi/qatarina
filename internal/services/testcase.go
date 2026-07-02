@@ -567,7 +567,6 @@ func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanI
 		return nil, err
 	}
 
-	// fetch the plan to enrich with description
 	plan, err := t.queries.GetTestPlan(ctx, testPlanID)
 	if err != nil {
 		return nil, err
@@ -575,6 +574,11 @@ func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanI
 
 	cases := make([]schema.TestCaseResponseItem, 0, len(rows))
 	for _, r := range rows {
+		var testerIDs []int64
+		if r.AssignedTesterIds != nil {
+			testerIDs = r.AssignedTesterIds
+		}
+
 		cases = append(cases, schema.TestCaseResponseItem{
 			ID:                   r.ID.String(),
 			Title:                r.Title,
@@ -583,12 +587,7 @@ func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanI
 				ID:   int64(plan.ID),
 				Name: plan.Description.String,
 			},
-			AssignedTesterIDs: func() []int64 {
-				if r.AssignedToID.Valid {
-					return []int64{int64(r.AssignedToID.Int64)}
-				}
-				return []int64{}
-			}(),
+			AssignedTesterIDs: testerIDs,
 		})
 	}
 	return cases, nil

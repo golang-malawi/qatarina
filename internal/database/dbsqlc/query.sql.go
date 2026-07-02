@@ -2523,30 +2523,20 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 }
 
 const listTestCasesByPlan = `-- name: ListTestCasesByPlan :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.parent_test_case_id, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path, pc.assigned_to_id
+SELECT
+  tc.id,
+  tc.title,
+  array_agg(pc.assigned_to_id)::bigint[] AS assigned_tester_ids
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 WHERE pc.test_plan_id = $1
+GROUP BY tc.id, tc.title
 `
 
 type ListTestCasesByPlanRow struct {
-	ID               uuid.UUID
-	Kind             TestKind
-	Code             string
-	FeatureOrModule  sql.NullString
-	Title            string
-	Description      string
-	ParentTestCaseID sql.NullInt32
-	IsDraft          sql.NullBool
-	Tags             []string
-	CreatedByID      int32
-	CreatedAt        sql.NullTime
-	UpdatedAt        sql.NullTime
-	ProjectID        sql.NullInt32
-	Suggested        sql.NullBool
-	Runner           sql.NullString
-	ScriptPath       sql.NullString
-	AssignedToID     sql.NullInt64
+	ID                uuid.UUID
+	Title             string
+	AssignedTesterIds []int64
 }
 
 func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]ListTestCasesByPlanRow, error) {
@@ -2558,25 +2548,7 @@ func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]
 	var items []ListTestCasesByPlanRow
 	for rows.Next() {
 		var i ListTestCasesByPlanRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Kind,
-			&i.Code,
-			&i.FeatureOrModule,
-			&i.Title,
-			&i.Description,
-			&i.ParentTestCaseID,
-			&i.IsDraft,
-			pq.Array(&i.Tags),
-			&i.CreatedByID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.ProjectID,
-			&i.Suggested,
-			&i.Runner,
-			&i.ScriptPath,
-			&i.AssignedToID,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.Title, pq.Array(&i.AssignedTesterIds)); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

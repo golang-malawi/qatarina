@@ -123,10 +123,14 @@ SELECT * FROM test_cases WHERE id = $1;
 SELECT * FROM test_cases WHERE project_id = $1;
 
 -- name: ListTestCasesByPlan :many
-SELECT tc.*, pc.assigned_to_id
+SELECT
+  tc.id,
+  tc.title,
+  array_agg(pc.assigned_to_id)::bigint[] AS assigned_tester_ids
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-WHERE pc.test_plan_id = $1;
+WHERE pc.test_plan_id = $1
+GROUP BY tc.id, tc.title;
 
 -- name: ListScriptTestCasesByPlan :many
 SELECT tc.*
