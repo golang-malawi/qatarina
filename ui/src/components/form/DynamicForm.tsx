@@ -56,6 +56,7 @@ export interface FieldConfig {
     value: unknown;
     onChange: (value: unknown) => void;
     onBlur: () => void;
+    formValues?: Record<string, any>;
   }) => ReactNode;
   fields?: FieldConfig[]; // for array type
   accept?: string;
@@ -246,6 +247,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                     value: field.state.value,
                     onChange: field.handleChange,
                     onBlur: field.handleBlur,
+                    formValues: form.state.values,
                   })}
                 </>
               )}

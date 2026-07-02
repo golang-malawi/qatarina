@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
-import SelectRunner from "@/components/form/SelectRunner";
+import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
 import { testCaseCreationSchema } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 
@@ -31,10 +31,14 @@ function EditTestCase() {
   const queryClient = useQueryClient();
   const { projectId, testCaseId } = Route.useParams();
     const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-    const [selectedRunner, setSelectedRunner] = useState("");
+    const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
     const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
     const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  const handleRunnerChange = useCallback((runner: string) => {
+    formValuesRef.current.runner = runner;
+  }, []);
 
   const fields = useMemo<FieldConfig[]>(() =>
     createTestCaseFields().map((field) => {
@@ -42,12 +46,10 @@ function EditTestCase() {
         return {
           ...field,
           customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
-            <SelectRunner
+            <RunnerFieldSync
               value={(value as string) || "basi"}
-              onChange={(val) => {
-                onChange(val);
-                setSelectedRunner(val);
-              }}
+              onChange={onChange}
+              onRunnerChange={handleRunnerChange}
             />
           ),
         };
@@ -56,63 +58,75 @@ function EditTestCase() {
         return {
           ...field,
           type: "custom",
-          customComponent: ({ onChange }: { onChange: (file: File | null) => void }) => (
-            <Box>
-              <input
-                type="file"
-                accept=".yaml,.yml,.basi"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  onChange(file);
-                  setAttachedScriptFile(file);
-                }}
-              />
-              <Box mt={2}>
-                {scriptValidationStatus === "validating" && (
-                  <Alert.Root status="info" borderRadius="md">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Description>
-                        Scanning script file using {selectedRunner}. Please wait...
-                      </Alert.Description>
-                    </Alert.Content>
-                  </Alert.Root>
-                )}
-                {scriptValidationStatus === "success" && (
-                  <Alert.Root status="success" borderRadius="md">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Description>
-                        {scriptValidationMessage || "Script validated successfully."}
-                      </Alert.Description>
-                    </Alert.Content>
-                  </Alert.Root>
-                )}
-                {scriptValidationStatus === "failed" && (
-                  <Alert.Root status="error" borderRadius="md">
-                    <Alert.Indicator />
-                    <Alert.Content>
-                      <Alert.Description>{scriptValidationMessage}</Alert.Description>
-                    </Alert.Content>
-                  </Alert.Root>
-                )}
+          customComponent: ({ onChange, formValues: fv }: { onChange: (file: File | null) => void; formValues?: Record<string, any> }) => {
+            // Keep ref in sync with current form values
+            if (fv) {
+              formValuesRef.current = fv;
+            }
+            return (
+              <Box>
+                <input
+                  type="file"
+                  accept=".yaml,.yml,.basi"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    onChange(file);
+                    setAttachedScriptFile(file);
+                  }}
+                />
+                <Box mt={2}>
+                  {scriptValidationStatus === "validating" && (
+                    <Alert.Root status="info" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description>
+                          {scriptValidationMessage}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                  {scriptValidationStatus === "success" && (
+                    <Alert.Root status="success" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description wordBreak="break-word">
+                          {scriptValidationMessage || "Script validated successfully."}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                  {scriptValidationStatus === "failed" && (
+                    <Alert.Root status="error" borderRadius="md">
+                      <Alert.Indicator />
+                      <Alert.Content>
+                        <Alert.Description wordBreak="break-word" maxWidth="100%">
+                          {scriptValidationMessage}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert.Root>
+                  )}
+                </Box>
               </Box>
-            </Box>
-          ),
+            );
+          },
         };
       }
       return field;
     }),
-    [scriptValidationStatus, scriptValidationMessage, selectedRunner]
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange]
   );
 
-  const validateAttachedScript = async (file: File, runner: string) => {
+  const validateAttachedScript = async (file: File) => {
+    const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
+    // Generic message - backend knows the runner being used
     setScriptValidationMessage("Scanning script file...");
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      setScriptValidationMessage(result.output || "Script validated successfully.");
+      // Show the runner that was used in the success message from backend
+      const message = result.output || `Script validated successfully using ${runner}.`;
+      setScriptValidationMessage(message);
     } catch (error) {
       setScriptValidationStatus("failed");
       setScriptValidationMessage((error as Error).message || "Script validation failed.");
@@ -120,16 +134,30 @@ function EditTestCase() {
   };
 
   useEffect(() => {
-    if (attachedScriptFile) {
-      validateAttachedScript(attachedScriptFile, selectedRunner);
-    } else {
+    if (!attachedScriptFile) {
       setScriptValidationStatus("idle");
       setScriptValidationMessage("");
+      return;
     }
-  }, [attachedScriptFile, selectedRunner]);
+
+    const runner = formValuesRef.current.runner;
+    if (!runner) {
+      setScriptValidationStatus("failed");
+      setScriptValidationMessage("Please select a runner before scanning.");
+      return;
+    }
+
+    validateAttachedScript(attachedScriptFile);
+  }, [attachedScriptFile]);
 
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
   const updateMutation = useUpdateTestCaseMutation();
+
+  useEffect(() => {
+    if (data?.runner) {
+      formValuesRef.current.runner = data.runner;
+    }
+  }, [data]);
 
   if (isLoading) {
     return (

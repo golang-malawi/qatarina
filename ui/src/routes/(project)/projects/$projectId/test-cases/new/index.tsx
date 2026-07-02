@@ -1,12 +1,12 @@
 import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { DynamicForm, FieldConfig } from "@/components/form/DynamicForm";
-import SelectRunner from "@/components/form/SelectRunner";
+import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
 import {
   testCaseCreationSchema,
   TestCaseCreationFormData,
@@ -27,18 +27,25 @@ function NewTestCases() {
   const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
 
   const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-  const [selectedRunner, setSelectedRunner] = useState("");
+  const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
   const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
   const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
 
-  const validateAttachedScript = async (file: File, runner: string) => {
+  const handleRunnerChange = useCallback((runner: string) => {
+    formValuesRef.current.runner = runner;
+  }, []);
+
+  const validateAttachedScript = async (file: File) => {
+    const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
     setScriptValidationMessage("Scanning script file...");
 
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      setScriptValidationMessage(result.output || "Script validated successfully.");
+      // Show the runner that was used in the success message from backend
+      const message = result.output || `Script validated successfully using ${runner}.`;
+      setScriptValidationMessage(message);
     } catch (error) {
       setScriptValidationStatus("failed");
       setScriptValidationMessage((error as Error).message || "Script validation failed.");
@@ -46,13 +53,21 @@ function NewTestCases() {
   };
 
   useEffect(() => {
-    if (attachedScriptFile) {
-      validateAttachedScript(attachedScriptFile, selectedRunner);
-    } else {
+    if (!attachedScriptFile) {
       setScriptValidationStatus("idle");
       setScriptValidationMessage("");
+      return;
     }
-  }, [attachedScriptFile, selectedRunner]);
+
+    const runner = formValuesRef.current.runner;
+    if (!runner) {
+      setScriptValidationStatus("failed");
+      setScriptValidationMessage("Please select a runner before scanning.");
+      return;
+    }
+
+    validateAttachedScript(attachedScriptFile);
+  }, [attachedScriptFile]);
 
   const fields = useMemo<FieldConfig[]>(
     () =>
@@ -61,12 +76,10 @@ function NewTestCases() {
           return {
             ...field,
             customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
-              <SelectRunner
+              <RunnerFieldSync
                 value={(value as string) || ""}
-                onChange={(val) => {
-                  onChange(val);
-                  setSelectedRunner(val);
-                }}
+                onChange={onChange}
+                onRunnerChange={handleRunnerChange}
               />
             ),
           };
@@ -76,34 +89,39 @@ function NewTestCases() {
           return {
             ...field,
             type: "custom",
-            customComponent: ({ onChange }: { onChange: (file: File | null) => void }) => (
-              <Box>
-                <input
-                  type="file"
-                  accept=".yaml,.yml,.basi"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    onChange(file);
-                    setAttachedScriptFile(file);
-                  }}
-                />
-                <Box mt={2}>
-                  {scriptValidationStatus === "validating" && (
-                    <Alert.Root status="info" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description>
-                          Scanning script file using {selectedRunner}. Please wait...
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
+            customComponent: ({ onChange, formValues: fv }: { onChange: (file: File | null) => void; formValues?: Record<string, any> }) => {
+              // Keep ref in sync with current form values
+              if (fv) {
+                formValuesRef.current = fv;
+              }
+              return (
+                <Box>
+                  <input
+                    type="file"
+                    accept=".yaml,.yml,.basi"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      onChange(file);
+                      setAttachedScriptFile(file);
+                    }}
+                  />
+                  <Box mt={2}>
+                    {scriptValidationStatus === "validating" && (
+                      <Alert.Root status="info" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description>
+                            {scriptValidationMessage}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
 
                   {scriptValidationStatus === "success" && (
                     <Alert.Root status="success" borderRadius="md">
                       <Alert.Indicator />
                       <Alert.Content>
-                        <Alert.Description>
+                        <Alert.Description wordBreak="break-word">
                           {scriptValidationMessage || "Script validated successfully."}
                         </Alert.Description>
                       </Alert.Content>
@@ -114,7 +132,7 @@ function NewTestCases() {
                     <Alert.Root status="error" borderRadius="md">
                       <Alert.Indicator />
                       <Alert.Content>
-                        <Alert.Description>
+                        <Alert.Description wordBreak="break-word" maxWidth="100%">
                           {scriptValidationMessage}
                         </Alert.Description>
                       </Alert.Content>
@@ -122,13 +140,14 @@ function NewTestCases() {
                   )}
                 </Box>
               </Box>
-            ),
+              );
+            },
           };
         }
 
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, selectedRunner],
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange],
   );
 
   async function handleSubmit(values: TestCaseCreationFormData) {
