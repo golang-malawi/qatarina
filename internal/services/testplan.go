@@ -15,8 +15,8 @@ import (
 )
 
 type TestPlanService interface {
-	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
-	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
+	FindAll(context.Context) ([]schema.TestPlanResponseItem, error)
+	FindAllByProjectID(context.Context, int64) ([]schema.TestPlanResponseItem, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.ListTestRunsByPlanRow, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
@@ -86,11 +86,63 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 }
 
 // FindAll implements TestPlanService.
-func (t *testPlanService) FindAll(ctx context.Context) ([]dbsqlc.TestPlan, error) {
-	return t.queries.ListTestPlans(ctx)
+func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanResponseItem, error) {
+	plans, err := t.queries.ListTestPlans(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var enriched []schema.TestPlanResponseItem
+	for _, plan := range plans {
+		// Count assigned test cases
+		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
+
+		// Get run stats
+		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
+
+		enriched = append(enriched, schema.TestPlanResponseItem{
+			ID:              plan.ID,
+			Description:     plan.Description.String,
+			Kind:            string(plan.Kind),
+			NumTestCases:    int32(len(cases)),
+			PassedCount:     runStats.PassedCount,
+			FailedCount:     runStats.FailedCount,
+			PendingCount:    runStats.PendingCount,
+			AssignedTesters: runStats.AssignedTestersCount,
+			IsComplete:      plan.IsComplete.Bool,
+			IsLocked:        plan.IsLocked.Bool,
+			HasReport:       plan.HasReport.Bool,
+		})
+	}
+	return enriched, nil
 }
-func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestPlan, error) {
-	return t.queries.ListTestPlansByProject(ctx, int32(projectID))
+
+func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int64) ([]schema.TestPlanResponseItem, error) {
+	plans, err := t.queries.ListTestPlansByProject(ctx, int32(projectID))
+	if err != nil {
+		return nil, err
+	}
+
+	var enriched []schema.TestPlanResponseItem
+	for _, plan := range plans {
+		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
+		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
+
+		enriched = append(enriched, schema.TestPlanResponseItem{
+			ID:              plan.ID,
+			Description:     plan.Description.String,
+			Kind:            string(plan.Kind),
+			NumTestCases:    int32(len(cases)),
+			PassedCount:     runStats.PassedCount,
+			FailedCount:     runStats.FailedCount,
+			PendingCount:    runStats.PendingCount,
+			AssignedTesters: runStats.AssignedTestersCount,
+			IsComplete:      plan.IsComplete.Bool,
+			IsLocked:        plan.IsLocked.Bool,
+			HasReport:       plan.HasReport.Bool,
+		})
+	}
+	return enriched, nil
 }
 
 // FindAllByTestPlanID implements TestPlanService
@@ -137,12 +189,13 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	// Updated query: ListTestCasesByPlan now aggregates assigned testers
+	// Get assigned cases
 	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
+	// Get run statistics
 	runStats, err := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
@@ -160,7 +213,7 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		StartAt:         plan.StartAt.Time.Format(time.DateTime),
 		ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
 		ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
-		NumTestCases:    int32(plan.NumTestCases),
+		NumTestCases:    int32(len(cases)),
 		NumFailures:     plan.NumFailures,
 		PassedCount:     runStats.PassedCount,
 		FailedCount:     runStats.FailedCount,
