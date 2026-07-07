@@ -10,16 +10,14 @@ import {
   VStack,
   HStack,
   NativeSelect,
-  Heading,
-  Text,
-  Code,  
-  List,  
   Tabs,
 } from "@chakra-ui/react";
+
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
 import ReactMarkdown from "react-markdown";
 import SelectRunner from "./SelectRunner";
+import { LuChevronDown } from "react-icons/lu";
 
 export type FieldType =
   | "text"
@@ -57,7 +55,7 @@ export interface FieldConfig {
     onChange: (value: unknown) => void;
     onBlur: () => void;
   }) => ReactNode;
-  fields?: FieldConfig[]; // for array type
+  fields?: FieldConfig[];
   accept?: string;
 }
 
@@ -98,15 +96,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   const isSubmitting = submitLoading ?? form.state.isSubmitting;
 
   const renderField = (fieldConfig: FieldConfig) => {
-    const {
-      name,
-      label,
-      type,
-      placeholder,
-      helperText,
-      options,
-      customComponent,
-    } = fieldConfig;
+    const { name, label, type, placeholder, helperText, options, customComponent } = fieldConfig;
 
     return (
       <form.Field key={name} name={name}>
@@ -116,101 +106,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
             field.state.meta.errors &&
             field.state.meta.errors.length > 0;
 
-          if (type === "array" && fieldConfig.fields) {
-            return (
-              <Field.Root invalid={showErrors}>
-                <Field.Label fontWeight="semibold">{label}</Field.Label>
-                <VStack align="stretch" gap={2}>
-                  {((field.state.value as any[]) || []).map((_, index) => (
-                    <Box
-                      key={index}
-                      border="1px solid #ccc"
-                      p={2}
-                      borderRadius="md"
-                    >
-                      {fieldConfig.fields!.map((subField) => (
-                        <form.Field
-                          key={`${name}[${index}].${subField.name}`}
-                          name={`${name}[${index}].${subField.name}`}
-                        >
-                          {(sub) => {
-                            const subErrors =
-                              sub.state.meta.isTouched &&
-                              sub.state.meta.errors &&
-                              sub.state.meta.errors.length > 0;
-
-                            return (
-                              <Field.Root invalid={subErrors}>
-                                <Field.Label fontWeight="semibold">
-                                  {subField.label}
-                                </Field.Label>
-                                <Input
-                                  type={subField.type as any}
-                                  value={(sub.state.value as string) || ""}
-                                  onBlur={sub.handleBlur}
-                                  onChange={(e) =>
-                                    sub.handleChange(e.target.value)
-                                  }
-                                  placeholder={subField.placeholder}
-                                />
-                                {subField.helperText && (
-                                  <Field.HelperText>
-                                    {subField.helperText}
-                                  </Field.HelperText>
-                                )}
-                                {subErrors && (
-                                  <Field.ErrorText>
-                                    {sub.state.meta
-                                      .errors!.map((error) =>
-                                        typeof error === "string"
-                                          ? error
-                                          : ((error as any)?.message ??
-                                            "Validation error"),
-                                      )
-                                      .join(", ")}
-                                  </Field.ErrorText>
-                                )}
-                              </Field.Root>
-                            );
-                          }}
-                        </form.Field>
-                      ))}
-                      <Button
-                        size="sm"
-                        mt={2}
-                        onClick={() => {
-                          const newVal = [
-                            ...((field.state.value as any[]) || []),
-                          ];
-                          newVal.splice(index, 1); // remove current item
-                          field.handleChange(newVal);
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </Box>
-                  ))}
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const newVal = [...((field.state.value as any[]) || [])];
-                      newVal.push({}); // add new empty item
-                      field.handleChange(newVal);
-                    }}
-                  >
-                    + Add {label}
-                  </Button>
-                </VStack>
-                {helperText && (
-                  <Field.HelperText>{helperText}</Field.HelperText>
-                )}
-              </Field.Root>
-            );
-          }
-
           return (
             <Field.Root invalid={showErrors}>
-              <Field.Label fontWeight="semibold">{label}</Field.Label>
+              <Field.Label fontSize="sm" fontWeight="medium">{label}</Field.Label>
 
               {type === "test-kind" && (
                 <SelectTestKind
@@ -266,19 +164,17 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                       <Tabs.Trigger value="write">Write</Tabs.Trigger>
                       <Tabs.Trigger value="preview">Preview</Tabs.Trigger>
                     </Tabs.List>
-
-                    <Tabs.Content value="write">                      
-                        <Textarea
-                          width="100%"
-                          minHeight="200px"                           
-                          fontFamily="monospace"                    
-                          value={(field.state.value as string) || ""}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder={placeholder}
-                        />                        
+                    <Tabs.Content value="write">
+                      <Textarea
+                        width="100%"
+                        minHeight="200px"
+                        fontFamily="monospace"
+                        value={(field.state.value as string) || ""}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder={placeholder}
+                      />
                     </Tabs.Content>
-
                     <Tabs.Content value="preview">
                       <Box
                         mt={2}
@@ -288,51 +184,44 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                         bg="gray.50"
                         borderRadius="md"
                       >
-                        <ReactMarkdown
-                          components={{
-                            h1: (props) => <Heading size="lg" {...props} />,
-                            h2: (props) => <Heading size="md" {...props} />,
-                            h3: (props) => <Heading size="sm" {...props} />,
-                            p: (props) => <Text mb={2} {...props} />,
-                            code: (props) => <Code colorScheme="yellow" {...props} />,
-                            ul: (props) => (
-                              <List.Root variant="marker" pl={4} {...props} />
-                            ),
-                            ol: (props) => (
-                              <List.Root variant="marker" as="ol" pl={4} {...props} />
-                            ),
-                            li: (props) => <List.Item {...props} />,
-                          }}
-                        >
-                          {(field.state.value as string) || ""}
-                      </ReactMarkdown>
+                        <ReactMarkdown>{(field.state.value as string) || ""}</ReactMarkdown>
                       </Box>
                     </Tabs.Content>
-                  </Tabs.Root>                          
-                  </Box>
-                )}
+                  </Tabs.Root>
+                </Box>
+              )}
 
               {type === "select" && (
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    value={(field.state.value as string) || ""}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder={placeholder || "Select an option"}
+                <Box position="relative">
+                  <NativeSelect.Root>
+                    <NativeSelect.Field
+                      value={(field.state.value as string) || ""}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    >
+                      <option value="">{placeholder || "Select an option"}</option>
+                      {options?.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </NativeSelect.Field>
+                  </NativeSelect.Root>
+                  <Box
+                    position="absolute"
+                    right="2"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="fg.muted"
                   >
-                    {options?.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                </NativeSelect.Root>
+                    <LuChevronDown />
+                  </Box>
+                </Box>
               )}
 
               {type === "checkbox" && (
-                <label
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
+                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <input
                     type="checkbox"
                     checked={(field.state.value as boolean) || false}
@@ -344,16 +233,16 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 </label>
               )}
 
-              {type === "file" &&(
+              {type === "file" && (
                 <Input
-                type="file"
-                accept={fieldConfig.accept}
-                onBlur={field.handleBlur}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  field.handleChange(file);
-                }}
-              />
+                  type="file"
+                  accept={fieldConfig.accept}
+                  onBlur={field.handleBlur}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const file = e.target.files?.[0];
+                    field.handleChange(file);
+                  }}
+                />
               )}
 
               {[
@@ -373,18 +262,18 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={placeholder}
                 />
-              )}   
+              )}
 
               {helperText && <Field.HelperText>{helperText}</Field.HelperText>}
+
               {showErrors && (
                 <Field.ErrorText>
-                  {field.state.meta
-                    .errors!.map((error) =>
+                  {[...new Set(field.state.meta.errors!.map(
+                    (error) =>
                       typeof error === "string"
                         ? error
-                        : ((error as any)?.message ?? "Validation error"),
-                    )
-                    .join(", ")}
+                        : (error as any)?.message ?? "Validation error"
+                  ))].join(", ")}
                 </Field.ErrorText>
               )}
             </Field.Root>
@@ -400,7 +289,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
       for (let i = 0; i < fields.length; i += 2) {
         chunks.push(fields.slice(i, i + 2));
       }
-
       return chunks.map((chunk, index) => (
         <HStack key={index} gap={spacing} align="start">
           {chunk.map((field) => (
@@ -411,7 +299,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
         </HStack>
       ));
     }
-
     return fields.map(renderField);
   };
 
@@ -425,7 +312,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     >
       <VStack gap={spacing} align="stretch">
         {renderFields()}
-
         <Button
           type="submit"
           variant="outline"

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Stack,
@@ -10,78 +11,91 @@ import {
   IconButton,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { LuEye, LuDownload, LuTrash } from "react-icons/lu";
 
-export const Route = createFileRoute(
-  "/(project)/projects/$projectId/reports/"
-)({
+import { createFileRoute } from "@tanstack/react-router";
+import { LuEye, LuDownload, LuTrash } from "react-icons/lu";
+import { Toaster, toaster } from "@/components/ui/toaster";
+import {
+  useReportsQuery,
+  useCreateReportMutation,
+  useDeleteReportMutation,
+  downloadReport,
+  Report,
+} from "@/services/ReportService";
+import { useProjectTestPlansQuery } from "@/services/TestPlanService";
+import { DynamicForm } from "@/components/form/DynamicForm";
+import {
+  reportCreationSchema,
+  ReportCreationFormData,
+} from "@/data/forms/report-schemas";
+import { createReportFields } from "@/data/forms/report-field-configs";
+import { AppDialog } from "@/components/ui/app-dialog";
+
+export const Route = createFileRoute("/(project)/projects/$projectId/reports/")({
   component: ReportsPage,
 });
 
-type Report = {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  createdAt: string;
-};
-
 function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const projectId = Route.useParams().projectId as string;
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      try {
-        setReports([
-          {
-            id: "RPT-001",
-            name: "QA Summary Report",
-            type: "Summary",
-            status: "Completed",
-            createdAt: "2025-07-14",
-          },
-          {
-            id: "RPT-002",
-            name: "Bug Trend Analysis",
-            type: "Analytics",
-            status: "In Progress",
-            createdAt: "2025-07-13",
-          },
-          {
-            id: "RPT-003",
-            name: "Regression Test Report",
-            type: "Detailed",
-            status: "Failed",
-            createdAt: "2025-07-11",
-          },
-        ]);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load reports.");
-        setLoading(false);
-      }
-    }, 1000);
+  const { data, isLoading, error, refetch } = useReportsQuery(projectId);
+  const reports: Report[] = data?.reports ?? [];
 
-    return () => clearTimeout(timeout);
-  }, []);
+  const createMutation = useCreateReportMutation();
+  const deleteMutation = useDeleteReportMutation();
+
+  const { data: testPlansData } = useProjectTestPlansQuery(projectId);
+  const testPlans = (testPlansData?.test_plans ?? []).map((tp: any) => ({
+    id: tp.id,
+    title: tp.description ?? tp.name ?? "Untitled Plan",
+  }));
+
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleDelete = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this report?")) return;
-    setReports((prev) => prev.filter((r) => r.id !== id));
+    deleteMutation.mutate(
+      { params: { path: { projectID: projectId, reportID: id } } },
+      {
+        onSuccess: () => {
+          toaster.create({ title: "Report deleted", type: "success" });
+          refetch();
+        },
+        onError: () => {
+          toaster.create({ title: "Failed to delete report", type: "error" });
+        },
+      }
+    );
+  };
+
+  const handleDownload = async (id: string) => {
+    const blob = await downloadReport(projectId, id);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${id}.pdf`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleView = (id: string) => {
-    console.log("View report", id);
+    window.open(`/v1/projects/${projectId}/reports/${id}/download`, "_blank");
   };
 
-  const handleDownload = (id: string) => {
-    console.log("Download report", id);
-  };
+  async function handleCreate(values: ReportCreationFormData) {
+    await createMutation.mutateAsync({
+      params: { path: { projectID: projectId } },
+      body: {
+        project_id: Number(projectId),
+        test_plan_id: Number(values.test_plan_id),
+        name: values.name,
+        type: values.type,
+        status: values.status,
+      },
+    });
+    toaster.create({ title: "Report created", type: "success" });
+    refetch();
+    setIsOpen(false);
+  }
 
   const totalReports = reports.length;
   const completedReports = reports.filter((r) => r.status === "Completed").length;
@@ -90,89 +104,61 @@ function ReportsPage() {
 
   return (
     <Box p={6}>
-      {/* Header */}
+      <Toaster />
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg" color="fg.heading">
-          Reports
-        </Heading>
-        <Button colorPalette="brand">+ Generate New Report</Button>
+        <Heading size="lg" color="fg.heading">Reports</Heading>
+        <Button colorPalette="brand" onClick={() => setIsOpen(true)}>
+          + Generate New Report
+        </Button>
       </Flex>
 
-      {/* Summary Cards */}
+      <AppDialog
+        open={isOpen}
+        onOpenChange={() => setIsOpen(false)}
+        title="Generate Report"        
+      >
+        <DynamicForm
+          schema={reportCreationSchema}
+          fields={createReportFields(testPlans)}
+          onSubmit={handleCreate}
+          submitText="Generate Report"
+          submitLoading={createMutation.isPending}
+          layout="vertical"
+          spacing={4}
+          defaultValues={{
+            test_plan_id: "",
+            name: "",
+            type: "Detailed",
+            status: "In Progress",
+          }}
+        />
+      </AppDialog>
+
       <SimpleGrid columns={[1, 2, 4]} gap={4} mb={6}>
-        <Box
-          p={4}
-          shadow="card"
-          borderRadius="lg"
-          bg="bg.surface"
-          border="sm"
-          borderColor="border.subtle"
-        >
-          <Text fontSize="sm" color="fg.muted">
-            Total Reports
-          </Text>
+        <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
+          <Text fontSize="sm" color="fg.muted">Total Reports</Text>
           <Heading size="lg">{totalReports}</Heading>
-          <Text fontSize="xs" color="fg.subtle">
-            Across all statuses
-          </Text>
         </Box>
-
-        <Box
-          p={4}
-          shadow="card"
-          borderRadius="lg"
-          bg="bg.surface"
-          border="sm"
-          borderColor="border.subtle"
-        >
-          <Text fontSize="sm" color="fg.muted">
-            Completed
-          </Text>
-          <Heading size="lg" color="fg.success">
-            {completedReports}
-          </Heading>
+        <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
+          <Text fontSize="sm" color="fg.muted">Completed</Text>
+          <Heading size="lg" color="fg.success">{completedReports}</Heading>
         </Box>
-
-        <Box
-          p={4}
-          shadow="card"
-          borderRadius="lg"
-          bg="bg.surface"
-          border="sm"
-          borderColor="border.subtle"
-        >
-          <Text fontSize="sm" color="fg.muted">
-            In Progress
-          </Text>
-          <Heading size="lg" color="fg.warning">
-            {inProgressReports}
-          </Heading>
+        <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
+          <Text fontSize="sm" color="fg.muted">In Progress</Text>
+          <Heading size="lg" color="fg.warning">{inProgressReports}</Heading>
         </Box>
-
-        <Box
-          p={4}
-          shadow="card"
-          borderRadius="lg"
-          bg="bg.surface"
-          border="sm"
-          borderColor="border.subtle"
-        >
-          <Text fontSize="sm" color="fg.muted">
-            Failed
-          </Text>
-          <Heading size="lg" color="fg.error">
-            {failedReports}
-          </Heading>
+        <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
+          <Text fontSize="sm" color="fg.muted">Failed</Text>
+          <Heading size="lg" color="fg.error">{failedReports}</Heading>
         </Box>
       </SimpleGrid>
 
-      {/* Report Table */}
-      {loading ? (
+      {isLoading ? (
         <Flex justify="center" py={10}>
           <Spinner size="lg" color="brand.solid" />
         </Flex>
       ) : error ? (
-        <Text color="fg.error">{error}</Text>
+        <Text color="fg.error">{(error as Error).message}</Text>
       ) : (
         <Stack gap="6">
           <Table.Root size="md">
@@ -188,35 +174,43 @@ function ReportsPage() {
             </Table.Header>
             <Table.Body>
               {reports.map((report) => (
-                <Table.Row key={report.id}>
-                  <Table.Cell>{report.id}</Table.Cell>
-                  <Table.Cell>{report.name}</Table.Cell>
-                  <Table.Cell>{report.type}</Table.Cell>
-                  <Table.Cell>{report.status}</Table.Cell>
-                  <Table.Cell>{report.createdAt}</Table.Cell>
+                <Table.Row key={report.id ?? Math.random()}>
+                  <Table.Cell>{report.id ?? "-"}</Table.Cell>
+                  <Table.Cell>{report.name ?? "-"}</Table.Cell>
+                  <Table.Cell>{report.type ?? "-"}</Table.Cell>
+                  <Table.Cell>{report.status ?? "-"}</Table.Cell>
+                  <Table.Cell>
+                    {report.created_at
+                      ? new Date(report.created_at).toLocaleDateString()
+                      : "-"}
+                  </Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
                       <IconButton
                         aria-label="View report"
-                        onClick={() => handleView(report.id)}
+                        onClick={() => report.id && handleView(report.id)}
                         colorPalette="info"
                         size="sm"
-                        children={<LuEye />}
-                      />
+                      >
+                        <LuEye />
+                      </IconButton>
                       <IconButton
                         aria-label="Download report"
-                        onClick={() => handleDownload(report.id)}
+                        onClick={() => report.id && handleDownload(report.id)}
                         colorPalette="success"
                         size="sm"
-                        children={<LuDownload />}
-                      />
+                      >
+                        <LuDownload />
+                      </IconButton>
                       <IconButton
                         aria-label="Delete report"
-                        onClick={() => handleDelete(report.id)}
+                        onClick={() => report.id && handleDelete(report.id)}
                         colorPalette="danger"
                         size="sm"
-                        children={<LuTrash />}
-                      />
+                        loading={deleteMutation.isPending}
+                      >
+                        <LuTrash />
+                      </IconButton>
                     </Flex>
                   </Table.Cell>
                 </Table.Row>
@@ -228,3 +222,5 @@ function ReportsPage() {
     </Box>
   );
 }
+
+export default ReportsPage;

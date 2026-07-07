@@ -9,13 +9,18 @@ import (
 )
 
 // ListReports godoc
-// @ID ListReports
-// @Summary List Reports for a Project
-// @Tags reports
-// @Produce json
-// @Param projectID path string true "Project ID"
-// @Success 200 {object} schema.ReportListResponse
-// @Router /v1/projects/{projectID}/reports [get]
+//
+//	@ID				ListReports
+//	@Summary		List Reports for a Project
+//	@Description	List Reports for a Project
+//	@Tags			reports
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		string	true	"Project ID"
+//	@Success		200			{object}	schema.ReportListResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/reports [get]
 func ListReports(reportService services.ReportService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID")
@@ -33,14 +38,19 @@ func ListReports(reportService services.ReportService, logger logging.Logger) fi
 }
 
 // CreateReport godoc
-// @ID CreateReport
-// @Summary Generate a new Report
-// @Tags reports
-// @Accept json
-// @Produce json
-// @Param request body schema.CreateReportRequest true "Report data"
-// @Success 200 {object} schema.ReportResponse
-// @Router /v1/projects/{projectID}/reports [post]
+//
+//	@ID             CreateReport
+//	@Summary        Generate a new report
+//	@Description    Generate a new report
+//	@Tags           reports
+//	@Accept         json
+//	@Produce        json
+//	@Param          projectID path string true "Project ID"
+//	@Param          request body schema.CreateReportRequest true "Report data"
+//	@Success        200 {object} schema.ReportResponse
+//	@Failure        400 {object} problemdetail.ProblemDetail
+//	@Failure        500 {object} problemdetail.ProblemDetail
+//	@Router         /v1/projects/{projectID}/reports [post]
 func CreateReport(reportService services.ReportService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		req := new(schema.CreateReportRequest)

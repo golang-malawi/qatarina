@@ -38,6 +38,7 @@ type CreateReportRequest struct {
 	TestPlanID int64  `json:"test_plan_id" validate:"required"`
 	Name       string `json:"name" validate:"required"`
 	Type       string `json:"type" validate:"required"`
+	Status     string `json:"status" validate:"required"`
 }
 
 func NewReportResponseList(items []dbsqlc.Report) []ReportResponse {

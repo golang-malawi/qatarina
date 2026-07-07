@@ -688,10 +688,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Reports for a Project */
+        /**
+         * List Reports for a Project
+         * @description List Reports for a Project
+         */
         get: operations["ListReports"];
         put?: never;
-        /** Generate a new Report */
+        /**
+         * Generate a new report
+         * @description Generate a new report
+         */
         post: operations["CreateReport"];
         delete?: never;
         options?: never;
@@ -2028,6 +2034,7 @@ export interface components {
         "schema.CreateReportRequest": {
             name: string;
             project_id: number;
+            status: string;
             test_plan_id: number;
             type: string;
         };
@@ -3755,7 +3762,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -3766,13 +3777,34 @@ export interface operations {
                     "application/json": components["schemas"]["schema.ReportListResponse"];
                 };
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
         };
     };
     CreateReport: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
             cookie?: never;
         };
         /** @description Report data */
@@ -3789,6 +3821,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.ReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
                 };
             };
         };

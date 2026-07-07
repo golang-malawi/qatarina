@@ -242,6 +242,8 @@ components:
           type: string
         project_id:
           type: integer
+        status:
+          type: string
         test_plan_id:
           type: integer
         type:
@@ -249,6 +251,7 @@ components:
       required:
       - name
       - project_id
+      - status
       - test_plan_id
       - type
       type: object
@@ -2358,6 +2361,7 @@ paths:
       - modules
   /v1/projects/{projectID}/reports:
     get:
+      description: List Reports for a Project
       operationId: ListReports
       parameters:
       - description: Project ID
@@ -2366,6 +2370,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         "200":
           content:
@@ -2373,11 +2382,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/schema.ReportListResponse'
           description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
       summary: List Reports for a Project
       tags:
       - reports
     post:
+      description: Generate a new report
       operationId: CreateReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -2392,7 +2421,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/schema.ReportResponse'
           description: OK
-      summary: Generate a new Report
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Generate a new report
       tags:
       - reports
   /v1/projects/{projectID}/reports/{reportID}:

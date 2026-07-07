@@ -43,7 +43,7 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 		ProjectID: int32(req.ProjectID),
 		Name:      req.Name,
 		Type:      req.Type,
-		Status:    "In Progress",
+		Status:    req.Status,
 		FilePath:  sql.NullString{},
 	})
 	if err != nil {
@@ -140,13 +140,6 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
 
-	// Update DB
-	err = s.queries.UpdateReportStatus(ctx, dbsqlc.UpdateReportStatusParams{ID: id, Status: "Completed"})
-	if err != nil {
-		s.logger.Error("reports-service", "failed to update report status", "error", err)
-		return nil, fmt.Errorf("failed to update report status: %w", err)
-	}
-
 	err = s.queries.UpdateReportFilePath(ctx, dbsqlc.UpdateReportFilePathParams{
 		ID:       id,
 		FilePath: sql.NullString{String: filePath, Valid: true},
@@ -157,7 +150,6 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	}
 
 	r.FilePath = sql.NullString{String: filePath, Valid: true}
-	r.Status = "Completed"
 	return &r, nil
 }
 
