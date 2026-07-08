@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api/query";
+import { apiClient, buildApiUrl } from "@/lib/api/query";
 import $api from "@/lib/api/query";
 import type { components } from "@/lib/api/v1";
 
@@ -29,7 +29,10 @@ export async function getReports(projectID: string): Promise<ReportListResponse>
   return res.data as ReportListResponse;
 }
 
-export async function createReport(projectID: string, data: CreateReportRequest): Promise<Report> {
+export async function createReport(
+  projectID: string,
+  data: CreateReportRequest
+): Promise<Report> {
   const res = await apiClient.request(
     "post",
     "/v1/projects/{projectID}/reports",
@@ -46,12 +49,28 @@ export async function deleteReport(projectID: string, reportID: string): Promise
   );
 }
 
-// Download report (returns Blob)
 export async function downloadReport(projectID: string, reportID: string): Promise<Blob> {
-  const res = await apiClient.request(
-    "get",
-    "/v1/projects/{projectID}/reports/{reportID}/download" as any,
-    { params: { path: { projectID, reportID } } }
-  );
-  return res.response.blob();
+  const { data, response } = await apiClient.GET("/v1/projects/{projectID}/reports/{reportID}/download", {
+    params: { path: { projectID, reportID } },
+    parseAs: "blob", 
+  });
+
+  if (!response.ok || !data) throw new Error("Failed to download report");
+  return data; 
+}
+
+export async function viewReportBlob(projectID: string, reportID: string): Promise<Blob> {
+  const { data, response } = await apiClient.GET("/v1/projects/{projectID}/reports/{reportID}/view", {
+    params: { path: { projectID, reportID } },
+    parseAs: "blob",
+  });
+
+  if (!response.ok || !data) throw new Error("Failed to view report");
+  return data;
+}
+
+export function viewReportUrl(projectID: string, reportID: string): string {
+  return buildApiUrl("/v1/projects/{projectID}/reports/{reportID}/view", {
+    path: { projectID, reportID },
+  });
 }

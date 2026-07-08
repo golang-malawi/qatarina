@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -86,12 +88,12 @@ func DeleteReport(reportService services.ReportService, logger logging.Logger) f
 
 // DownloadReport godoc
 // @ID DownloadReport
-// @Summary Download a Report file
+// @Summary Download a Report file (forces browser download)
 // @Tags reports
-// @Produce application/octet-stream
+// @Produce application/pdf
 // @Param projectID path string true "Project ID"
 // @Param reportID path string true "Report ID"
-// @Success 200 {file} binary
+// @Success 200 {file} string "PDF file"
 // @Router /v1/projects/{projectID}/reports/{reportID}/download [get]
 func DownloadReport(reportService services.ReportService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -100,9 +102,38 @@ func DownloadReport(reportService services.ReportService, logger logging.Logger)
 		if err != nil {
 			return problemdetail.ServerErrorProblem(c, "report not found")
 		}
+
 		if report.FilePath.Valid {
-			return c.SendFile(report.FilePath.String)
+			return c.Download(report.FilePath.String, fmt.Sprintf("report-%s.pdf", reportID))
 		}
+
 		return problemdetail.ServerErrorProblem(c, "report has no file to download")
+	}
+}
+
+// ViewReport godoc
+// @ID ViewReport
+// @Summary View a Report file inline in the browser
+// @Tags reports
+// @Produce application/pdf
+// @Param projectID path string true "Project ID"
+// @Param reportID path string true "Report ID"
+// @Success 200 {file} string "PDF file"
+// @Router /v1/projects/{projectID}/reports/{reportID}/view [get]
+func ViewReport(reportService services.ReportService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		reportID := c.Params("reportID")
+		report, err := reportService.GetByID(c.Context(), reportID)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "report not found")
+		}
+
+		if report.FilePath.Valid {
+			c.Set("Content-Type", "application/pdf")
+			c.Set("Content-Disposition", "inline; filename=\"report.pdf\"")
+			return c.SendFile(report.FilePath.String, true)
+		}
+
+		return problemdetail.ServerErrorProblem(c, "report has no file to view")
 	}
 }

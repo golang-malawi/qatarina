@@ -20,6 +20,7 @@ import {
   useCreateReportMutation,
   useDeleteReportMutation,
   downloadReport,
+  viewReportBlob,
   Report,
 } from "@/services/ReportService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
@@ -53,33 +54,38 @@ function ReportsPage() {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate(
-      { params: { path: { projectID: projectId, reportID: id } } },
-      {
-        onSuccess: () => {
-          toaster.create({ title: "Report deleted", type: "success" });
-          refetch();
-        },
-        onError: () => {
-          toaster.create({ title: "Failed to delete report", type: "error" });
-        },
-      }
-    );
-  };
+  if (!window.confirm("Are you sure you want to delete this report?")) return;
+  deleteMutation.mutate(
+    { params: { path: { projectID: projectId, reportID: id } } },
+    {
+      onSuccess: () => {
+        toaster.create({ title: "Report deleted", type: "success" });
+        refetch();
+      },
+      onError: () => {
+        toaster.create({ title: "Failed to delete report", type: "error" });
+      },
+    }
+  );
+};
 
-  const handleDownload = async (id: string) => {
-    const blob = await downloadReport(projectId, id);
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${id}.pdf`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
+const handleDownload = async (reportID: string) => {
+  const blob = await downloadReport(projectId, reportID);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `report-${reportID}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
 
-  const handleView = (id: string) => {
-    window.open(`/v1/projects/${projectId}/reports/${id}/download`, "_blank");
-  };
+const handleView = async (reportID: string) => {
+  const blob = await viewReportBlob(projectId, reportID); 
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, '_blank');
+};
 
   async function handleCreate(values: ReportCreationFormData) {
     await createMutation.mutateAsync({

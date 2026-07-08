@@ -2486,12 +2486,42 @@ paths:
             application/json:
               schema:
                 type: file
-            application/octet-stream:
+            application/pdf:
               schema:
                 format: binary
                 type: string
-          description: OK
-      summary: Download a Report file
+          description: PDF file
+      summary: Download a Report file (forces browser download)
+      tags:
+      - reports
+  /v1/projects/{projectID}/reports/{reportID}/view:
+    get:
+      operationId: ViewReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Report ID
+        in: path
+        name: reportID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            application/pdf:
+              schema:
+                format: binary
+                type: string
+          description: PDF file
+      summary: View a Report file inline in the browser
       tags:
       - reports
   /v1/projects/{projectID}/test-case-template:

@@ -729,8 +729,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download a Report file */
+        /** Download a Report file (forces browser download) */
         get: operations["DownloadReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View a Report file inline in the browser */
+        get: operations["ViewReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3884,14 +3901,40 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description PDF file */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": Record<string, never>;
-                    "application/octet-stream": string;
+                    "application/pdf": string;
+                };
+            };
+        };
+    };
+    ViewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/pdf": string;
                 };
             };
         };

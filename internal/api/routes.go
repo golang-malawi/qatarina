@@ -195,6 +195,7 @@ func (api *API) routes() {
 		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
 		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
 		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
 	}
 
 	// Serves the app at the root path  "/"
