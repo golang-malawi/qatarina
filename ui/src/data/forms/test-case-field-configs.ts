@@ -43,6 +43,7 @@ export const createTestCaseFields = (): FieldConfig[] => [
     name: "runner",
       label: "Runner",
       type: "runner",
+      defaultValue: "basi",
       options: [
         { label: "Basi", value: "basi" },
         { label: "Playwright", value: "playwright" },
