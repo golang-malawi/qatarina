@@ -528,6 +528,8 @@ func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTest
 		IsDraft:         common.NewNullBool(req.IsDraft),
 		Tags:            req.Tags,
 		UpdatedAt:       common.NullTime(time.Now()),
+		Runner:          common.NullString(req.Runner),
+		ScriptPath:      common.NullString(req.ScriptPath),
 	}
 
 	if err := t.queries.UpdateTestCase(ctx, params); err != nil {
@@ -575,7 +577,7 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 
 func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error) {
 	rows, err := t.queries.TestCaseListByAssignedUser(ctx, dbsqlc.TestCaseListByAssignedUserParams{
-		UserID:        common.NewNullInt64(userID),
+		UserID:        userID,
 		RowLimit:      limit,
 		RowOffset:     offset,
 		IncludeClosed: includeClosed,
@@ -603,7 +605,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			UpdatedAt:       row.UpdatedAt.Time,
 			ProjectID:       int64(row.ProjectID.Int32),
 			TestPlanID:      int32(row.TestPlanID),
-			AssignedToID:    int32(row.AssignedToID.Int64),
+			AssignedToID:    int32(row.AssignedToID),
 			EnvironmentID:   row.EnvironmentID.Int32,
 			IsClosed:        row.IsClosed,
 		})
@@ -611,7 +613,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 
 	// Count query
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
-		UserID:        common.NewNullInt64(userID),
+		UserID:        userID,
 		IncludeClosed: includeClosed,
 	})
 	if err != nil {

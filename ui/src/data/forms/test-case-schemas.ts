@@ -9,7 +9,7 @@ export const testCaseCreationSchema = z.object({
   tags: z.union([z.string(), z.array(z.string())]).optional().default([]),
   is_draft: z.boolean().optional().default(false),
   script_file: z.any().optional(),
-  runner: z.string().default("basi"),
+  runner: z.string().optional().default(""),
 });
 
 export type TestCaseCreationFormData = z.infer<typeof testCaseCreationSchema>;
