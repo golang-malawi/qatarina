@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
 import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
+import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import { testCaseCreationSchema } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 
@@ -111,6 +112,19 @@ function EditTestCase() {
           },
         };
       }
+      if (field.name === "feature_or_module") {
+      return {
+        ...field,
+        type: "custom",
+        customComponent: ({ value, onChange }) => (
+          <SelectFeatureModule
+            projectId={projectId}
+            value={(value as string) || ""}
+            onChange={onChange}
+          />
+        ),
+      };
+    }
       return field;
     }),
     [scriptValidationStatus, scriptValidationMessage, handleRunnerChange]

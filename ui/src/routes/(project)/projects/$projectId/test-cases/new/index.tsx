@@ -7,6 +7,7 @@ import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { DynamicForm, FieldConfig } from "@/components/form/DynamicForm";
 import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
+import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   testCaseCreationSchema,
   TestCaseCreationFormData,
@@ -145,6 +146,19 @@ function NewTestCases() {
           };
         }
 
+        if (field.name === "feature_or_module") {
+          return {
+            ...field,
+            type: "custom",
+            customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
+              <SelectFeatureModule
+                projectId={params.projectId}
+                value={(value as string) || ""}
+                onChange={onChange}
+              />
+            ),
+          };
+        }
         return field;
       }),
     [scriptValidationStatus, scriptValidationMessage, handleRunnerChange],
@@ -253,7 +267,7 @@ function NewTestCases() {
         defaultValues={{
           title: "",
           code: "",
-          feature_or_module: "Feature",
+          feature_or_module: "",
           kind: "",
           description: data?.test_case_template ?? "",
           runner: "basi",

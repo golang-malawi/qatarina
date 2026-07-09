@@ -30,9 +30,9 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 
 function TestCasePageInbox() {
   const [includeClosed, setIncludeClosed] = React.useState(false);
+  const [moduleFilter, setModuleFilter] = React.useState<string>("");
   const [page, setPage] = React.useState(1);
-  const [pageSize] = React.useState(10); // fixed page size for now
-
+  const [pageSize] = React.useState(10); 
   const match = useMatch({
     from: "/workspace/test-cases/inbox/$testCaseId/",
     shouldThrow: false,
@@ -46,7 +46,7 @@ function TestCasePageInbox() {
   } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed, page, pageSize));
 
   const testCases = testCasesResponse?.test_cases ?? [];
-  const pagination = (testCasesResponse as any)?.pagination; // until OpenAPI types regenerated
+  const pagination = (testCasesResponse as any)?.pagination;
 
   // Fetch projects for mapping project IDs to titles
   const { data: projects } = useSuspenseQuery(findProjectsQueryOptions);
@@ -54,6 +54,10 @@ function TestCasePageInbox() {
   (projects?.projects ?? []).forEach((p: any) => {
     projectMap[p.id] = p.title;
   });
+
+  const moduleOptions = Array.from(
+    new Set(testCases.map((tc) => tc.feature_or_module).filter(Boolean))
+  ).map((v) => ({ label: v, value: v }));
 
   // Fetch summary counts
   const {
@@ -91,8 +95,11 @@ function TestCasePageInbox() {
     });
   });
 
-  // Render each test case row
-  const testCaseRows = testCases.map(
+  const filteredTestCases = testCases.filter(
+    (tc) => !moduleFilter || tc.feature_or_module === moduleFilter
+  );
+
+  const testCaseRows = filteredTestCases.map(
     (tc: components["schemas"]["schema.AssignedTestCase"], idx: number) => {
       const counts =
         summaryMap.get(tc.id ?? "") ?? {
@@ -176,6 +183,19 @@ function TestCasePageInbox() {
           >
             Show closed test cases
           </Checkbox>
+          <Box mt={2}>
+            <select
+              value={moduleFilter}
+              onChange={(e) => setModuleFilter(e.target.value)}
+            >
+              <option value="">All</option>
+              {moduleOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </Box>
         </Box>
 
         <Box>
@@ -198,8 +218,7 @@ function TestCasePageInbox() {
               Previous
             </Button>
             <Text>
-              Page {page} of{" "}
-              {Math.ceil((pagination?.total ?? 0) / pageSize)}
+              Page {page} of {Math.ceil((pagination?.total ?? 0) / pageSize)}
             </Text>
             <Button
               onClick={() =>
@@ -209,9 +228,7 @@ function TestCasePageInbox() {
                     : p
                 )
               }
-              disabled={
-                page >= Math.ceil((pagination?.total ?? 0) / pageSize)
-              }
+              disabled={page >= Math.ceil((pagination?.total ?? 0) / pageSize)}
             >
               Next
             </Button>
