@@ -24,8 +24,8 @@ export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
 
 export const findTestCaseInboxQueryOptions = (
   includeClosed: boolean,
-  page: number,
-  pageSize: number
+  page: number = 1,
+  pageSize: number = 25,
 ) =>
   queryOptions({
     queryKey: ["testCases", "inbox", includeClosed, page, pageSize],

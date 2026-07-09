@@ -74,7 +74,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
 				TestPlanID:   int64(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				AssignedToID: common.NewNullInt64(uid),
+				AssignedToID: uid,
 			}); err != nil {
 				return nil, err
 			}
@@ -162,7 +162,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
 				TestPlanID:   request.PlanID,
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				AssignedToID: common.NewNullInt64(uid),
+				AssignedToID: uid,
 			}); err != nil {
 				return nil, err
 			}
