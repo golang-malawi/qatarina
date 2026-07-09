@@ -3438,9 +3438,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/schema.UpdateTestCaseRequest'
-        description: Test Case update data
-        required: true
+              type: file
+          multipart/form-data:
+            schema:
+              type: file
+        description: Script file
       responses:
         "200":
           content:

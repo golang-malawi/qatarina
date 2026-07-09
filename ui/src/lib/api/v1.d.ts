@@ -4843,10 +4843,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description Test Case update data */
-        requestBody: {
+        /** @description Script file */
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["schema.UpdateTestCaseRequest"];
+                "application/json": Record<string, never>;
+                "multipart/form-data": Record<string, never>;
             };
         };
         responses: {
