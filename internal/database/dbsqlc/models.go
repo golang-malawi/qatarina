@@ -244,6 +244,17 @@ type ProjectTester struct {
 	UpdatedAt sql.NullTime
 }
 
+type Report struct {
+	ID        uuid.UUID
+	ProjectID int32
+	Name      string
+	Type      string
+	Status    string
+	CreatedAt sql.NullTime
+	FilePath  sql.NullString
+	UpdatedAt sql.NullTime
+}
+
 type TestCase struct {
 	ID uuid.UUID
 	// The kind of test this case represents

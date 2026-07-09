@@ -681,6 +681,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reports for a Project
+         * @description List Reports for a Project
+         */
+        get: operations["ListReports"];
+        put?: never;
+        /**
+         * Generate a new report
+         * @description Generate a new report
+         */
+        post: operations["CreateReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a Report */
+        delete: operations["DeleteReport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a Report file (forces browser download) */
+        get: operations["DownloadReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View a Report file inline in the browser */
+        get: operations["ViewReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/test-case-template": {
         parameters: {
             query?: never;
@@ -1973,6 +2048,13 @@ export interface components {
             project_id: number;
             type: string;
         };
+        "schema.CreateReportRequest": {
+            name: string;
+            project_id: number;
+            status: string;
+            test_plan_id: number;
+            type: string;
+        };
         "schema.CreateSuggestedTestCaseRequest": {
             code?: string;
             description: string;
@@ -2149,6 +2231,19 @@ export interface components {
         };
         "schema.RefreshTokenRequest": Record<string, never>;
         "schema.RefreshTokenResponse": Record<string, never>;
+        "schema.ReportListResponse": {
+            pagination?: components["schemas"]["schema.Pagination"];
+            reports?: components["schemas"]["schema.ReportResponse"][];
+        };
+        "schema.ReportResponse": {
+            created_at?: string;
+            file_path?: string;
+            id?: string;
+            name?: string;
+            project_id?: number;
+            status?: string;
+            type?: string;
+        };
         "schema.SignUpRequest": {
             display_name: string;
             email: string;
@@ -3672,6 +3767,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ReportListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Report data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateReportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    DownloadReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/pdf": string;
+                };
+            };
+        };
+    };
+    ViewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/pdf": string;
                 };
             };
         };

@@ -537,6 +537,44 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 	return i, err
 }
 
+const createReport = `-- name: CreateReport :one
+INSERT INTO reports (id, project_id, name, type, status, created_at, file_path)
+VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+RETURNING id, project_id, name, type, status, created_at, file_path, updated_at
+`
+
+type CreateReportParams struct {
+	ID        uuid.UUID
+	ProjectID int32
+	Name      string
+	Type      string
+	Status    string
+	FilePath  sql.NullString
+}
+
+func (q *Queries) CreateReport(ctx context.Context, arg CreateReportParams) (Report, error) {
+	row := q.db.QueryRowContext(ctx, createReport,
+		arg.ID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Type,
+		arg.Status,
+		arg.FilePath,
+	)
+	var i Report
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Type,
+		&i.Status,
+		&i.CreatedAt,
+		&i.FilePath,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createTestCase = `-- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
@@ -791,6 +829,18 @@ DELETE FROM project_testers WHERE user_id = $1
 
 func (q *Queries) DeleteProjectTester(ctx context.Context, userID int32) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteProjectTester, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteReport = `-- name: DeleteReport :execrows
+DELETE FROM reports WHERE id = $1
+`
+
+func (q *Queries) DeleteReport(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteReport, id)
 	if err != nil {
 		return 0, err
 	}
@@ -1451,6 +1501,54 @@ func (q *Queries) GetRecentProjects(ctx context.Context) ([]GetRecentProjectsRow
 		return nil, err
 	}
 	return items, nil
+}
+
+const getReport = `-- name: GetReport :one
+SELECT id, project_id, name, type, status, created_at, file_path, updated_at FROM reports WHERE id = $1
+`
+
+func (q *Queries) GetReport(ctx context.Context, id uuid.UUID) (Report, error) {
+	row := q.db.QueryRowContext(ctx, getReport, id)
+	var i Report
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Type,
+		&i.Status,
+		&i.CreatedAt,
+		&i.FilePath,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getReportCountSummary = `-- name: GetReportCountSummary :one
+SELECT
+    COUNT(*) AS total,
+    COUNT(*) FILTER (WHERE status = 'Completed') AS completed,
+    COUNT(*) FILTER (WHERE status = 'In Progress') AS in_progress,
+    COUNT(*) FILTER (WHERE status = 'Failed') AS failed
+FROM reports WHERE project_id = $1
+`
+
+type GetReportCountSummaryRow struct {
+	Total      int64
+	Completed  int64
+	InProgress int64
+	Failed     int64
+}
+
+func (q *Queries) GetReportCountSummary(ctx context.Context, projectID int32) (GetReportCountSummaryRow, error) {
+	row := q.db.QueryRowContext(ctx, getReportCountSummary, projectID)
+	var i GetReportCountSummaryRow
+	err := row.Scan(
+		&i.Total,
+		&i.Completed,
+		&i.InProgress,
+		&i.Failed,
+	)
+	return i, err
 }
 
 const getTestCase = `-- name: GetTestCase :one
@@ -2273,6 +2371,42 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.Code,
 			&i.ParentProjectID,
 			&i.TestcaseTemplate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReportsByProject = `-- name: ListReportsByProject :many
+SELECT id, project_id, name, type, status, created_at, file_path, updated_at FROM reports WHERE project_id = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListReportsByProject(ctx context.Context, projectID int32) ([]Report, error) {
+	rows, err := q.db.QueryContext(ctx, listReportsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Report
+	for rows.Next() {
+		var i Report
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Type,
+			&i.Status,
+			&i.CreatedAt,
+			&i.FilePath,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -3630,6 +3764,34 @@ func (q *Queries) UpdateProjectTesterRole(ctx context.Context, arg UpdateProject
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const updateReportFilePath = `-- name: UpdateReportFilePath :exec
+UPDATE reports SET file_path = $2 WHERE id = $1
+`
+
+type UpdateReportFilePathParams struct {
+	ID       uuid.UUID
+	FilePath sql.NullString
+}
+
+func (q *Queries) UpdateReportFilePath(ctx context.Context, arg UpdateReportFilePathParams) error {
+	_, err := q.db.ExecContext(ctx, updateReportFilePath, arg.ID, arg.FilePath)
+	return err
+}
+
+const updateReportStatus = `-- name: UpdateReportStatus :exec
+UPDATE reports SET status = $2, updated_at = NOW() WHERE id = $1
+`
+
+type UpdateReportStatusParams struct {
+	ID     uuid.UUID
+	Status string
+}
+
+func (q *Queries) UpdateReportStatus(ctx context.Context, arg UpdateReportStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateReportStatus, arg.ID, arg.Status)
+	return err
 }
 
 const updateSuggestedFlag = `-- name: UpdateSuggestedFlag :exec

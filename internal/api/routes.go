@@ -189,6 +189,15 @@ func (api *API) routes() {
 		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
 	}
 
+	reportsV1 := projectsV1.Group("/:projectID/reports", authenticationMiddleware)
+	{
+		reportsV1.Get("", apiv1.ListReports(api.ReportService, api.logger))
+		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
+		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
+		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
+	}
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),

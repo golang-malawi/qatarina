@@ -14,6 +14,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/lib/pq v1.10.9
 	github.com/lucasepe/homedir v0.0.0-20190526081923-f2b92ef978a0
 	github.com/microcosm-cc/bluemonday v1.0.27

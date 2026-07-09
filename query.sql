@@ -722,3 +722,31 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
+
+-- name: ListReportsByProject :many
+SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
+
+-- name: GetReport :one
+SELECT * FROM reports WHERE id = $1;
+
+-- name: CreateReport :one
+INSERT INTO reports (id, project_id, name, type, status, created_at, file_path)
+VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+RETURNING *;
+
+-- name: DeleteReport :execrows
+DELETE FROM reports WHERE id = $1;
+
+-- name: UpdateReportStatus :exec
+UPDATE reports SET status = $2, updated_at = NOW() WHERE id = $1;
+
+-- name: UpdateReportFilePath :exec
+UPDATE reports SET file_path = $2 WHERE id = $1;
+
+-- name: GetReportCountSummary :one
+SELECT
+    COUNT(*) AS total,
+    COUNT(*) FILTER (WHERE status = 'Completed') AS completed,
+    COUNT(*) FILTER (WHERE status = 'In Progress') AS in_progress,
+    COUNT(*) FILTER (WHERE status = 'Failed') AS failed
+FROM reports WHERE project_id = $1;

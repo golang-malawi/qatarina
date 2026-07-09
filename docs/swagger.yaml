@@ -236,6 +236,25 @@ components:
       - project_id
       - type
       type: object
+    schema.CreateReportRequest:
+      properties:
+        name:
+          type: string
+        project_id:
+          type: integer
+        status:
+          type: string
+        test_plan_id:
+          type: integer
+        type:
+          type: string
+      required:
+      - name
+      - project_id
+      - status
+      - test_plan_id
+      - type
+      type: object
     schema.CreateSuggestedTestCaseRequest:
       properties:
         code:
@@ -625,6 +644,33 @@ components:
     schema.RefreshTokenRequest:
       type: object
     schema.RefreshTokenResponse:
+      type: object
+    schema.ReportListResponse:
+      properties:
+        pagination:
+          $ref: '#/components/schemas/schema.Pagination'
+        reports:
+          items:
+            $ref: '#/components/schemas/schema.ReportResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.ReportResponse:
+      properties:
+        created_at:
+          type: string
+        file_path:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        project_id:
+          type: integer
+        status:
+          type: string
+        type:
+          type: string
       type: object
     schema.SignUpRequest:
       properties:
@@ -2317,6 +2363,171 @@ paths:
       summary: Get a Modules by project
       tags:
       - modules
+  /v1/projects/{projectID}/reports:
+    get:
+      description: List Reports for a Project
+      operationId: ListReports
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ReportListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List Reports for a Project
+      tags:
+      - reports
+    post:
+      description: Generate a new report
+      operationId: CreateReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateReportRequest'
+        description: Report data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ReportResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Generate a new report
+      tags:
+      - reports
+  /v1/projects/{projectID}/reports/{reportID}:
+    delete:
+      operationId: DeleteReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Report ID
+        in: path
+        name: reportID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+      summary: Delete a Report
+      tags:
+      - reports
+  /v1/projects/{projectID}/reports/{reportID}/download:
+    get:
+      operationId: DownloadReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Report ID
+        in: path
+        name: reportID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            application/pdf:
+              schema:
+                format: binary
+                type: string
+          description: PDF file
+      summary: Download a Report file (forces browser download)
+      tags:
+      - reports
+  /v1/projects/{projectID}/reports/{reportID}/view:
+    get:
+      operationId: ViewReport
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Report ID
+        in: path
+        name: reportID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            application/pdf:
+              schema:
+                format: binary
+                type: string
+          description: PDF file
+      summary: View a Report file inline in the browser
+      tags:
+      - reports
   /v1/projects/{projectID}/test-case-template:
     get:
       description: Get the test case template for a project. This template can be
