@@ -6,7 +6,10 @@ import {
 import { Button, Flex, Heading, HStack } from "@chakra-ui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { markTestCaseAsDraft, deleteTestCase } from "@/services/TestCaseService";
+import {
+  markTestCaseAsDraft,
+  deleteTestCase,
+} from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { LuEye, LuPencil } from "react-icons/lu";
@@ -108,7 +111,8 @@ function TestCasePage() {
           <Link to="/workspace/test-cases/new">
             <Button colorPalette="brand">Create New</Button>
           </Link>
-          <Button colorPalette="success">Import from Excel</Button>        </HStack>
+          <Button colorPalette="success">Import from Excel</Button>{" "}
+        </HStack>
       </Flex>
 
       <AppDataTable<TestCase, TestCaseListResponse>
@@ -128,25 +132,29 @@ function TestCasePage() {
               row.id && markDraftMutation.mutate(String(row.id)),
           },
           {
-  name: "delete",
-  label: "Delete",
-  color: "fg.error",
-  onClick: (row) => {
-    if (row.id) {
-      deleteTestCase(String(row.id))
-  .then(() => {
-    toaster.success({ title: "Test case deleted successfully" });
-    queryClient.invalidateQueries(findTestCaseAllQueryOptions({}));
-  }) 
-  .catch((err) => {
-    toaster.error({
-      title: "Failed to delete test case",
-      description: err?.message,
-    });
-  });
-    }
-  },
-}
+            name: "delete",
+            label: "Delete",
+            color: "fg.error",
+            onClick: (row) => {
+              if (row.id) {
+                deleteTestCase(String(row.id))
+                  .then(() => {
+                    toaster.success({
+                      title: "Test case deleted successfully",
+                    });
+                    queryClient.invalidateQueries(
+                      findTestCaseAllQueryOptions({}),
+                    );
+                  })
+                  .catch((err) => {
+                    toaster.error({
+                      title: "Failed to delete test case",
+                      description: err?.message,
+                    });
+                  });
+              }
+            },
+          },
         ]}
       />
     </div>

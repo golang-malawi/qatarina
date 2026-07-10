@@ -17,5 +17,6 @@
   "country_helper": "Choose your country",
   "organization": "Organization",
   "save_changes": "Save Changes",
-  "edit_profile": "Edit Profile"
+  "edit_profile": "Edit Profile",
+  "test_cases.header_description": "Manage Test Cases and assign test cases to test plans"
 }

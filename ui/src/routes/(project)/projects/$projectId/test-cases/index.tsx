@@ -1,22 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
-  ButtonGroup,
   Box,
   Flex,
   Heading,
-  IconButton,
   Table,
   Tabs,
+  Text,
 } from "@chakra-ui/react";
-import {
-  IconAlertTriangle,
-  IconClock,
-  IconList,
-  IconListCheck,
-  IconListDetails,
-  IconTable,
-} from "@tabler/icons-react";
+import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
@@ -41,6 +33,7 @@ import {
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
 import { deleteTestCase } from "@/services/TestCaseService";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -83,6 +76,7 @@ const columns: AppTableColumn<TestCase>[] = [
 
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const [moduleFilter, setModuleFilter] = useState<string>("");
@@ -146,8 +140,8 @@ export default function ListProjectTestCases() {
     if (!file) return;
 
     try {
-      const response = await importTestCasesFromFile(projectId, file)
-      
+      const response = await importTestCasesFromFile(projectId, file);
+
       const msg = response.message;
 
       let toastType: "success" | "warning" | "info" = "success";
@@ -156,7 +150,7 @@ export default function ListProjectTestCases() {
       if (msg.startsWith("Imported 0")) {
         toastType = "warning";
         title = "No new test cases imported";
-      } else if (msg.includes("skipped") && !msg.startsWith("Imported 0")){
+      } else if (msg.includes("skipped") && !msg.startsWith("Imported 0")) {
         toastType = "success";
         title = "Imported completed with duplicates";
       } else {
@@ -190,7 +184,9 @@ export default function ListProjectTestCases() {
       <Heading as="h6" size="xl" color="fg.heading">
         Test Cases
       </Heading>
-
+      <Text colorPalette={"gray.500"}>
+        {t("test_cases.header_description")}
+      </Text>
       <Flex
         py={"4"}
         px={"4"}
@@ -204,10 +200,9 @@ export default function ListProjectTestCases() {
           to={"/projects/$projectId/test-cases/new"}
           params={{ projectId: projectId }}
         >
-          <Button variant={"outline"} colorPalette="brand" size={"sm"}>
+          <Button variant={"solid"} colorPalette="brand" size={"sm"}>
             Add Test Cases
           </Button>
-
         </Link>
         <Button colorPalette="success" size="sm" onClick={handleImportClick}>
           Import from Excel
@@ -220,25 +215,6 @@ export default function ListProjectTestCases() {
           style={{ display: "none" }}
           onChange={handleFileChange}
         />
-
-        <ButtonGroup>
-          <IconButton
-            aria-label="List view"
-            bg="bg.subtle"
-            color="fg.muted"
-            size={"sm"}
-          >
-            <IconListDetails />
-          </IconButton>
-          <IconButton
-            aria-label="Table view"
-            bg="bg.emphasized"
-            color="fg"
-            size={"sm"}
-          >
-            <IconTable />
-          </IconButton>
-        </ButtonGroup>
       </Flex>
 
       <Tabs.Root defaultValue="all">
@@ -247,35 +223,20 @@ export default function ListProjectTestCases() {
             <IconList />
             &nbsp; All Test Cases
           </Tabs.Trigger>
-          <Tabs.Trigger color={"fg.success"} value="completed">
-            <IconListCheck />
-            &nbsp;Completed / Closed
-          </Tabs.Trigger>
-          <Tabs.Trigger color={"fg.error"} value="failing">
-            <IconAlertTriangle />
-            &nbsp;Failing
-          </Tabs.Trigger>
-          <Tabs.Trigger color={"fg.warning"} value="scheduled">
-            <IconClock />
-            &nbsp;Scheduled
-          </Tabs.Trigger>
-          <Tabs.Trigger color={"purple"} value="blocked">
-            <IconAlertTriangle />
-            &nbsp;Blocked
-          </Tabs.Trigger>
+
           <Tabs.Trigger color={"blue"} value="suggested">
             <IconListDetails />
             &nbsp;Suggested
           </Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="all">
-  <Box mt={2}>
-    <SelectFeatureModule
-      projectId={projectId}
-      value={moduleFilter}
-      onChange={setModuleFilter}
-    />
-  </Box>
+          <Box mt={2}>
+            <SelectFeatureModule
+              projectId={projectId}
+              value={moduleFilter}
+              onChange={setModuleFilter}
+            />
+          </Box>
 
           <AppDataTable<TestCase, TestCaseListResponse>
             // @ts-expect-error TODO(sevenreup)
@@ -304,22 +265,24 @@ export default function ListProjectTestCases() {
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
               },
-              { name: "edit", 
-                label: "Edit", 
+              {
+                name: "edit",
+                label: "Edit",
                 icon: LuPencil,
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
-               },
+              },
               {
                 name: "mark-draft",
                 label: "Mark as Draft",
                 onClick: (row) =>
                   row.id && markDraftMutation.mutate(String(row.id)),
               },
-              { name: "use", 
+              {
+                name: "use",
                 label: "Use in Test Session",
-                  link: (row) =>
-                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
+                link: (row) =>
+                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
               },
               {
                 name: "delete",
@@ -329,9 +292,11 @@ export default function ListProjectTestCases() {
                   if (row.id) {
                     try {
                       await deleteTestCase(String(row.id));
-                      toaster.success({ title: "Test case deleted successfully" });
+                      toaster.success({
+                        title: "Test case deleted successfully",
+                      });
                       queryClient.invalidateQueries(
-                        testCasesByProjectIdQueryOptions(projectId)
+                        testCasesByProjectIdQueryOptions(projectId),
                       );
                       window.location.href = `/projects/${projectId}/test-cases`;
                     } catch (err: any) {
@@ -342,9 +307,9 @@ export default function ListProjectTestCases() {
                     }
                   }
                 },
-              } 
+              },
             ]}
-          /> 
+          />
         </Tabs.Content>
         <Tabs.Content value="completed">
           <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
@@ -359,7 +324,7 @@ export default function ListProjectTestCases() {
           <BlockedTestCasesTab projectID={projectId} userMap={userMap} />
         </Tabs.Content>
         <Tabs.Content value="suggested">
-          <SuggestedTestCasesTab projectID={projectId}/>
+          <SuggestedTestCasesTab projectID={projectId} />
         </Tabs.Content>
       </Tabs.Root>
     </div>
@@ -452,7 +417,7 @@ type TestCasesTableProps = {
   error: any;
   loadingMessage: string;
   errorMessage: string;
-  userMap: Record<number, string>;  
+  userMap: Record<number, string>;
 };
 
 function TestCasesTable({
@@ -461,7 +426,7 @@ function TestCasesTable({
   error,
   loadingMessage,
   errorMessage,
-  userMap, 
+  userMap,
 }: TestCasesTableProps) {
   if (isLoading) return <p>{loadingMessage}</p>;
   if (error) return <p>{errorMessage}</p>;
@@ -502,10 +467,17 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
     try {
       await approveSuggestedTestCase(id);
       toaster.success({ title: "Test case approved" });
-      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"] });
-      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases"] });
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+      });
     } catch (err: any) {
-      toaster.error({ title: "Failed to approve test case", description: err?.message });
+      toaster.error({
+        title: "Failed to approve test case",
+        description: err?.message,
+      });
     }
   };
 
@@ -513,9 +485,14 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
     try {
       await rejectSuggestedTestCase(id);
       toaster.success({ title: "Test case rejected" });
-      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"] });
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"],
+      });
     } catch (err: any) {
-      toaster.error({ title: "Failed to reject test case", description: err?.message });
+      toaster.error({
+        title: "Failed to reject test case",
+        description: err?.message,
+      });
     }
   };
 
@@ -528,7 +505,8 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
         <Table.Row>
           <Table.ColumnHeader>Code</Table.ColumnHeader>
           <Table.ColumnHeader>Title</Table.ColumnHeader>
-          <Table.ColumnHeader>Description</Table.ColumnHeader> {/* NEW COLUMN */}
+          <Table.ColumnHeader>Description</Table.ColumnHeader>{" "}
+          {/* NEW COLUMN */}
           <Table.ColumnHeader>Actions</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
@@ -540,10 +518,18 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
             <Table.Cell>{tc.description}</Table.Cell> {/* SHOW DESCRIPTION */}
             <Table.Cell>
               <Flex gap={2}>
-                <Button size="sm" colorPalette="green" onClick={() => handleApprove(String(tc.id))}>
+                <Button
+                  size="sm"
+                  colorPalette="green"
+                  onClick={() => handleApprove(String(tc.id))}
+                >
                   Approve
                 </Button>
-                <Button size="sm" colorPalette="red" onClick={() => handleReject(String(tc.id))}>
+                <Button
+                  size="sm"
+                  colorPalette="red"
+                  onClick={() => handleReject(String(tc.id))}
+                >
                   Reject
                 </Button>
               </Flex>
