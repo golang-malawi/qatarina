@@ -1,4 +1,4 @@
-import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import { AppDataTable } from "@/components/ui/app-data-table";
 import {
   findTestCaseAllQueryOptions,
   TestCaseListQueryParams,
@@ -14,6 +14,7 @@ import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
 import { LuEye, LuPencil } from "react-icons/lu";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/test-cases/")({
   component: TestCasePage,
@@ -24,43 +25,16 @@ type TestCase = components["schemas"]["schema.TestCaseResponse"];
 type TestCaseListResponse =
   components["schemas"]["schema.TestCaseListResponse"];
 
-const columns: AppTableColumn<TestCase>[] = [
-  { key: "code", header: "Code", sortKey: "code" },
-  { key: "title", header: "Title", sortKey: "title" },
-  { key: "kind", header: "Kind", sortKey: "kind" },
-  {
-    key: "is_draft",
-    header: "Draft",
-    type: "enum",
-    sortKey: "is_draft",
-    enumOptions: {
-      map: {
-        true: { label: "Draft", colorPalette: "orange" },
-        false: { label: "Active", colorPalette: "green" },
-      },
-    },
-    align: "center",
-    width: "120px",
-  },
-  {
-    key: "created_at",
-    header: "Created",
-    type: "date",
-    sortKey: "created_at",
-    align: "end",
-    width: "140px",
-  },
-];
-
 function TestCasePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const markDraftMutation = useMutation({
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
     onSuccess: () => {
       toaster.create({
-        title: "Success",
-        description: "Marked as draft",
+        title: t("test_cases.toast.success"),
+        description: t("test_cases.mark_draft.success"),
         type: "success",
       });
       queryClient.invalidateQueries({
@@ -69,8 +43,8 @@ function TestCasePage() {
     },
     onError: () => {
       toaster.create({
-        title: "Error",
-        description: "Failed to mark as draft",
+        title: t("test_cases.toast.error"),
+        description: t("test_cases.mark_draft.error"),
         type: "error",
       });
     },
@@ -97,7 +71,7 @@ function TestCasePage() {
 
   return (
     <div>
-      <Heading color="fg.heading">Test Cases</Heading>
+      <Heading color="fg.heading">{t("test_cases")}</Heading>
 
       <Flex
         mb={4}
@@ -109,38 +83,84 @@ function TestCasePage() {
       >
         <HStack gap="3" flexWrap="wrap">
           <Link to="/workspace/test-cases/new">
-            <Button colorPalette="brand">Create New</Button>
+            <Button colorPalette="brand">{t("test_cases.create_new")}</Button>
           </Link>
-          <Button colorPalette="success">Import from Excel</Button>{" "}
+          <Button colorPalette="success">
+            {t("test_cases.import_from_excel")}
+          </Button>{" "}
         </HStack>
       </Flex>
 
       <AppDataTable<TestCase, TestCaseListResponse>
         // @ts-expect-error TODO(sevenreup)
         query={queryFactory}
-        columns={columns}
+        columns={[
+          {
+            key: "code",
+            header: t("test_cases.column.code"),
+            sortKey: "code",
+          },
+          {
+            key: "title",
+            header: t("test_cases.column.title"),
+            sortKey: "title",
+          },
+          {
+            key: "kind",
+            header: t("test_cases.column.kind"),
+            sortKey: "kind",
+          },
+          {
+            key: "is_draft",
+            header: t("test_cases.column.draft"),
+            type: "enum",
+            sortKey: "is_draft",
+            enumOptions: {
+              map: {
+                true: {
+                  label: t("test_cases.status.draft"),
+                  colorPalette: "orange",
+                },
+                false: {
+                  label: t("test_cases.status.active"),
+                  colorPalette: "green",
+                },
+              },
+            },
+            align: "center",
+            width: "120px",
+          },
+          {
+            key: "created_at",
+            header: t("test_cases.column.created"),
+            type: "date",
+            sortKey: "created_at",
+            align: "end",
+            width: "140px",
+          },
+        ]}
         defaultSort={{ key: "created_at", desc: true }}
         showGlobalFilter
-        filterPlaceholder="Search test cases"
+        filterPlaceholder={t("test_cases.search_placeholder")}
         rowActions={[
-          { name: "view", label: "View", icon: LuEye },
-          { name: "edit", label: "Edit", icon: LuPencil },
+          { name: "view", label: t("test_cases.view"), icon: LuEye },
+          { name: "edit", label: t("test_cases.edit"), icon: LuPencil },
           {
             name: "mark-draft",
-            label: "Mark as Draft",
+            label: t("test_cases.mark_as_draft"),
             onClick: (row) =>
               row.id && markDraftMutation.mutate(String(row.id)),
           },
           {
             name: "delete",
-            label: "Delete",
+            label: t("test_cases.delete"),
             color: "fg.error",
             onClick: (row) => {
               if (row.id) {
                 deleteTestCase(String(row.id))
                   .then(() => {
                     toaster.success({
-                      title: "Test case deleted successfully",
+                      title: t("test_cases.delete.success"),
                     });
                     queryClient.invalidateQueries(
                       findTestCaseAllQueryOptions({}),
@@ -148,7 +168,7 @@ function TestCasePage() {
                   })
                   .catch((err) => {
                     toaster.error({
-                      title: "Failed to delete test case",
+                      title: t("test_cases.delete.error"),
                       description: err?.message,
                     });
                   });

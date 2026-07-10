@@ -46,34 +46,6 @@ type TestCase = components["schemas"]["schema.TestCaseResponse"];
 type TestCaseListResponse =
   components["schemas"]["schema.TestCaseListResponse"];
 
-const columns: AppTableColumn<TestCase>[] = [
-  { key: "code", header: "Code", sortKey: "code" },
-  { key: "title", header: "Title", sortKey: "title" },
-  { key: "kind", header: "Kind", sortKey: "kind" },
-  {
-    key: "is_draft",
-    header: "Draft",
-    type: "enum",
-    sortKey: "is_draft",
-    enumOptions: {
-      map: {
-        true: { label: "Draft", colorPalette: "orange" },
-        false: { label: "Active", colorPalette: "green" },
-      },
-    },
-    align: "center",
-    width: "120px",
-  },
-  {
-    key: "created_at",
-    header: "Created",
-    type: "date",
-    sortKey: "created_at",
-    align: "end",
-    width: "140px",
-  },
-];
-
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const { t } = useTranslation();
@@ -85,8 +57,8 @@ export default function ListProjectTestCases() {
     mutationFn: async (id: string) => await markTestCaseAsDraft(id),
     onSuccess: () => {
       toaster.create({
-        title: "Success",
-        description: "Marked as draft",
+        title: t("test_cases.toast.success"),
+        description: t("test_cases.mark_draft.success"),
         type: "success",
       });
       queryClient.invalidateQueries({
@@ -95,8 +67,8 @@ export default function ListProjectTestCases() {
     },
     onError: () => {
       toaster.create({
-        title: "Error",
-        description: "Failed to mark as draft",
+        title: t("test_cases.toast.error"),
+        description: t("test_cases.mark_draft.error"),
         type: "error",
       });
     },
@@ -126,6 +98,40 @@ export default function ListProjectTestCases() {
   const userMap = Object.fromEntries(
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
+
+  const columns: AppTableColumn<TestCase>[] = [
+    { key: "code", header: t("test_cases.column.code"), sortKey: "code" },
+    { key: "title", header: t("test_cases.column.title"), sortKey: "title" },
+    { key: "kind", header: t("test_cases.column.kind"), sortKey: "kind" },
+    {
+      key: "is_draft",
+      header: t("test_cases.column.draft"),
+      type: "enum",
+      sortKey: "is_draft",
+      enumOptions: {
+        map: {
+          true: {
+            label: t("test_cases.status.draft"),
+            colorPalette: "orange",
+          },
+          false: {
+            label: t("test_cases.status.active"),
+            colorPalette: "green",
+          },
+        },
+      },
+      align: "center",
+      width: "120px",
+    },
+    {
+      key: "created_at",
+      header: t("test_cases.column.created"),
+      type: "date",
+      sortKey: "created_at",
+      align: "end",
+      width: "140px",
+    },
+  ];
 
   // const { data: testCases } = useSuspenseQuery(
   //   testCasesByProjectIdQueryOptions(projectId),
@@ -182,7 +188,7 @@ export default function ListProjectTestCases() {
     <div>
       <Toaster />
       <Heading as="h6" size="xl" color="fg.heading">
-        Test Cases
+        {t("test_cases")}
       </Heading>
       <Text colorPalette={"gray.500"}>
         {t("test_cases.header_description")}
@@ -201,11 +207,11 @@ export default function ListProjectTestCases() {
           params={{ projectId: projectId }}
         >
           <Button variant={"solid"} colorPalette="brand" size={"sm"}>
-            Add Test Cases
+            {t("test_cases.add")}
           </Button>
         </Link>
         <Button colorPalette="success" size="sm" onClick={handleImportClick}>
-          Import from Excel
+          {t("test_cases.import_from_excel")}
         </Button>
 
         <input
@@ -221,12 +227,12 @@ export default function ListProjectTestCases() {
         <Tabs.List>
           <Tabs.Trigger value="all">
             <IconList />
-            &nbsp; All Test Cases
+            &nbsp;{t("test_cases.tab.all")}
           </Tabs.Trigger>
 
           <Tabs.Trigger color={"blue"} value="suggested">
             <IconListDetails />
-            &nbsp;Suggested
+            &nbsp;{t("test_cases.tab.suggested")}
           </Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="all">
@@ -244,7 +250,7 @@ export default function ListProjectTestCases() {
             columns={columns}
             defaultSort={{ key: "created_at", desc: true }}
             showGlobalFilter
-            filterPlaceholder="Search test cases"
+            filterPlaceholder={t("test_cases.search_placeholder")}
             dataAccessor={(response) =>
               (response?.test_cases ?? []) as TestCase[]
             }
@@ -260,40 +266,40 @@ export default function ListProjectTestCases() {
             rowActions={[
               {
                 name: "view",
-                label: "View",
+                label: t("test_cases.view"),
                 icon: LuEye,
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
               },
               {
                 name: "edit",
-                label: "Edit",
+                label: t("test_cases.edit"),
                 icon: LuPencil,
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
               },
               {
                 name: "mark-draft",
-                label: "Mark as Draft",
+                label: t("test_cases.mark_as_draft"),
                 onClick: (row) =>
                   row.id && markDraftMutation.mutate(String(row.id)),
               },
               {
                 name: "use",
-                label: "Use in Test Session",
+                label: t("test_cases.use_in_test_session"),
                 link: (row) =>
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
               },
               {
                 name: "delete",
-                label: "Delete",
+                label: t("test_cases.delete"),
                 color: "fg.error",
                 onClick: async (row) => {
                   if (row.id) {
                     try {
                       await deleteTestCase(String(row.id));
                       toaster.success({
-                        title: "Test case deleted successfully",
+                        title: t("test_cases.delete.success"),
                       });
                       queryClient.invalidateQueries(
                         testCasesByProjectIdQueryOptions(projectId),
@@ -301,7 +307,7 @@ export default function ListProjectTestCases() {
                       window.location.href = `/projects/${projectId}/test-cases`;
                     } catch (err: any) {
                       toaster.error({
-                        title: "Failed to delete test case",
+                        title: t("test_cases.delete.error"),
                         description: err?.message,
                       });
                     }
@@ -339,13 +345,14 @@ function ClosedTestCasesTab({
   userMap: Record<number, string>;
 }) {
   const { data, isLoading, error } = useClosedTestCasesQuery(projectID);
+  const { t } = useTranslation();
   return (
     <TestCasesTable
       testCases={data?.test_cases ?? []}
       isLoading={isLoading}
       error={error}
-      loadingMessage="Loading closed cases..."
-      errorMessage="Failed to load closed test cases"
+      loadingMessage={t("test_cases.loading.closed")}
+      errorMessage={t("test_cases.error.closed")}
       userMap={userMap}
     />
   );
@@ -359,13 +366,14 @@ function FailingTestCasesTab({
   userMap: Record<number, string>;
 }) {
   const { data, isLoading, error } = useFailingTestCasesQuery(projectID);
+  const { t } = useTranslation();
   return (
     <TestCasesTable
       testCases={data?.test_cases ?? []}
       isLoading={isLoading}
       error={error}
-      loadingMessage="Loading failing cases..."
-      errorMessage="Failed to load failing test cases"
+      loadingMessage={t("test_cases.loading.failing")}
+      errorMessage={t("test_cases.error.failing")}
       userMap={userMap}
     />
   );
@@ -379,13 +387,14 @@ function ScheduledTestCasesTab({
   userMap: Record<number, string>;
 }) {
   const { data, isLoading, error } = useScheduledTestCasesQuery(projectID);
+  const { t } = useTranslation();
   return (
     <TestCasesTable
       testCases={data?.test_cases ?? []}
       isLoading={isLoading}
       error={error}
-      loadingMessage="Loading scheduled cases..."
-      errorMessage="Failed to load scheduled test cases"
+      loadingMessage={t("test_cases.loading.scheduled")}
+      errorMessage={t("test_cases.error.scheduled")}
       userMap={userMap}
     />
   );
@@ -399,13 +408,14 @@ function BlockedTestCasesTab({
   userMap: Record<number, string>;
 }) {
   const { data, isLoading, error } = useBlockedTestCasesQuery(projectID);
+  const { t } = useTranslation();
   return (
     <TestCasesTable
       testCases={data?.test_cases ?? []}
       isLoading={isLoading}
       error={error}
-      loadingMessage="Loading blocked cases..."
-      errorMessage="Failed to load blocked test cases"
+      loadingMessage={t("test_cases.loading.blocked")}
+      errorMessage={t("test_cases.error.blocked")}
       userMap={userMap}
     />
   );
@@ -428,6 +438,7 @@ function TestCasesTable({
   errorMessage,
   userMap,
 }: TestCasesTableProps) {
+  const { t } = useTranslation();
   if (isLoading) return <p>{loadingMessage}</p>;
   if (error) return <p>{errorMessage}</p>;
 
@@ -435,12 +446,12 @@ function TestCasesTable({
     <Table.Root>
       <Table.Header>
         <Table.Row>
-          <Table.ColumnHeader>Code</Table.ColumnHeader>
-          <Table.ColumnHeader>Title</Table.ColumnHeader>
-          <Table.ColumnHeader>Status</Table.ColumnHeader>
-          <Table.ColumnHeader>Result</Table.ColumnHeader>
-          <Table.ColumnHeader>Executed By</Table.ColumnHeader>
-          <Table.ColumnHeader>Notes</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.code")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.title")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.status")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.result")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.executed_by")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.notes")}</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
       <Table.Body>
@@ -460,13 +471,14 @@ function TestCasesTable({
 }
 
 function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useSuggestedTestCasesQuery(projectID);
 
   const handleApprove = async (id: string) => {
     try {
       await approveSuggestedTestCase(id);
-      toaster.success({ title: "Test case approved" });
+      toaster.success({ title: t("test_cases.approve.success") });
       queryClient.invalidateQueries({
         queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"],
       });
@@ -475,7 +487,7 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
       });
     } catch (err: any) {
       toaster.error({
-        title: "Failed to approve test case",
+        title: t("test_cases.approve.error"),
         description: err?.message,
       });
     }
@@ -484,30 +496,30 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
   const handleReject = async (id: string) => {
     try {
       await rejectSuggestedTestCase(id);
-      toaster.success({ title: "Test case rejected" });
+      toaster.success({ title: t("test_cases.reject.success") });
       queryClient.invalidateQueries({
         queryKey: ["get", "/v1/projects/{projectID}/test-cases/suggested"],
       });
     } catch (err: any) {
       toaster.error({
-        title: "Failed to reject test case",
+        title: t("test_cases.reject.error"),
         description: err?.message,
       });
     }
   };
 
-  if (isLoading) return <p>Loading suggested cases...</p>;
-  if (error) return <p>Failed to load suggested test cases</p>;
+  if (isLoading) return <p>{t("test_cases.loading.suggested")}</p>;
+  if (error) return <p>{t("test_cases.error.suggested")}</p>;
 
   return (
     <Table.Root>
       <Table.Header>
         <Table.Row>
-          <Table.ColumnHeader>Code</Table.ColumnHeader>
-          <Table.ColumnHeader>Title</Table.ColumnHeader>
-          <Table.ColumnHeader>Description</Table.ColumnHeader>{" "}
+          <Table.ColumnHeader>{t("test_cases.column.code")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.title")}</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.description")}</Table.ColumnHeader>{" "}
           {/* NEW COLUMN */}
-          <Table.ColumnHeader>Actions</Table.ColumnHeader>
+          <Table.ColumnHeader>{t("test_cases.column.actions")}</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
       <Table.Body>
@@ -523,14 +535,14 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
                   colorPalette="green"
                   onClick={() => handleApprove(String(tc.id))}
                 >
-                  Approve
+                  {t("test_cases.approve")}
                 </Button>
                 <Button
                   size="sm"
                   colorPalette="red"
                   onClick={() => handleReject(String(tc.id))}
                 >
-                  Reject
+                  {t("test_cases.reject")}
                 </Button>
               </Flex>
             </Table.Cell>

@@ -146,14 +146,16 @@ function resolveData<TData>(response: any): TData[] {
   if (Array.isArray(response.items)) return response.items as TData[];
   if (Array.isArray(response.results)) return response.results as TData[];
   if (Array.isArray(response.test_cases)) return response.test_cases as TData[];
-  if (Array.isArray(response.data?.test_cases)) return response.data.test_cases as TData[];
+  if (Array.isArray(response.data?.test_cases))
+    return response.data.test_cases as TData[];
   return [];
 }
 
 function resolvePagination(response: any): PaginationInfo | undefined {
   if (!response) return undefined;
   if (response.pagination) return response.pagination as PaginationInfo;
-  if (response.data?.pagination) return response.data.pagination as PaginationInfo;
+  if (response.data?.pagination)
+    return response.data.pagination as PaginationInfo;
   return undefined;
 }
 
@@ -344,10 +346,6 @@ export function AppDataTable<TData, TResponse>({
     },
     [navigate, resolveActions, rowActionsLabel],
   );
-
-
-
-
 
   const builtColumns = React.useMemo(() => {
     const columnDefs: ColumnDef<TData, unknown>[] = [];
@@ -722,7 +720,9 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Previous page"
               size="sm"
               variant="ghost"
-              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex - 1)}
+              onClick={() =>
+                table.setPageIndex(table.getState().pagination.pageIndex - 1)
+              }
               disabled={!table.getCanPreviousPage()}
             >
               <LuChevronLeft />
@@ -731,7 +731,9 @@ export function AppDataTable<TData, TResponse>({
               aria-label="Next page"
               size="sm"
               variant="ghost"
-              onClick={() => table.setPageIndex(table.getState().pagination.pageIndex + 1)}
+              onClick={() =>
+                table.setPageIndex(table.getState().pagination.pageIndex + 1)
+              }
               disabled={!table.getCanNextPage()}
             >
               <LuChevronRight />
