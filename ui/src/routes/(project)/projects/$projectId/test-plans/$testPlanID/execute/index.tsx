@@ -14,6 +14,7 @@ import { useState } from "react";
 import TestCaseGrid from "@/components/TestCaseGrid";
 import { useExecuteTestCaseMutation } from "@/services/TestExecutionService";
 import { useScriptTestCasesQuery } from "@/services/TestCaseService";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/execute/"
@@ -22,9 +23,13 @@ export const Route = createFileRoute(
 });
 
 function ExecuteTestPlan() {
+  const { t } = useTranslation();
   const { testPlanID } = Route.useParams();
   const mutation = useExecuteTestCaseMutation();
-  const [runStatus, setRunStatus] = useState<"started" | "passed" | "failed" | "pending" | null>(null);
+
+  const [runStatus, setRunStatus] = useState<
+    "started" | "passed" | "failed" | "pending" | null
+  >(null);
   const [latestRunID, setLatestRunID] = useState<string | null>(null);
 
   // Fetch script-based test cases
@@ -44,7 +49,7 @@ function ExecuteTestPlan() {
             setLatestRunID(data.id);
           }
         },
-      },
+      }
     );
   };
 
@@ -61,11 +66,11 @@ function ExecuteTestPlan() {
               <HStack gap={2}>
                 <Icon as={IconPlayerPlay} color="brand.solid" />
                 <Heading size="lg" color="fg.heading">
-                  Execute Test Plan
+                  {t("test_plans.execute")}
                 </Heading>
               </HStack>
               <Text color="fg.subtle">
-                Select a test case below and run it against the configured runner.
+                {t("test_plans.execute_description")}
               </Text>
             </Stack>
           </Flex>
@@ -75,8 +80,8 @@ function ExecuteTestPlan() {
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface">
         <Card.Body p={{ base: 4, md: 5 }}>
           <Box overflowX="auto" minH="80">
-            {isLoading && <Text>Loading script test cases...</Text>}
-            {isError && <Text color="red.500">Failed to load test cases</Text>}
+            {isLoading && <Text>{t("test_plans.loading_cases")}</Text>}
+            {isError && <Text color="red.500">{t("test_plans.error_cases")}</Text>}
             {data && (
               <TestCaseGrid
                 testCases={data.test_cases} // pass fetched cases
@@ -91,12 +96,24 @@ function ExecuteTestPlan() {
       {mutation.isError && (
         <Text color="red.500">Error: {(mutation.error as Error).message}</Text>
       )}
+
       {mutation.isPending && runStatus === "started" && latestRunID && (
-        <Text color="blue.500">Run started... ID: {latestRunID}</Text>
+        <Text color="blue.500">
+          {t("test_plans.run_started", { id: latestRunID })}
+        </Text>
       )}
+
       {runStatus && runStatus !== "started" && (
-        <Text color={runStatus === "passed" ? "green.500" : runStatus === "failed" ? "red.500" : "orange.500"}>
-          Run finished: {runStatus}
+        <Text
+          color={
+            runStatus === "passed"
+              ? "green.500"
+              : runStatus === "failed"
+              ? "red.500"
+              : "orange.500"
+          }
+        >
+          {t("test_plans.run_finished", { status: runStatus })}
         </Text>
       )}
     </Box>

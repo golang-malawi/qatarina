@@ -22,6 +22,7 @@ import {
 import { useTestPlanQuery } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import type { components } from "@/lib/api/v1";
+import { useTranslation } from "react-i18next";
 
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
@@ -40,7 +41,7 @@ type PlanTester = {
   id: number;
   name: string;
   email: string;
-  role: "Plan Owner" | "Assigned Tester";
+  role: string;
   assignments: number;
 };
 
@@ -51,6 +52,7 @@ export const Route = createFileRoute(
 });
 
 function TestPlanTestersPage() {
+  const { t } = useTranslation();
   const { testPlanID } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -59,12 +61,13 @@ function TestPlanTestersPage() {
     isLoading: boolean;
     isError: boolean;
   };
-  const usersQuery = useUsersQuery();
 
+  const usersQuery = useUsersQuery();
   const users = useMemo(
     () => (usersQuery.data?.users ?? []) as UserRecord[],
     [usersQuery.data?.users]
   );
+
   const usersById = useMemo(() => {
     const map = new Map<number, UserRecord>();
     users.forEach((user) => {
@@ -87,36 +90,34 @@ function TestPlanTestersPage() {
 
   const testers = useMemo(() => {
     const ids = new Set<number>();
-
     if (testPlanQuery.data?.assigned_to_id) {
       ids.add(testPlanQuery.data.assigned_to_id);
     }
-
     assignmentCountByTester.forEach((_, testerId) => ids.add(testerId));
 
     return Array.from(ids)
       .map((id): PlanTester => {
         const user = usersById.get(id);
         const assignments = assignmentCountByTester.get(id) ?? 0;
-
         return {
           id,
           name: getUserName(user, id),
-          email: user?.Email ?? user?.email ?? "No email available",
+          email: user?.Email ?? user?.email ?? t("test_plans.no_users"),
           role:
             id === testPlanQuery.data?.assigned_to_id
-              ? "Plan Owner"
-              : "Assigned Tester",
+              ? t("test_plans.role.owner")
+              : t("test_plans.role.assigned"),
           assignments,
         };
       })
-      .sort((a, b) => b.assignments - a.assignments || a.name.localeCompare(b.name));
-  }, [assignmentCountByTester, testPlanQuery.data?.assigned_to_id, usersById]);
+      .sort(
+        (a, b) => b.assignments - a.assignments || a.name.localeCompare(b.name)
+      );
+  }, [assignmentCountByTester, testPlanQuery.data?.assigned_to_id, usersById, t]);
 
   const filteredTesters = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return testers;
-
     return testers.filter((tester) => {
       const searchable = `${tester.id} ${tester.name} ${tester.email} ${tester.role}`.toLowerCase();
       return searchable.includes(term);
@@ -129,10 +130,11 @@ function TestPlanTestersPage() {
   );
 
   if (testPlanQuery.isLoading || usersQuery.isLoading) {
-    return <LoadingState label="Loading testers..." />;
+    return <LoadingState label={t("test_plans.loading")} />;
   }
+
   if (testPlanQuery.isError) {
-    return <ErrorState title="Failed to load testers for this plan" />;
+    return <ErrorState title={t("test_plans.error")} />;
   }
 
   return (
@@ -143,22 +145,19 @@ function TestPlanTestersPage() {
             <HStack gap={2}>
               <Icon as={IconUsers} color="brand.solid" />
               <Heading size="lg" color="fg.heading">
-                Plan Testers
+                {t("test_plans.testers")}
               </Heading>
             </HStack>
-            <Text color="fg.subtle">
-              View everyone currently assigned to this plan and track tester
-              workload across linked test cases.
-            </Text>
+            <Text color="fg.subtle">{t("test_plans.testers_description")}</Text>
             <HStack gap={2} flexWrap="wrap">
               <Badge colorPalette="brand" variant="subtle">
-                {testers.length} tester(s)
+                {testers.length} {t("test_plans.testers.count")}
               </Badge>
               <Badge colorPalette="blue" variant="subtle">
-                {totalAssignments} assignment(s)
+                {totalAssignments} {t("test_plans.testers.assignments")}
               </Badge>
               <Badge colorPalette="gray" variant="subtle">
-                {filteredTesters.length} shown
+                {filteredTesters.length} {t("test_plans.testers.shown")}
               </Badge>
             </HStack>
           </Stack>
@@ -171,7 +170,7 @@ function TestPlanTestersPage() {
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by tester name, email, role, or id"
+              placeholder={t("test_plans.search_testers")}
             />
           </InputGroup>
         </Card.Body>
@@ -179,13 +178,13 @@ function TestPlanTestersPage() {
 
       {testers.length === 0 ? (
         <EmptyState
-          title="No testers assigned yet"
-          description="Assign testers from the Test Cases tab to populate this list."
+          title={t("test_plans.empty_testers")}
+          description={t("test_plans.empty_testers_description")}
         />
       ) : filteredTesters.length === 0 ? (
         <EmptyState
-          title="No matching testers"
-          description="Try another search term to find a specific tester."
+          title={t("test_plans.no_match_testers")}
+          description={t("test_plans.no_match_testers_description")}
         />
       ) : (
         <Stack gap={4}>
@@ -217,7 +216,11 @@ function TestPlanTestersPage() {
                         ID: {tester.id}
                       </Badge>
                       <Badge
-                        colorPalette={tester.role === "Plan Owner" ? "purple" : "brand"}
+                        colorPalette={
+                          tester.role === t("test_plans.role.owner")
+                            ? "purple"
+                            : "brand"
+                        }
                         variant="subtle"
                       >
                         {tester.role}
@@ -227,15 +230,15 @@ function TestPlanTestersPage() {
 
                   <Stack gap={1}>
                     <Text fontSize="xs" color="fg.subtle">
-                      Assigned Test Cases
+                      {t("test_plans.assigned_cases")}
                     </Text>
                     <Heading size="lg" color="fg.heading">
                       {tester.assignments}
                     </Heading>
                     <Text color="fg.subtle" fontSize="sm">
                       {tester.assignments > 0
-                        ? "Direct case assignments in this plan."
-                        : "No direct case assignments yet."}
+                        ? t("test_plans.assigned_cases_description")
+                        : t("test_plans.no_assigned_cases")}
                     </Text>
                   </Stack>
                 </Grid>
@@ -260,3 +263,4 @@ function getUserName(user?: UserRecord, fallbackId?: number) {
     `User ${fallbackId ?? ""}`.trim()
   );
 }
+
