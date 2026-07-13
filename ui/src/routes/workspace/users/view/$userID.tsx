@@ -12,36 +12,30 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGetUserQuery, deleteUserByID } from "@/services/UserService";
 import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/users/view/$userID")({
   component: ViewUserProfile,
 });
 
 function ViewUserProfile() {
+  const { t } = useTranslation();
   const { userID } = Route.useParams();
   const navigate = useNavigate();
   const { user: loggedInUser } = useAuth();
 
   const { data: user, isPending, isError, error } = useGetUserQuery(userID);
   const { data: loggedInUserProfile } = useGetUserQuery(
-    loggedInUser?.user_id?.toString() || "",
+    loggedInUser?.user_id?.toString() || ""
   );
 
-  // Check if the logged-in user is the same as the user being viewed
   const isOwnProfile = loggedInUser?.user_id === Number(userID);
-
-  // Can deactivate only if it's own profile OR user is super admin
-  const canEditUser =
-    isOwnProfile || loggedInUserProfile?.is_super_admin === true;
-  const canDeactivate =
-    isOwnProfile || loggedInUserProfile?.is_super_admin === true;
+  const canEditUser = isOwnProfile || loggedInUserProfile?.is_super_admin === true;
+  const canDeactivate = isOwnProfile || loggedInUserProfile?.is_super_admin === true;
 
   const handleDeactivate = async () => {
-    const confirm = window.confirm(
-      "Are you sure you want to deactivate this user?",
-    );
+    const confirm = window.confirm(t("users.view.deactivate_confirm"));
     if (!confirm) return;
-
     try {
       await deleteUserByID(userID);
       await navigate({ to: "/workspace/users" });
@@ -61,23 +55,28 @@ function ViewUserProfile() {
   if (isError || !user) {
     return (
       <ErrorAlert
-        message={`Failed to fetch user details: ${(error as Error)?.message || "Unknown error"}`}
+        message={`${t("users.view.error")}: ${
+          (error as Error)?.message || t("common.unknown_error")
+        }`}
       />
     );
   }
 
-  const displayName = user.display_name ?? "N/A";
-  const email = user.email ?? "N/A";
-  const role = user.is_super_admin ? "Super Admin" : "User";
+  const displayName = user.display_name ?? t("common.not_available");
+  const email = user.email ?? t("common.not_available");
+  const role = user.is_super_admin ? t("users.view.super_admin") : t("users.view.user");
   const joinedAt = user.created_at
     ? new Date(user.created_at).toLocaleDateString()
-    : "Unknown";
-  const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(displayName)}`;
+    : t("common.unknown");
+
+  const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+    displayName
+  )}`;
 
   return (
     <Box p={6}>
       <Heading size="lg" mb={4} color="fg.heading">
-        View Profile: {displayName}
+        {t("users.view.title")}: {displayName}
       </Heading>
 
       <Flex
@@ -99,15 +98,16 @@ function ViewUserProfile() {
           boxSize="24"
           mb="4"
         />
+
         <Heading size="md" color="fg.heading">
           {displayName}
         </Heading>
         <Text color="fg.muted">{email}</Text>
         <Text color="fg.subtle" mt={1}>
-          Role: {role}
+          {t("users.view.role")}: {role}
         </Text>
         <Text fontSize="sm" color="fg.subtle" mt={2}>
-          Joined on: {joinedAt}
+          {t("users.view.joined_on")}: {joinedAt}
         </Text>
 
         <Box my={4} w="100%" borderTop="sm" borderColor="border.muted" />
@@ -120,7 +120,7 @@ function ViewUserProfile() {
                 navigate({ to: "/users/$userID/edit", params: { userID } })
               }
             >
-              Edit Profile
+              {t("users.view.edit_button")}
             </Button>
           )}
           {canDeactivate && (
@@ -129,7 +129,7 @@ function ViewUserProfile() {
               variant="outline"
               onClick={handleDeactivate}
             >
-              Deactivate User
+              {t("users.view.deactivate_button")}
             </Button>
           )}
         </Stack>
