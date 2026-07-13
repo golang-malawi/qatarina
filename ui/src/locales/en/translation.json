@@ -284,6 +284,7 @@
 "organizations.delete.success_title": "Success",
 "organizations.delete.error_title": "Error",
 "organizations.new.error_title": "Failed to create organization.",
-"organizations.edit.error_title": "Failed to update organization."
+"organizations.edit.error_title": "Failed to update organization.",
+"integrations.title": "Integrations"
 
 }
