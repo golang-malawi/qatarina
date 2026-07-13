@@ -11,6 +11,7 @@ import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
+import { useTranslation } from "react-i18next";
 
 countries.registerLocale(enLocale);
 
@@ -21,20 +22,21 @@ export const Route = createFileRoute("/workspace/organizations/")({
 });
 
 function OrgsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const orgsQueryOptions = $api.queryOptions("get", "/v1/orgs");
   const { data: { orgs = [] } = {} } = $api.useQuery("get", "/v1/orgs");
   const deleteMutation = $api.useMutation("delete", "/v1/orgs/{orgID}");
 
   const handleDelete = (orgID: number, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
+    if (confirm(t("organizations.delete.confirm", { name }))) {
       deleteMutation.mutate(
         { params: { path: { orgID: orgID.toString() } } },
         {
           onSuccess: () => {
             toaster.create({
-              title: "Success",
-              description: `Organization "${name}" deleted successfully`,
+              title: t("organizations.delete.success_title"),
+              description: t("organizations.delete.success", { name }),
               type: "success",
             });
             queryClient.setQueryData(
@@ -45,7 +47,7 @@ function OrgsPage() {
                   ...oldData,
                   orgs: oldData.orgs.filter((o: any) => o.id !== orgID),
                 };
-              },
+              }
             );
             queryClient.invalidateQueries({
               queryKey: orgsQueryOptions.queryKey,
@@ -53,12 +55,12 @@ function OrgsPage() {
           },
           onError: (error: any) => {
             toaster.create({
-              title: "Error",
-              description: `Failed to delete organization: ${error.message}`,
+              title: t("organizations.delete.error_title"),
+              description: t("organizations.delete.error", { error: error.message }),
               type: "error",
             });
           },
-        },
+        }
       );
     }
   };
@@ -66,20 +68,22 @@ function OrgsPage() {
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg" color="fg.heading">Organizations</Heading>
+        <Heading size="lg" color="fg.heading">
+          {t("organizations.title")}
+        </Heading>
         <Link to="/workspace/organizations/new">
-          <Button colorPalette="brand">+ Create Organization</Button>
+          <Button colorPalette="brand">{t("organizations.create_button")}</Button>
         </Link>
       </Flex>
 
       <Table.Root>
         <Table.Header>
           <Table.Row>
-            <Table.ColumnHeader>Name</Table.ColumnHeader>
-            <Table.ColumnHeader>Country</Table.ColumnHeader>
-            <Table.ColumnHeader>Website</Table.ColumnHeader>
-            <Table.ColumnHeader>Created At</Table.ColumnHeader>
-            <Table.ColumnHeader>Actions</Table.ColumnHeader>
+            <Table.ColumnHeader>{t("organizations.column.name")}</Table.ColumnHeader>
+            <Table.ColumnHeader>{t("organizations.column.country")}</Table.ColumnHeader>
+            <Table.ColumnHeader>{t("organizations.column.website")}</Table.ColumnHeader>
+            <Table.ColumnHeader>{t("organizations.column.created_at")}</Table.ColumnHeader>
+            <Table.ColumnHeader>{t("organizations.column.actions")}</Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -89,14 +93,14 @@ function OrgsPage() {
               <Table.Cell>
                 {org.country
                   ? countries.getName(org.country, "en") || org.country
-                  : "N/A"}
+                  : t("common.not_available")}
               </Table.Cell>
               <Table.Cell>
                 {org.website_url ? (
                   <a href={org.website_url} target="_blank" rel="noopener noreferrer">
                     {org.website_url}
                   </a>
-                ) : "N/A"}
+                ) : t("common.not_available")}
               </Table.Cell>
               <Table.Cell>
                 {new Date(org.created_at).toLocaleDateString()}
@@ -104,10 +108,10 @@ function OrgsPage() {
               <Table.Cell>
                 <Flex gap={2}>
                   <Link to="/workspace/organizations/$id" params={{ id: org.id.toString() }}>
-                    <Button size="sm" colorPalette="brand">View</Button>
+                    <Button size="sm" colorPalette="brand">{t("organizations.view")}</Button>
                   </Link>
                   <Link to="/workspace/organizations/$id/edit" params={{ id: org.id.toString() }}>
-                    <Button size="sm" colorPalette="brand">Edit</Button>
+                    <Button size="sm" colorPalette="brand">{t("organizations.edit")}</Button>
                   </Link>
                   <Button
                     size="sm"
@@ -115,7 +119,7 @@ function OrgsPage() {
                     loading={deleteMutation.isPending}
                     onClick={() => handleDelete(org.id, org.name)}
                   >
-                    Delete
+                    {t("organizations.delete")}
                   </Button>
                 </Flex>
               </Table.Cell>
