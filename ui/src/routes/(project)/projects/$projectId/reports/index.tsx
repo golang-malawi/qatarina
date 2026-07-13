@@ -11,7 +11,6 @@ import {
   IconButton,
   SimpleGrid,
 } from "@chakra-ui/react";
-
 import { createFileRoute } from "@tanstack/react-router";
 import { LuEye, LuDownload, LuTrash } from "react-icons/lu";
 import { Toaster, toaster } from "@/components/ui/toaster";
@@ -31,61 +30,63 @@ import {
 } from "@/data/forms/report-schemas";
 import { createReportFields } from "@/data/forms/report-field-configs";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/(project)/projects/$projectId/reports/")({
   component: ReportsPage,
 });
 
 function ReportsPage() {
+  const { t } = useTranslation();
   const projectId = Route.useParams().projectId as string;
 
   const { data, isLoading, error, refetch } = useReportsQuery(projectId);
   const reports: Report[] = data?.reports ?? [];
-
   const createMutation = useCreateReportMutation();
   const deleteMutation = useDeleteReportMutation();
 
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
   const testPlans = (testPlansData?.test_plans ?? []).map((tp: any) => ({
     id: tp.id,
-    title: tp.description ?? tp.name ?? "Untitled Plan",
+    title: tp.description ?? tp.name ?? t("reports.untitled_plan"),
   }));
 
   const [isOpen, setIsOpen] = useState(false);
 
   const handleDelete = (id: string) => {
-  if (!window.confirm("Are you sure you want to delete this report?")) return;
-  deleteMutation.mutate(
-    { params: { path: { projectID: projectId, reportID: id } } },
-    {
-      onSuccess: () => {
-        toaster.create({ title: "Report deleted", type: "success" });
-        refetch();
-      },
-      onError: () => {
-        toaster.create({ title: "Failed to delete report", type: "error" });
-      },
-    }
-  );
-};
+    if (!window.confirm(t("reports.delete.confirm"))) return;
 
-const handleDownload = async (reportID: string) => {
-  const blob = await downloadReport(projectId, reportID);
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `report-${reportID}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-};
+    deleteMutation.mutate(
+      { params: { path: { projectID: projectId, reportID: id } } },
+      {
+        onSuccess: () => {
+          toaster.create({ title: t("reports.delete.success"), type: "success" });
+          refetch();
+        },
+        onError: () => {
+          toaster.create({ title: t("reports.delete.error"), type: "error" });
+        },
+      }
+    );
+  };
 
-const handleView = async (reportID: string) => {
-  const blob = await viewReportBlob(projectId, reportID); 
-  const url = window.URL.createObjectURL(blob);
-  window.open(url, '_blank');
-};
+  const handleDownload = async (reportID: string) => {
+    const blob = await downloadReport(projectId, reportID);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `report-${reportID}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleView = async (reportID: string) => {
+    const blob = await viewReportBlob(projectId, reportID);
+    const url = window.URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  };
 
   async function handleCreate(values: ReportCreationFormData) {
     await createMutation.mutateAsync({
@@ -98,7 +99,8 @@ const handleView = async (reportID: string) => {
         status: values.status,
       },
     });
-    toaster.create({ title: "Report created", type: "success" });
+
+    toaster.create({ title: t("reports.create.success"), type: "success" });
     refetch();
     setIsOpen(false);
   }
@@ -111,23 +113,24 @@ const handleView = async (reportID: string) => {
   return (
     <Box p={6}>
       <Toaster />
+
       <Flex justify="space-between" align="center" mb={4}>
-        <Heading size="lg" color="fg.heading">Reports</Heading>
+        <Heading size="lg" color="fg.heading">{t("reports")}</Heading>
         <Button colorPalette="brand" onClick={() => setIsOpen(true)}>
-          + Generate New Report
+          {t("reports.create_new")}
         </Button>
       </Flex>
 
       <AppDialog
         open={isOpen}
         onOpenChange={() => setIsOpen(false)}
-        title="Generate Report"        
+        title={t("reports.generate")}
       >
         <DynamicForm
           schema={reportCreationSchema}
           fields={createReportFields(testPlans)}
           onSubmit={handleCreate}
-          submitText="Generate Report"
+          submitText={t("reports.generate")}
           submitLoading={createMutation.isPending}
           layout="vertical"
           spacing={4}
@@ -142,19 +145,22 @@ const handleView = async (reportID: string) => {
 
       <SimpleGrid columns={[1, 2, 4]} gap={4} mb={6}>
         <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
-          <Text fontSize="sm" color="fg.muted">Total Reports</Text>
+          <Text fontSize="sm" color="fg.muted">{t("reports.total")}</Text>
           <Heading size="lg">{totalReports}</Heading>
         </Box>
+
         <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
-          <Text fontSize="sm" color="fg.muted">Completed</Text>
+          <Text fontSize="sm" color="fg.muted">{t("reports.completed")}</Text>
           <Heading size="lg" color="fg.success">{completedReports}</Heading>
         </Box>
+
         <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
-          <Text fontSize="sm" color="fg.muted">In Progress</Text>
+          <Text fontSize="sm" color="fg.muted">{t("reports.in_progress")}</Text>
           <Heading size="lg" color="fg.warning">{inProgressReports}</Heading>
         </Box>
+
         <Box p={4} shadow="card" borderRadius="lg" bg="bg.surface">
-          <Text fontSize="sm" color="fg.muted">Failed</Text>
+          <Text fontSize="sm" color="fg.muted">{t("reports.failed")}</Text>
           <Heading size="lg" color="fg.error">{failedReports}</Heading>
         </Box>
       </SimpleGrid>
@@ -170,14 +176,15 @@ const handleView = async (reportID: string) => {
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>ID</Table.ColumnHeader>
-                <Table.ColumnHeader>Name</Table.ColumnHeader>
-                <Table.ColumnHeader>Type</Table.ColumnHeader>
-                <Table.ColumnHeader>Status</Table.ColumnHeader>
-                <Table.ColumnHeader>Created At</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.id")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.name")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.type")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.status")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.created_at")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("reports.column.actions")}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
+
             <Table.Body>
               {reports.map((report) => (
                 <Table.Row key={report.id ?? Math.random()}>
@@ -193,23 +200,25 @@ const handleView = async (reportID: string) => {
                   <Table.Cell>
                     <Flex gap={2}>
                       <IconButton
-                        aria-label="View report"
+                        aria-label={t("reports.view")}
                         onClick={() => report.id && handleView(report.id)}
                         colorPalette="info"
                         size="sm"
                       >
                         <LuEye />
                       </IconButton>
+
                       <IconButton
-                        aria-label="Download report"
+                        aria-label={t("reports.download")}
                         onClick={() => report.id && handleDownload(report.id)}
                         colorPalette="success"
                         size="sm"
                       >
                         <LuDownload />
                       </IconButton>
+
                       <IconButton
-                        aria-label="Delete report"
+                        aria-label={t("reports.delete")}
                         onClick={() => report.id && handleDelete(report.id)}
                         colorPalette="danger"
                         size="sm"

@@ -93,5 +93,25 @@
   "test_plans.delete_confirm_title": "Delete test plan?",
   "test_plans.delete_confirm_description": "This action cannot be undone.",
   "test_plans.delete.success": "Test plan deleted successfully",
-  "test_plans.delete.error": "Failed to delete test plan"
+  "test_plans.delete.error": "Failed to delete test plan",
+  "reports": "Reports",
+"reports.create_new": "Generate New Report",
+"reports.generate": "Generate Report",
+"reports.total": "Total Reports",
+"reports.completed": "Completed",
+"reports.in_progress": "In Progress",
+"reports.failed": "Failed",
+"reports.column.id": "ID",
+"reports.column.name": "Name",
+"reports.column.type": "Type",
+"reports.column.status": "Status",
+"reports.column.created_at": "Created At",
+"reports.column.actions": "Actions",
+"reports.view": "View report",
+"reports.download": "Download report",
+"reports.delete": "Delete report",
+"reports.delete.success": "Report deleted",
+"reports.delete.error": "Failed to delete report",
+"reports.create.success": "Report created"
+
 }
