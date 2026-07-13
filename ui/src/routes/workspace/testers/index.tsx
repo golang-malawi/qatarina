@@ -10,30 +10,31 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTestersQuery, useDeleteTesterMutation } from "@/services/TesterService";
 import ErrorAlert from "@/components/ui/error-alert";
-import {toaster} from "@/components/ui/toaster"
+import { toaster } from "@/components/ui/toaster";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/testers/")({
   component: ListTesters,
 });
 
 function ListTesters() {
+  const { t } = useTranslation();
   const { data, isPending, isError, error, refetch } = useTestersQuery();
   const deleteMutation = useDeleteTesterMutation();
 
   const testers = data?.testers ?? [];
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this tester?")) return;
-    
+    if (!window.confirm(t("testers.actions.delete_confirm"))) return;
     try {
       await deleteMutation.mutateAsync({
-        params: {path: {testerID: String(id)}},
+        params: { path: { testerID: String(id) } },
       });
-      toaster.success({title: "Tester deleted successfully"});
+      toaster.success({ title: t("testers.actions.delete_success") });
       refetch();
-    }catch (err){
+    } catch (err) {
       console.error("Failed to delete tester", err);
-      toaster.error({title: "Failed to delete tester"});
+      toaster.error({ title: t("testers.actions.delete_error") });
     }
   };
 
@@ -41,11 +42,12 @@ function ListTesters() {
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
         <Heading size="lg" color="fg.heading">
-          Testers
+          {t("testers.title")}
         </Heading>
-        {/* We have to think about this since adding a tester requires a project id which at this level we dont have
-        <Link to="/workspace/testers/invite">
-          <Button colorScheme="teal">+ Add New Tester</Button>
+
+        {/* Optional: Add New Tester button (commented out in original) */}
+        {/* <Link to="/workspace/testers/invite">
+          <Button colorScheme="teal">+ {t("testers.add_button")}</Button>
         </Link> */}
       </Flex>
 
@@ -54,31 +56,34 @@ function ListTesters() {
           <Spinner size="lg" color="brand.solid" />
         </Flex>
       ) : isError ? (
-        <ErrorAlert message={`Failed to load testers: ${(error as Error).message}`} />
+        <ErrorAlert message={`${t("testers.error.load")}: ${(error as Error).message}`} />
       ) : (
         <Stack gap="6">
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>User ID</Table.ColumnHeader>
-                <Table.ColumnHeader>Name</Table.ColumnHeader>
-                <Table.ColumnHeader>Project</Table.ColumnHeader>
-                <Table.ColumnHeader>Role</Table.ColumnHeader>
-                <Table.ColumnHeader>Actions</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("testers.view.user_id")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("testers.view.name")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("testers.view.project")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("testers.view.role")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("testers.table.actions")}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {testers.map((tester) => (
                 <Table.Row key={tester.user_id}>
                   <Table.Cell>{tester.user_id}</Table.Cell>
-                  <Table.Cell>{tester.name || "N/A"}</Table.Cell>
-                  <Table.Cell>{tester.project || "N/A"}</Table.Cell>
-                  <Table.Cell>{tester.role || "N/A"}</Table.Cell>
+                  <Table.Cell>{tester.name || t("common.not_available")}</Table.Cell>
+                  <Table.Cell>{tester.project || t("common.not_available")}</Table.Cell>
+                  <Table.Cell>{tester.role || t("common.not_available")}</Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
                       <Button variant="outline" colorPalette="brand" size="sm">
-                        <Link to={`/workspace/testers/view/$testerId`} params={{  testerId: `${tester.user_id!}` }}>
-                          View
+                        <Link
+                          to={`/workspace/testers/view/$testerId`}
+                          params={{ testerId: `${tester.user_id!}` }}
+                        >
+                          {t("testers.actions.view")}
                         </Link>
                       </Button>
                       <Button
@@ -86,9 +91,8 @@ function ListTesters() {
                         onClick={() => handleDelete(tester.user_id!)}
                         size="sm"
                       >
-                        Delete
+                        {t("testers.actions.delete")}
                       </Button>
-
                     </Flex>
                   </Table.Cell>
                 </Table.Row>
