@@ -32,6 +32,7 @@ import { Route as WorkspaceTestCasesInboxRouteRouteImport } from './routes/works
 import { Route as projectProjectsProjectIdRouteRouteImport } from './routes/(project)/projects/$projectId/route'
 import { Route as WorkspaceUsersNewIndexRouteImport } from './routes/workspace/users/new/index'
 import { Route as WorkspaceTestCasesNewIndexRouteImport } from './routes/workspace/test-cases/new/index'
+import { Route as WorkspaceTestCasesInboxIndexRouteImport } from './routes/workspace/test-cases/inbox/index'
 import { Route as WorkspaceProjectsNewIndexRouteImport } from './routes/workspace/projects/new/index'
 import { Route as WorkspaceOrganizationsNewIndexRouteImport } from './routes/workspace/organizations/new/index'
 import { Route as WorkspaceOrganizationsIdIndexRouteImport } from './routes/workspace/organizations/$id/index'
@@ -186,6 +187,12 @@ const WorkspaceTestCasesNewIndexRoute =
     id: '/test-cases/new/',
     path: '/test-cases/new/',
     getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const WorkspaceTestCasesInboxIndexRoute =
+  WorkspaceTestCasesInboxIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkspaceTestCasesInboxRouteRoute,
   } as any)
 const WorkspaceProjectsNewIndexRoute =
   WorkspaceProjectsNewIndexRouteImport.update({
@@ -424,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
+  '/workspace/test-cases/inbox/': typeof WorkspaceTestCasesInboxIndexRoute
   '/workspace/test-cases/new/': typeof WorkspaceTestCasesNewIndexRoute
   '/workspace/users/new/': typeof WorkspaceUsersNewIndexRoute
   '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
@@ -460,7 +468,6 @@ export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRouteRouteWithChildren
   '/': typeof appIndexRoute
   '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
-  '/workspace/test-cases/inbox': typeof WorkspaceTestCasesInboxRouteRouteWithChildren
   '/workspace/testers/invite': typeof WorkspaceTestersInviteRoute
   '/test-plans': typeof appTestPlansIndexRoute
   '/login': typeof authLoginIndexRoute
@@ -483,6 +490,7 @@ export interface FileRoutesByTo {
   '/workspace/organizations/$id': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new': typeof WorkspaceProjectsNewIndexRoute
+  '/workspace/test-cases/inbox': typeof WorkspaceTestCasesInboxIndexRoute
   '/workspace/test-cases/new': typeof WorkspaceTestCasesNewIndexRoute
   '/workspace/users/new': typeof WorkspaceUsersNewIndexRoute
   '/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
@@ -544,6 +552,7 @@ export interface FileRoutesById {
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
+  '/workspace/test-cases/inbox/': typeof WorkspaceTestCasesInboxIndexRoute
   '/workspace/test-cases/new/': typeof WorkspaceTestCasesNewIndexRoute
   '/workspace/users/new/': typeof WorkspaceUsersNewIndexRoute
   '/(project)/projects/$projectId/Features/CreateFeatureModuleForm': typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
@@ -605,6 +614,7 @@ export interface FileRouteTypes {
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
+    | '/workspace/test-cases/inbox/'
     | '/workspace/test-cases/new/'
     | '/workspace/users/new/'
     | '/projects/$projectId/Features/CreateFeatureModuleForm'
@@ -641,7 +651,6 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/'
     | '/projects/$projectId'
-    | '/workspace/test-cases/inbox'
     | '/workspace/testers/invite'
     | '/test-plans'
     | '/login'
@@ -664,6 +673,7 @@ export interface FileRouteTypes {
     | '/workspace/organizations/$id'
     | '/workspace/organizations/new'
     | '/workspace/projects/new'
+    | '/workspace/test-cases/inbox'
     | '/workspace/test-cases/new'
     | '/workspace/users/new'
     | '/projects/$projectId/Features/CreateFeatureModuleForm'
@@ -724,6 +734,7 @@ export interface FileRouteTypes {
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
+    | '/workspace/test-cases/inbox/'
     | '/workspace/test-cases/new/'
     | '/workspace/users/new/'
     | '/(project)/projects/$projectId/Features/CreateFeatureModuleForm'
@@ -929,6 +940,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspace/test-cases/new/'
       preLoaderRoute: typeof WorkspaceTestCasesNewIndexRouteImport
       parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/workspace/test-cases/inbox/': {
+      id: '/workspace/test-cases/inbox/'
+      path: '/'
+      fullPath: '/workspace/test-cases/inbox/'
+      preLoaderRoute: typeof WorkspaceTestCasesInboxIndexRouteImport
+      parentRoute: typeof WorkspaceTestCasesInboxRouteRoute
     }
     '/workspace/projects/new/': {
       id: '/workspace/projects/new/'
@@ -1196,12 +1214,14 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 
 interface WorkspaceTestCasesInboxRouteRouteChildren {
   WorkspaceTestCasesInboxSuggestRoute: typeof WorkspaceTestCasesInboxSuggestRoute
+  WorkspaceTestCasesInboxIndexRoute: typeof WorkspaceTestCasesInboxIndexRoute
   WorkspaceTestCasesInboxTestCaseIdIndexRoute: typeof WorkspaceTestCasesInboxTestCaseIdIndexRoute
 }
 
 const WorkspaceTestCasesInboxRouteRouteChildren: WorkspaceTestCasesInboxRouteRouteChildren =
   {
     WorkspaceTestCasesInboxSuggestRoute: WorkspaceTestCasesInboxSuggestRoute,
+    WorkspaceTestCasesInboxIndexRoute: WorkspaceTestCasesInboxIndexRoute,
     WorkspaceTestCasesInboxTestCaseIdIndexRoute:
       WorkspaceTestCasesInboxTestCaseIdIndexRoute,
   }
