@@ -282,9 +282,9 @@ SELECT
   tc.created_at,
   tc.updated_at,
   tc.project_id,
-  pc.test_plan_id AS test_plan_id,
-  pc.assigned_to_id AS assigned_to_id,
-  tp.environment_id AS environment_id,
+  MAX(pc.test_plan_id)::int AS test_plan_id,
+  MAX(pc.assigned_to_id)::int AS assigned_to_id,
+  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
   COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
@@ -292,17 +292,21 @@ INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
-GROUP BY tc.id, pc.test_plan_id, pc.assigned_to_id, tp.environment_id
+GROUP BY tc.id
 ORDER BY tc.created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: TestCaseCountByAssignedUser :one
-SELECT COUNT(DISTINCT tc.id)
-FROM test_cases tc
-INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false);
+SELECT COUNT(*)
+FROM (
+  SELECT tc.id
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  GROUP BY tc.id
+  HAVING sqlc.arg(include_closed)::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
+) sub;
 
 -- name: TestCaseListByProjectPaged :many
 SELECT *
