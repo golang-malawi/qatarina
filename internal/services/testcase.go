@@ -606,7 +606,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			ProjectID:       int64(row.ProjectID.Int32),
 			TestPlanID:      int32(row.TestPlanID),
 			AssignedToID:    int32(row.AssignedToID),
-			EnvironmentID:   row.EnvironmentID.Int32,
+			EnvironmentID:   row.EnvironmentID,
 			IsClosed:        row.IsClosed,
 		})
 	}
