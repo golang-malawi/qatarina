@@ -161,7 +161,7 @@ function NewTestCases() {
         }
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange],
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, params.projectId],
   );
 
   async function handleSubmit(values: TestCaseCreationFormData) {
