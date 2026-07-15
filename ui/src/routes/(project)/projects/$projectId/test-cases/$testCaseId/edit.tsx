@@ -127,7 +127,7 @@ function EditTestCase() {
     }
       return field;
     }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange]
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId]
   );
 
   const validateAttachedScript = async (file: File) => {
