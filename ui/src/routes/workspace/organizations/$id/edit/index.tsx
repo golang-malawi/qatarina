@@ -6,12 +6,14 @@ import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { orgSchema } from "@/data/forms/org-schemas";
 import { orgFields } from "@/data/forms/org-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/organizations/$id/edit/")({
   component: EditOrgPage,
 });
 
 function EditOrgPage() {
+  const { t } = useTranslation();
   const { id } = useParams({ from: "/workspace/organizations/$id/edit/" });
   const { data: org, isLoading } = useGetOrgQuery(id);
   const updateOrgMutation = useUpdateOrgMutation();
@@ -19,7 +21,7 @@ function EditOrgPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (isLoading || !org) {
-    return <Heading size="md">Loading organization details...</Heading>;
+    return <Heading size="md">{t("organizations.edit.loading")}</Heading>;
   }
 
   const defaultValues = {
@@ -43,11 +45,10 @@ function EditOrgPage() {
         orgID: id,
         data: { id: Number(id), ...values },
       });
-
       if (res) {
         toaster.create({
-          title: "Organization updated.",
-          description: "The organization has been successfully updated.",
+          title: t("organizations.edit.success"),
+          description: t("organizations.edit.description"),
           type: "success",
           duration: 3000,
         });
@@ -55,8 +56,8 @@ function EditOrgPage() {
       }
     } catch {
       toaster.create({
-        title: "Failed to update organization.",
-        description: "An error occurred while updating the organization.",
+        title: t("organizations.edit.error_title"),
+        description: t("organizations.edit.error"),
         type: "error",
         duration: 3000,
       });
@@ -68,14 +69,14 @@ function EditOrgPage() {
   return (
     <Box>
       <Heading size="lg" mb={4}>
-        Edit Organization
+        {t("organizations.edit.title")}
       </Heading>
       <DynamicForm
         fields={orgFields}
         schema={orgSchema}
-        defaultValues={defaultValues}   
+        defaultValues={defaultValues}
         onSubmit={handleSubmit}
-        submitText="Update Organization"
+        submitText={t("organizations.update_button")}
         submitLoading={submitting}
         layout="vertical"
         spacing={4}

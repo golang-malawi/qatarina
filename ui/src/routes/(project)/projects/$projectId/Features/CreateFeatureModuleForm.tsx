@@ -3,8 +3,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toaster } from "@/components/ui/toaster";
 import ModuleService from "@/services/ModuleService";
 import { DynamicForm } from "@/components/form/DynamicForm";
-import { featureModuleCreationSchema, FeatureModuleCreationFormData } from "@/data/forms/feature-module-schemas";
+import {
+  featureModuleCreationSchema,
+  FeatureModuleCreationFormData,
+} from "@/data/forms/feature-module-schemas";
 import { featureModuleCreationFields } from "@/data/forms/feature-module-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/CreateFeatureModuleForm"
@@ -13,6 +17,7 @@ export const Route = createFileRoute(
 });
 
 function RouteComponent() {
+  const { t } = useTranslation();
   const params = Route.useParams();
   const navigate = useNavigate();
   const moduleService = new ModuleService();
@@ -28,15 +33,20 @@ function RouteComponent() {
     };
 
     try {
-      const res = await moduleService.createModule(payload)
-
-      if (!res || (res as any).type === "problemdetail.example.com/http/types/BadRequest"){
-        throw new Error((res as any).detail || "Failed to create module");
+      const res = await moduleService.createModule(payload);
+      if (
+        !res ||
+        (res as any).type === "problemdetail.example.com/http/types/BadRequest"
+      ) {
+        throw new Error((res as any).detail || t("features.create.error"));
       }
-      
+
       toaster.create({
-        title: "Module created",
-        description: `We've created ${values.type}: ${values.name}`,
+        title: t("features.create.success"),
+        description: t("features.create.success_description", {
+          type: values.type,
+          name: values.name,
+        }),
         type: "success",
         duration: 3000,
       });
@@ -48,8 +58,8 @@ function RouteComponent() {
     } catch (err) {
       console.error(err);
       toaster.create({
-        title: "Failed to create",
-        description: "There was an error creating the module.",
+        title: t("features.create.error"),
+        description: t("features.create.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -57,13 +67,13 @@ function RouteComponent() {
   }
 
   return (
-    <Box>
-      <Heading>Create Feature / Component / Module</Heading>
+    <Box p={6}>
+      <Heading color="fg.heading">{t("features.create.title")}</Heading>
       <DynamicForm
         schema={featureModuleCreationSchema}
         fields={featureModuleCreationFields}
         onSubmit={handleSubmit}
-        submitText="Create"
+        submitText={t("features.create.submit")}
         layout="vertical"
         spacing={4}
       />

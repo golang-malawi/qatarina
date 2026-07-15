@@ -9,9 +9,10 @@ import {
   FeatureModuleEditFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/Features/EditFeatureModuleForm",
+  "/(project)/projects/$projectId/Features/EditFeatureModuleForm"
 )({
   component: EditFeatureModuleForm,
   validateSearch: (search) => {
@@ -23,9 +24,11 @@ export const Route = createFileRoute(
 });
 
 function EditFeatureModuleForm() {
+  const { t } = useTranslation();
   const { projectId } = Route.useParams();
   const { moduleId } = Route.useSearch();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [defaultValues, setDefaultValues] = useState<
     FeatureModuleEditFormData | undefined
@@ -35,8 +38,8 @@ function EditFeatureModuleForm() {
     const fetchModule = async () => {
       if (!moduleId) {
         toaster.create({
-          title: "Invalid module ID",
-          description: "Module ID is missing or invalid.",
+          title: t("features.edit.invalid_id"),
+          description: t("features.edit.invalid_id_description"),
           type: "error",
         });
         return;
@@ -55,8 +58,8 @@ function EditFeatureModuleForm() {
       } catch (err) {
         console.error(err);
         toaster.create({
-          title: "Failed to load module",
-          description: "Unable to fetch module details.",
+          title: t("features.edit.error_load"),
+          description: t("features.edit.error_load_description"),
           type: "error",
         });
       } finally {
@@ -80,10 +83,12 @@ function EditFeatureModuleForm() {
     const moduleService = new ModuleService();
     try {
       await moduleService.updateModule(moduleId, payload);
-
       toaster.create({
-        title: "Module updated",
-        description: `Successfully updated ${values.type}: ${values.name}`,
+        title: t("features.edit.success"),
+        description: t("features.edit.success_description", {
+          type: values.type,
+          name: values.name,
+        }),
         type: "success",
         duration: 3000,
       });
@@ -95,8 +100,8 @@ function EditFeatureModuleForm() {
     } catch (err) {
       console.error(err);
       toaster.create({
-        title: "Failed to update",
-        description: "An error occurred while updating the module.",
+        title: t("features.edit.error"),
+        description: t("features.edit.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -107,19 +112,19 @@ function EditFeatureModuleForm() {
     return (
       <Box textAlign="center" mt={50}>
         <Spinner size="xl" color="brand.solid" />
-        <Text color="fg.muted">Loading module details...</Text>
+        <Text color="fg.muted">{t("features.edit.loading")}</Text>
       </Box>
     );
 
   return (
     <Box p={6}>
-      <Heading color="fg.heading">Edit Feature / Component / Module</Heading>
+      <Heading color="fg.heading">{t("features.edit.title")}</Heading>
       <DynamicForm
         schema={featureModuleEditSchema}
         fields={featureModuleEditFields}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
-        submitText="Save Changes"
+        submitText={t("features.edit.submit")}
         layout="vertical"
         spacing={4}
       />

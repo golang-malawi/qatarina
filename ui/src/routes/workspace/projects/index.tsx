@@ -30,6 +30,7 @@ import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import { useMemo, useState } from "react";
 import { Route as ProjectOverviewRoute } from "@/routes/(project)/projects/$projectId/overview";
+import { useTranslation } from "react-i18next";
 
 type ProjectRecord = {
   id?: number;
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/workspace/projects/")({
 });
 
 function ProjectsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -102,18 +104,18 @@ function ProjectsPage() {
   }
 
   if (error) {
-    return <Text color="fg.error">Error: error fetching</Text>;
+    return <Text color="fg.error">{t("projects.error.load")}</Text>;
   }
 
   const handleDelete = (projectID: number, title: string) => {
-    if (confirm(`Are you sure you want to delete project "${title}"?`)) {
+    if (confirm(t("projects.delete.confirm"))) {
       deleteMutation.mutate(
         { params: { path: { projectID: projectID.toString() } } },
         {
           onSuccess: () => {
             toaster.create({
-              title: "Success",
-              description: `Project "${title}" deleted successfully`,
+              title: t("projects.delete.success"),
+              description: t("projects.delete.success_with_name", { title }),
               type: "success",
             });
             queryClient.setQueryData(
@@ -134,8 +136,8 @@ function ProjectsPage() {
           },
           onError: (error: any) => {
             toaster.create({
-              title: "Error",
-              description: error?.message ?? "Failed to delete project",
+              title: t("projects.delete.error"),
+              description: error?.message ?? t("projects.delete.error_generic"),
               type: "error",
             });
           },
@@ -164,26 +166,26 @@ function ProjectsPage() {
               <HStack gap={2}>
                 <Icon as={IconFolder} color="brand.solid" />
                 <Heading size="lg" color="fg.heading">
-                  Project Workspace
+                  {t("projects.workspace")}
                 </Heading>
               </HStack>
               <Text color="fg.subtle">
-                Manage active projects, jump into execution, and maintain test
-                planning flow.
+                {t("projects.workspace_description")}
               </Text>
               <HStack gap={2}>
                 <Badge colorPalette="brand" variant="subtle">
-                  {filteredProjects.length} shown
+                  {filteredProjects.length} {t("projects.shown")}
                 </Badge>
                 <Badge colorPalette="gray" variant="subtle">
-                  {projectRecords.length} total
+                  {projectRecords.length} {t("projects.total")}
                 </Badge>
               </HStack>
             </Stack>
+
             <Link to="/workspace/projects/new">
               <Button colorPalette="brand">
                 <IconPlus />
-                Create Project
+                {t("projects.create")}
               </Button>
             </Link>
           </Flex>
@@ -196,7 +198,7 @@ function ProjectsPage() {
             <Input
               value={searchTerm ?? ""}
               onChange={(event) => setSearchTerm(event.target.value ?? "")}
-              placeholder="Search by name, code, description, or version"
+              placeholder={t("projects.search_placeholder")}
             />
           </InputGroup>
         </Card.Body>
@@ -207,15 +209,15 @@ function ProjectsPage() {
           <Card.Body p={{ base: 8, md: 10 }}>
             <Stack align="center" gap={3} textAlign="center">
               <Heading size="md" color="fg.heading">
-                No projects match your search
+                {t("projects.empty")}
               </Heading>
               <Text color="fg.subtle" maxW="lg">
-                Clear the search or create a new project to continue.
+                {t("projects.empty_description")}
               </Text>
               <Link to="/workspace/projects/new">
                 <Button colorPalette="brand">
                   <IconPlus />
-                  New Project
+                  {t("projects.create_new")}
                 </Button>
               </Link>
             </Stack>
@@ -226,7 +228,7 @@ function ProjectsPage() {
           {filteredProjects.map((record) => {
             const projectId = record.id ? String(record.id) : "";
             const hasId = Boolean(record.id);
-            const title = record.title || "Untitled Project";
+            const title = record.title || t("projects.untitled");
             const isActive = record.is_active ?? true;
             const integrations = [
               record.website_url,
@@ -252,31 +254,33 @@ function ProjectsPage() {
                           {title}
                         </Heading>
                         <Text color="fg.subtle" fontSize="sm">
-                          {record.description || "No project description yet."}
+                          {record.description || t("projects.no_description")}
                         </Text>
                       </Stack>
                       <Badge
                         colorPalette={isActive ? "green" : "gray"}
                         variant="subtle"
                       >
-                        {isActive ? "Active" : "Inactive"}
+                        {isActive
+                          ? t("projects.status.active")
+                          : t("projects.status.inactive")}
                       </Badge>
                     </Flex>
 
                     <HStack flexWrap="wrap" gap={2}>
                       {record.code && (
                         <Badge colorPalette="blue" variant="outline">
-                          Code: {record.code}
+                          {t("projects.code")}: {record.code}
                         </Badge>
                       )}
                       {record.version && (
                         <Badge colorPalette="purple" variant="outline">
-                          Version: {record.version}
+                          {t("projects.version")}: {record.version}
                         </Badge>
                       )}
                       {record.updated_at && (
                         <Badge colorPalette="orange" variant="outline">
-                          Updated:{" "}
+                          {t("projects.updated")}:{" "}
                           {new Date(record.updated_at).toLocaleDateString()}
                         </Badge>
                       )}
@@ -285,7 +289,7 @@ function ProjectsPage() {
                     {integrations.length > 0 && (
                       <Stack gap={1}>
                         <Text fontSize="xs" color="fg.subtle">
-                          Integrations
+                          {t("projects.integrations")}
                         </Text>
                         <HStack flexWrap="wrap" gap={3}>
                           {integrations.map((integrationUrl) => (
@@ -313,60 +317,49 @@ function ProjectsPage() {
                     <Flex wrap="wrap" gap={2}>
                       {hasId ? (
                         <Link to={ProjectOverviewRoute.to} params={{ projectId }}>
-                          <Button
-                            variant="outline"
-                            colorPalette="brand"
-                            size="sm"
-                          >
-                            Open Workspace
+                          <Button variant="outline" colorPalette="brand" size="sm">
+                            {t("projects.open_workspace")}
                           </Button>
                         </Link>
                       ) : (
                         <Button variant="outline" colorPalette="brand" size="sm" disabled>
-                          Open Workspace
-                        </Button>
-                      )}
-                      {hasId && isActive ? (
-                        <Link
-                          to="/projects/$projectId/test-cases/new"
-                          params={{ projectId }}
-                        >
-                          <Button variant="outline" colorPalette="blue" size="sm">
-                            Add Test Case
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button variant="outline" colorPalette="blue" size="sm" disabled>
-                          Add Test Case
-                        </Button>
-                      )}
-                      {hasId && isActive ? (
-                        <Link
-                          to="/projects/$projectId/test-plans/new"
-                          params={{ projectId }}
-                        >
-                          <Button variant="outline" colorPalette="teal" size="sm">
-                            New Test Plan
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button variant="outline" colorPalette="teal" size="sm" disabled>
-                          New Test Plan
+                          {t("projects.open_workspace")}
                         </Button>
                       )}
 
                       {hasId && isActive ? (
-                        <Link
-                          to="/workspace/projects/$projectId/edit"
-                          params={{ projectId }}
-                        >
+                        <Link to="/projects/$projectId/test-cases/new" params={{ projectId }}>
+                          <Button variant="outline" colorPalette="blue" size="sm">
+                            {t("projects.add_test_case")}
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button variant="outline" colorPalette="blue" size="sm" disabled>
+                          {t("projects.add_test_case")}
+                        </Button>
+                      )}
+
+                      {hasId && isActive ? (
+                        <Link to="/projects/$projectId/test-plans/new" params={{ projectId }}>
+                          <Button variant="outline" colorPalette="teal" size="sm">
+                            {t("projects.new_test_plan")}
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button variant="outline" colorPalette="teal" size="sm" disabled>
+                          {t("projects.new_test_plan")}
+                        </Button>
+                      )}
+
+                      {hasId && isActive ? (
+                        <Link to="/workspace/projects/$projectId/edit" params={{ projectId }}>
                           <Button variant="outline" colorPalette="orange" size="sm">
-                            Edit
+                            {t("projects.edit_button")}
                           </Button>
                         </Link>
                       ) : (
                         <Button variant="outline" colorPalette="orange" size="sm" disabled>
-                          Edit
+                          {t("projects.edit_button")}
                         </Button>
                       )}
 
@@ -381,7 +374,7 @@ function ProjectsPage() {
                         disabled={!hasId || !isActive}
                       >
                         <IconTrash />
-                        Delete
+                        {t("projects.delete")}
                       </Button>
                     </Flex>
                   </Stack>

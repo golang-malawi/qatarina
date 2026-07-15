@@ -2,8 +2,10 @@ import { Button } from "@chakra-ui/react";
 import { useArchiveProjectMutation, useUnarchiveProjectMutation } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 export function ArchiveControls({ projectId, isActive = true }: { projectId: string; isActive?: boolean }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const archiveMutation = useArchiveProjectMutation();
   const unarchiveMutation = useUnarchiveProjectMutation();
@@ -13,9 +15,9 @@ export function ArchiveControls({ projectId, isActive = true }: { projectId: str
       await archiveMutation.mutateAsync({ params: { path: { projectID: Number(projectId) } } });
       queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects"] });
       queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}"] });
-      toaster.success({ title: "Project archived successfully" });
+      toaster.success({ title: t("projects.settings.archive.success") });
     } catch (err: any) {
-      toaster.error({ title: "Failed to archive project", description: err?.message });
+      toaster.error({ title: t("projects.settings.archive.error"), description: err?.message });
     }
   };
 
@@ -24,15 +26,19 @@ export function ArchiveControls({ projectId, isActive = true }: { projectId: str
       await unarchiveMutation.mutateAsync({ params: { path: { projectID: Number(projectId) } } });
       queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects"] });
       queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}"] });
-      toaster.success({ title: "Project unarchived successfully" });
+      toaster.success({ title: t("projects.settings.unarchive.success") });
     } catch (err: any) {
-      toaster.error({ title: "Failed to unarchive project", description: err?.message });
+      toaster.error({ title: t("projects.settings.unarchive.error"), description: err?.message });
     }
   };
 
   return isActive ? (
-    <Button colorScheme="red" onClick={handleArchive}>Archive Project</Button>
+    <Button colorScheme="red" onClick={handleArchive}>
+      {t("projects.settings.archive_button")}
+    </Button>
   ) : (
-    <Button colorScheme="green" onClick={handleUnarchive}>Unarchive Project</Button>
+    <Button colorScheme="green" onClick={handleUnarchive}>
+      {t("projects.settings.unarchive_button")}
+    </Button>
   );
 }

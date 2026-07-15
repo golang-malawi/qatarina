@@ -12,13 +12,15 @@ import {
 import { IconUser } from "@tabler/icons-react";
 import { useUsersQuery } from "@/services/UserService";
 import ErrorAlert from "@/components/ui/error-alert";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/users/")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { data, isPending, isError } = useUsersQuery();
+  const { t } = useTranslation();
+  const { data, isPending, isError, error } = useUsersQuery();
 
   if (isPending) {
     return (
@@ -30,7 +32,9 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <ErrorAlert message={`Failed to load users: {(error as Error).message}`} />
+      <ErrorAlert
+        message={`${t("users.error.load")}: ${(error as Error).message}`}
+      />
     );
   }
 
@@ -40,10 +44,10 @@ function RouteComponent() {
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={6}>
         <Heading size="lg" color="fg.heading">
-          Users
+          {t("users.title")}
         </Heading>
         <Link to={`/workspace/users/new`}>
-          <Button colorPalette="brand">+ Add New User</Button>
+          <Button colorPalette="brand">+ {t("users.add_button")}</Button>
         </Link>
       </Flex>
 
@@ -62,16 +66,19 @@ function RouteComponent() {
             <Flex align="center" gap={3}>
               <Icon as={IconUser} boxSize={6} color="fg.accent" />
               <Box>
-                <Link to={`/workspace/users/view/$userID`} params={{ userID: user.id }}>
+                <Link
+                  to={`/workspace/users/view/$userID`}
+                  params={{ userID: user.id }}
+                >
                   <Heading size="md" color="fg.heading">
                     {user.displayName}
                   </Heading>
                 </Link>
                 <Text fontSize="sm" color="fg.muted">
-                  Username: {user.username}
+                  {t("users.username")}: {user.username}
                 </Text>
                 <Text fontSize="xs" color="fg.subtle">
-                  Registered At: {user.createdAt}
+                  {t("users.registered_at")}: {user.createdAt}
                 </Text>
               </Box>
             </Flex>

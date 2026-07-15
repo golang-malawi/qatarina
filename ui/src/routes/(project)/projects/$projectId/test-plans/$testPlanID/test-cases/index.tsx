@@ -34,10 +34,12 @@ import {
 } from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
+import { useTranslation } from "react-i18next";
 
 type TestCaseItem = components["schemas"]["schema.TestCaseResponse"] & {
   assigned_tester_ids?: number[];
 };
+
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
 type UserRecord = {
@@ -58,6 +60,7 @@ export const Route = createFileRoute(
 });
 
 function TestPlanTestCasesPage() {
+  const { t } = useTranslation();
   const { testPlanID } = Route.useParams();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -82,12 +85,12 @@ function TestPlanTestCasesPage() {
     () => (usersQuery.data?.users ?? []) as UserRecord[],
     [usersQuery.data?.users]
   );
+
   const allCases = useMemo(() => normalizeTestCases(testCasesResult), [testCasesResult]);
 
   const filteredCases = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return allCases;
-
     return allCases.filter((testCase) => {
       const searchable = [
         testCase.id,
@@ -98,7 +101,6 @@ function TestPlanTestCasesPage() {
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-
       return searchable.includes(term);
     });
   }, [allCases, searchTerm]);
@@ -124,7 +126,7 @@ function TestPlanTestCasesPage() {
   ) => {
     const projectId = testPlanQuery.data?.project_id;
     if (!projectId) {
-      toaster.error({ title: "Unable to resolve project for this test plan" });
+      toaster.error({ title: t("test_plans.error_cases") });
       return;
     }
 
@@ -136,7 +138,7 @@ function TestPlanTestCasesPage() {
       }));
 
     if (plannedTests.length === 0) {
-      toaster.error({ title: "No test cases available for assignment" });
+      toaster.error({ title: t("test_plans.no_users") });
       return;
     }
 
@@ -146,19 +148,20 @@ function TestPlanTestCasesPage() {
         test_plan_id: Number(testPlanID),
         planned_tests: plannedTests,
       });
-      toaster.success({ title: "Tester assignments saved" });
+      toaster.success({ title: t("test_plans.confirm_assignment") });
       await refetch();
     } catch (assignError) {
       console.error("Failed to assign testers", assignError);
-      toaster.error({ title: "Failed to assign testers" });
+      toaster.error({ title: t("test_plans.assign_error") });
     }
   };
 
   if (isLoadingCases || usersQuery.isLoading || testPlanQuery.isLoading) {
-    return <LoadingState label="Loading test cases..." />;
+    return <LoadingState label={t("test_plans.loading_cases")} />;
   }
+
   if (testCasesError || testPlanQuery.error) {
-    return <ErrorState title="Error loading test cases for this plan" />;
+    return <ErrorState title={t("test_plans.error_cases")} />;
   }
 
   return (
@@ -175,29 +178,26 @@ function TestPlanTestCasesPage() {
               <HStack gap={2}>
                 <Icon as={IconUsers} color="brand.solid" />
                 <Heading size="lg" color="fg.heading">
-                  Test Cases in Plan
+                  {t("test_plans.cases_in_plan")}
                 </Heading>
               </HStack>
-              <Text color="fg.subtle">
-                Assign testers to each case and keep coverage balanced across
-                the execution window.
-              </Text>
+              <Text color="fg.subtle">{t("test_plans.cases_description")}</Text>
               <HStack gap={2} flexWrap="wrap">
                 <Badge colorPalette="brand" variant="subtle">
-                  {allCases.length} total
+                  {allCases.length} {t("test_plans.cases.total")}
                 </Badge>
                 <Badge colorPalette="green" variant="subtle">
-                  {assignedCases} assigned
+                  {assignedCases} {t("test_plans.cases.assigned")}
                 </Badge>
                 <Badge colorPalette="orange" variant="subtle">
-                  {unassignedCases} unassigned
+                  {unassignedCases} {t("test_plans.cases.unassigned")}
                 </Badge>
               </HStack>
             </Stack>
 
             <AssignTesterDialog
               users={users}
-              buttonText="Assign to visible cases"
+              buttonText={t("test_plans.assign_visible")}
               buttonIcon={IconUserPlus}
               onAssign={(ids) => performAssignment(ids, filteredCases)}
               disabled={filteredCases.length === 0}
@@ -212,7 +212,7 @@ function TestPlanTestCasesPage() {
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by code, title, module, or id"
+              placeholder={t("test_plans.search_cases")}
             />
           </InputGroup>
         </Card.Body>
@@ -220,13 +220,13 @@ function TestPlanTestCasesPage() {
 
       {allCases.length === 0 ? (
         <EmptyState
-          title="No test cases in this plan yet"
-          description="Add test cases to this plan first, then assign testers."
+          title={t("test_plans.empty_cases")}
+          description={t("test_plans.empty_cases_description")}
         />
       ) : filteredCases.length === 0 ? (
         <EmptyState
-          title="No matching test cases"
-          description="Try a different search term to find the case you need."
+          title={t("test_plans.no_match_cases")}
+          description={t("test_plans.no_match_cases_description")}
         />
       ) : (
         <Stack gap={4}>
@@ -264,7 +264,7 @@ function TestPlanTestCasesPage() {
                               Code: {testCase.code}
                             </Badge>
                           )}
-                          {testCase.feature_or_module && (
+                                                    {testCase.feature_or_module && (
                             <Badge colorPalette="purple" variant="outline">
                               Module: {testCase.feature_or_module}
                             </Badge>
@@ -279,7 +279,7 @@ function TestPlanTestCasesPage() {
 
                       <AssignTesterDialog
                         users={users}
-                        buttonText="Assign Tester"
+                        buttonText={t("test_plans.assign_tester")}
                         buttonVariant="outline"
                         buttonIcon={IconUserPlus}
                         onAssign={(ids) => performAssignment(ids, [testCase])}
@@ -297,7 +297,7 @@ function TestPlanTestCasesPage() {
                     >
                       <Box>
                         <Text fontSize="xs" color="fg.subtle" mb={1}>
-                          Assignment Status
+                          {t("test_plans.assignment_status")}
                         </Text>
                         <Badge
                           colorPalette={assignedNames.length > 0 ? "green" : "orange"}
@@ -305,13 +305,13 @@ function TestPlanTestCasesPage() {
                         >
                           {assignedNames.length > 0
                             ? `${assignedNames.length} tester(s) assigned`
-                            : "Unassigned"}
+                            : t("test_plans.unassigned")}
                         </Badge>
                       </Box>
 
                       <Box>
                         <Text fontSize="xs" color="fg.subtle" mb={1}>
-                          Assigned Testers
+                          {t("test_plans.assigned_testers")}
                         </Text>
                         {assignedNames.length > 0 ? (
                           <HStack gap={2} flexWrap="wrap">
@@ -327,7 +327,7 @@ function TestPlanTestCasesPage() {
                           </HStack>
                         ) : (
                           <Text color="fg.subtle" fontSize="sm">
-                            No testers assigned.
+                            {t("test_plans.no_testers")}
                           </Text>
                         )}
                       </Box>
@@ -364,6 +364,7 @@ function AssignTesterDialog({
   buttonIcon?: ElementType;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -387,7 +388,7 @@ function AssignTesterDialog({
         setIsDialogOpen(event.open);
         if (!event.open) setSelectedUsers([]);
       }}
-      title="Select testers"
+      title={t("test_plans.select_testers")}
       showCloseTrigger
       onClose={() => setSelectedUsers([])}
       trigger={
@@ -408,13 +409,13 @@ function AssignTesterDialog({
           disabled={selectedUsers.length === 0 || users.length === 0}
           onClick={handleConfirm}
         >
-          Confirm Assignment
+          {t("test_plans.confirm_assignment")}
         </Button>
       }
     >
       {users.length === 0 ? (
         <Text color="fg.subtle" fontSize="sm">
-          No users available to assign.
+          {t("test_plans.no_users")}
         </Text>
       ) : (
         <CheckboxGroup value={selectedUsers} onValueChange={setSelectedUsers}>
@@ -422,7 +423,6 @@ function AssignTesterDialog({
             {users.map((user) => {
               const userId = String(user.ID ?? user.id ?? "");
               if (!userId) return null;
-
               return (
                 <Checkbox.Root key={userId} value={userId}>
                   <Checkbox.HiddenInput />
@@ -433,7 +433,7 @@ function AssignTesterDialog({
                         {getUserLabel(user, Number(userId))}
                       </Text>
                       <Text fontSize="xs" color="fg.subtle">
-                        {user.Email ?? user.email ?? "No email"}
+                        {user.Email ?? user.email ?? t("test_plans.no_users")}
                       </Text>
                     </Box>
                   </Checkbox.Label>
@@ -450,27 +450,22 @@ function AssignTesterDialog({
 function normalizeTestCases(payload: unknown): TestCaseItem[] {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload as TestCaseItem[];
-
   const payloadObject = payload as {
     data?: unknown;
     test_cases?: unknown;
   };
-
   if (Array.isArray(payloadObject.test_cases)) {
     return payloadObject.test_cases as TestCaseItem[];
   }
-
   if (payloadObject.data && typeof payloadObject.data === "object") {
     const nestedData = payloadObject.data as { test_cases?: unknown };
     if (Array.isArray(nestedData.test_cases)) {
       return nestedData.test_cases as TestCaseItem[];
     }
-
     if (Array.isArray(payloadObject.data)) {
       return payloadObject.data as TestCaseItem[];
     }
   }
-
   return [];
 }
 

@@ -7,12 +7,14 @@ import { useState } from "react";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { orgSchema } from "@/data/forms/org-schemas";
 import { orgFields } from "@/data/forms/org-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/organizations/new/")({
   component: CreateNewOrg,
 });
 
 function CreateNewOrg() {
+  const { t } = useTranslation();
   const createOrgMutation = useCreateOrgMutation();
   const redirect = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -25,26 +27,21 @@ function CreateNewOrg() {
   }) => {
     setSubmitting(true);
     try {
-      const res = await createOrgMutation.mutateAsync({
-        body: values,
-      });
-      
+      const res = await createOrgMutation.mutateAsync({ body: values });
       if (res) {
         toaster.create({
-          title: "Organization created.",
-          description: "We've created your new organization.",
+          title: t("organizations.new.success"),
+          description: t("organizations.new.description"),
           type: "success",
           duration: 3000,
         });
         redirect({ to: "/workspace/organizations" });
       }
-    } catch (err: any){
-      if (err.name === "CancelledError"){
-        return;
-      }    
+    } catch (err: any) {
+      if (err.name === "CancelledError") return;
       toaster.create({
-        title: "Failed to create organization.",
-        description: "Failed to create new organization",
+        title: t("organizations.new.error_title"),
+        description: t("organizations.new.error"),
         type: "error",
         duration: 3000,
       });
@@ -52,19 +49,19 @@ function CreateNewOrg() {
       setSubmitting(false);
     }
   };
-  
+
   return (
     <Box>
-      <Heading size="3xl"> Add New Organization</Heading>
+      <Heading size="3xl">{t("organizations.new.title")}</Heading>
       <DynamicForm
         schema={orgSchema}
         fields={orgFields}
         onSubmit={handleSubmit}
-        submitText="Create Organization"
+        submitText={t("organizations.create_button")}
         submitLoading={submitting}
         layout="vertical"
         spacing={4}
       />
     </Box>
-    );
+  );
 }

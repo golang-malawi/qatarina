@@ -5,20 +5,19 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjectTestCaseTemplateQuery, useAddProjectTestCaseTemplateMutation } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
+import { useTranslation } from "react-i18next";
 
 function TestCaseTemplatePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { projectId } = useParams({ from: "/(project)/projects/$projectId/settings/TestCaseTemplate" });
   const queryClient = useQueryClient();
-
   const projectID = Number(projectId);
 
   const { data, isLoading } = useProjectTestCaseTemplateQuery(projectID);
   const saveMutation = useAddProjectTestCaseTemplateMutation();
-
   const [template, setTemplate] = useState("");
 
-  // Prefill textarea when data arrives
   useEffect(() => {
     if (data) {
       setTemplate(data.test_case_template ?? "");
@@ -34,19 +33,17 @@ function TestCaseTemplatePage() {
           test_case_template: template,
         },
       });
-      
       toaster.create({
-        title: "Template saved.",
-        description: "We've saved your test case template.",
+        title: t("projects.settings.template.saved"),
+        description: t("projects.settings.template.saved_description"),
         type: "success",
         duration: 3000,
       });
       queryClient.invalidateQueries({ queryKey: ["projectTemplate", projectID] });
       navigate({ to: `/projects/${projectId}/settings` });
     } catch (err: any) {
-      console.error("Failed to save template", err);
       toaster.create({
-        title: "Failed to save template",
+        title: t("projects.settings.template.error"),
         description: err.message,
         type: "error",
         duration: 4000,
@@ -62,7 +59,7 @@ function TestCaseTemplatePage() {
     return (
       <Box p={10}>
         <Spinner size="lg" />
-        <Text mt={4}>Loading template...</Text>
+        <Text mt={4}>{t("projects.settings.template.loading")}</Text>
       </Box>
     );
   }
@@ -70,16 +67,20 @@ function TestCaseTemplatePage() {
   return (
     <Box p={4}>
       <Heading size="lg" mb={8}>
-        {data?.test_case_template ? "Add Test Case DescriptionTemplate" : "Add Test Case Template"}
+        {data?.test_case_template
+          ? t("projects.settings.template.add_description_title")
+          : t("projects.settings.template.add_title")}
       </Heading>
+
       <Stack gap={6}>
         <Textarea
           value={template}
           onChange={(e) => setTemplate(e.target.value)}
-          placeholder="Enter template (e.g. Preconditions, Steps, Expected Result)"
+          placeholder={t("projects.settings.template.placeholder")}
           rows={16}
           width="100%"
         />
+
         <Box>
           <Button
             type="button"
@@ -88,14 +89,15 @@ function TestCaseTemplatePage() {
             onClick={handleSave}
             loading={saveMutation.isPending}
           >
-            Save
+            {t("projects.settings.template.save_button")}
           </Button>
           <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
+            {t("projects.settings.template.cancel_button")}
           </Button>
         </Box>
+
         <Text color="gray.500">
-          This template will be used as a guide for users when creating test cases.
+          {t("projects.settings.template.helper")}
         </Text>
       </Stack>
     </Box>

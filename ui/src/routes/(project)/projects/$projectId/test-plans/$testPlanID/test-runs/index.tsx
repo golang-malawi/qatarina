@@ -27,18 +27,21 @@ import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
 import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
 import $api from "@/lib/api/query";
+import { useTranslation } from "react-i18next";
 
 type TestRunItem = components["schemas"]["schema.TestRunResponse"];
 type ResultFilter = "all" | "passed" | "failed" | "pending";
 
 export const Route = createFileRoute(
-  "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/",
+  "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/"
 )({
   component: TestPlanTestRunsPage,
 });
 
 function TestPlanTestRunsPage() {
+  const { t } = useTranslation();
   const { projectId, testPlanID } = Route.useParams();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [envFilter, setEnvFilter] = useState<number | "all">("all");
@@ -50,75 +53,63 @@ function TestPlanTestRunsPage() {
   });
 
   // Fetch environments for this project
-const { data: envData } = $api.useQuery(
-  "get",
-  "/v1/projects/{projectID}/environments",
-  {
-    params: { path: { projectID: projectId } },
-  },
-);
-
-const environments = envData?.environments ?? [];
+  const { data: envData } = $api.useQuery(
+    "get",
+    "/v1/projects/{projectID}/environments",
+    { params: { path: { projectID: projectId } } }
+  );
+  const environments = envData?.environments ?? [];
 
   const allRuns = useMemo(() => {
     const runs = data?.test_runs;
     return Array.isArray(runs) ? (runs as TestRunItem[]) : [];
   }, [data?.test_runs]);
- 
-  $api.useQuery("get", "/v1/projects/{projectID}/environments", {
-    params: { path: { projectID: projectId } },
-  });
+
   const filteredRuns = useMemo(() => {
-  const term = searchTerm.trim().toLowerCase();
-
-  return allRuns.filter((run) => {
-    const runState = getResultState(run.result_state);
-    const matchesFilter = resultFilter === "all" || runState === resultFilter;
-
-    const matchesEnv =
-      envFilter === "all" || run.environment_id === envFilter;
-
-    if (!matchesFilter || !matchesEnv) return false;
-
-    if (!term) return true;
-
-    const searchable = [
-      run.id,
-      run.code,
-      run.test_case_title,
-      run.executed_by,
-      run.result_state,
-      run.notes,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return searchable.includes(term);
-  });
-}, [allRuns, resultFilter, envFilter, searchTerm]);
+    const term = searchTerm.trim().toLowerCase();
+    return allRuns.filter((run) => {
+      const runState = getResultState(run.result_state);
+      const matchesFilter = resultFilter === "all" || runState === resultFilter;
+      const matchesEnv =
+        envFilter === "all" || run.environment_id === envFilter;
+      if (!matchesFilter || !matchesEnv) return false;
+      if (!term) return true;
+      const searchable = [
+        run.id,
+        run.code,
+        run.test_case_title,
+        run.executed_by,
+        run.result_state,
+        run.notes,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(term);
+    });
+  }, [allRuns, resultFilter, envFilter, searchTerm]);
 
   const closedRuns = allRuns.filter((run) => run.is_closed).length;
   const openRuns = allRuns.length - closedRuns;
   const passedRuns = allRuns.filter(
-    (run) => getResultState(run.result_state) === "passed",
+    (run) => getResultState(run.result_state) === "passed"
   ).length;
   const failedRuns = allRuns.filter(
-    (run) => getResultState(run.result_state) === "failed",
+    (run) => getResultState(run.result_state) === "failed"
   ).length;
 
-  if (isLoading) return <LoadingState label="Loading test runs..." />;
-  if (error) return <ErrorState title="Error loading test runs" />;
+  if (isLoading) return <LoadingState label={t("test_plans.loading")} />;
+  if (error) return <ErrorState title={t("test_plans.error")} />;
 
   const handleClose = async (runId: string) => {
     try {
       setClosingRunId(runId);
       await closeTestRun(runId);
-      toaster.success({ title: "Test run closed" });
+      toaster.success({ title: t("test_plans.close_run.success") });
       await refetch();
     } catch (closeError) {
       console.error("Failed to close test run", closeError);
-      toaster.error({ title: "Failed to close test run" });
+      toaster.error({ title: t("test_plans.close_run.error") });
     } finally {
       setClosingRunId(null);
     }
@@ -130,27 +121,24 @@ const environments = envData?.environments ?? [];
         <Card.Body p={{ base: 4, md: 6 }}>
           <Stack gap={2}>
             <Heading size="lg" color="fg.heading">
-              Test Runs
+              {t("test_plans.runs")}
             </Heading>
-            <Text color="fg.subtle">
-              Review execution output, compare expected vs actual results, and
-              close runs after verification.
-            </Text>
+            <Text color="fg.subtle">{t("test_plans.runs_description")}</Text>
             <HStack gap={2} flexWrap="wrap">
               <Badge colorPalette="brand" variant="subtle">
-                {allRuns.length} total
+                {allRuns.length} {t("test_plans.runs.total")}
               </Badge>
               <Badge colorPalette="green" variant="subtle">
-                {passedRuns} passed
+                {passedRuns} {t("test_plans.runs.passed")}
               </Badge>
               <Badge colorPalette="red" variant="subtle">
-                {failedRuns} failed
+                {failedRuns} {t("test_plans.runs.failed")}
               </Badge>
               <Badge colorPalette="orange" variant="subtle">
-                {openRuns} open
+                {openRuns} {t("test_plans.runs.open")}
               </Badge>
               <Badge colorPalette="gray" variant="subtle">
-                {closedRuns} closed
+                {closedRuns} {t("test_plans.runs.closed")}
               </Badge>
             </HStack>
           </Stack>
@@ -164,9 +152,10 @@ const environments = envData?.environments ?? [];
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by title, code, notes, result, or executor"
+                placeholder={t("test_plans.search_runs")}
               />
             </InputGroup>
+
             <HStack gap={2} flexWrap="wrap">
               {(["all", "passed", "failed", "pending"] as ResultFilter[]).map(
                 (value) => (
@@ -177,51 +166,46 @@ const environments = envData?.environments ?? [];
                     colorPalette={resultFilter === value ? "brand" : "gray"}
                     onClick={() => setResultFilter(value)}
                   >
-                    {value === "all"
-                      ? "All"
-                      : value.charAt(0).toUpperCase() + value.slice(1)}
+                    {t(`test_plans.filter.${value}`)}
                   </Button>
-                ),
+                )
               )}
             </HStack>
 
-              <HStack gap={2} flexWrap="wrap">
+            <HStack gap={2} flexWrap="wrap">
+              <Button
+                size="xs"
+                variant={envFilter === "all" ? "solid" : "outline"}
+                colorPalette={envFilter === "all" ? "brand" : "gray"}
+                onClick={() => setEnvFilter("all")}
+              >
+                {t("test_plans.all_envs")}
+              </Button>
+              {environments.map((env) => (
                 <Button
+                  key={env.id}
                   size="xs"
-                  variant={envFilter === "all" ? "solid" : "outline"}
-                  colorPalette={envFilter === "all" ? "brand" : "gray"}
-                  onClick={() => setEnvFilter("all")}
+                  variant={envFilter === env.id ? "solid" : "outline"}
+                  colorPalette={envFilter === env.id ? "brand" : "gray"}
+                  onClick={() => setEnvFilter(env.id!)}
                 >
-                  All Environments
+                  {env.name}
                 </Button>
-
-                {environments.map((env) => (
-                  <Button
-                    key={env.id}
-                    size="xs"
-                    variant={envFilter === env.id ? "solid" : "outline"}
-                    colorPalette={envFilter === env.id ? "brand" : "gray"}
-                    onClick={() => setEnvFilter(env.id!)}
-                  >
-                    {env.name}
-                  </Button>
-                ))}
-              </HStack>
-
-
+              ))}
+            </HStack>
           </Stack>
         </Card.Body>
       </Card.Root>
 
       {allRuns.length === 0 ? (
         <EmptyState
-          title="No test runs found"
-          description="Execute this test plan to start generating runs."
+          title={t("test_plans.empty_runs")}
+          description={t("test_plans.empty_runs_description")}
         />
       ) : filteredRuns.length === 0 ? (
         <EmptyState
-          title="No matching test runs"
-          description="Adjust the filters or search term to see run activity."
+          title={t("test_plans.no_match_runs")}
+          description={t("test_plans.no_match_runs_description")}
         />
       ) : (
         <Stack gap={4}>
@@ -257,7 +241,8 @@ const environments = envData?.environments ?? [];
                           </Text>
                         )}
                       </Stack>
-                      <HStack gap={2} flexWrap="wrap">
+
+                                            <HStack gap={2} flexWrap="wrap">
                         <Badge
                           colorPalette={getResultColor(runStatus)}
                           variant="subtle"
@@ -268,7 +253,7 @@ const environments = envData?.environments ?? [];
                           colorPalette={run.is_closed ? "gray" : "orange"}
                           variant="subtle"
                         >
-                          {run.is_closed ? "Closed" : "Open"}
+                          {run.is_closed ? t("test_plans.runs.closed") : t("test_plans.runs.open")}
                         </Badge>
                         {runId && (
                           <Badge colorPalette="blue" variant="outline">
@@ -285,26 +270,26 @@ const environments = envData?.environments ?? [];
                       }}
                       gap={4}
                     >
-                      <DetailItem label="Executed By" value={run.executed_by} />
+                      <DetailItem label={t("test_plans.detail.executed_by")} value={run.executed_by} />
                       <DetailItem
-                        label="Tested On"
+                        label={t("test_plans.detail.tested_on")}
                         value={formatHumanDateTime(run.tested_on, {
-                          fallback: "Not recorded",
+                          fallback: t("test_plans.not_recorded"),
                         })}
                       />
                       <DetailItem
-                        label="Expected Result"
+                        label={t("test_plans.detail.expected_result")}
                         value={run.expected_result}
                       />
                       <DetailItem
-                        label="Actual Result"
+                        label={t("test_plans.detail.actual_result")}
                         value={run.actual_result}
                       />
                       <DetailItem
-                        label="Environment"
+                        label={t("test_plans.detail.environment")}
                         value={
                           environments.find((e) => e.id === run.environment_id)?.name ||
-                          "Unknown"
+                          t("test_plans.not_available")
                         }
                       />
                     </Grid>
@@ -313,10 +298,10 @@ const environments = envData?.environments ?? [];
 
                     <Stack gap={2}>
                       <Text fontSize="xs" color="fg.subtle">
-                        Notes
+                        {t("test_plans.detail.notes")}
                       </Text>
                       <Text color="fg.default">
-                        {run.notes?.trim() || "No notes added."}
+                        {run.notes?.trim() || t("test_plans.no_notes")}
                       </Text>
                     </Stack>
 
@@ -330,7 +315,7 @@ const environments = envData?.environments ?? [];
                         onClick={() => handleClose(runId)}
                       >
                         <IconX />
-                        Close Test Run
+                        {t("test_plans.close_run")}
                       </Button>
                     )}
                   </Stack>
@@ -364,12 +349,13 @@ function getResultColor(state: ResultFilter) {
 }
 
 function DetailItem({ label, value }: { label: string; value?: string }) {
+  const { t } = useTranslation();
   return (
     <Stack gap={1}>
       <Text fontSize="xs" color="fg.subtle">
         {label}
       </Text>
-      <Text color="fg.default">{value?.trim() || "N/A"}</Text>
+      <Text color="fg.default">{value?.trim() || t("test_plans.not_available")}</Text>
     </Stack>
   );
 }

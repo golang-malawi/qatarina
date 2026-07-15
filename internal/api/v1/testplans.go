@@ -183,7 +183,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 		}
 
 		return c.JSON(fiber.Map{
-			"message": "Test cases created",
+			"message": "Test plan created",
 		})
 	}
 }

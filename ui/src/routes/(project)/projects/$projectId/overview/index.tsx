@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Box, Flex, Button, Heading, Text, Stack, Spinner } from "@chakra-ui/react";
 import { useProjectQuery } from "@/services/ProjectService";
+import { useTranslation } from "react-i18next";
 
 // Route for the Overview page
 export const Route = createFileRoute("/(project)/projects/$projectId/overview/")({
@@ -10,27 +11,28 @@ export const Route = createFileRoute("/(project)/projects/$projectId/overview/")
 // Redirect route: when someone visits /projects/:projectId, send them to /overview
 export const RedirectRoute = createFileRoute("/(project)/projects/$projectId")({
   beforeLoad: ({ params }) => {
-    return { redirect: Route.to, params }; 
+    return { redirect: Route.to, params };
   },
 });
 
 function ViewProject() {
+  const { t } = useTranslation();
   const { projectId } = Route.useParams();
   const { data: project, isLoading, error } = useProjectQuery(projectId!);
 
   if (isLoading) return <Spinner color="brand.solid" />;
-  if (error) return <Text color="fg.error">Error loading project.</Text>;
+  if (error) return <Text color="fg.error">{t("projects.overview.error")}</Text>;
 
   const navItems = [
-    { label: "Summary", path: Route.to },
-    { label: "Test Cases", path: "/projects/$projectId/test-cases" },
-    { label: "Test Plans", path: "/projects/$projectId/test-plans" },
-    { label: "Features/Modules", path: "/projects/$projectId/Features" },
-    { label: "Testers", path: "/projects/$projectId/testers" },
-    { label: "Reports", path: "/projects/$projectId/reports" },
-    { label: "Insights", path: "/projects/$projectId/insights" },
-    { label: "Settings", path: "/projects/$projectId/settings" },
-    { label: "Environments", path: "/projects/$projectId/environments" },
+    { label: t("projects.overview.nav.summary"), path: Route.to },
+    { label: t("projects.overview.nav.test_cases"), path: "/projects/$projectId/test-cases" },
+    { label: t("projects.overview.nav.test_plans"), path: "/projects/$projectId/test-plans" },
+    { label: t("projects.overview.nav.features"), path: "/projects/$projectId/features" },
+    { label: t("projects.overview.nav.testers"), path: "/projects/$projectId/testers" },
+    { label: t("projects.overview.nav.reports"), path: "/projects/$projectId/reports" },
+    { label: t("projects.overview.nav.insights"), path: "/projects/$projectId/insights" },
+    { label: t("projects.overview.nav.settings"), path: "/projects/$projectId/settings" },
+    { label: t("projects.overview.nav.environments"), path: "/projects/$projectId/environments" },
   ];
 
   return (
@@ -60,25 +62,27 @@ function ViewProject() {
       </Flex>
 
       <Box p={6}>
-        <Heading size="lg" mb={4} color="tg.heading">
-          Welcome to {project?.title ? `${project.title} Project` : "Your Project"}
+        <Heading size="lg" mb={4} color="fg.heading">
+          {project?.title
+            ? t("projects.overview.welcome_with_title", { title: project.title })
+            : t("projects.overview.welcome_default")}
         </Heading>
         <Text mb={4} color="fg.subtle">
-          Here’s how the testing process works in this project:
+          {t("projects.overview.intro")}
         </Text>
         <Stack gap={3}>
-          <Text>• Create <strong>Test Cases</strong> for the project.</Text>
-          <Text>• Add those test cases into a <strong>Test Plan</strong>.</Text>
-          <Text>• Assign users to execute the test cases in the plan.</Text>
-          <Text>• Assigned test cases appear in each tester’s <strong>Inbox</strong>.</Text>
-          <Text>• When a tester opens a case, they record results and mark it as <strong>Passed</strong> or <strong>Failed</strong>.</Text>
-          <Text>• Each submission creates a <strong>Test Run</strong> (case + result).</Text>
-          <Text>• Test runs are visible under the project’s Test Plan → Test Runs.</Text>
-          <Text>• Users can close individual test runs once complete.</Text>
-          <Text>• A Test Plan can only be closed once all its test runs are closed.</Text>
+          <Text>• {t("projects.overview.step.create_cases")}</Text>
+          <Text>• {t("projects.overview.step.add_to_plan")}</Text>
+          <Text>• {t("projects.overview.step.assign_users")}</Text>
+          <Text>• {t("projects.overview.step.inbox")}</Text>
+          <Text>• {t("projects.overview.step.record_results")}</Text>
+          <Text>• {t("projects.overview.step.test_run")}</Text>
+          <Text>• {t("projects.overview.step.view_runs")}</Text>
+          <Text>• {t("projects.overview.step.close_runs")}</Text>
+          <Text>• {t("projects.overview.step.close_plan")}</Text>
         </Stack>
         <Text mt={6} color="fg.muted">
-          Need help? Visit the Settings page or contact your project owner.
+          {t("projects.overview.help")}
         </Text>
       </Box>
     </Box>
