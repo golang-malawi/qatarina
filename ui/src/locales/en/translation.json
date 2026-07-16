@@ -329,6 +329,8 @@
 "testers.title": "Testers",
 "testers.project_title": "Project Testers",
 "testers.add_button": "Add New Tester",
+"testers.new.user": "User",
+"testers.new.role": "Role",
 "testers.total": "Total Testers",
 "testers.error.load": "Failed to load testers",
 "testers.error.load_single": "Failed to load tester",
