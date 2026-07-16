@@ -22,6 +22,7 @@ import { useProjectTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toaster } from "@/components/ui/toaster";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -34,6 +35,7 @@ function ViewTestCase() {
   const { projectId, testCaseId } = Route.useParams();
   const search = Route.useSearch();
   const defaultTab = search.tab === "usage" ? "usage" : "description";
+  const { t } = useTranslation();
 
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
@@ -43,7 +45,7 @@ function ViewTestCase() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
   const navigate = useNavigate();
-
+  
   const [optimisticAssignment, setOptimisticAssignment] = useState<{
     test_plan_id: string | null;
     testers: string[];
@@ -297,7 +299,7 @@ function ViewTestCase() {
               </CheckboxGroup>
             ) : (
               <Stack gap={2}>
-                <Text color="fg.error">No testers have been added to this project yet.</Text>
+                <Text color="fg.error">{t("testers.none_assigned")}</Text>
                 <Button
                   size="sm"
                   colorPalette="brand"

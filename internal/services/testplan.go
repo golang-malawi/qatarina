@@ -112,7 +112,13 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
+			StartAt:         plan.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
+			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
 		})
+
 	}
 	return enriched, nil
 }
@@ -140,7 +146,13 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
+			StartAt:         plan.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
+			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
 		})
+
 	}
 	return enriched, nil
 }
