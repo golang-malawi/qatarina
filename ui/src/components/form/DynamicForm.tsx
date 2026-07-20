@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { ReactNode, ChangeEvent } from "react";
+import { ReactNode, ChangeEvent, lazy, Suspense } from "react";
 import {
   Box,
   Button,
@@ -10,14 +10,15 @@ import {
   VStack,
   HStack,
   NativeSelect,
-  Tabs,
 } from "@chakra-ui/react";
-
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
-import ReactMarkdown from "react-markdown";
 import SelectRunner from "./SelectRunner";
 import { LuChevronDown } from "react-icons/lu";
+
+// Lazy load editor to avoid SSR issues
+const MDEditor = lazy(() => import("@uiw/react-md-editor"));
+const MDPreview = lazy(() => import("@uiw/react-markdown-preview"));
 
 export type FieldType =
   | "text"
@@ -109,7 +110,9 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
           return (
             <Field.Root invalid={showErrors}>
-              <Field.Label fontSize="sm" fontWeight="medium">{label}</Field.Label>
+              <Field.Label fontSize="sm" fontWeight="medium">
+                {label}
+              </Field.Label>
 
               {type === "test-kind" && (
                 <SelectTestKind
@@ -161,35 +164,25 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
               {type === "markdown-textarea" && (
                 <Box w="100%">
-                  <Tabs.Root defaultValue="write">
-                    <Tabs.List>
-                      <Tabs.Trigger value="write">Write</Tabs.Trigger>
-                      <Tabs.Trigger value="preview">Preview</Tabs.Trigger>
-                    </Tabs.List>
-                    <Tabs.Content value="write">
-                      <Textarea
-                        width="100%"
-                        minHeight="200px"
-                        fontFamily="monospace"
-                        value={(field.state.value as string) || ""}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder={placeholder}
-                      />
-                    </Tabs.Content>
-                    <Tabs.Content value="preview">
-                      <Box
-                        mt={2}
-                        p={4}
-                        border="1px solid"
-                        borderColor="gray.200"
-                        bg="gray.50"
-                        borderRadius="md"
-                      >
-                        <ReactMarkdown>{(field.state.value as string) || ""}</ReactMarkdown>
-                      </Box>
-                    </Tabs.Content>
-                  </Tabs.Root>
+                  <Suspense fallback={<Textarea placeholder="Loading editor..." />}>
+                    <MDEditor
+                      value={(field.state.value as string) || ""}
+                      onChange={(val) => field.handleChange(val || "")}
+                      height={400}
+                    />
+                  </Suspense>
+                  <Box
+                    mt={4}
+                    p={4}
+                    border="1px solid"
+                    borderColor="gray.200"
+                    bg="gray.50"
+                    borderRadius="md"
+                  >
+                    <Suspense fallback={<Box>Loading preview...</Box>}>
+                      <MDPreview source={(field.state.value as string) || ""} />
+                    </Suspense>
+                  </Box>
                 </Box>
               )}
 
@@ -270,12 +263,13 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
               {showErrors && (
                 <Field.ErrorText>
-                  {[...new Set(field.state.meta.errors!.map(
-                    (error) =>
+                  {[...new Set(
+                    field.state.meta.errors!.map((error) =>
                       typeof error === "string"
                         ? error
                         : (error as any)?.message ?? "Validation error"
-                  ))].join(", ")}
+                    )
+                  )].join(", ")}
                 </Field.ErrorText>
               )}
             </Field.Root>
