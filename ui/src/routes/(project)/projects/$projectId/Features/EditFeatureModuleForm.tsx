@@ -68,7 +68,7 @@ function EditFeatureModuleForm() {
     };
 
     fetchModule();
-  }, [moduleId]);
+  }, [moduleId, t]);
 
   async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
