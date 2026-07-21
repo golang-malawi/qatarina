@@ -35,42 +35,44 @@ type ProjectListResponse struct {
 }
 
 type ProjectResponse struct {
-	ID              int32  `json:"id"`
-	Title           string `json:"title"`
-	Code            string `json:"code"`
-	Description     string `json:"description"`
-	Version         string `json:"version"`
-	IsActive        bool   `json:"is_active"`
-	IsPublic        bool   `json:"is_public"`
-	WebsiteUrl      string `json:"website_url"`
-	GithubUrl       string `json:"github_url"`
-	TrelloUrl       string `json:"trello_url"`
-	JiraUrl         string `json:"jira_url"`
-	MondayUrl       string `json:"monday_url"`
-	OwnerUserID     int32  `json:"owner_user_id"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
-	ParentProjectID int32  `json:"parent_project_id"`
+	ID                      int32  `json:"id"`
+	Title                   string `json:"title"`
+	Code                    string `json:"code"`
+	Description             string `json:"description"`
+	Version                 string `json:"version"`
+	IsActive                bool   `json:"is_active"`
+	IsPublic                bool   `json:"is_public"`
+	WebsiteUrl              string `json:"website_url"`
+	GithubUrl               string `json:"github_url"`
+	TrelloUrl               string `json:"trello_url"`
+	JiraUrl                 string `json:"jira_url"`
+	MondayUrl               string `json:"monday_url"`
+	OwnerUserID             int32  `json:"owner_user_id"`
+	CreatedAt               string `json:"created_at"`
+	UpdatedAt               string `json:"updated_at"`
+	ParentProjectID         int32  `json:"parent_project_id"`
+	AutomatedTestingEnabled bool   `json:"automated_testing_enabled"`
 }
 
 func NewProjectResponse(data *dbsqlc.Project, owner *dbsqlc.User) ProjectResponse {
 	return ProjectResponse{
-		ID:              data.ID,
-		Title:           data.Title,
-		Code:            data.Code,
-		Description:     data.Description,
-		Version:         data.Version.String,
-		IsActive:        data.IsActive.Bool,
-		IsPublic:        data.IsPublic.Bool,
-		WebsiteUrl:      data.WebsiteUrl.String,
-		GithubUrl:       data.GithubUrl.String,
-		TrelloUrl:       data.TrelloUrl.String,
-		JiraUrl:         data.JiraUrl.String,
-		MondayUrl:       data.MondayUrl.String,
-		OwnerUserID:     data.OwnerUserID,
-		CreatedAt:       formatDateTime(data.CreatedAt),
-		UpdatedAt:       formatDateTime(data.UpdatedAt),
-		ParentProjectID: data.ParentProjectID.Int32,
+		ID:                      data.ID,
+		Title:                   data.Title,
+		Code:                    data.Code,
+		Description:             data.Description,
+		Version:                 data.Version.String,
+		IsActive:                data.IsActive.Bool,
+		IsPublic:                data.IsPublic.Bool,
+		WebsiteUrl:              data.WebsiteUrl.String,
+		GithubUrl:               data.GithubUrl.String,
+		TrelloUrl:               data.TrelloUrl.String,
+		JiraUrl:                 data.JiraUrl.String,
+		MondayUrl:               data.MondayUrl.String,
+		OwnerUserID:             data.OwnerUserID,
+		CreatedAt:               formatDateTime(data.CreatedAt),
+		UpdatedAt:               formatDateTime(data.UpdatedAt),
+		ParentProjectID:         data.ParentProjectID.Int32,
+		AutomatedTestingEnabled: data.AutomatedTestingEnabled,
 	}
 }
 
@@ -92,4 +94,8 @@ type AddProjectTestCaseTemplateRequest struct {
 
 type ProjectTestCaseTemplateResponse struct {
 	TestCaseTemplate string `json:"test_case_template"`
+}
+
+type UpdateAutomatedTestingRequest struct {
+	AutomatedTestingEnabled bool `json:"automated_testing_enabled" validate:"required"`
 }

@@ -52,7 +52,7 @@ const archiveProject = `-- name: ArchiveProject :one
 UPDATE projects
 SET is_active = false
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled
 `
 
 func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -77,6 +77,7 @@ func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error)
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
 	)
 	return i, err
 }
@@ -1378,7 +1379,7 @@ func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects WHERE id = $1
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
@@ -1403,6 +1404,7 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
 	)
 	return i, err
 }
@@ -2340,7 +2342,7 @@ func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects ORDER BY created_at DESC
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled FROM projects ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
@@ -2371,6 +2373,7 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.Code,
 			&i.ParentProjectID,
 			&i.TestcaseTemplate,
+			&i.AutomatedTestingEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -3172,7 +3175,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const searchProject = `-- name: SearchProject :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled FROM projects
 WHERE title ILIKE '%' || $1 || '%'
 `
 
@@ -3204,6 +3207,7 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.Code,
 			&i.ParentProjectID,
 			&i.TestcaseTemplate,
+			&i.AutomatedTestingEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -3582,7 +3586,7 @@ const unarchiveProject = `-- name: UnarchiveProject :one
 UPDATE projects
 SET is_active = true
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled
 `
 
 func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -3607,8 +3611,27 @@ func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, erro
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
 	)
 	return i, err
+}
+
+const updateAutomatedTesting = `-- name: UpdateAutomatedTesting :exec
+UPDATE projects
+SET 
+    automated_testing_enabled = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateAutomatedTestingParams struct {
+	ID                      int32
+	AutomatedTestingEnabled bool
+}
+
+func (q *Queries) UpdateAutomatedTesting(ctx context.Context, arg UpdateAutomatedTestingParams) error {
+	_, err := q.db.ExecContext(ctx, updateAutomatedTesting, arg.ID, arg.AutomatedTestingEnabled)
+	return err
 }
 
 const updateOrg = `-- name: UpdateOrg :exec

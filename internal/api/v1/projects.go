@@ -586,3 +586,42 @@ func GetProjectTestCaseTemplate(projectService services.ProjectService, logger l
 		})
 	}
 }
+
+// UpdateAutomatedTesting godoc
+//
+//	@ID				UpdateAutomatedTesting
+//	@Summary		Update project automated testing setting
+//	@Description	Enable or disable automated testing capability for a project
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int		true	"Project ID"
+//	@Param			request		body		schema.UpdateAutomatedTestingRequest	true	"Automated testing state"
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/automated-testing [post]
+func UpdateAutomatedTesting(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
+		var request schema.UpdateAutomatedTestingRequest
+		_, err = common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		}
+
+		err = projectService.UpdateAutomatedTesting(c.Context(), projectID, request.AutomatedTestingEnabled)
+		if err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to update automated testing setting", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update automated testing setting")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Automated testing setting updated successfully",
+		})
+	}
+}

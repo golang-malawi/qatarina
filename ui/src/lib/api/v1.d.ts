@@ -637,6 +637,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/automated-testing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update project automated testing setting
+         * @description Enable or disable automated testing capability for a project
+         */
+        post: operations["UpdateAutomatedTesting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/environments": {
         parameters: {
             query?: never;
@@ -2209,6 +2229,7 @@ export interface components {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
         "schema.ProjectResponse": {
+            automated_testing_enabled?: boolean;
             code?: string;
             created_at?: string;
             description?: string;
@@ -2388,6 +2409,9 @@ export interface components {
         };
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
+        };
+        "schema.UpdateAutomatedTestingRequest": {
+            automated_testing_enabled: boolean;
         };
         "schema.UpdateOrgRequest": {
             address?: string;
@@ -3613,6 +3637,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.ProjectResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateAutomatedTesting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Automated testing state */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateAutomatedTestingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
