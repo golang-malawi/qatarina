@@ -286,7 +286,6 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
-              {/* GitHub-style Tabbed Markdown Field */}
               {type === "markdown-textarea" && (
                 <Box w="100%" borderWidth="1px" borderRadius="md" p={2} bg="bg.panel">
                   <Tabs.Root defaultValue="write" variant="outline">
