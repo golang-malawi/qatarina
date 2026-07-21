@@ -117,7 +117,7 @@ function ViewUserProfile() {
             <Button
               colorPalette="brand"
               onClick={() =>
-                navigate({ to: "/users/$userID/edit", params: { userID } })
+                navigate({ to: "/workspace/users/$userID/edit", params: { userID } })
               }
             >
               {t("users.view.edit_button")}
