@@ -266,6 +266,9 @@ export default function ListProjectTestCases() {
                   try {
                     await branchTestCase(String(row.id));
                     toaster.success({ title: t("test_cases.branch.success") });
+                    await queryClient.invalidateQueries({
+                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                    });
                     navigate({
                       to: "/projects/$projectId/test-cases",
                       params: { projectId },
