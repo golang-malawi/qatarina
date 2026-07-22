@@ -303,10 +303,8 @@ components:
         project_id:
           type: integer
         runner:
-          description: '"basi", "playwright", "cypress", "browseruse"'
           type: string
         script_path:
-          description: optional; used for "playwright" and "cypress" runner types
           type: string
         tags:
           items:
@@ -319,7 +317,6 @@ components:
       - description
       - feature_or_module
       - kind
-      - tags
       - title
       type: object
     schema.CreateTestPlan:
@@ -761,7 +758,11 @@ components:
           type: string
         notes:
           type: string
+        parent_code:
+          type: string
         parent_test_case_id:
+          type: string
+        parent_title:
           type: string
         project_id:
           type: integer

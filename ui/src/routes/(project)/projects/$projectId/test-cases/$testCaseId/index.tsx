@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
   Box,
@@ -23,6 +23,7 @@ import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toaster } from "@/components/ui/toaster";
+import { branchTestCase } from "@/services/TestCaseService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -93,6 +94,31 @@ function ViewTestCase() {
         <Text fontSize="sm" color="fg.subtle">
           Project ID: {projectId}
         </Text>
+        <Button
+          size="sm"
+          colorPalette="brand"
+          onClick={async () => {
+            try {
+              await branchTestCase(testCaseId);
+              toaster.success({
+                title: "Branched",
+                description: "New test case created from this one.",
+              });
+              navigate({
+                to: "/projects/$projectId/test-cases",
+                params: { projectId },
+              });
+            } catch (err: any) {
+              toaster.error({
+                title: "Branch failed",
+                description: err?.message || "Could not branch test case.",
+              });
+            }
+          }}
+        >
+          Branch
+        </Button>
+
       </Stack>
 
       <Tabs.Root defaultValue={defaultTab}>
@@ -222,6 +248,21 @@ function ViewTestCase() {
                       : "N/A"}
                   </Text>
                 </Flex>
+                {testCase.parent_test_case_id && (
+                  <Flex justify="space-between">
+                    <Text fontWeight="semibold">Branched From:</Text>
+                    <Text>
+                      <Link
+                        to="/projects/$projectId/test-cases/$testCaseId"
+                        params={{ projectId, testCaseId: testCase.parent_test_case_id }}
+                        style={{ color: "#3182CE", textDecoration: "underline" }}
+                      >
+                        {testCase.parent_code} — {testCase.parent_title}
+                      </Link>
+                    </Text>
+                  </Flex>
+                )}
+
               </Stack>
             </Box>
           </Box>

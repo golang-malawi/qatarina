@@ -2095,11 +2095,9 @@ export interface components {
             kind: string;
             parent_test_case_id?: string;
             project_id?: number;
-            /** @description "basi", "playwright", "cypress", "browseruse" */
             runner?: string;
-            /** @description optional; used for "playwright" and "cypress" runner types */
             script_path?: string;
-            tags: string[];
+            tags?: string[];
             title: string;
         };
         "schema.CreateTestPlan": {
@@ -2305,7 +2303,9 @@ export interface components {
             is_draft?: boolean;
             kind?: string;
             notes?: string;
+            parent_code?: string;
             parent_test_case_id?: string;
+            parent_title?: string;
             project_id?: number;
             result?: string;
             runner?: string;

@@ -9,7 +9,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
@@ -19,9 +19,8 @@ import {
   TestCaseListQueryParams,
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
-import { LuEye, LuPencil } from "react-icons/lu";
+import { LuEye, LuGitBranch, LuPencil } from "react-icons/lu";
 import {
-  markTestCaseAsDraft,
   useClosedTestCasesQuery,
   useFailingTestCasesQuery,
   useScheduledTestCasesQuery,
@@ -30,10 +29,14 @@ import {
   useSuggestedTestCasesQuery,
   approveSuggestedTestCase,
   rejectSuggestedTestCase,
+  branchTestCase,
+  markTestCaseAsDraft,
+  unMarkTestCaseAsDraft,
+  deleteTestCase,
 } from "@/services/TestCaseService";
 import { useUsersQuery } from "@/services/UserService";
-import { deleteTestCase } from "@/services/TestCaseService";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -49,30 +52,10 @@ type TestCaseListResponse =
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const [moduleFilter, setModuleFilter] = useState<string>("");
-
-  const markDraftMutation = useMutation({
-    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
-    onSuccess: () => {
-      toaster.create({
-        title: t("test_cases.toast.success"),
-        description: t("test_cases.mark_draft.success"),
-        type: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-      });
-    },
-    onError: () => {
-      toaster.create({
-        title: t("test_cases.toast.error"),
-        description: t("test_cases.mark_draft.error"),
-        type: "error",
-      });
-    },
-  });
 
   const queryFactory = React.useCallback(
     ({
@@ -133,10 +116,6 @@ export default function ListProjectTestCases() {
     },
   ];
 
-  // const { data: testCases } = useSuspenseQuery(
-  //   testCasesByProjectIdQueryOptions(projectId),
-  // );
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -158,7 +137,7 @@ export default function ListProjectTestCases() {
         title = "No new test cases imported";
       } else if (msg.includes("skipped") && !msg.startsWith("Imported 0")) {
         toastType = "success";
-        title = "Imported completed with duplicates";
+        title = "Import completed with duplicates";
       } else {
         toastType = "success";
         title = "Import successful";
@@ -279,10 +258,54 @@ export default function ListProjectTestCases() {
                   `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
               },
               {
-                name: "mark-draft",
-                label: t("test_cases.mark_as_draft"),
-                onClick: (row) =>
-                  row.id && markDraftMutation.mutate(String(row.id)),
+                name: "branch",
+                label: t("test_cases.branch"),
+                icon: LuGitBranch,
+                onClick: async (row) => {
+                  if (!row.id) return;
+                  try {
+                    await branchTestCase(String(row.id));
+                    toaster.success({ title: t("test_cases.branch.success") });
+                    navigate({
+                      to: "/projects/$projectId/test-cases",
+                      params: { projectId },
+                    });
+                  } catch (err: any) {
+                    toaster.error({
+                      title: t("test_cases.branch.error"),
+                      description: err?.message,
+                    });
+                  }
+                },
+              },
+              {
+                name: "toggle-draft",
+                label: (row) =>
+                  row.is_draft
+                    ? t("test_cases.unmark_as_draft")
+                    : t("test_cases.mark_as_draft"),
+                onClick: async (row) => {
+                  if (!row.id) return;
+                  try {
+                    if (row.is_draft) {
+                      await unMarkTestCaseAsDraft(String(row.id));
+                      toaster.success({ title: t("test_cases.unmark_draft.success") });
+                    } else {
+                      await markTestCaseAsDraft(String(row.id));
+                      toaster.success({ title: t("test_cases.mark_draft.success") });
+                    }
+                    await queryClient.invalidateQueries({
+                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                    });
+                  } catch (err: any) {
+                    toaster.error({
+                      title: row.is_draft
+                        ? t("test_cases.unmark_draft.error")
+                        : t("test_cases.mark_draft.error"),
+                      description: err?.message,
+                    });
+                  }
+                },
               },
               {
                 name: "use",
@@ -295,26 +318,24 @@ export default function ListProjectTestCases() {
                 label: t("test_cases.delete"),
                 color: "fg.error",
                 onClick: async (row) => {
-                  if (row.id) {
-                    try {
-                      await deleteTestCase(String(row.id));
-                      toaster.success({
-                        title: t("test_cases.delete.success"),
-                      });
-                      queryClient.invalidateQueries(
-                        testCasesByProjectIdQueryOptions(projectId),
-                      );
-                      window.location.href = `/projects/${projectId}/test-cases`;
-                    } catch (err: any) {
-                      toaster.error({
-                        title: t("test_cases.delete.error"),
-                        description: err?.message,
-                      });
-                    }
+                  if (!row.id) return;
+                  try {
+                    await deleteTestCase(String(row.id));
+                    toaster.success({ title: t("test_cases.delete.success") });
+                    await queryClient.invalidateQueries({
+                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                    });
+                    window.location.href = `/projects/${projectId}/test-cases`;
+                  } catch (err: any) {
+                    toaster.error({
+                      title: t("test_cases.delete.error"),
+                      description: err?.message,
+                    });
                   }
                 },
               },
             ]}
+
           />
         </Tabs.Content>
         <Tabs.Content value="completed">
@@ -517,8 +538,7 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
         <Table.Row>
           <Table.ColumnHeader>{t("test_cases.column.code")}</Table.ColumnHeader>
           <Table.ColumnHeader>{t("test_cases.column.title")}</Table.ColumnHeader>
-          <Table.ColumnHeader>{t("test_cases.column.description")}</Table.ColumnHeader>{" "}
-          {/* NEW COLUMN */}
+          <Table.ColumnHeader>{t("test_cases.column.description")}</Table.ColumnHeader>
           <Table.ColumnHeader>{t("test_cases.column.actions")}</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
@@ -527,7 +547,7 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
           <Table.Row key={tc.id}>
             <Table.Cell>{tc.code}</Table.Cell>
             <Table.Cell>{tc.title}</Table.Cell>
-            <Table.Cell>{tc.description}</Table.Cell> {/* SHOW DESCRIPTION */}
+            <Table.Cell>{tc.description}</Table.Cell>
             <Table.Cell>
               <Flex gap={2}>
                 <Button

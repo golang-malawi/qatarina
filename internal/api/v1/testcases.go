@@ -259,7 +259,7 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(testCase))
+		return c.JSON(schema.NewTestCaseResponseFromRow(testCase))
 	}
 }
 
@@ -603,7 +603,7 @@ func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			return problemdetail.ServerErrorProblem(c, "failed to update test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(updated))
+		return c.JSON(schema.NewTestCaseResponseFromRow(updated))
 	}
 }
 
@@ -931,7 +931,7 @@ func SuggestTestCase(testCaseService services.TestCaseService, logger logging.Lo
 			return problemdetail.ServerErrorProblem(c, "failed to suggest test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(tc))
+		return c.JSON(schema.NewTestCaseResponseFromRow(tc))
 	}
 }
 
@@ -1128,6 +1128,6 @@ func BranchTestCase(testCaseService services.TestCaseService, logger logging.Log
 			return problemdetail.ServerErrorProblem(c, "failed to branch test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(branched))
+		return c.JSON(schema.NewTestCaseResponseFromRow(branched))
 	}
 }
