@@ -1,13 +1,15 @@
-import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, Box, Heading, Spinner, Text, Button } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
-import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
+import { useProjectQuery, useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { DynamicForm, FieldConfig } from "@/components/form/DynamicForm";
 import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
+
 import {
   testCaseCreationSchema,
   TestCaseCreationFormData,
@@ -22,29 +24,31 @@ export const Route = createFileRoute(
 
 function NewTestCases() {
   const params = Route.useParams();
-  const redirect = useNavigate();
+  const navigate = useNavigate();
   const project_id = params.projectId;
+
   const createTestCaseMutation = useCreateTestCaseMutation();
-  const { data, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
+
+  const { data: templateData, isLoading } = useProjectTestCaseTemplateQuery(Number(project_id));
+  const { data: projectData } = useProjectQuery(project_id);
 
   const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
   const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
+
   const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
   const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
 
-  const handleRunnerChange = useCallback((runner: string) => {
+  const handleRunnerChange = (runner: string) => {
     formValuesRef.current.runner = runner;
-  }, []);
+  };
 
   const validateAttachedScript = async (file: File) => {
     const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
     setScriptValidationMessage("Scanning script file...");
-
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      // Show the runner that was used in the success message from backend
       const message = result.output || `Script validated successfully using ${runner}.`;
       setScriptValidationMessage(message);
     } catch (error) {
@@ -59,20 +63,59 @@ function NewTestCases() {
       setScriptValidationMessage("");
       return;
     }
-
     const runner = formValuesRef.current.runner;
     if (!runner) {
       setScriptValidationStatus("failed");
       setScriptValidationMessage("Please select a runner before scanning.");
       return;
     }
-
     validateAttachedScript(attachedScriptFile);
   }, [attachedScriptFile]);
 
   const fields = useMemo<FieldConfig[]>(
     () =>
       createTestCaseFields().map((field) => {
+        // If automated testing is disabled, group and display a clean banner for both runner/script fields once
+        if ((field.name === "runner" || field.name === "script_file") && !projectData?.automated_testing_enabled) {
+          // Render the banner only on the "runner" field to prevent duplication, and hide the "script_file" field slot entirely
+          if (field.name === "script_file") {
+            return {
+              ...field,
+              type: "custom",
+              customComponent: () => null,
+            };
+          }
+
+          return {
+            ...field,
+            type: "custom",
+            customComponent: () => (
+              <Alert.Root status="info" borderRadius="md" variant="subtle" p={4}>
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title fontWeight="semibold" mb={1}>Automated Testing is Disabled</Alert.Title>
+                  <Alert.Description fontSize="sm" mb={3}>
+                    Enable automated testing in your project settings to select test runners and attach script files.
+                  </Alert.Description>
+                  <Button
+                    size="sm"
+                    colorPalette="blue"
+                    variant="solid"
+                    onClick={() =>
+                      navigate({
+                        to: "/projects/$projectId/settings",
+                        params: { projectId: project_id },
+                      })
+                    }
+                  >
+                    Go to Project Settings
+                  </Button>
+                </Alert.Content>
+              </Alert.Root>
+            ),
+          };
+        }
+
         if (field.name === "runner") {
           return {
             ...field,
@@ -91,7 +134,6 @@ function NewTestCases() {
             ...field,
             type: "custom",
             customComponent: ({ onChange, formValues: fv }: { onChange: (file: File | null) => void; formValues?: Record<string, any> }) => {
-              // Keep ref in sync with current form values
               if (fv) {
                 formValuesRef.current = fv;
               }
@@ -111,36 +153,32 @@ function NewTestCases() {
                       <Alert.Root status="info" borderRadius="md">
                         <Alert.Indicator />
                         <Alert.Content>
-                          <Alert.Description>
+                          <Alert.Description>{scriptValidationMessage}</Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
+                    {scriptValidationStatus === "success" && (
+                      <Alert.Root status="success" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word">
+                            {scriptValidationMessage || "Script validated successfully."}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
+                    {scriptValidationStatus === "failed" && (
+                      <Alert.Root status="error" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word" maxWidth="100%">
                             {scriptValidationMessage}
                           </Alert.Description>
                         </Alert.Content>
                       </Alert.Root>
                     )}
-
-                  {scriptValidationStatus === "success" && (
-                    <Alert.Root status="success" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description wordBreak="break-word">
-                          {scriptValidationMessage || "Script validated successfully."}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
-
-                  {scriptValidationStatus === "failed" && (
-                    <Alert.Root status="error" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description wordBreak="break-word" maxWidth="100%">
-                          {scriptValidationMessage}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
+                  </Box>
                 </Box>
-              </Box>
               );
             },
           };
@@ -159,9 +197,10 @@ function NewTestCases() {
             ),
           };
         }
+
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, params.projectId],
+    [scriptValidationStatus, scriptValidationMessage, params.projectId, projectData?.automated_testing_enabled, navigate, project_id],
   );
 
   async function handleSubmit(values: TestCaseCreationFormData) {
@@ -170,21 +209,27 @@ function NewTestCases() {
         ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
         : values.tags || [];
 
+    if (!projectData?.automated_testing_enabled && values.script_file) {
+      toaster.create({
+        title: "Automated testing disabled",
+        description: "You cannot attach scripts because automated testing is disabled for this project.",
+        type: "error",
+      });
+      return;
+    }
+
     if (values.script_file && scriptValidationStatus !== "success") {
       toaster.create({
         title: "Script validation required",
-        description:
-          "Please wait for script scanning to complete and pass before creating the test case.",
+        description: "Please wait for script scanning to complete and pass before creating the test case.",
         type: "warning",
         duration: 4000,
       });
       return;
     }
 
-    let body:any;
-
+    let body: any;
     if (values.script_file) {
-      // File present - use FormData
       const formData = new FormData();
       formData.append("project_id", project_id.toString());
       formData.append("kind", values.kind);
@@ -195,12 +240,9 @@ function NewTestCases() {
       formData.append("is_draft", (values.is_draft ?? false).toString());
       tags.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file);
-
       formData.append("runner", values.runner);
-
       body = formData;
     } else {
-      // No file - send JSON
       body = {
         project_id: Number(project_id),
         kind: values.kind,
@@ -216,7 +258,6 @@ function NewTestCases() {
 
     try {
       const res = await createTestCaseMutation.mutateAsync({ body });
-
       if (res) {
         toaster.create({
           title: "Test Case created.",
@@ -224,7 +265,7 @@ function NewTestCases() {
           type: "success",
           duration: 3000,
         });
-        redirect({
+        navigate({
           to: "/projects/$projectId/test-cases",
           params: { projectId: `${project_id}` },
         });
@@ -253,6 +294,7 @@ function NewTestCases() {
       <Heading size="3xl" color="fg.heading">
         Create Test Cases
       </Heading>
+
       <DynamicForm
         schema={testCaseCreationSchema}
         fields={fields}
@@ -269,7 +311,7 @@ function NewTestCases() {
           code: "",
           feature_or_module: "",
           kind: "",
-          description: data?.test_case_template ?? "",
+          description: templateData?.test_case_template ?? "",
           runner: "basi",
           tags: [],
           is_draft: false,

@@ -75,6 +75,7 @@ func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
 
 type UpdateTestCaseRequest struct {
 	ID              string   `json:"id" validate:"required"`
+	ProjectID       int64    `json:"project_id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code,omitempty"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
