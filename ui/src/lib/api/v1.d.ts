@@ -1250,6 +1250,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/branch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Branch a Test Case
+         * @description Create a new test case by branching from an existing one.
+         */
+        post: operations["BranchTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/mark-draft": {
         parameters: {
             query?: never;
@@ -2073,6 +2093,7 @@ export interface components {
             feature_or_module: string;
             is_draft?: boolean;
             kind: string;
+            parent_test_case_id?: string;
             project_id?: number;
             /** @description "basi", "playwright", "cypress", "browseruse" */
             runner?: string;
@@ -2284,6 +2305,7 @@ export interface components {
             is_draft?: boolean;
             kind?: string;
             notes?: string;
+            parent_test_case_id?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -4956,6 +4978,60 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    BranchTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Parent Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

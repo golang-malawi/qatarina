@@ -268,7 +268,7 @@ type TestCase struct {
 	// Description of the test-case
 	Description string
 	// If applicable, the parent test-cases
-	ParentTestCaseID sql.NullInt32
+	ParentTestCaseID uuid.NullUUID
 	// Whether test case is a draft i.e. not complete
 	IsDraft sql.NullBool
 	// Tags for the test case

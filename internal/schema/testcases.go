@@ -7,17 +7,18 @@ import (
 )
 
 type CreateTestCaseRequest struct {
-	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code,omitempty"` // optional; auto-generated if blank
-	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
-	Title           string   `json:"title" validate:"required"`
-	Description     string   `json:"description" validate:"required"`
-	IsDraft         bool     `json:"is_draft" validate:"-"`
-	Tags            []string `json:"tags" validate:"required"`
-	CreatedByID     string   `json:"-" validate:"-"`
-	ProjectID       int64    `json:"project_id" validate:"-"`
-	Runner          string   `json:"runner"`                // "basi", "playwright", "cypress", "browseruse"
-	ScriptPath      string   `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
+	Kind             string   `json:"kind" validate:"required"`
+	Code             string   `json:"code,omitempty"` // optional; auto-generated if blank
+	FeatureOrModule  string   `json:"feature_or_module" validate:"required"`
+	Title            string   `json:"title" validate:"required"`
+	Description      string   `json:"description" validate:"required"`
+	IsDraft          bool     `json:"is_draft" validate:"-"`
+	Tags             []string `json:"tags" validate:"required"`
+	CreatedByID      string   `json:"-" validate:"-"`
+	ProjectID        int64    `json:"project_id" validate:"-"`
+	Runner           string   `json:"runner"`                // "basi", "playwright", "cypress", "browseruse"
+	ScriptPath       string   `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
+	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
 }
 
 type ExecuteTestCaseRequest struct {
@@ -26,25 +27,26 @@ type ExecuteTestCaseRequest struct {
 }
 
 type TestCaseResponse struct {
-	ID              string   `json:"id"`
-	ProjectID       int64    `json:"project_id"`
-	CreatedByID     int64    `json:"created_by"`
-	Kind            string   `json:"kind"`
-	Code            string   `json:"code"`
-	FeatureOrModule string   `json:"feature_or_module"`
-	Title           string   `json:"title"`
-	Description     string   `json:"description"`
-	IsDraft         bool     `json:"is_draft"`
-	Tags            []string `json:"tags"`
-	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"updated_at"`
-	Status          string   `json:"status"`
-	Result          string   `json:"result"`
-	ExecutedBy      int64    `json:"executed_by"`
-	Notes           string   `json:"notes"`
-	Suggested       bool     `json:"suggested"`
-	Runner          string   `json:"runner"`
-	ScriptPath      string   `json:"script_path,omitempty"`
+	ID               string   `json:"id"`
+	ProjectID        int64    `json:"project_id"`
+	CreatedByID      int64    `json:"created_by"`
+	Kind             string   `json:"kind"`
+	Code             string   `json:"code"`
+	FeatureOrModule  string   `json:"feature_or_module"`
+	Title            string   `json:"title"`
+	Description      string   `json:"description"`
+	IsDraft          bool     `json:"is_draft"`
+	Tags             []string `json:"tags"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at"`
+	Status           string   `json:"status"`
+	Result           string   `json:"result"`
+	ExecutedBy       int64    `json:"executed_by"`
+	Notes            string   `json:"notes"`
+	Suggested        bool     `json:"suggested"`
+	Runner           string   `json:"runner"`
+	ScriptPath       string   `json:"script_path,omitempty"`
+	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
