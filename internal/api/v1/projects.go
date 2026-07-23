@@ -591,7 +591,7 @@ func GetProjectTestCaseTemplate(projectService services.ProjectService, logger l
 //
 //	@ID				UpdateAutomatedTesting
 //	@Summary		Update project automated testing setting
-//	@Description	Enable or disable automated testing capability for a project
+//	@Description	Enable or disable automated testing capability for a project and configure supported runners
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
@@ -614,7 +614,9 @@ func UpdateAutomatedTesting(projectService services.ProjectService, logger loggi
 			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
 		}
 
-		err = projectService.UpdateAutomatedTesting(c.Context(), projectID, request.AutomatedTestingEnabled)
+		request.ProjectID = projectID
+
+		err = projectService.UpdateAutomatedTesting(c.Context(), &request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiProjects, "failed to update automated testing setting", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to update automated testing setting")

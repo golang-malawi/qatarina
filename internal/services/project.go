@@ -27,7 +27,7 @@ type ProjectService interface {
 	UnarchiveProject(context.Context, int64) error
 	AddProjectTestCaseTemplate(ctx context.Context, projectID int64, template string) error
 	GetProjectTestCaseTemplate(context.Context, int64) (*string, error)
-	UpdateAutomatedTesting(ctx context.Context, projectID int64, enabled bool) error
+	UpdateAutomatedTesting(ctx context.Context, req *schema.UpdateAutomatedTestingRequest) error
 }
 
 type projectServiceImpl struct {
@@ -222,13 +222,13 @@ func (s *projectServiceImpl) GetProjectTestCaseTemplate(ctx context.Context, pro
 	return nil, nil
 }
 
-func (s *projectServiceImpl) UpdateAutomatedTesting(ctx context.Context, projectID int64, enabled bool) error {
+func (s *projectServiceImpl) UpdateAutomatedTesting(ctx context.Context, req *schema.UpdateAutomatedTestingRequest) error {
 	err := s.db.UpdateAutomatedTesting(ctx, dbsqlc.UpdateAutomatedTestingParams{
-		ID:                      int32(projectID),
-		AutomatedTestingEnabled: enabled,
+		ID:                      int32(req.ProjectID),
+		AutomatedTestingEnabled: req.AutomatedTestingEnabled,
 	})
 	if err != nil {
-		s.logger.Error(s.name, "failed to update automated testing setting", "projectID", projectID, "error", err)
+		s.logger.Error(s.name, "failed to update automated testing setting", "projectID", req.ProjectID, "error", err)
 		return err
 	}
 	return nil

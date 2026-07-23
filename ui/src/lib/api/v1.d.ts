@@ -648,7 +648,7 @@ export interface paths {
         put?: never;
         /**
          * Update project automated testing setting
-         * @description Enable or disable automated testing capability for a project
+         * @description Enable or disable automated testing capability for a project and configure supported runners
          */
         post: operations["UpdateAutomatedTesting"];
         delete?: never;
@@ -2186,6 +2186,7 @@ export interface components {
             uptimeSeconds?: number;
         };
         "schema.NewProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2411,7 +2412,9 @@ export interface components {
             testers?: components["schemas"]["schema.Tester"][];
         };
         "schema.UpdateAutomatedTestingRequest": {
-            automated_testing_enabled: boolean;
+            automated_testing_enabled?: boolean;
+            project_id: number;
+            supported_runners?: string[];
         };
         "schema.UpdateOrgRequest": {
             address?: string;
@@ -2431,6 +2434,7 @@ export interface components {
             type: string;
         };
         "schema.UpdateProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2449,6 +2453,7 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];

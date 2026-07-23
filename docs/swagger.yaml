@@ -500,6 +500,8 @@ components:
       type: object
     schema.NewProjectRequest:
       properties:
+        automated_testing_enabled:
+          type: boolean
         code:
           maxLength: 10
           minLength: 3
@@ -987,8 +989,15 @@ components:
       properties:
         automated_testing_enabled:
           type: boolean
+        project_id:
+          type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
       required:
-      - automated_testing_enabled
+      - project_id
       type: object
     schema.UpdateOrgRequest:
       properties:
@@ -1033,6 +1042,8 @@ components:
       type: object
     schema.UpdateProjectRequest:
       properties:
+        automated_testing_enabled:
+          type: boolean
         code:
           maxLength: 10
           minLength: 3
@@ -1081,6 +1092,8 @@ components:
           type: boolean
         kind:
           type: string
+        project_id:
+          type: integer
         runner:
           type: string
         script_path:
@@ -1096,6 +1109,7 @@ components:
       - feature_or_module
       - id
       - kind
+      - project_id
       - title
       type: object
     schema.UpdateTesterRoleRequest:
@@ -2259,7 +2273,8 @@ paths:
       - projects
   /v1/projects/{projectID}/automated-testing:
     post:
-      description: Enable or disable automated testing capability for a project
+      description: Enable or disable automated testing capability for a project and
+        configure supported runners
       operationId: UpdateAutomatedTesting
       parameters:
       - description: Project ID

@@ -99,5 +99,7 @@ type ProjectTestCaseTemplateResponse struct {
 }
 
 type UpdateAutomatedTestingRequest struct {
-	AutomatedTestingEnabled bool `json:"automated_testing_enabled"`
+	ProjectID               int64    `json:"project_id" validate:"required"`
+	AutomatedTestingEnabled bool     `json:"automated_testing_enabled"`
+	SupportedRunners        []string `json:"supported_runners" validate:"dive,oneof=basi playwright cypress browseruse"`
 }
