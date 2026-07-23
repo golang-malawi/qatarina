@@ -1,7 +1,7 @@
 import { Alert, Box, Heading, Spinner, Text, Button } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
@@ -44,7 +44,7 @@ function NewTestCases() {
     formValuesRef.current.runner = runner;
   };
 
-  const validateAttachedScript = async (file: File) => {
+  const validateAttachedScript = useCallback(async (file: File) => {
     const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
     setScriptValidationMessage(t("test_cases.script.scanning"));
@@ -57,7 +57,7 @@ function NewTestCases() {
       setScriptValidationStatus("failed");
       setScriptValidationMessage((error as Error).message || t("test_cases.script.validation_failed"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     if (!attachedScriptFile) {
@@ -72,7 +72,7 @@ function NewTestCases() {
       return;
     }
     validateAttachedScript(attachedScriptFile);
-  }, [attachedScriptFile]);
+  }, [attachedScriptFile, validateAttachedScript, t]);
 
   const fields = useMemo<FieldConfig[]>(
     () =>
