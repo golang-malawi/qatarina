@@ -54,7 +54,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 
 		StartAt:        common.NullTime(request.StartAt),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
-		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)), // helper for optional
+		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)),
 		NumTestCases:   0,
 		NumFailures:    0,
 		IsComplete:     common.FalseNullBool(),
@@ -94,10 +94,7 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 
 	var enriched []schema.TestPlanResponseItem
 	for _, plan := range plans {
-		// Count assigned test cases
 		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
-
-		// Get run stats
 		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
@@ -112,13 +109,12 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
-			StartAt:         plan.StartAt.Time.Format(time.DateTime),
-			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
-			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
-			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
-			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
+			StartAt:         common.FormatNullDateTime(plan.StartAt),
+			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
+			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
+			CreatedAt:       common.FormatNullDateTime(plan.CreatedAt),
+			UpdatedAt:       common.FormatNullDateTime(plan.UpdatedAt),
 		})
-
 	}
 	return enriched, nil
 }
@@ -146,13 +142,12 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
-			StartAt:         plan.StartAt.Time.Format(time.DateTime),
-			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
-			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
-			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
-			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
+			StartAt:         common.FormatNullDateTime(plan.StartAt),
+			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
+			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
+			CreatedAt:       common.FormatNullDateTime(plan.CreatedAt),
+			UpdatedAt:       common.FormatNullDateTime(plan.UpdatedAt),
 		})
-
 	}
 	return enriched, nil
 }
@@ -201,13 +196,11 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	// Get assigned cases
 	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
-	// Get run statistics
 	runStats, err := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
@@ -222,9 +215,9 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		UpdatedByID:     plan.UpdatedByID,
 		Kind:            string(plan.Kind),
 		Description:     plan.Description.String,
-		StartAt:         plan.StartAt.Time.Format(time.DateTime),
-		ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
-		ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+		StartAt:         common.FormatNullDateTime(plan.StartAt),
+		ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
+		ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
 		NumTestCases:    int32(len(cases)),
 		NumFailures:     plan.NumFailures,
 		PassedCount:     runStats.PassedCount,
@@ -234,12 +227,11 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		IsComplete:      plan.IsComplete.Bool,
 		IsLocked:        plan.IsLocked.Bool,
 		HasReport:       plan.HasReport.Bool,
-		CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
-		UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
+		CreatedAt:       common.FormatNullDateTime(plan.CreatedAt),
+		UpdatedAt:       common.FormatNullDateTime(plan.UpdatedAt),
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
-	// Build response test cases with multiple assigned testers
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
@@ -273,7 +265,6 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 	return true, nil
 }
 
-// CloseTestPlan implements TestRunService
 func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) error {
 	testRuns, err := t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 	if err != nil {
