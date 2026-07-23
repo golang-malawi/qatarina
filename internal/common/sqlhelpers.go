@@ -71,6 +71,14 @@ func ZeroOrTime(t *time.Time) time.Time {
 	return *t
 }
 
+// FormatNullDateTime formats an sql.NullTime using time.DateTime, returning an empty string if invalid.
+func FormatNullDateTime(t sql.NullTime) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.Format(time.DateTime)
+}
+
 // func ParseDate(dateStr string) sql.NullTime {
 // 	t, err := time.Parse("2006-01-02", dateStr)
 // 	if err != nil {
