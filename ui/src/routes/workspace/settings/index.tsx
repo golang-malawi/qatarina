@@ -107,7 +107,7 @@ function RouteComponent() {
             onClick={() =>
               loggedInUser?.user_id &&
               navigate({
-                to: "/users/$userID/edit",
+                to: "/workspace/users/$userID/edit",
                 params: { userID: loggedInUser.user_id.toString() },
               })
             }
