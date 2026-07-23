@@ -219,7 +219,7 @@ function ViewTestCase() {
                   })}
                 </Flex>
               ) : (
-                <Text fontSize="sm" color="fg.subtle">No testers assigned yet.</Text>
+                <Text fontSize="sm" color="fg.subtle">{t("test_cases.no_testers_assigned")}</Text>
               )}
             </Box>
           </Stack>
