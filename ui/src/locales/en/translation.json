@@ -346,6 +346,7 @@
   "workspace.settings.validation.new_required": "New password must be at least 6 characters",
   "workspace.settings.validation.confirm_required": "Confirm password is required",
   "workspace.settings.validation.mismatch": "Passwords do not match",
+  "projects.settings.automated_testing.updated_desc": "Your automated testing settings have been updated.",
   "testers.title": "Testers",
   "testers.project_title": "Project Testers",
   "testers.add_button": "Add New Tester",

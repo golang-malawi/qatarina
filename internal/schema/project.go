@@ -16,6 +16,7 @@ type NewProjectRequest struct {
 	ParentProjectID         int64                `json:"parent_project_id,omitempty"`
 	Environments            []EnvironmentRequest `json:"environments,omitempty"`
 	AutomatedTestingEnabled bool                 `json:"automated_testing_enabled"`
+	SupportedRunners        []string             `json:"supported_runners,omitempty"`
 }
 
 type UpdateProjectRequest struct {
@@ -30,6 +31,7 @@ type UpdateProjectRequest struct {
 	ParentProjectID         int64                `json:"parent_project_id,omitempty"`
 	Environments            []EnvironmentRequest `json:"environments,omitempty"`
 	AutomatedTestingEnabled bool                 `json:"automated_testing_enabled"`
+	SupportedRunners        []string             `json:"supported_runners,omitempty"`
 }
 
 type ProjectListResponse struct {
@@ -37,23 +39,24 @@ type ProjectListResponse struct {
 }
 
 type ProjectResponse struct {
-	ID                      int32  `json:"id"`
-	Title                   string `json:"title"`
-	Code                    string `json:"code"`
-	Description             string `json:"description"`
-	Version                 string `json:"version"`
-	IsActive                bool   `json:"is_active"`
-	IsPublic                bool   `json:"is_public"`
-	WebsiteUrl              string `json:"website_url"`
-	GithubUrl               string `json:"github_url"`
-	TrelloUrl               string `json:"trello_url"`
-	JiraUrl                 string `json:"jira_url"`
-	MondayUrl               string `json:"monday_url"`
-	OwnerUserID             int32  `json:"owner_user_id"`
-	CreatedAt               string `json:"created_at"`
-	UpdatedAt               string `json:"updated_at"`
-	ParentProjectID         int32  `json:"parent_project_id"`
-	AutomatedTestingEnabled bool   `json:"automated_testing_enabled"`
+	ID                      int32    `json:"id"`
+	Title                   string   `json:"title"`
+	Code                    string   `json:"code"`
+	Description             string   `json:"description"`
+	Version                 string   `json:"version"`
+	IsActive                bool     `json:"is_active"`
+	IsPublic                bool     `json:"is_public"`
+	WebsiteUrl              string   `json:"website_url"`
+	GithubUrl               string   `json:"github_url"`
+	TrelloUrl               string   `json:"trello_url"`
+	JiraUrl                 string   `json:"jira_url"`
+	MondayUrl               string   `json:"monday_url"`
+	OwnerUserID             int32    `json:"owner_user_id"`
+	CreatedAt               string   `json:"created_at"`
+	UpdatedAt               string   `json:"updated_at"`
+	ParentProjectID         int32    `json:"parent_project_id"`
+	AutomatedTestingEnabled bool     `json:"automated_testing_enabled"`
+	SupportedRunners        []string `json:"supported_runners,omitempty"`
 }
 
 func NewProjectResponse(data *dbsqlc.Project, owner *dbsqlc.User) ProjectResponse {
@@ -75,6 +78,7 @@ func NewProjectResponse(data *dbsqlc.Project, owner *dbsqlc.User) ProjectRespons
 		UpdatedAt:               formatDateTime(data.UpdatedAt),
 		ParentProjectID:         data.ParentProjectID.Int32,
 		AutomatedTestingEnabled: data.AutomatedTestingEnabled,
+		SupportedRunners:        data.SupportedRunners,
 	}
 }
 

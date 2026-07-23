@@ -2194,6 +2194,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id?: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2242,6 +2243,7 @@ export interface components {
             monday_url?: string;
             owner_user_id?: number;
             parent_project_id?: number;
+            supported_runners?: string[];
             title?: string;
             trello_url?: string;
             updated_at?: string;
@@ -2443,6 +2445,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };

@@ -230,6 +230,7 @@ type Project struct {
 	ParentProjectID         sql.NullInt32
 	TestcaseTemplate        sql.NullString
 	AutomatedTestingEnabled bool
+	SupportedRunners        []string
 }
 
 type ProjectTester struct {

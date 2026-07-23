@@ -126,6 +126,7 @@ function NewTestCases() {
                 value={(value as string) || ""}
                 onChange={onChange}
                 onRunnerChange={handleRunnerChange}
+                supportedRunners={projectData?.supported_runners}
               />
             ),
           };
@@ -202,7 +203,7 @@ function NewTestCases() {
 
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, params.projectId, projectData?.automated_testing_enabled, navigate, project_id, t],
+    [scriptValidationStatus, scriptValidationMessage, params.projectId, projectData?.automated_testing_enabled, projectData?.supported_runners, navigate, project_id, t],
   );
 
   async function handleSubmit(values: TestCaseCreationFormData) {
@@ -318,6 +319,7 @@ function NewTestCases() {
           tags: [],
           is_draft: false,
         }}
+        supportedRunners={projectData?.supported_runners}
       />
     </Box>
   );

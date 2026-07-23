@@ -521,6 +521,11 @@ components:
           type: integer
         project_owner_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         version:
           type: string
         website_url:
@@ -629,6 +634,11 @@ components:
           type: integer
         parent_project_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         title:
           type: string
         trello_url:
@@ -1065,6 +1075,11 @@ components:
           type: integer
         project_owner_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         version:
           type: string
         website_url:

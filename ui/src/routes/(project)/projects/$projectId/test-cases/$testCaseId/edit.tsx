@@ -95,6 +95,7 @@ function EditTestCase() {
               value={(value as string) || "basi"}
               onChange={onChange}
               onRunnerChange={handleRunnerChange}
+              supportedRunners={projectData?.supported_runners}
             />
           ),
         };
@@ -170,7 +171,7 @@ function EditTestCase() {
       }
       return field;
     }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId, projectData?.automated_testing_enabled, navigate]
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId, projectData?.automated_testing_enabled, projectData?.supported_runners, navigate]
   );
 
   const validateAttachedScript = async (file: File) => {
@@ -322,9 +323,8 @@ function EditTestCase() {
         onSubmit={handleSubmit}
         submitText="Update Test Case"
         submitLoading={submitting}
-        submitDisabled={
-          attachedScriptFile !== null && scriptValidationStatus !== "success"
-        }
+        submitDisabled={attachedScriptFile !== null && scriptValidationStatus !== "success"}
+        supportedRunners={projectData?.supported_runners}
       />
     </Box>
   );

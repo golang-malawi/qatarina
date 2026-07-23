@@ -49,17 +49,19 @@ func NewProjectService(db *dbsqlc.Queries, logger logging.Logger, moduleService 
 // Create implements ProjectService.
 func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProjectRequest) (*dbsqlc.Project, error) {
 	projectID, err := s.db.CreateProject(context.Background(), dbsqlc.CreateProjectParams{
-		Title:       request.Name,
-		Code:        request.Code,
-		Description: request.Description,
-		Version:     common.NullString(request.Version),
-		IsActive:    common.TrueNullBool(),
-		IsPublic:    common.TrueNullBool(),
-		WebsiteUrl:  common.NullString(request.WebsiteURL),
-		GithubUrl:   common.NullString(request.GitHubURL),
-		OwnerUserID: int32(request.ProjectOwnerID),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		Title:                   request.Name,
+		Code:                    request.Code,
+		Description:             request.Description,
+		Version:                 common.NullString(request.Version),
+		IsActive:                common.TrueNullBool(),
+		IsPublic:                common.TrueNullBool(),
+		WebsiteUrl:              common.NullString(request.WebsiteURL),
+		GithubUrl:               common.NullString(request.GitHubURL),
+		OwnerUserID:             int32(request.ProjectOwnerID),
+		CreatedAt:               time.Now(),
+		UpdatedAt:               time.Now(),
+		AutomatedTestingEnabled: request.AutomatedTestingEnabled,
+		SupportedRunners:        request.SupportedRunners,
 	})
 	if err != nil {
 		s.logger.Error(s.name, "failed to create project", "error", err)
@@ -126,15 +128,17 @@ func (s *projectServiceImpl) FindByID(ctx context.Context, projectID int64) (*db
 // Update implements ProjectService.
 func (s *projectServiceImpl) Update(ctx context.Context, request schema.UpdateProjectRequest) (bool, error) {
 	_, err := s.db.UpdateProject(ctx, dbsqlc.UpdateProjectParams{
-		ID:              int32(request.ID),
-		Title:           request.Name,
-		Code:            request.Code,
-		Description:     request.Description,
-		WebsiteUrl:      common.NullString(request.WebsiteURL),
-		Version:         common.NullString(request.Version),
-		GithubUrl:       common.NullString(request.GitHubURL),
-		OwnerUserID:     int32(request.ProjectOwnerID),
-		ParentProjectID: common.NewNullInt32(int32(request.ParentProjectID)),
+		ID:                      int32(request.ID),
+		Title:                   request.Name,
+		Code:                    request.Code,
+		Description:             request.Description,
+		WebsiteUrl:              common.NullString(request.WebsiteURL),
+		Version:                 common.NullString(request.Version),
+		GithubUrl:               common.NullString(request.GitHubURL),
+		OwnerUserID:             int32(request.ProjectOwnerID),
+		ParentProjectID:         common.NewNullInt32(int32(request.ParentProjectID)),
+		AutomatedTestingEnabled: request.AutomatedTestingEnabled,
+		SupportedRunners:        request.SupportedRunners,
 	})
 
 	if err != nil {
@@ -226,6 +230,7 @@ func (s *projectServiceImpl) UpdateAutomatedTesting(ctx context.Context, req *sc
 	err := s.db.UpdateAutomatedTesting(ctx, dbsqlc.UpdateAutomatedTestingParams{
 		ID:                      int32(req.ProjectID),
 		AutomatedTestingEnabled: req.AutomatedTestingEnabled,
+		SupportedRunners:        req.SupportedRunners,
 	})
 	if err != nil {
 		s.logger.Error(s.name, "failed to update automated testing setting", "projectID", req.ProjectID, "error", err)

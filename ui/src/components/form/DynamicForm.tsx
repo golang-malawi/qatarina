@@ -70,6 +70,7 @@ export interface FormConfig<T extends z.ZodTypeAny> {
   submitDisabled?: boolean;
   layout?: "vertical" | "horizontal";
   spacing?: number;
+  supportedRunners?: string[];
 }
 
 export function DynamicForm<T extends z.ZodTypeAny>({
@@ -82,6 +83,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   layout = "vertical",
   spacing = 4,
   submitDisabled,
+  supportedRunners,
 }: FormConfig<T>) {
   const form = useForm({
     defaultValues: defaultValues || {},
@@ -136,6 +138,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 <SelectRunner
                   value={field.state.value as string}
                   onChange={(val) => field.handleChange(val)}
+                  supportedRunners={supportedRunners}
                 />
               )}
 
