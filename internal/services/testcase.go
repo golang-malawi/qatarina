@@ -24,8 +24,8 @@ type TestCaseService interface {
 	// FindAllPaged retrieves test cases with pagination, sorting, and filtering
 	FindAllPaged(context.Context, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
-	// FindAllByID retrieves all test cases in the database by Project ID
-	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
+	// FindAllByID retrieves all test cases in the database by test case ID
+	FindByID(context.Context, string) (*dbsqlc.GetTestCaseWithParentRow, error)
 
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
@@ -163,7 +163,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
-			ParentTestCaseID: sql.NullInt32{},
+			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
 			CreatedByID:      1,
@@ -246,7 +246,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		FeatureOrModule:  common.NullString(request.FeatureOrModule),
 		Title:            request.Title,
 		Description:      request.Description,
-		ParentTestCaseID: sql.NullInt32{},
+		ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
 		CreatedByID:      int32(userID),
@@ -432,9 +432,13 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 }
 
 // FindAllByID implements TestCaseService.
-func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
-	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
-	return &tc, err
+func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.GetTestCaseWithParentRow, error) {
+	uuidID := uuid.MustParse(id)
+	tc, err := t.queries.GetTestCaseWithParent(ctx, uuidID)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }
 
 // FindAllByProjectID implements TestCaseService.

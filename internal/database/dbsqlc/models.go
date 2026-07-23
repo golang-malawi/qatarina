@@ -267,8 +267,6 @@ type TestCase struct {
 	Title string
 	// Description of the test-case
 	Description string
-	// If applicable, the parent test-cases
-	ParentTestCaseID sql.NullInt32
 	// Whether test case is a draft i.e. not complete
 	IsDraft sql.NullBool
 	// Tags for the test case
@@ -278,10 +276,11 @@ type TestCase struct {
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
-	ProjectID  sql.NullInt32
-	Suggested  sql.NullBool
-	Runner     sql.NullString
-	ScriptPath sql.NullString
+	ProjectID        sql.NullInt32
+	Suggested        sql.NullBool
+	Runner           sql.NullString
+	ScriptPath       sql.NullString
+	ParentTestCaseID uuid.NullUUID
 }
 
 type TestCaseSequence struct {

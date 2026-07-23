@@ -298,13 +298,13 @@ components:
           type: boolean
         kind:
           type: string
+        parent_test_case_id:
+          type: string
         project_id:
           type: integer
         runner:
-          description: '"basi", "playwright", "cypress", "browseruse"'
           type: string
         script_path:
-          description: optional; used for "playwright" and "cypress" runner types
           type: string
         tags:
           items:
@@ -317,7 +317,6 @@ components:
       - description
       - feature_or_module
       - kind
-      - tags
       - title
       type: object
     schema.CreateTestPlan:
@@ -758,6 +757,12 @@ components:
         kind:
           type: string
         notes:
+          type: string
+        parent_code:
+          type: string
+        parent_test_case_id:
+          type: string
+        parent_title:
           type: string
         project_id:
           type: integer
@@ -3503,6 +3508,50 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Accept a suggested test case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/branch:
+    post:
+      description: Create a new test case by branching from an existing one.
+      operationId: BranchTestCase
+      parameters:
+      - description: Parent Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Branch a Test Case
       tags:
       - test-cases
   /v1/test-cases/{testCaseID}/mark-draft:

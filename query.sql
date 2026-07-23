@@ -119,6 +119,29 @@ SELECT * FROM test_cases ORDER BY created_at DESC;
 -- name: GetTestCase :one
 SELECT * FROM test_cases WHERE id = $1;
 
+-- name: GetTestCaseWithParent :one
+SELECT 
+  tc.id,
+  tc.project_id,
+  tc.created_by_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_at,
+  tc.updated_at,
+  tc.runner,
+  tc.script_path,
+  tc.parent_test_case_id,
+  parent.code AS parent_code,
+  parent.title AS parent_title
+FROM test_cases tc
+LEFT JOIN test_cases parent ON parent.id = tc.parent_test_case_id
+WHERE tc.id = $1;
+
 -- name: ListTestCasesByProject :many
 SELECT * FROM test_cases WHERE project_id = $1;
 

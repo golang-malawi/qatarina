@@ -61,7 +61,7 @@ export type AppTableEnumOptions<TData> = {
 
 export type AppTableRowAction<TData> = {
   name?: string;
-  label: string;
+  label: string | ((row: TData) => string);
   icon?: React.ElementType | React.ReactNode;
   link?: string | ((row: TData) => string);
   href?: string | ((row: TData) => string);
@@ -308,7 +308,15 @@ export function AppDataTable<TData, TResponse>({
                 borderColor="border.subtle"
               >
                 {visibleActions.map((action) => {
-                  const name = action.name ?? action.label;
+                  const resolvedLabel =
+                    typeof action.label === "function"
+                      ? action.label(row)
+                      : action.label;
+                  const name =
+                    action.name ??
+                    (typeof action.label === "string"
+                      ? action.label
+                      : "action");
                   const disabled =
                     typeof action.disabled === "function"
                       ? action.disabled(row)
@@ -316,7 +324,7 @@ export function AppDataTable<TData, TResponse>({
                   const href: string =
                     typeof action.link === "function"
                       ? action.link(row)
-                      : (action.link ?? `${action.href}`);
+                      : (action.link ?? `${action.href ?? ""}`);
                   return (
                     <Menu.Item
                       key={name}
@@ -333,7 +341,7 @@ export function AppDataTable<TData, TResponse>({
                     >
                       <HStack gap="2">
                         {renderActionIcon(action.icon)}
-                        <Text>{action.label}</Text>
+                        <Text>{resolvedLabel}</Text>
                       </HStack>
                     </Menu.Item>
                   );
@@ -356,8 +364,6 @@ export function AppDataTable<TData, TResponse>({
         header: ({ table }) => (
           <Checkbox.Root
             checked={table.getIsAllPageRowsSelected()}
-            // TODO: check if this attribute is supported
-            // indeterminate={table.getIsSomePageRowsSelected()}
             onCheckedChange={({ checked }) =>
               table.toggleAllPageRowsSelected(!!checked)
             }
@@ -370,8 +376,6 @@ export function AppDataTable<TData, TResponse>({
           <Box onClick={(event) => event.stopPropagation()}>
             <Checkbox.Root
               checked={row.getIsSelected()}
-              // TODO: check if this attribute is supportes
-              // indeterminate={row.getIsSomeSelected()}
               onCheckedChange={({ checked }) => row.toggleSelected(!!checked)}
             >
               <Checkbox.HiddenInput />
