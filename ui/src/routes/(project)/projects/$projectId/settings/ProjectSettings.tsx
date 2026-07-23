@@ -1,6 +1,7 @@
 import { Box, Heading, Spinner, Text, Stack, Button } from "@chakra-ui/react";
 import { useProjectQuery } from "@/services/ProjectService";
 import { ArchiveControls } from "./ArchiveControls";
+import { AutomatedTestingToggle } from "./AutomatedTestingToggle"; 
 import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
@@ -22,9 +23,13 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   return (
     <Box p={6}>
       <Heading size="lg" mb={6}>{t("projects.settings.title")}</Heading>
-
       <Stack gap={8} divideY="1px" borderColor="gray.200">
-        <Box>
+
+        {/* Automated Testing Toggle */}
+        <AutomatedTestingToggle projectId={projectId} />
+
+        {/* Archive Project */}
+        <Box pt={4}>
           <Heading size="md" mb={2}>{t("projects.settings.archive.title")}</Heading>
           <Text mb={4} color="gray.600">
             {t("projects.settings.archive.description")}
@@ -32,7 +37,8 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           <ArchiveControls projectId={projectId} isActive={isActive} />
         </Box>
 
-        <Box>
+        {/* Test Case Template */}
+        <Box pt={4}>
           <Heading size="md" mb={2}>{t("projects.settings.template.title")}</Heading>
           <Text mb={4} color="gray.600">
             {t("projects.settings.template.description")}
@@ -41,6 +47,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
             {t("projects.settings.template.add_button")}
           </Button>
         </Box>
+
       </Stack>
     </Box>
   );

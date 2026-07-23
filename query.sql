@@ -66,15 +66,17 @@ SELECT * FROM projects WHERE id = $1;
 
 -- name: UpdateProject :execrows
 UPDATE projects SET
-  title = $2,
-  code = $3,
-  description = $4,
-  website_url = $5,
-  version = $6,
-  github_url = $7,
-  owner_user_id = $8,
-  parent_project_id = $9,
-  updated_at = NOW()
+    title = $2,
+    code = $3,
+    description = $4,
+    website_url = $5,
+    version = $6,
+    github_url = $7,
+    owner_user_id = $8,
+    parent_project_id = $9,
+    automated_testing_enabled = $10,
+    supported_runners = $11,
+    updated_at = NOW()
 WHERE id = $1;
 
 -- name: DeleteProject :execrows
@@ -84,13 +86,16 @@ DELETE FROM projects WHERE id = $1;
 INSERT INTO projects (
     title, code, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
-    owner_user_id, created_at, updated_at, deleted_at
+    owner_user_id, created_at, updated_at, deleted_at,
+    automated_testing_enabled, supported_runners
 )
-VALUES(
-    $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10,
-    $11, $12, $13, $14, $15
-) RETURNING id;
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11,
+    $12, $13, $14, $15,
+    $16, $17
+)
+RETURNING id;
 
 -- name: ArchiveProject :one
 UPDATE projects
@@ -112,6 +117,14 @@ WHERE id = $1;
 
 -- name: GetProjectTestCaseTemplate :one
 SELECT testcase_template FROM projects WHERE id = $1;
+
+-- name: UpdateAutomatedTesting :exec
+UPDATE projects
+SET
+    automated_testing_enabled = $2,
+    supported_runners = $3,
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: ListTestCases :many
 SELECT * FROM test_cases ORDER BY created_at DESC;

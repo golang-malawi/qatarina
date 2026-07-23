@@ -44,12 +44,6 @@ export const createTestCaseFields = (): FieldConfig[] => [
       label: "Runner",
       type: "runner",
       defaultValue: "basi",
-      options: [
-        { label: "Basi", value: "basi" },
-        { label: "Playwright", value: "playwright" },
-        { label: "Cypress", value: "cypress" },
-        { label: "BrowserUse", value: "browseruse" },
-      ],
   },
   {
     name: "script_file",

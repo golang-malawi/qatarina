@@ -500,6 +500,8 @@ components:
       type: object
     schema.NewProjectRequest:
       properties:
+        automated_testing_enabled:
+          type: boolean
         code:
           maxLength: 10
           minLength: 3
@@ -519,6 +521,11 @@ components:
           type: integer
         project_owner_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         version:
           type: string
         website_url:
@@ -603,6 +610,8 @@ components:
       type: object
     schema.ProjectResponse:
       properties:
+        automated_testing_enabled:
+          type: boolean
         code:
           type: string
         created_at:
@@ -625,6 +634,11 @@ components:
           type: integer
         parent_project_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         title:
           type: string
         trello_url:
@@ -981,6 +995,20 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.UpdateAutomatedTestingRequest:
+      properties:
+        automated_testing_enabled:
+          type: boolean
+        project_id:
+          type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - project_id
+      type: object
     schema.UpdateOrgRequest:
       properties:
         address:
@@ -1024,6 +1052,8 @@ components:
       type: object
     schema.UpdateProjectRequest:
       properties:
+        automated_testing_enabled:
+          type: boolean
         code:
           maxLength: 10
           minLength: 3
@@ -1045,6 +1075,11 @@ components:
           type: integer
         project_owner_id:
           type: integer
+        supported_runners:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
         version:
           type: string
         website_url:
@@ -1072,6 +1107,8 @@ components:
           type: boolean
         kind:
           type: string
+        project_id:
+          type: integer
         runner:
           type: string
         script_path:
@@ -1087,6 +1124,7 @@ components:
       - feature_or_module
       - id
       - kind
+      - project_id
       - title
       type: object
     schema.UpdateTesterRoleRequest:
@@ -2246,6 +2284,49 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Archive a Project
+      tags:
+      - projects
+  /v1/projects/{projectID}/automated-testing:
+    post:
+      description: Enable or disable automated testing capability for a project and
+        configure supported runners
+      operationId: UpdateAutomatedTesting
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateAutomatedTestingRequest'
+        description: Automated testing state
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update project automated testing setting
       tags:
       - projects
   /v1/projects/{projectID}/environments:

@@ -637,6 +637,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/automated-testing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update project automated testing setting
+         * @description Enable or disable automated testing capability for a project and configure supported runners
+         */
+        post: operations["UpdateAutomatedTesting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/environments": {
         parameters: {
             query?: never;
@@ -2166,6 +2186,7 @@ export interface components {
             uptimeSeconds?: number;
         };
         "schema.NewProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2173,6 +2194,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id?: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2209,6 +2231,7 @@ export interface components {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
         "schema.ProjectResponse": {
+            automated_testing_enabled?: boolean;
             code?: string;
             created_at?: string;
             description?: string;
@@ -2220,6 +2243,7 @@ export interface components {
             monday_url?: string;
             owner_user_id?: number;
             parent_project_id?: number;
+            supported_runners?: string[];
             title?: string;
             trello_url?: string;
             updated_at?: string;
@@ -2389,6 +2413,11 @@ export interface components {
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
         };
+        "schema.UpdateAutomatedTestingRequest": {
+            automated_testing_enabled?: boolean;
+            project_id: number;
+            supported_runners?: string[];
+        };
         "schema.UpdateOrgRequest": {
             address?: string;
             country?: string;
@@ -2407,6 +2436,7 @@ export interface components {
             type: string;
         };
         "schema.UpdateProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2415,6 +2445,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2425,6 +2456,7 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];
@@ -3613,6 +3645,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.ProjectResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateAutomatedTesting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Automated testing state */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateAutomatedTestingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
