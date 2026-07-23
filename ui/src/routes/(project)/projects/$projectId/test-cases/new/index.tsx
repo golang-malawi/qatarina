@@ -2,6 +2,7 @@ import { Alert, Box, Heading, Spinner, Text, Button } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-router";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { useProjectQuery, useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
@@ -23,6 +24,7 @@ export const Route = createFileRoute(
 });
 
 function NewTestCases() {
+  const { t } = useTranslation();
   const params = Route.useParams();
   const navigate = useNavigate();
   const project_id = params.projectId;
@@ -45,15 +47,15 @@ function NewTestCases() {
   const validateAttachedScript = async (file: File) => {
     const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
-    setScriptValidationMessage("Scanning script file...");
+    setScriptValidationMessage(t("test_cases.script.scanning"));
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      const message = result.output || `Script validated successfully using ${runner}.`;
+      const message = result.output || t("test_cases.script.validated_success", { runner });
       setScriptValidationMessage(message);
     } catch (error) {
       setScriptValidationStatus("failed");
-      setScriptValidationMessage((error as Error).message || "Script validation failed.");
+      setScriptValidationMessage((error as Error).message || t("test_cases.script.validation_failed"));
     }
   };
 
@@ -66,7 +68,7 @@ function NewTestCases() {
     const runner = formValuesRef.current.runner;
     if (!runner) {
       setScriptValidationStatus("failed");
-      setScriptValidationMessage("Please select a runner before scanning.");
+      setScriptValidationMessage(t("test_cases.script.select_runner_warning"));
       return;
     }
     validateAttachedScript(attachedScriptFile);
@@ -75,9 +77,7 @@ function NewTestCases() {
   const fields = useMemo<FieldConfig[]>(
     () =>
       createTestCaseFields().map((field) => {
-        // If automated testing is disabled, group and display a clean banner for both runner/script fields once
         if ((field.name === "runner" || field.name === "script_file") && !projectData?.automated_testing_enabled) {
-          // Render the banner only on the "runner" field to prevent duplication, and hide the "script_file" field slot entirely
           if (field.name === "script_file") {
             return {
               ...field,
@@ -93,9 +93,11 @@ function NewTestCases() {
               <Alert.Root status="info" borderRadius="md" variant="subtle" p={4}>
                 <Alert.Indicator />
                 <Alert.Content>
-                  <Alert.Title fontWeight="semibold" mb={1}>Automated Testing is Disabled</Alert.Title>
+                  <Alert.Title fontWeight="semibold" mb={1}>
+                    {t("test_cases.automated_testing.disabled_title")}
+                  </Alert.Title>
                   <Alert.Description fontSize="sm" mb={3}>
-                    Enable automated testing in your project settings to select test runners and attach script files.
+                    {t("test_cases.automated_testing.disabled_description")}
                   </Alert.Description>
                   <Button
                     size="sm"
@@ -108,7 +110,7 @@ function NewTestCases() {
                       })
                     }
                   >
-                    Go to Project Settings
+                    {t("test_cases.automated_testing.go_to_settings")}
                   </Button>
                 </Alert.Content>
               </Alert.Root>
@@ -162,7 +164,7 @@ function NewTestCases() {
                         <Alert.Indicator />
                         <Alert.Content>
                           <Alert.Description wordBreak="break-word">
-                            {scriptValidationMessage || "Script validated successfully."}
+                            {scriptValidationMessage || t("test_cases.script.default_success")}
                           </Alert.Description>
                         </Alert.Content>
                       </Alert.Root>
@@ -200,7 +202,7 @@ function NewTestCases() {
 
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, params.projectId, projectData?.automated_testing_enabled, navigate, project_id],
+    [scriptValidationStatus, scriptValidationMessage, params.projectId, projectData?.automated_testing_enabled, navigate, project_id, t],
   );
 
   async function handleSubmit(values: TestCaseCreationFormData) {
@@ -211,8 +213,8 @@ function NewTestCases() {
 
     if (!projectData?.automated_testing_enabled && values.script_file) {
       toaster.create({
-        title: "Automated testing disabled",
-        description: "You cannot attach scripts because automated testing is disabled for this project.",
+        title: t("test_cases.toast.disabled_title"),
+        description: t("test_cases.toast.disabled_desc"),
         type: "error",
       });
       return;
@@ -220,8 +222,8 @@ function NewTestCases() {
 
     if (values.script_file && scriptValidationStatus !== "success") {
       toaster.create({
-        title: "Script validation required",
-        description: "Please wait for script scanning to complete and pass before creating the test case.",
+        title: t("test_cases.toast.validation_required_title"),
+        description: t("test_cases.toast.validation_required_desc"),
         type: "warning",
         duration: 4000,
       });
@@ -260,8 +262,8 @@ function NewTestCases() {
       const res = await createTestCaseMutation.mutateAsync({ body });
       if (res) {
         toaster.create({
-          title: "Test Case created.",
-          description: "We've created your Test Case.",
+          title: t("test_cases.toast.success_title"),
+          description: t("test_cases.toast.success_desc"),
           type: "success",
           duration: 3000,
         });
@@ -272,7 +274,7 @@ function NewTestCases() {
       }
     } catch (err) {
       toaster.create({
-        title: "Failed to create test case",
+        title: t("test_cases.toast.error_title"),
         description: (err as Error).message,
         type: "error",
         duration: 4000,
@@ -284,7 +286,7 @@ function NewTestCases() {
     return (
       <Box p={6}>
         <Spinner size="lg" />
-        <Text mt={4}>Loading template...</Text>
+        <Text mt={4}>{t("test_cases.create.loading_template")}</Text>
       </Box>
     );
   }
@@ -292,14 +294,14 @@ function NewTestCases() {
   return (
     <Box p={6}>
       <Heading size="3xl" color="fg.heading">
-        Create Test Cases
+        {t("test_cases.create.title")}
       </Heading>
 
       <DynamicForm
         schema={testCaseCreationSchema}
         fields={fields}
         onSubmit={handleSubmit}
-        submitText="Create Test Case"
+        submitText={t("test_cases.create.submit")}
         submitLoading={createTestCaseMutation.isPending}
         submitDisabled={
           attachedScriptFile !== null && scriptValidationStatus !== "success"
