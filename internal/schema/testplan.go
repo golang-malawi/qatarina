@@ -115,3 +115,23 @@ type TestPlanSummary struct {
 type ChangeEnvironmentRequest struct {
 	EnvironmentID int64 `json:"environment_id" validate:"required"`
 }
+
+type CreateComment struct {
+	TestPlanID int64  `json:"test_plan_id" validate:"required"`
+	UserID     int64  `json:"user_id" validate:"required"`
+	Content    string `json:"content" validate:"required"`
+}
+
+type CommentResponseItem struct {
+	ID         string `json:"id"`
+	TestPlanID int64  `json:"test_plan_id"`
+	UserID     int64  `json:"user_id"`
+	UserName   string `json:"user_name"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+type CommentListResponse struct {
+	Comments []CommentResponseItem `json:"comments"`
+}

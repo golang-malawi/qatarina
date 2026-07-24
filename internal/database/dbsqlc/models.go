@@ -332,6 +332,15 @@ type TestPlanCase struct {
 	AssignedToID int64
 }
 
+type TestPlanComment struct {
+	ID         uuid.UUID
+	TestPlanID int64
+	UserID     int64
+	Content    string
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID

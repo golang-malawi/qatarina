@@ -408,3 +408,107 @@ func ChangeEnvironment(testPlanService services.TestPlanService, logger logging.
 		})
 	}
 }
+
+// ListTestPlanComments godoc
+//
+// @ID      ListTestPlanComments
+// @Summary List all comments for a test plan
+// @Tags    test-plans, comments
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Success 200 {object} schema.CommentListResponse
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments [get]
+func ListTestPlanComments(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		planID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || planID <= 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID")
+		}
+		comments, err := testPlanService.ListComments(c.Context(), int64(planID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to list comments", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to list comments")
+		}
+		return c.JSON(schema.CommentListResponse{Comments: comments})
+	}
+}
+
+// CreateTestPlanComment godoc
+//
+// @ID      CreateTestPlanComment
+// @Summary Add a new comment to a test plan
+// @Tags    test-plans, comments
+// @Accept  json
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   request body schema.CreateComment true "Comment payload"
+// @Success 200 {object} schema.CommentResponseItem
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments [post]
+func CreateTestPlanComment(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		req := new(schema.CreateComment)
+		if validationErrors, err := common.ParseBodyThenValidate(c, req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse request")
+		}
+		comment, err := testPlanService.CreateComment(c.Context(), req)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to create comment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create comment")
+		}
+		return c.JSON(comment)
+	}
+}
+
+// DeleteTestPlanComment godoc
+//
+// @ID      DeleteTestPlanComment
+// @Summary Delete a comment from a test plan
+// @Tags    test-plans, comments
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   commentID  path string true "Comment ID"
+// @Success 200 {object} interface{}
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments/{commentID} [delete]
+func DeleteTestPlanComment(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		commentID := c.Params("commentID")
+		if err := testPlanService.DeleteComment(c.Context(), commentID); err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to delete comment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to delete comment")
+		}
+		return c.JSON(fiber.Map{"message": "comment deleted"})
+	}
+}
+
+// ConvertCommentToTestCase godoc
+//
+// @ID      ConvertCommentToTestCase
+// @Summary Convert a comment into a test case
+// @Tags    test-plans, comments, test-cases
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   commentID  path string true "Comment ID"
+// @Success 200 {object} interface{}
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments/{commentID}/convert [post]
+func ConvertCommentToTestCase(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		commentID := c.Params("commentID")
+		newID, err := testPlanService.ConvertCommentToTestCase(c.Context(), commentID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to convert comment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to convert comment")
+		}
+		return c.JSON(fiber.Map{"message": "converted to test case", "test_case_id": newID})
+	}
+}

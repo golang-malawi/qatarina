@@ -25,6 +25,10 @@ type TestPlanService interface {
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
 	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
+	ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error)
+	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
+	DeleteComment(ctx context.Context, commentID string) error
+	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -296,4 +300,70 @@ func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, env
 		EnvironmentID: common.NewNullInt32(int32(envID)),
 	}
 	return t.queries.ChangeEnvironment(ctx, params)
+}
+
+func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error) {
+	rows, err := t.queries.ListCommentsByTestPlan(ctx, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	comments := make([]schema.CommentResponseItem, 0, len(rows))
+	for _, r := range rows {
+		comments = append(comments, schema.CommentResponseItem{
+			ID:         r.ID.String(),
+			TestPlanID: r.TestPlanID,
+			UserID:     r.UserID,
+			UserName:   r.DisplayName.String,
+			Content:    r.Content,
+			CreatedAt:  r.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:  r.UpdatedAt.Time.Format(time.RFC3339),
+		})
+	}
+	return comments, nil
+}
+
+func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error) {
+	id := uuid.New()
+	row, err := t.queries.CreateComment(ctx, dbsqlc.CreateCommentParams{
+		ID:         id,
+		TestPlanID: req.TestPlanID,
+		UserID:     req.UserID,
+		Content:    req.Content,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &schema.CommentResponseItem{
+		ID:         row.ID.String(),
+		TestPlanID: row.TestPlanID,
+		UserID:     row.UserID,
+		Content:    row.Content,
+		CreatedAt:  row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:  row.UpdatedAt.Time.Format(time.RFC3339),
+	}, nil
+}
+
+func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) error {
+	id, err := uuid.Parse(commentID)
+	if err != nil {
+		return err
+	}
+	_, err = t.queries.DeleteComment(ctx, id)
+	return err
+}
+
+func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error) {
+	cid, err := uuid.Parse(commentID)
+	if err != nil {
+		return "", err
+	}
+	newID := uuid.New()
+	id, err := t.queries.ConvertCommentToTestCase(ctx, dbsqlc.ConvertCommentToTestCaseParams{
+		ID:        cid,
+		NewTestID: newID,
+	})
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
 }
