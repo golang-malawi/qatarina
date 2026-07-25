@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Alert, Box, Heading, Spinner, Text, Button } from "@chakra-ui/react";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { DynamicForm, FieldConfig } from "@/components/form";
@@ -13,6 +13,7 @@ import {
   useUpdateTestCaseMutation,
   validateTestCaseScript,
 } from "@/services/TestCaseService";
+import { useProjectQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -31,10 +32,13 @@ function EditTestCase() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { projectId, testCaseId } = Route.useParams();
-    const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-    const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
-    const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
-    const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
+
+  const { data: projectData } = useProjectQuery(projectId);
+
+  const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
+  const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
+  const [scriptValidationStatus, setScriptValidationStatus] = useState<"idle" | "validating" | "success" | "failed">("idle");
+  const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleRunnerChange = useCallback((runner: string) => {
@@ -43,6 +47,46 @@ function EditTestCase() {
 
   const fields = useMemo<FieldConfig[]>(() =>
     createTestCaseFields().map((field) => {
+      // If automated testing is disabled, group and display a clean info banner once
+      if ((field.name === "runner" || field.name === "script_file") && !projectData?.automated_testing_enabled) {
+        if (field.name === "script_file") {
+          return {
+            ...field,
+            type: "custom",
+            customComponent: () => null,
+          };
+        }
+
+        return {
+          ...field,
+          type: "custom",
+          customComponent: () => (
+            <Alert.Root status="info" borderRadius="md" variant="subtle" p={4}>
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Title fontWeight="semibold" mb={1}>Automated Testing is Disabled</Alert.Title>
+                <Alert.Description fontSize="sm" mb={3}>
+                  Enable automated testing in your project settings to select test runners and attach script files.
+                </Alert.Description>
+                <Button
+                  size="sm"
+                  colorPalette="blue"
+                  variant="solid"
+                  onClick={() =>
+                    navigate({
+                      to: "/projects/$projectId/settings",
+                      params: { projectId },
+                    })
+                  }
+                >
+                  Go to Project Settings
+                </Button>
+              </Alert.Content>
+            </Alert.Root>
+          ),
+        };
+      }
+
       if (field.name === "runner") {
         return {
           ...field,
@@ -51,6 +95,7 @@ function EditTestCase() {
               value={(value as string) || "basi"}
               onChange={onChange}
               onRunnerChange={handleRunnerChange}
+              supportedRunners={projectData?.supported_runners}
             />
           ),
         };
@@ -60,7 +105,6 @@ function EditTestCase() {
           ...field,
           type: "custom",
           customComponent: ({ onChange, formValues: fv }: { onChange: (file: File | null) => void; formValues?: Record<string, any> }) => {
-            // Keep ref in sync with current form values
             if (fv) {
               formValuesRef.current = fv;
             }
@@ -113,32 +157,30 @@ function EditTestCase() {
         };
       }
       if (field.name === "feature_or_module") {
-      return {
-        ...field,
-        type: "custom",
-        customComponent: ({ value, onChange }) => (
-          <SelectFeatureModule
-            projectId={projectId}
-            value={(value as string) || ""}
-            onChange={onChange}
-          />
-        ),
-      };
-    }
+        return {
+          ...field,
+          type: "custom",
+          customComponent: ({ value, onChange }) => (
+            <SelectFeatureModule
+              projectId={projectId}
+              value={(value as string) || ""}
+              onChange={onChange}
+            />
+          ),
+        };
+      }
       return field;
     }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId]
+    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId, projectData?.automated_testing_enabled, projectData?.supported_runners, navigate]
   );
 
   const validateAttachedScript = async (file: File) => {
     const runner = formValuesRef.current.runner || "basi";
     setScriptValidationStatus("validating");
-    // Generic message - backend knows the runner being used
     setScriptValidationMessage("Scanning script file...");
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      // Show the runner that was used in the success message from backend
       const message = result.output || `Script validated successfully using ${runner}.`;
       setScriptValidationMessage(message);
     } catch (error) {
@@ -183,17 +225,24 @@ function EditTestCase() {
   if (error) return <Text color="fg.error">Error loading test case</Text>;
   if (!data) return <Text color="fg.muted">No test case found</Text>;
 
-
-
-const handleSubmit = async (values: z.infer<typeof schema>) => {
+  const handleSubmit = async (values: z.infer<typeof schema>) => {
     setSubmitting(true);
-    // normalize tags
+
+    if (!projectData?.automated_testing_enabled && values.script_file) {
+      toaster.create({
+        title: "Automated testing disabled",
+        description: "You cannot attach scripts because automated testing is disabled for this project.",
+        type: "error",
+      });
+      setSubmitting(false);
+      return;
+    }
+
     const tagsArray: string[] = Array.isArray(values.tags)
       ? values.tags
       : (values.tags ? (values.tags as any).split(",").map((t: string) => t.trim()) : []);
     const featureOrModule = values.feature_or_module?.trim() || data?.feature_or_module?.trim() || "Feature";
 
-    // precheck script validation
     if (values.script_file && scriptValidationStatus !== "success") {
       toaster.error({ title: "Script validation required", description: "Please wait for validation to succeed." });
       setSubmitting(false);
@@ -231,15 +280,24 @@ const handleSubmit = async (values: z.infer<typeof schema>) => {
       };
     }
 
-    await updateMutation.mutateAsync({
-      params: { path: { testCaseID: values.id } },
-      body,
-    });
+    try {
+      await updateMutation.mutateAsync({
+        params: { path: { testCaseID: values.id } },
+        body,
+      });
 
-    queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases"] });
-    toaster.success({ title: "Test case updated successfully" });
-    navigate({ to: "/projects/$projectId/test-cases", params: { projectId } });
-    setSubmitting(false);
+      queryClient.invalidateQueries({ queryKey: ["get", "/v1/projects/{projectID}/test-cases"] });
+      toaster.success({ title: "Test case updated successfully" });
+      navigate({ to: "/projects/$projectId/test-cases", params: { projectId } });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to update test case",
+        description: (err as Error).message,
+        type: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -265,6 +323,8 @@ const handleSubmit = async (values: z.infer<typeof schema>) => {
         onSubmit={handleSubmit}
         submitText="Update Test Case"
         submitLoading={submitting}
+        submitDisabled={attachedScriptFile !== null && scriptValidationStatus !== "success"}
+        supportedRunners={projectData?.supported_runners}
       />
     </Box>
   );

@@ -52,7 +52,7 @@ const archiveProject = `-- name: ArchiveProject :one
 UPDATE projects
 SET is_active = false
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners
 `
 
 func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -77,6 +77,8 @@ func (q *Queries) ArchiveProject(ctx context.Context, id int32) (Project, error)
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
+		pq.Array(&i.SupportedRunners),
 	)
 	return i, err
 }
@@ -446,31 +448,36 @@ const createProject = `-- name: CreateProject :one
 INSERT INTO projects (
     title, code, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
-    owner_user_id, created_at, updated_at, deleted_at
+    owner_user_id, created_at, updated_at, deleted_at,
+    automated_testing_enabled, supported_runners
 )
-VALUES(
-    $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10,
-    $11, $12, $13, $14, $15
-) RETURNING id
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11,
+    $12, $13, $14, $15,
+    $16, $17
+)
+RETURNING id
 `
 
 type CreateProjectParams struct {
-	Title       string
-	Code        string
-	Description string
-	Version     sql.NullString
-	IsActive    sql.NullBool
-	IsPublic    sql.NullBool
-	WebsiteUrl  sql.NullString
-	GithubUrl   sql.NullString
-	TrelloUrl   sql.NullString
-	JiraUrl     sql.NullString
-	MondayUrl   sql.NullString
-	OwnerUserID int32
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   sql.NullTime
+	Title                   string
+	Code                    string
+	Description             string
+	Version                 sql.NullString
+	IsActive                sql.NullBool
+	IsPublic                sql.NullBool
+	WebsiteUrl              sql.NullString
+	GithubUrl               sql.NullString
+	TrelloUrl               sql.NullString
+	JiraUrl                 sql.NullString
+	MondayUrl               sql.NullString
+	OwnerUserID             int32
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	DeletedAt               sql.NullTime
+	AutomatedTestingEnabled bool
+	SupportedRunners        []string
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (int32, error) {
@@ -490,6 +497,8 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 		arg.CreatedAt,
 		arg.UpdatedAt,
 		arg.DeletedAt,
+		arg.AutomatedTestingEnabled,
+		pq.Array(arg.SupportedRunners),
 	)
 	var id int32
 	err := row.Scan(&id)
@@ -1378,7 +1387,7 @@ func (q *Queries) GetPage(ctx context.Context, id int32) (Page, error) {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects WHERE id = $1
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
@@ -1403,6 +1412,8 @@ func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
+		pq.Array(&i.SupportedRunners),
 	)
 	return i, err
 }
@@ -2340,7 +2351,7 @@ func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects ORDER BY created_at DESC
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners FROM projects ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
@@ -2371,6 +2382,8 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 			&i.Code,
 			&i.ParentProjectID,
 			&i.TestcaseTemplate,
+			&i.AutomatedTestingEnabled,
+			pq.Array(&i.SupportedRunners),
 		); err != nil {
 			return nil, err
 		}
@@ -3172,7 +3185,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 }
 
 const searchProject = `-- name: SearchProject :many
-SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template FROM projects
+SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners FROM projects
 WHERE title ILIKE '%' || $1 || '%'
 `
 
@@ -3204,6 +3217,8 @@ func (q *Queries) SearchProject(ctx context.Context, dollar_1 sql.NullString) ([
 			&i.Code,
 			&i.ParentProjectID,
 			&i.TestcaseTemplate,
+			&i.AutomatedTestingEnabled,
+			pq.Array(&i.SupportedRunners),
 		); err != nil {
 			return nil, err
 		}
@@ -3582,7 +3597,7 @@ const unarchiveProject = `-- name: UnarchiveProject :one
 UPDATE projects
 SET is_active = true
 WHERE id = $1
-RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template
+RETURNING id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners
 `
 
 func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, error) {
@@ -3607,8 +3622,30 @@ func (q *Queries) UnarchiveProject(ctx context.Context, id int32) (Project, erro
 		&i.Code,
 		&i.ParentProjectID,
 		&i.TestcaseTemplate,
+		&i.AutomatedTestingEnabled,
+		pq.Array(&i.SupportedRunners),
 	)
 	return i, err
+}
+
+const updateAutomatedTesting = `-- name: UpdateAutomatedTesting :exec
+UPDATE projects
+SET
+    automated_testing_enabled = $2,
+    supported_runners = $3,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateAutomatedTestingParams struct {
+	ID                      int32
+	AutomatedTestingEnabled bool
+	SupportedRunners        []string
+}
+
+func (q *Queries) UpdateAutomatedTesting(ctx context.Context, arg UpdateAutomatedTestingParams) error {
+	_, err := q.db.ExecContext(ctx, updateAutomatedTesting, arg.ID, arg.AutomatedTestingEnabled, pq.Array(arg.SupportedRunners))
+	return err
 }
 
 const updateOrg = `-- name: UpdateOrg :exec
@@ -3685,28 +3722,32 @@ func (q *Queries) UpdatePage(ctx context.Context, arg UpdatePageParams) error {
 
 const updateProject = `-- name: UpdateProject :execrows
 UPDATE projects SET
-  title = $2,
-  code = $3,
-  description = $4,
-  website_url = $5,
-  version = $6,
-  github_url = $7,
-  owner_user_id = $8,
-  parent_project_id = $9,
-  updated_at = NOW()
+    title = $2,
+    code = $3,
+    description = $4,
+    website_url = $5,
+    version = $6,
+    github_url = $7,
+    owner_user_id = $8,
+    parent_project_id = $9,
+    automated_testing_enabled = $10,
+    supported_runners = $11,
+    updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateProjectParams struct {
-	ID              int32
-	Title           string
-	Code            string
-	Description     string
-	WebsiteUrl      sql.NullString
-	Version         sql.NullString
-	GithubUrl       sql.NullString
-	OwnerUserID     int32
-	ParentProjectID sql.NullInt32
+	ID                      int32
+	Title                   string
+	Code                    string
+	Description             string
+	WebsiteUrl              sql.NullString
+	Version                 sql.NullString
+	GithubUrl               sql.NullString
+	OwnerUserID             int32
+	ParentProjectID         sql.NullInt32
+	AutomatedTestingEnabled bool
+	SupportedRunners        []string
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (int64, error) {
@@ -3720,6 +3761,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (i
 		arg.GithubUrl,
 		arg.OwnerUserID,
 		arg.ParentProjectID,
+		arg.AutomatedTestingEnabled,
+		pq.Array(arg.SupportedRunners),
 	)
 	if err != nil {
 		return 0, err
