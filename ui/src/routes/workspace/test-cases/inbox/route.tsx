@@ -59,7 +59,6 @@ function TestCasePageInbox() {
 
   // Fetch environments across unique projects present in the list
   const environmentQueries = uniqueProjectIds.map((projectId) =>
-    // @ts-ignore
     $api.useQuery("get", "/v1/projects/{projectID}/environments", {
       params: { path: { projectID: projectId!.toString() } },
     })
