@@ -8,6 +8,9 @@ export type TestPlansResponse = {
   test_plans: TestPlan[];
 };
 
+export type Comment = components["schemas"]["schema.CommentResponseItem"];
+export type CommentListResponse = components["schemas"]["schema.CommentListResponse"];
+
 type AssignTestsToPlanPayload = {
   planned_tests: { test_case_id?: string; user_ids?: number[] }[];
   project_id: number;
@@ -134,14 +137,12 @@ export async function changeTestPlanEnvironment(
   return response.data;
 }
 
-// Query hook for test cases in a specific test plan
 export function useTestPlanTestCasesQuery(testPlanID: number) {
   return $api.useQuery("get", "/v1/test-plans/{testPlanID}/test-cases", {
     params: { path: { testPlanID } },
   });
 }
 
-// Optional plain async function if you want to fetch outside React Query
 export async function getTestPlanTestCases(testPlanID: number) {
   const res = await apiClient.request(
     "get",
@@ -149,6 +150,50 @@ export async function getTestPlanTestCases(testPlanID: number) {
     { params: { path: { testPlanID } } }
   );
   return res.data as components["schemas"]["schema.TestCaseListResponse"];
+}
+
+export function useTestPlanCommentsQuery(testPlanID: string) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/comments", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export function useCreateCommentMutation() {
+  return $api.useMutation("post", "/v1/test-plans/{testPlanID}/comments");
+}
+
+export function useDeleteCommentMutation() {
+  return $api.useMutation("delete", "/v1/test-plans/{testPlanID}/comments/{commentID}");
+}
+
+export function useConvertCommentMutation() {
+  return $api.useMutation("post", "/v1/test-plans/{testPlanID}/comments/{commentID}/convert");
+}
+
+export async function getTestPlanComments(testPlanID: number): Promise<CommentListResponse> {
+  const res = await apiClient.request("get", "/v1/test-plans/{testPlanID}/comments", {
+    params: { path: { testPlanID } },
+  });
+  return res.data as CommentListResponse;
+}
+
+export async function createComment(testPlanID: number, body: { user_id: number; content: string }) {
+  return apiClient.request("post", "/v1/test-plans/{testPlanID}/comments", {
+    params: { path: { testPlanID } },
+    body,
+  });
+}
+
+export async function deleteComment(testPlanID: number, commentID: string) {
+  return apiClient.request("delete", "/v1/test-plans/{testPlanID}/comments/{commentID}", {
+    params: { path: { testPlanID, commentID } },
+  });
+}
+
+export async function convertCommentToTestCase(testPlanID: number, commentID: string) {
+  return apiClient.request("post", "/v1/test-plans/{testPlanID}/comments/{commentID}/convert", {
+    params: { path: { testPlanID, commentID } },
+  });
 }
 
 
