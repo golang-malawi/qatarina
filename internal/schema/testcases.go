@@ -23,16 +23,17 @@ type CreateTestCaseRequest struct {
 
 type UpdateTestCaseRequest struct {
 	ID              string   `json:"id" validate:"required"`
+	ProjectID       int64    `json:"project_id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code,omitempty"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description,omitempty"`
-	IsDraft         bool     `json:"is_draft"`
+	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
-	CreatedByID     string   `json:"-"` // internal only
-	Runner          string   `json:"runner,omitempty"`
-	ScriptPath      string   `json:"script_path,omitempty"`
+	CreatedByID     string   `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path"`
 }
 
 type BulkCreateTestCases struct {
@@ -127,33 +128,6 @@ func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
 		res = append(res, NewTestCaseResponseFromRow(&item))
 	}
 	return res
-}
-
-type UpdateTestCaseRequest struct {
-	ID              string   `json:"id" validate:"required"`
-	ProjectID       int64    `json:"project_id" validate:"required"`
-	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code,omitempty"`
-	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
-	Title           string   `json:"title" validate:"required"`
-	Description     string   `json:"description,omitempty"`
-	IsDraft         bool     `json:"is_draft" validate:"-"`
-	Tags            []string `json:"tags,omitempty"`
-	CreatedByID     string   `json:"-" validate:"-"`
-	Runner          string   `json:"runner"`
-	ScriptPath      string   `json:"script_path"`
-}
-
-type BulkCreateTestCases struct {
-	ProjectID int64                   `json:"project_id" validate:"required"`
-	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required,min=1,max=100"`
-}
-
-type ImportFromGithubRequest struct {
-	Owner       string `json:"owner"`
-	Repository  string `json:"repository"`
-	GitHubToken string `json:"github_token"`
-	ProjectID   int64  `json:"project_id"`
 }
 
 type TestCaseListResponse struct {

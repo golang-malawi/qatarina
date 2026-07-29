@@ -21,7 +21,7 @@ import { testCaseCreationSchema } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { assignTestersToTestPlan, useProjectTestPlansQuery } from "@/services/TestPlanService";
-
+import { useProjectQuery } from "@/services/ProjectService";
 import {
   useTestCaseQuery,
   useUpdateTestCaseMutation,
@@ -93,10 +93,39 @@ function EditTestCase() {
     formValuesRef.current.runner = runner;
   }, []);
 
-  const fields = useMemo<FieldConfig[]>(() =>
-    createTestCaseFields().map((field) => {
-      // If automated testing is disabled, group and display a clean info banner once
-      if ((field.name === "runner" || field.name === "script_file") && !projectData?.automated_testing_enabled) {
+  const fields = useMemo<FieldConfig[]>(
+    () =>
+      createTestCaseFields().map((field) => {
+        // If automated testing is disabled, hide runner and script file
+        if (
+          (field.name === "runner" || field.name === "script_file") &&
+          !projectData?.automated_testing_enabled
+        ) {
+          return {
+            ...field,
+            hidden: true,
+          };
+        }
+
+        if (field.name === "runner") {
+          return {
+            ...field,
+            customComponent: ({
+              value,
+              onChange,
+            }: {
+              value: any;
+              onChange: (val: string) => void;
+            }) => (
+              <RunnerFieldSync
+                value={(value as string) || "basi"}
+                onChange={onChange}
+                onRunnerChange={handleRunnerChange}
+              />
+            ),
+          };
+        }
+
         if (field.name === "script_file") {
           return {
             ...field,
@@ -157,6 +186,7 @@ function EditTestCase() {
             },
           };
         }
+
         if (field.name === "feature_or_module") {
           return {
             ...field,
@@ -170,9 +200,16 @@ function EditTestCase() {
             ),
           };
         }
+
         return field;
       }),
-    [scriptValidationStatus, scriptValidationMessage, handleRunnerChange, projectId]
+    [
+      projectData?.automated_testing_enabled,
+      scriptValidationStatus,
+      scriptValidationMessage,
+      handleRunnerChange,
+      projectId,
+    ]
   );
 
   const validateAttachedScript = async (file: File) => {
@@ -270,13 +307,11 @@ function EditTestCase() {
   const handleSubmit = async (values: z.infer<typeof schema>) => {
     setSubmitting(true);
 
-  const handleSubmit = async (values: z.infer<typeof schema>) => {
-    setSubmitting(true);
-
     if (!projectData?.automated_testing_enabled && values.script_file) {
       toaster.create({
         title: "Automated testing disabled",
-        description: "You cannot attach scripts because automated testing is disabled for this project.",
+        description:
+          "You cannot attach scripts because automated testing is disabled for this project.",
         type: "error",
       });
       setSubmitting(false);
