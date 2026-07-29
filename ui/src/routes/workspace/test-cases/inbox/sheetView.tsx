@@ -21,6 +21,7 @@ import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
 import { getInboxTestCases } from "@/services/TestCaseService";
+import { useTranslation } from "react-i18next";
 
 interface SheetViewProps {
   projectMap: Record<number, string>;
@@ -35,6 +36,7 @@ export function SheetView({
   onBackToStandard,
   includeClosed,
 }: SheetViewProps) {
+  const { t } = useTranslation();
   const [sheetStatuses, setSheetStatuses] = useState<Record<string, "passed" | "failed">>({});
   const [sheetNotes, setSheetNotes] = useState<Record<string, string>>({});
   const [selectedTestCaseForDetails, setSelectedTestCaseForDetails] =
@@ -106,7 +108,7 @@ export function SheetView({
       tc: components["schemas"]["schema.AssignedTestCase"];
       status: "passed" | "failed";
     }) => {
-      const resText = "Executed via Sheet View";
+      const resText = t("test_cases.sheet_view.executed_via", "Executed via Sheet View");
       const noteText = sheetNotes[tc.id!] || "";
 
       if (!tc.id) throw new Error("Test case ID is missing.");
@@ -139,8 +141,8 @@ export function SheetView({
     },
     onSuccess: (_, variables) => {
       toaster.create({
-        title: "Success",
-        description: "Test result recorded via Sheet View",
+        title: t("test_cases.toast.success", "Success"),
+        description: t("test_cases.sheet_view.toast.success_desc", "Test result recorded via Sheet View"),
         type: "success",
       });
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
@@ -151,8 +153,8 @@ export function SheetView({
     },
     onError: () => {
       toaster.create({
-        title: "Error",
-        description: "Failed to record test result",
+        title: t("test_cases.toast.error", "Error"),
+        description: t("test_cases.sheet_view.toast.error_desc", "Failed to record test result"),
         type: "error",
       });
     },
@@ -169,7 +171,7 @@ export function SheetView({
   if (error) {
     return (
       <Box p={6} textAlign="center" color="fg.error">
-        Error loading sheet view test cases.
+        {t("test_cases.sheet_view.error_loading", "Error loading sheet view test cases.")}
       </Box>
     );
   }
@@ -178,7 +180,7 @@ export function SheetView({
     <Box display="flex" flexDirection="column" h="full" w="full" p={0} m={0}>
       <Flex justify="space-between" align="center" mb={1} px={2} pt={1} flexShrink={0}>
         <Heading size="md" color="fg.heading">
-          Test Case Sheet View 
+          {t("test_cases.sheet_view.title", "Test Case Sheet View")}
         </Heading>
         <Button
           size="xs"
@@ -186,7 +188,7 @@ export function SheetView({
           colorPalette="brand"
           onClick={onBackToStandard}
         >
-          Back to Standard View
+          {t("test_cases.sheet_view.back_to_standard", "Back to Standard View")}
         </Button>
       </Flex>
 
@@ -194,14 +196,14 @@ export function SheetView({
         <Table.Root size="sm" variant="outline" css={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
           <Table.Header position="sticky" top={0} zIndex={1} bg="gray.100">
             <Table.Row>
-              <Table.ColumnHeader width="8%">Code</Table.ColumnHeader>
-              <Table.ColumnHeader width="15%">Title</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">Project</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">Environment</Table.ColumnHeader>
-              <Table.ColumnHeader width="10%">Last Result</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">Status</Table.ColumnHeader>
-              <Table.ColumnHeader width="23%">Comments</Table.ColumnHeader>
-              <Table.ColumnHeader width="8%" textAlign="center">Action</Table.ColumnHeader>
+              <Table.ColumnHeader width="8%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="15%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="12%">{t("test_cases.column.project", "Project")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="12%">{t("test_cases.column.environment", "Environment")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="10%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="12%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="23%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Action")}</Table.ColumnHeader>
             </Table.Row>
           </Table.Header>
 
@@ -230,7 +232,7 @@ export function SheetView({
             ) : (
               <Table.Row>
                 <Table.Cell colSpan={8} textAlign="center" color="gray.500" py={6}>
-                  No test cases found.
+                  {t("test_cases.sheet_view.empty", "No test cases found.")}
                 </Table.Cell>
               </Table.Row>
             )}
@@ -238,7 +240,7 @@ export function SheetView({
             {isFetchingNextPage && (
               <Table.Row>
                 <Table.Cell colSpan={8} textAlign="center" py={3} color="gray.500" fontSize="xs">
-                  Loading more test cases...
+                  {t("test_cases.sheet_view.loading_more", "Loading more test cases...")}
                 </Table.Cell>
               </Table.Row>
             )}
@@ -246,7 +248,7 @@ export function SheetView({
         </Table.Root>
       </Box>
 
-            {/* Drawer for details */}
+      {/* Drawer for details */}
       {selectedTestCaseForDetails && (
         <Box
           position="fixed"
@@ -272,7 +274,7 @@ export function SheetView({
             flexDirection="column"
           >
             <Flex justify="space-between" align="center" mb={4}>
-              <Heading size="sm">Test Case Steps</Heading>
+              <Heading size="sm">{t("test_cases.sheet_view.steps_title", "Test Case Steps")}</Heading>
               <Button
                 size="xs"
                 variant="ghost"
@@ -284,7 +286,7 @@ export function SheetView({
 
             <Box mb={4}>
               <Text fontWeight="bold" fontSize="xs" color="gray.500">
-                TITLE
+                {t("test_cases.column.title", "TITLE").toUpperCase()}
               </Text>
               <Text fontWeight="semibold" fontSize="md">
                 {selectedTestCaseForDetails.title}
@@ -293,10 +295,10 @@ export function SheetView({
 
             <Box flex="1">
               <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={2}>
-                DESCRIPTION & STEPS
+                {t("test_cases.sheet_view.description_and_steps", "DESCRIPTION & STEPS")}
               </Text>
               <Text fontSize="sm" whiteSpace="pre-wrap" color="gray.700">
-                {selectedTestCaseForDetails.description || "No detailed steps provided."}
+                {selectedTestCaseForDetails.description || t("test_cases.sheet_view.no_steps", "No detailed steps provided.")}
               </Text>
             </Box>
 
@@ -306,7 +308,7 @@ export function SheetView({
               mt={4}
               onClick={() => setSelectedTestCaseForDetails(null)}
             >
-              Close
+              {t("test_cases.sheet_view.close", "Close")}
             </Button>
           </Box>
         </Box>
@@ -347,6 +349,8 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     },
     ref
   ) {
+    const { t } = useTranslation();
+
     const { data: runsData } = useQuery({
       queryKey: ["testRuns", tc.test_plan_id],
       queryFn: async () => {
@@ -386,20 +390,20 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               px={1}
               onClick={onViewDetails}
             >
-              View Steps
+              {t("test_cases.sheet_view.view_steps", "View Steps")}
             </Button>
           </Flex>
         </Table.Cell>
 
         <Table.Cell border="1px solid" borderColor="gray.200" fontSize="xs" py={1} px={2}>
-          {projectMap[tc.project_id ?? -1] ?? "Unknown"}
+          {projectMap[tc.project_id ?? -1] ?? t("common.unknown", "Unknown")}
         </Table.Cell>
 
         <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
           <Badge variant="subtle" colorPalette="info" size="xs">
             {tc.environment_id && environmentMap[tc.environment_id]
               ? environmentMap[tc.environment_id]
-              : "Not specified"}
+              : t("test_cases.sheet_view.not_specified", "Not specified")}
           </Badge>
         </Table.Cell>
 
@@ -416,7 +420,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
                 : "gray"
             }
           >
-            {lastRun?.result_state ? lastRun.result_state.toUpperCase() : "NO RUN"}
+            {lastRun?.result_state ? lastRun.result_state.toUpperCase() : t("test_cases.sheet_view.no_run", "NO RUN")}
           </Badge>
         </Table.Cell>
 
@@ -439,9 +443,9 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               })
             }
           >
-            <option value="">Status...</option>
-            <option value="passed">Passed</option>
-            <option value="failed">Failed</option>
+            <option value="">{t("test_cases.sheet_view.status_placeholder", "Status...")}</option>
+            <option value="passed">{t("test_plans.filter.passed", "Passed")}</option>
+            <option value="failed">{t("test_plans.filter.failed", "Failed")}</option>
           </select>
         </Table.Cell>
 
@@ -449,7 +453,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         <Table.Cell border="1px solid" borderColor="gray.200" p={1}>
           <Textarea
             size="xs"
-            placeholder="Comments..."
+            placeholder={t("test_cases.sheet_view.comments_placeholder", "Comments...")}
             value={sheetNotes[tc.id!] || ""}
             borderRadius="2px"
             borderColor="gray.300"
@@ -484,7 +488,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               }
             }}
           >
-            Record
+            {t("test_cases.sheet_view.record", "Record")}
           </Button>
         </Table.Cell>
       </Table.Row>

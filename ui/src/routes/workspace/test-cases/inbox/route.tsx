@@ -57,7 +57,6 @@ function TestCasePageInbox() {
     new Set(testCases.map((tc) => tc.project_id).filter(Boolean))
   );
 
-  // Fixed conditional hook rules: Render hooks unconditionally with fixed indices
   const envQuery0 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
     params: { path: { projectID: (uniqueProjectIds[0] ?? "").toString() } },
     enabled: uniqueProjectIds.length > 0 && uniqueProjectIds[0] !== undefined,
