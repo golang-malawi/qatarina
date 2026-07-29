@@ -264,19 +264,33 @@ export default function ListProjectTestCases() {
                 onClick: async (row) => {
                   if (!row.id) return;
                   try {
-                    await branchTestCase(String(row.id));
-                    toaster.success({ title: t("test_cases.branch.success") });
+                    const branched = await branchTestCase(String(row.id));
+                    const newId = branched?.data?.id ?? (branched as any)?.id;
+
+                    if (!newId) {
+                      throw new Error(
+                        "Branching did not return a new test case ID",
+                      );
+                    }
+
+                    toaster.success({
+                      title: t("test_cases.branch.success"),
+                      description: t("test_cases.branch.success_description"),
+                    });
+
                     await queryClient.invalidateQueries({
                       queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
                     });
+
                     navigate({
-                      to: "/projects/$projectId/test-cases",
-                      params: { projectId },
+                      to: "/projects/$projectId/test-cases/$testCaseId/edit",
+                      params: { projectId, testCaseId: String(newId) },
+                      search: { isBranched: true },
                     });
                   } catch (err: any) {
                     toaster.error({
                       title: t("test_cases.branch.error"),
-                      description: err?.message,
+                      description: err?.message || "Could not branch test case.",
                     });
                   }
                 },
@@ -338,7 +352,6 @@ export default function ListProjectTestCases() {
                 },
               },
             ]}
-
           />
         </Tabs.Content>
         <Tabs.Content value="completed">

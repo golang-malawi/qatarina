@@ -70,6 +70,7 @@
   "test_cases.unmark_draft.error": "Failed to unmark test case",
   "test_cases.branch": "Branch",
   "test_cases.branch.success": "Test case branched successfully",
+  "test_cases.branch.success_description": "New test case created from this one. You can now edit it.",
   "test_cases.branch.error": "Failed to branch test case",
   "test_plans.header_description": "Track progress, execute runs, and manage plan lifecycle for this project.",
   "test_plans.loading": "Loading test plans...",

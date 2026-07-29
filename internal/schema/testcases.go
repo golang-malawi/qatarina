@@ -31,8 +31,8 @@ type UpdateTestCaseRequest struct {
 	IsDraft         bool     `json:"is_draft"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-"` // internal only
-	Runner          string   `json:"runner"`
-	ScriptPath      string   `json:"script_path"`
+	Runner          string   `json:"runner,omitempty"`
+	ScriptPath      string   `json:"script_path,omitempty"`
 }
 
 type BulkCreateTestCases struct {
