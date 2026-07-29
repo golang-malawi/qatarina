@@ -50,15 +50,16 @@ function EditTestCase() {
   const search = Route.useSearch();
 
   const { data, isLoading, error } = useTestCaseQuery(testCaseId);
+  const { data: projectData } = useProjectQuery(projectId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useTestersQuery();
   const updateMutation = useUpdateTestCaseMutation();
 
   const [attachedScriptFile, setAttachedScriptFile] = useState<File | null>(null);
-  const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
   const [scriptValidationStatus, setScriptValidationStatus] = useState<
     "idle" | "validating" | "success" | "failed"
   >("idle");
+  const formValuesRef = useRef<Record<string, any>>({ runner: "basi" });
   const [scriptValidationMessage, setScriptValidationMessage] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,21 +93,10 @@ function EditTestCase() {
     formValuesRef.current.runner = runner;
   }, []);
 
-  const fields = useMemo<FieldConfig[]>(
-    () =>
-      createTestCaseFields().map((field) => {
-        if (field.name === "runner") {
-          return {
-            ...field,
-            customComponent: ({ value, onChange }: { value: any; onChange: (val: string) => void }) => (
-              <RunnerFieldSync
-                value={(value as string) || "basi"}
-                onChange={onChange}
-                onRunnerChange={handleRunnerChange}
-              />
-            ),
-          };
-        }
+  const fields = useMemo<FieldConfig[]>(() =>
+    createTestCaseFields().map((field) => {
+      // If automated testing is disabled, group and display a clean info banner once
+      if ((field.name === "runner" || field.name === "script_file") && !projectData?.automated_testing_enabled) {
         if (field.name === "script_file") {
           return {
             ...field,
@@ -280,6 +270,19 @@ function EditTestCase() {
   const handleSubmit = async (values: z.infer<typeof schema>) => {
     setSubmitting(true);
 
+  const handleSubmit = async (values: z.infer<typeof schema>) => {
+    setSubmitting(true);
+
+    if (!projectData?.automated_testing_enabled && values.script_file) {
+      toaster.create({
+        title: "Automated testing disabled",
+        description: "You cannot attach scripts because automated testing is disabled for this project.",
+        type: "error",
+      });
+      setSubmitting(false);
+      return;
+    }
+
     const tagsArray: string[] = Array.isArray(values.tags)
       ? values.tags
       : values.tags
@@ -380,6 +383,8 @@ function EditTestCase() {
         onSubmit={handleSubmit}
         submitText="Update Test Case"
         submitLoading={submitting}
+        submitDisabled={attachedScriptFile !== null && scriptValidationStatus !== "success"}
+        supportedRunners={projectData?.supported_runners}
       />
 
       {/* Dialog shown when saving a branched test case */}
