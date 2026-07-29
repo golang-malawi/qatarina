@@ -57,12 +57,29 @@ function TestCasePageInbox() {
     new Set(testCases.map((tc) => tc.project_id).filter(Boolean))
   );
 
-  // Fetch environments across unique projects present in the list
-  const environmentQueries = uniqueProjectIds.map((projectId) =>
-    $api.useQuery("get", "/v1/projects/{projectID}/environments", {
-      params: { path: { projectID: projectId!.toString() } },
-    })
-  );
+  // Fixed conditional hook rules: Render hooks unconditionally with fixed indices
+  const envQuery0 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: (uniqueProjectIds[0] ?? "").toString() } },
+    enabled: uniqueProjectIds.length > 0 && uniqueProjectIds[0] !== undefined,
+  });
+  const envQuery1 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: (uniqueProjectIds[1] ?? "").toString() } },
+    enabled: uniqueProjectIds.length > 1 && uniqueProjectIds[1] !== undefined,
+  });
+  const envQuery2 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: (uniqueProjectIds[2] ?? "").toString() } },
+    enabled: uniqueProjectIds.length > 2 && uniqueProjectIds[2] !== undefined,
+  });
+  const envQuery3 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: (uniqueProjectIds[3] ?? "").toString() } },
+    enabled: uniqueProjectIds.length > 3 && uniqueProjectIds[3] !== undefined,
+  });
+  const envQuery4 = $api.useQuery("get", "/v1/projects/{projectID}/environments", {
+    params: { path: { projectID: (uniqueProjectIds[4] ?? "").toString() } },
+    enabled: uniqueProjectIds.length > 4 && uniqueProjectIds[4] !== undefined,
+  });
+
+  const environmentQueries = [envQuery0, envQuery1, envQuery2, envQuery3, envQuery4];
 
   const environmentMap: Record<number, string> = {};
   environmentQueries.forEach((query) => {
@@ -234,7 +251,7 @@ function TestCasePageInbox() {
             )}
           </Box>
 
-          {/* Pagination Controls */}
+          {/* Standard Pagination Controls */}
           <Box p={4} borderTop="sm" borderColor="border.subtle" bg="bg.surface">
             <Flex justify="space-between" align="center">
               <Button
@@ -260,16 +277,13 @@ function TestCasePageInbox() {
       )}
 
       {/* Right Pane / Content Area */}
-      <Box flex="1" p={6} bg="bg.canvas" overflowY="auto">
+      <Box flex="1" p={isSheetView ? 0 : 6} bg="bg.canvas" overflowY="auto">
         {isSheetView ? (
           <SheetView
-            testCases={filteredTestCases}
+            includeClosed={includeClosed}
             projectMap={projectMap}
             environmentMap={environmentMap}
             onBackToStandard={() => setIsSheetView(false)}
-            page={page}
-            setPage={setPage}
-            totalPages={totalPages}
           />
         ) : (
           <Outlet />
@@ -278,4 +292,3 @@ function TestCasePageInbox() {
     </Flex>
   );
 }
-
