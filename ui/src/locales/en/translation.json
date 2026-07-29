@@ -47,7 +47,7 @@
   "test_cases.sheet_view.description_and_steps": "DESCRIPTION & STEPS",
   "test_cases.sheet_view.no_steps": "No detailed steps provided.",
   "test_cases.sheet_view.close": "Close",
-  "test_cases.sheet_view.view_steps": "View Steps",
+  "test_cases.sheet_view.view_steps": "View Description",
   "test_cases.sheet_view.not_specified": "Not specified",
   "test_cases.sheet_view.no_run": "NO RUN",
   "test_cases.sheet_view.status_placeholder": "Status...",
