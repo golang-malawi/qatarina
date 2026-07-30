@@ -637,6 +637,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/automated-testing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update project automated testing setting
+         * @description Enable or disable automated testing capability for a project and configure supported runners
+         */
+        post: operations["UpdateAutomatedTesting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/environments": {
         parameters: {
             query?: never;
@@ -673,6 +693,81 @@ export interface paths {
          * @description Get a Modules by project
          */
         get: operations["GetProjectModule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reports for a Project
+         * @description List Reports for a Project
+         */
+        get: operations["ListReports"];
+        put?: never;
+        /**
+         * Generate a new report
+         * @description Generate a new report
+         */
+        post: operations["CreateReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a Report */
+        delete: operations["DeleteReport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a Report file (forces browser download) */
+        get: operations["DownloadReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/reports/{reportID}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** View a Report file inline in the browser */
+        get: operations["ViewReport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1107,6 +1202,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{test_case_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute a Test Case and create a Test Run
+         * @description Execute a test case by running its script against the configured runner
+         */
+        post: operations["ExecuteTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}": {
         parameters: {
             query?: never;
@@ -1315,6 +1430,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/validate-script": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate a runner script without creating a test case
+         * @description Validate a test script by sending it to the configured runner before creation
+         */
+        post: operations["ValidateTestCaseScript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans": {
         parameters: {
             query?: never;
@@ -1407,6 +1542,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/script-test-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all script-based test cases of a test plan
+         * @description Returns only test cases that have a runner and script_path set
+         */
+        get: operations["GetScriptTestPlanTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-cases": {
         parameters: {
             query?: never;
@@ -1486,7 +1641,7 @@ export interface paths {
         put?: never;
         /**
          * Create a new Test Run
-         * @description Create a new Test Run
+         * @description Create a new Test Run. Optional: provide feedback (actual_result, result_state) to record results immediately (GitHub Actions-like workflow)
          */
         post: operations["CreateTestRun"];
         delete?: never;
@@ -1577,6 +1732,26 @@ export interface paths {
          * @description Execute a Test Run
          */
         post: operations["ExecuteTestRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-runs/{testRunID}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record feedback/results for a Test Run (GitHub Actions-like workflow)
+         * @description Record test execution feedback with outcome (passed/failed). This transitions the test run from pending to completed status based on the provided feedback.
+         */
+        post: operations["RecordTestRunFeedback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1804,6 +1979,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         "dbsqlc.TestKind": string;
+        /** @description passed, failed, or leave nil for pending */
         "dbsqlc.TestRunState": string;
         "problemdetail.ProblemDetail": {
             context?: unknown;
@@ -1821,38 +1997,25 @@ export interface components {
             test_plan_id: number;
         };
         "schema.AssignedTestCase": {
-            actual_result?: string;
             assigned_to_id?: number;
-            assignee_can_change_code?: boolean;
             code?: string;
             created_at?: string;
             created_by_id?: number;
             description?: string;
             environment_id?: number;
-            expected_result?: string;
-            external_issue_id?: string;
             feature_or_module?: string;
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
-            notes?: string;
-            owner_id?: number;
-            parent_test_case_id?: number;
             project_id?: number;
-            reactions?: number[];
-            result_state?: components["schemas"]["dbsqlc.TestRunState"];
             tags?: string[];
-            test_case_created_at?: string;
-            test_case_updated_at?: string;
             test_plan_id?: number;
-            test_run_id?: string;
-            tested_by_id?: number;
-            tested_on?: string;
             title?: string;
             updated_at?: string;
         };
         "schema.AssignedTestCaseListResponse": {
+            pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
         };
         "schema.BulkAssignTesters": {
@@ -1877,9 +2040,10 @@ export interface components {
         };
         "schema.CommitTestRunResult": {
             actual_result: string;
+            environment_id?: number;
             expected_result?: string;
             is_closed?: boolean;
-            notes: string;
+            notes?: string;
             /** @description State is the result of the test run */
             result_state: string;
             test_run_id: string;
@@ -1904,12 +2068,21 @@ export interface components {
             project_id: number;
             type: string;
         };
+        "schema.CreateReportRequest": {
+            name: string;
+            project_id: number;
+            status: string;
+            test_plan_id: number;
+            type: string;
+        };
         "schema.CreateSuggestedTestCaseRequest": {
             code?: string;
             description: string;
             feature_or_module: string;
             kind: string;
             project_id: number;
+            runner?: string;
+            script_path?: string;
             tags?: string[];
             title: string;
         };
@@ -1921,6 +2094,10 @@ export interface components {
             is_draft?: boolean;
             kind: string;
             project_id?: number;
+            /** @description "basi", "playwright", "cypress", "browseruse" */
+            runner?: string;
+            /** @description optional; used for "playwright" and "cypress" runner types */
+            script_path?: string;
             tags: string[];
             title: string;
         };
@@ -1933,7 +2110,7 @@ export interface components {
             kind: string;
             planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
-            scheduled_end_at?: string;
+            scheduled_end_at: string;
             start_at: string;
             updated_by_id?: number;
         };
@@ -1966,6 +2143,11 @@ export interface components {
             name?: string;
             project_id?: number;
             updated_at?: string;
+        };
+        "schema.ExecuteTestCaseRequest": {
+            /** @description optional, falls back to test case runner type */
+            runner?: string;
+            test_plan_id?: number;
         };
         "schema.ExecuteTestRunRequest": {
             environment_id?: number;
@@ -2004,6 +2186,7 @@ export interface components {
             uptimeSeconds?: number;
         };
         "schema.NewProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2011,6 +2194,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id?: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2047,6 +2231,7 @@ export interface components {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
         "schema.ProjectResponse": {
+            automated_testing_enabled?: boolean;
             code?: string;
             created_at?: string;
             description?: string;
@@ -2058,6 +2243,7 @@ export interface components {
             monday_url?: string;
             owner_user_id?: number;
             parent_project_id?: number;
+            supported_runners?: string[];
             title?: string;
             trello_url?: string;
             updated_at?: string;
@@ -2069,6 +2255,19 @@ export interface components {
         };
         "schema.RefreshTokenRequest": Record<string, never>;
         "schema.RefreshTokenResponse": Record<string, never>;
+        "schema.ReportListResponse": {
+            pagination?: components["schemas"]["schema.Pagination"];
+            reports?: components["schemas"]["schema.ReportResponse"][];
+        };
+        "schema.ReportResponse": {
+            created_at?: string;
+            file_path?: string;
+            id?: string;
+            name?: string;
+            project_id?: number;
+            status?: string;
+            type?: string;
+        };
         "schema.SignUpRequest": {
             display_name: string;
             email: string;
@@ -2111,6 +2310,8 @@ export interface components {
             notes?: string;
             project_id?: number;
             result?: string;
+            runner?: string;
+            script_path?: string;
             status?: string;
             suggested?: boolean;
             tags?: string[];
@@ -2159,6 +2360,28 @@ export interface components {
         "schema.TestRunListResponse": {
             test_runs?: components["schemas"]["schema.TestRunResponse"][];
         };
+        "schema.TestRunRequest": {
+            /** @description Feedback fields (optional) - for recording results at creation time */
+            actual_result?: string;
+            assigned_to_id?: number;
+            code?: string;
+            created_at?: string;
+            environment_id?: number;
+            expected_result?: string;
+            notes?: string;
+            owner_id: number;
+            project_id: number;
+            result_state?: components["schemas"]["dbsqlc.TestRunState"];
+            /** @description "basi", "playwright", "cypress", "browseruse" */
+            runner?: string;
+            /** @description optional; used for "playwright" and "cypress" runner types */
+            script_path?: string;
+            test_case_id: string;
+            test_plan_id: number;
+            tested_by_id: number;
+            tested_on?: string;
+            updated_at?: string;
+        };
         "schema.TestRunResponse": {
             actual_result?: string;
             code?: string;
@@ -2190,6 +2413,11 @@ export interface components {
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
         };
+        "schema.UpdateAutomatedTestingRequest": {
+            automated_testing_enabled?: boolean;
+            project_id: number;
+            supported_runners?: string[];
+        };
         "schema.UpdateOrgRequest": {
             address?: string;
             country?: string;
@@ -2208,6 +2436,7 @@ export interface components {
             type: string;
         };
         "schema.UpdateProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2216,6 +2445,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2226,6 +2456,9 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            project_id: number;
+            runner?: string;
+            script_path?: string;
             tags?: string[];
             title: string;
         };
@@ -2410,7 +2643,14 @@ export interface operations {
     };
     ListAssignedTestCases: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description Include closed test cases */
+                includeClosed?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3427,6 +3667,54 @@ export interface operations {
             };
         };
     };
+    UpdateAutomatedTesting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Automated testing state */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateAutomatedTestingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     ListEnvironments: {
         parameters: {
             query?: never;
@@ -3559,6 +3847,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ReportListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Report data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateReportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ReportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    DownloadReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/pdf": string;
+                };
+            };
+        };
+    };
+    ViewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Report ID */
+                reportID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/pdf": string;
                 };
             };
         };
@@ -4318,10 +4776,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Create Test Case data */
-        requestBody: {
+        /** @description Script file */
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["schema.CreateTestCaseRequest"];
+                "application/json": Record<string, never>;
+                "multipart/form-data": Record<string, never>;
             };
         };
         responses: {
@@ -4336,6 +4795,61 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ExecuteTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                test_case_id: string;
+            };
+            cookie?: never;
+        };
+        /** @description Execution request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ExecuteTestCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestRunResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4409,10 +4923,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description Test Case update data */
-        requestBody: {
+        /** @description Script file */
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["schema.UpdateTestCaseRequest"];
+                "application/json": Record<string, never>;
+                "multipart/form-data": Record<string, never>;
             };
         };
         responses: {
@@ -4892,6 +5407,51 @@ export interface operations {
             };
         };
     };
+    ValidateTestCaseScript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Runner */
+        requestBody: {
+            content: {
+                "multipart/form-data": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     ListTestPlans: {
         parameters: {
             query?: never;
@@ -5204,6 +5764,51 @@ export interface operations {
             };
         };
     };
+    GetScriptTestPlanTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetTestPlanTestCases: {
         parameters: {
             query?: never;
@@ -5434,10 +6039,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Test Run data */
+        /** @description Test Run data (feedback fields optional) */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.TestRunRequest"];
             };
         };
         responses: {
@@ -5721,6 +6326,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestRunResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    RecordTestRunFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run ID */
+                testRunID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Feedback data (actual_result, result_state, notes, etc.) */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CommitTestRunResult"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Bad Request */

@@ -19,6 +19,14 @@ type TestRunRequest struct {
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
 	EnvironmentID int32  `json:"environment_id"`
+	Runner        string `json:"runner,omitempty"`      // "basi", "playwright", "cypress", "browseruse"
+	ScriptPath    string `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
+	// Feedback fields (optional) - for recording results at creation time
+	ActualResult   *string              `json:"actual_result,omitempty"`
+	ExpectedResult *string              `json:"expected_result,omitempty"`
+	Notes          *string              `json:"notes,omitempty"`
+	ResultState    *dbsqlc.TestRunState `json:"result_state,omitempty"` // passed, failed, or leave nil for pending
+	TestedOn       *time.Time           `json:"tested_on,omitempty"`
 }
 
 type BulkCommitTestResults struct {
@@ -29,13 +37,14 @@ type BulkCommitTestResults struct {
 type CommitTestRunResult struct {
 	UserID         int64     `json:"-"`
 	TestRunID      string    `json:"test_run_id" validate:"required"`
-	Notes          string    `json:"notes" validate:"required"`
+	Notes          string    `json:"notes,omitempty"`
 	IsClosed       bool      `json:"is_closed"`
 	TestedOn       time.Time `json:"tested_on" validate:"required"`
 	ActualResult   string    `json:"actual_result" validate:"required"`
 	ExpectedResult string    `json:"expected_result"`
 	// State is the result of the test run
-	State dbsqlc.TestRunState `json:"result_state" validate:"required"`
+	State         dbsqlc.TestRunState `json:"result_state" validate:"required"`
+	EnvironmentID int32               `json:"environment_id,omitempty"`
 }
 
 // NewFoundIssuesRequest contains list of issues which basically translates to "failed test cases/runs"
@@ -118,9 +127,9 @@ func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse 
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID),
+		TestPlanID:     int64(tr.TestPlanID.Int32),
 		TestCaseID:     tr.TestCaseID.String(),
-		TestedByID:     tr.TestedByID,
+		TestedByID:     tr.TestedByID.Int32,
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),
 		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
@@ -138,7 +147,7 @@ func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID),
+		TestPlanID:     int64(tr.TestPlanID.Int32),
 		TestCaseID:     tr.TestCaseID.String(),
 		Code:           tr.Code,
 		ResultState:    string(tr.ResultState),

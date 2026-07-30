@@ -15,8 +15,8 @@ import (
 )
 
 type TestPlanService interface {
-	FindAll(context.Context) ([]dbsqlc.TestPlan, error)
-	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestPlan, error)
+	FindAll(context.Context) ([]schema.TestPlanResponseItem, error)
+	FindAllByProjectID(context.Context, int64) ([]schema.TestPlanResponseItem, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.ListTestRunsByPlanRow, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
@@ -43,62 +43,39 @@ func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanSer
 
 // Create implements TestPlanService.
 func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error) {
-
-	// TODO: create the test plan
-	// TODO: create test-runs for the plan from assigned
 	testPlanParams := dbsqlc.CreateTestPlanParams{
 		ProjectID:     int32(request.ProjectID),
 		AssignedToID:  int32(request.AssignedToID),
 		CreatedByID:   int32(request.CreatedByID),
 		UpdatedByID:   int32(request.UpdatedByID),
 		Kind:          dbsqlc.TestKind(request.Kind),
-		Description:   sql.NullString{String: request.Description, Valid: true},
+		Description:   common.NullString(request.Description),
 		EnvironmentID: common.NewNullInt32(int32(request.EnvironmentID)),
-		StartAt:        sql.NullTime{Time: request.StartAt, Valid: true},
-		ScheduledEndAt: sql.NullTime{Time: request.ScheduledEndAt, Valid: true},
-		NumTestCases: 0,
-		NumFailures:  0,
-		IsComplete:   sql.NullBool{Bool: false, Valid: true},
-		IsLocked:     sql.NullBool{Bool: false, Valid: true},
-		HasReport:    sql.NullBool{Bool: false, Valid: true},
-		CreatedAt: sql.NullTime{
-			Time: time.Now(), Valid: true,
-		},
-		UpdatedAt: sql.NullTime{
-			Time: time.Now(), Valid: true,
-		},
+
+		StartAt:        common.NullTime(request.StartAt),
+		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
+		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)), // helper for optional
+		NumTestCases:   0,
+		NumFailures:    0,
+		IsComplete:     common.FalseNullBool(),
+		IsLocked:       common.FalseNullBool(),
+		HasReport:      common.FalseNullBool(),
+		CreatedAt:      common.NewNullTime(time.Now()),
+		UpdatedAt:      common.NewNullTime(time.Now()),
 	}
 
 	testPlanID, err := t.queries.CreateTestPlan(ctx, testPlanParams)
 	if err != nil {
 		return nil, err
 	}
-	for _, assignedTestCase := range request.PlannedTests {
-		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
-		if err != nil {
-			return nil, err
-		}
-		for _, userID := range assignedTestCase.UserIds {
-			testRunID, _ := uuid.NewV7()
-			testRunParams := dbsqlc.CreateNewTestRunParams{
-				ID:           testRunID,
-				ProjectID:    int32(request.ProjectID),
-				TestPlanID:   int32(testPlanID),
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				OwnerID:      int32(request.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
-				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
-				CreatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-				UpdatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-			}
 
-			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
-			if err != nil {
+	for _, assignedTestCase := range request.PlannedTests {
+		for _, uid := range assignedTestCase.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   int64(testPlanID),
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				AssignedToID: uid,
+			}); err != nil {
 				return nil, err
 			}
 		}
@@ -109,16 +86,68 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 }
 
 // FindAll implements TestPlanService.
-func (t *testPlanService) FindAll(ctx context.Context) ([]dbsqlc.TestPlan, error) {
-	return t.queries.ListTestPlans(ctx)
+func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanResponseItem, error) {
+	plans, err := t.queries.ListTestPlans(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var enriched []schema.TestPlanResponseItem
+	for _, plan := range plans {
+		// Count assigned test cases
+		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
+
+		// Get run stats
+		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
+
+		enriched = append(enriched, schema.TestPlanResponseItem{
+			ID:              plan.ID,
+			Description:     plan.Description.String,
+			Kind:            string(plan.Kind),
+			NumTestCases:    int32(len(cases)),
+			PassedCount:     runStats.PassedCount,
+			FailedCount:     runStats.FailedCount,
+			PendingCount:    runStats.PendingCount,
+			AssignedTesters: runStats.AssignedTestersCount,
+			IsComplete:      plan.IsComplete.Bool,
+			IsLocked:        plan.IsLocked.Bool,
+			HasReport:       plan.HasReport.Bool,
+		})
+	}
+	return enriched, nil
 }
-func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int64) ([]dbsqlc.TestPlan, error) {
-	return t.queries.ListTestPlansByProject(ctx, int32(projectID))
+
+func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int64) ([]schema.TestPlanResponseItem, error) {
+	plans, err := t.queries.ListTestPlansByProject(ctx, int32(projectID))
+	if err != nil {
+		return nil, err
+	}
+
+	var enriched []schema.TestPlanResponseItem
+	for _, plan := range plans {
+		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
+		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
+
+		enriched = append(enriched, schema.TestPlanResponseItem{
+			ID:              plan.ID,
+			Description:     plan.Description.String,
+			Kind:            string(plan.Kind),
+			NumTestCases:    int32(len(cases)),
+			PassedCount:     runStats.PassedCount,
+			FailedCount:     runStats.FailedCount,
+			PendingCount:    runStats.PendingCount,
+			AssignedTesters: runStats.AssignedTestersCount,
+			IsComplete:      plan.IsComplete.Bool,
+			IsLocked:        plan.IsLocked.Bool,
+			HasReport:       plan.HasReport.Bool,
+		})
+	}
+	return enriched, nil
 }
 
 // FindAllByTestPlanID implements TestPlanService
 func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID int32) ([]dbsqlc.ListTestRunsByPlanRow, error) {
-	return t.queries.ListTestRunsByPlan(ctx, testPlanID)
+	return t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 }
 
 // AddTestCaseToPlan implements TestPlanService.
@@ -127,33 +156,14 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	if err != nil {
 		return nil, err
 	}
-	testPlanID := request.PlanID
-	for _, assignedTestCase := range request.PlannedTests {
-		testCase, err := t.queries.GetTestCase(ctx, uuid.MustParse(assignedTestCase.TestCaseID))
-		if err != nil {
-			return nil, err
-		}
-		for _, userID := range assignedTestCase.UserIds {
-			testRunID, _ := uuid.NewV7()
-			testRunParams := dbsqlc.CreateNewTestRunParams{
-				ID:           testRunID,
-				ProjectID:    int32(request.ProjectID),
-				TestPlanID:   int32(testPlanID),
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				OwnerID:      int32(testPlan.CreatedByID),
-				TestedByID:   int32(userID),
-				AssignedToID: int32(userID),
-				Code:         fmt.Sprintf("TC-%s/%d", testCase.Code, userID),
-				CreatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-				UpdatedAt: sql.NullTime{
-					Time: time.Now(), Valid: true,
-				},
-			}
 
-			_, err = t.queries.CreateNewTestRun(ctx, testRunParams)
-			if err != nil {
+	for _, assignedTestCase := range request.PlannedTests {
+		for _, uid := range assignedTestCase.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   request.PlanID,
+				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
+				AssignedToID: uid,
+			}); err != nil {
 				return nil, err
 			}
 		}
@@ -179,13 +189,14 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	cases, err := t.queries.GetTestCasesWithTestersByPlan(ctx, int32(id))
+	// Get assigned cases
+	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load test cases with testers for plan %d: %w", id, err)
+		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
-	// Get test run statistics
-	runStats, err := t.queries.GetTestPlanRunStats(ctx, int32(id))
+	// Get run statistics
+	runStats, err := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
 	}
@@ -202,7 +213,7 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		StartAt:         plan.StartAt.Time.Format(time.DateTime),
 		ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
 		ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
-		NumTestCases:    int32(plan.NumTestCases),
+		NumTestCases:    int32(len(cases)),
 		NumFailures:     plan.NumFailures,
 		PassedCount:     runStats.PassedCount,
 		FailedCount:     runStats.FailedCount,
@@ -216,16 +227,17 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
+	// Build response test cases with multiple assigned testers
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
-			ID:                   tc.TestCaseID.String(),
+			ID:                   tc.ID.String(),
 			Title:                tc.Title,
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   plan.ID,
 				Name: plan.Description.String,
 			},
-			AssignedTesterIDs: tc.TesterIds,
+			AssignedTesterIDs: tc.AssignedTesterIds,
 		})
 	}
 
@@ -239,7 +251,7 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 		Description:    common.NullString(request.Description),
 		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
 		StartAt:        common.NullTime(request.StartAt),
-		ClosedAt:       common.NullTime(request.ClosedAt),
+		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
 	})
 	if err != nil {
@@ -251,7 +263,7 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 
 // CloseTestPlan implements TestRunService
 func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) error {
-	testRuns, err := t.queries.ListTestRunsByPlan(ctx, testPlanID)
+	testRuns, err := t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 	if err != nil {
 		t.logger.Error("error listing test runs", "error", err)
 		return err

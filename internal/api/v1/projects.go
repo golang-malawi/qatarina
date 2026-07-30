@@ -201,12 +201,12 @@ func GetProjectTestPlans(testPlanService services.TestPlanService, logger loggin
 		}
 		testPlans, err := testPlanService.FindAllByProjectID(context.Background(), projectID)
 		if err != nil {
-			logger.Error(loggedmodule.ApiProjects, "failed to fetch test cases for project", "projectID", projectID, "error", err)
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch test plans for project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 
-		return c.JSON(fiber.Map{
-			"test_plans": schema.NewTestPlanListResponse(testPlans),
+		return c.JSON(schema.TestPlanListResponse{
+			TestPlans: testPlans,
 		})
 	}
 }
@@ -281,9 +281,9 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 				ProjectID:      int64(project.ID),
 				Kind:           string(dbsqlc.TestKindGeneral),
 				Description:    "Default -- Ongoing Testing",
-				StartAt:        t,
+				StartAt:        time.Now(),
 				ClosedAt:       nil,
-				ScheduledEndAt: time.Now().Local().AddDate(100, 10, 10),
+				ScheduledEndAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 				AssignedToID:   int64(project.OwnerUserID),
 				CreatedByID:    int64(project.OwnerUserID),
 				UpdatedByID:    int64(project.OwnerUserID),
@@ -588,6 +588,47 @@ func GetProjectTestCaseTemplate(projectService services.ProjectService, logger l
 		}
 		return c.JSON(schema.ProjectTestCaseTemplateResponse{
 			TestCaseTemplate: *template,
+		})
+	}
+}
+
+// UpdateAutomatedTesting godoc
+//
+//	@ID				UpdateAutomatedTesting
+//	@Summary		Update project automated testing setting
+//	@Description	Enable or disable automated testing capability for a project and configure supported runners
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID	path		int		true	"Project ID"
+//	@Param			request		body		schema.UpdateAutomatedTestingRequest	true	"Automated testing state"
+//	@Success		200			{object}	map[string]string
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/automated-testing [post]
+func UpdateAutomatedTesting(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
+		var request schema.UpdateAutomatedTestingRequest
+		_, err = common.ParseBodyThenValidate(c, &request)
+		if err != nil {
+			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		}
+
+		request.ProjectID = projectID
+
+		err = projectService.UpdateAutomatedTesting(c.Context(), &request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to update automated testing setting", "projectID", projectID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update automated testing setting")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Automated testing setting updated successfully",
 		})
 	}
 }

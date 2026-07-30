@@ -7,12 +7,14 @@ import { useState } from "react";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { userCreationSchema } from "@/data/forms/user-schemas";
 import { userCreationFields as userFields } from "@/data/forms/user-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/users/new/")({
   component: CreateNewUser,
 });
 
 function CreateNewUser() {
+  const { t } = useTranslation();
   const createUserMutation = useCreateUserMutation();
   const redirect = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -37,8 +39,8 @@ function CreateNewUser() {
 
       if (res) {
         toaster.create({
-          title: "User created.",
-          description: "We've created your new Team mate.",
+          title: t("users.new.success"),
+          description: t("users.new.success_description"),
           type: "success",
           duration: 3000,
         });
@@ -46,8 +48,8 @@ function CreateNewUser() {
       }
     } catch {
       toaster.create({
-        title: "Failed to create user account.",
-        description: "Failed to create new user account",
+        title: t("users.new.error"),
+        description: t("users.new.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -59,13 +61,13 @@ function CreateNewUser() {
   return (
     <Box p={6}>
       <Heading size="3xl" color="fg.heading">
-        Add New User
+        {t("users.new.title")}
       </Heading>
       <DynamicForm
         schema={userCreationSchema}
         fields={userFields}
         onSubmit={handleSubmit}
-        submitText="Create User"
+        submitText={t("users.new.submit")}
         submitLoading={submitting}
         layout="vertical"
         spacing={4}

@@ -16,6 +16,13 @@ type CreateTestCaseRequest struct {
 	Tags            []string `json:"tags" validate:"required"`
 	CreatedByID     string   `json:"-" validate:"-"`
 	ProjectID       int64    `json:"project_id" validate:"-"`
+	Runner          string   `json:"runner"`                // "basi", "playwright", "cypress", "browseruse"
+	ScriptPath      string   `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
+}
+
+type ExecuteTestCaseRequest struct {
+	TestPlanID int32  `json:"test_plan_id" validate:"-"`
+	Runner     string `json:"runner" validate:"-"` // optional, falls back to test case runner type
 }
 
 type TestCaseResponse struct {
@@ -36,6 +43,8 @@ type TestCaseResponse struct {
 	ExecutedBy      int64    `json:"executed_by"`
 	Notes           string   `json:"notes"`
 	Suggested       bool     `json:"suggested"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path,omitempty"`
 }
 
 func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
@@ -66,6 +75,7 @@ func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
 
 type UpdateTestCaseRequest struct {
 	ID              string   `json:"id" validate:"required"`
+	ProjectID       int64    `json:"project_id" validate:"required"`
 	Kind            string   `json:"kind" validate:"required"`
 	Code            string   `json:"code,omitempty"`
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
@@ -74,6 +84,8 @@ type UpdateTestCaseRequest struct {
 	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path"`
 }
 
 type BulkCreateTestCases struct {
@@ -100,41 +112,27 @@ type Pagination struct {
 }
 
 type AssignedTestCaseListResponse struct {
-	TestCases []AssignedTestCase `json:"test_cases"`
+	TestCases  []AssignedTestCase `json:"test_cases"`
+	Pagination *Pagination        `json:"pagination,omitempty"`
 }
 
 type AssignedTestCase struct {
-	ID                    string              `json:"id"`
-	Kind                  dbsqlc.TestKind     `json:"kind"`
-	Code                  string              `json:"code"`
-	FeatureOrModule       string              `json:"feature_or_module"`
-	Title                 string              `json:"title"`
-	Description           string              `json:"description"`
-	ParentTestCaseID      int                 `json:"parent_test_case_id"`
-	IsDraft               bool                `json:"is_draft"`
-	Tags                  []string            `json:"tags"`
-	CreatedByID           int32               `json:"created_by_id"`
-	TestCaseCreatedAt     time.Time           `json:"test_case_created_at"`
-	TestCaseUpdatedAt     time.Time           `json:"test_case_updated_at"`
-	ProjectID             int64               `json:"project_id"`
-	TestRunID             string              `json:"test_run_id"`
-	TestPlanID            int32               `json:"test_plan_id"`
-	TestCaseID            string              `json:"-"`
-	OwnerID               int32               `json:"owner_id"`
-	TestedByID            int32               `json:"tested_by_id"`
-	AssignedToID          int32               `json:"assigned_to_id"`
-	AssigneeCanChangeCode bool                `json:"assignee_can_change_code"`
-	ExternalIssueID       string              `json:"external_issue_id"`
-	ResultState           dbsqlc.TestRunState `json:"result_state"`
-	IsClosed              bool                `json:"is_closed"`
-	Notes                 string              `json:"notes"`
-	ActualResult          string              `json:"actual_result"`
-	ExpectedResult        string              `json:"expected_result"`
-	Reactions             []byte              `json:"reactions"`
-	TestedOn              *time.Time          `json:"tested_on"`
-	CreatedAt             time.Time           `json:"created_at"`
-	UpdatedAt             time.Time           `json:"updated_at"`
-	EnvironmentID         int32               `json:"environment_id"`
+	ID              string          `json:"id"`
+	Kind            dbsqlc.TestKind `json:"kind"`
+	Code            string          `json:"code"`
+	FeatureOrModule string          `json:"feature_or_module"`
+	Title           string          `json:"title"`
+	Description     string          `json:"description"`
+	IsDraft         bool            `json:"is_draft"`
+	Tags            []string        `json:"tags"`
+	CreatedByID     int32           `json:"created_by_id"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	ProjectID       int64           `json:"project_id"`
+	TestPlanID      int32           `json:"test_plan_id"`
+	AssignedToID    int32           `json:"assigned_to_id"`
+	EnvironmentID   int32           `json:"environment_id"`
+	IsClosed        bool            `json:"is_closed"`
 }
 
 type TestCaseExecutionSummary struct {
@@ -162,6 +160,8 @@ type CreateSuggestedTestCaseRequest struct {
 	Description     string   `json:"description" validate:"required"`
 	Tags            []string `json:"tags"`
 	CreatedByID     int64    `json:"-" validate:"-"`
+	Runner          string   `json:"runner"`
+	ScriptPath      string   `json:"script_path,omitempty"`
 }
 
 type SugestedTestCaseResponse struct {

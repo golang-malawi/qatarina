@@ -26,9 +26,19 @@ export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getInboxTestCases(params?: { includeClosed?: boolean }) {
-  return apiClient.request("get", "/v1/me/test-cases/inbox", { 
-    params: { query: { includeClosed: params?.includeClosed ?? false } } as any,
+export async function getInboxTestCases(params?: {
+  includeClosed?: boolean;
+  page?: number;
+  pageSize?: number;
+}) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox", {
+    params: {
+      query: {
+        includeClosed: params?.includeClosed ?? false,
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+      },
+    },
   });
 }
 
@@ -45,14 +55,34 @@ export async function getTestCaseById(testCaseID: string) {
 }
 
 export async function createTestCase(
-  data: components["schemas"]["schema.CreateTestCaseRequest"]
+  data: components["schemas"]["schema.CreateTestCaseRequest"],
 ) {
-  return apiClient.request("post", "/v1/test-cases", { body: data });
+  return apiClient.request("post", "/v1/test-cases", { body: data as any });
+}
+
+export async function validateTestCaseScript(file: File, runner: string) {
+  const formData = new FormData();
+  formData.append("script_file", file);
+  formData.append("runner", runner);
+
+  const res = await apiClient.request(
+    "post",
+    "/v1/test-cases/validate-script" as any,
+    {
+      body: formData as any,
+    },
+  );
+
+  if (res.error) {
+    throw new Error(res.error.detail || "Script validation failed");
+  }
+
+  return res.data as { valid: boolean; output: string; state: string };
 }
 
 export async function importTestCasesFromFile(
   projectId: string,
-  file: File
+  file: File,
 ): Promise<{ message: string }> {
   const formData = new FormData();
   formData.append("projectID", projectId);
@@ -69,23 +99,21 @@ export async function importTestCasesFromFile(
   return res.data as { message: string };
 }
 
-export async function markTestCaseAsDraft(testCaseID:string) {
-  return apiClient.request("post", "/v1/test-cases/{testCaseID}/mark-draft",{
-    params: {path: {testCaseID}},
+export async function markTestCaseAsDraft(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/mark-draft", {
+    params: { path: { testCaseID } },
   });
-  
 }
-export async function unmarkTestCaseAsDraft(testCaseID:string) {
-  return apiClient.request("post", "/v1/test-cases/{testCaseID}/unmark-draft",{
-    params: {path: {testCaseID}},
+export async function unmarkTestCaseAsDraft(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/unmark-draft", {
+    params: { path: { testCaseID } },
   });
-  
 }
 
 export function useClosedTestCasesQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/closed", {
-    params: {path: {projectID}}
-  })
+    params: { path: { projectID } },
+  });
 }
 
 export function useFailingTestCasesQuery(projectID: string) {
@@ -100,36 +128,23 @@ export function useScheduledTestCasesQuery(projectID: string) {
   });
 }
 
-export function useBlockedTestCasesQuery(projectID: string){
+export function useBlockedTestCasesQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-cases/blocked", {
-    params: {path: {projectID}},
+    params: { path: { projectID } },
   });
 }
 
 export function useUpdateTestCaseMutation() {
-  return $api.useMutation(
-    "post", 
-    "/v1/test-cases/{testCaseID}"
-  ); 
-   
-}
-
-export async function updateTestCase(
-  data:components["schemas"]["schema.UpdateTestCaseRequest"]
-) {
-  return apiClient.request("post", "/v1/test-cases/{testCaseID}", {
-    params: {path: {testCaseID: data.id}},
-    body: data,
-  });  
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}");
 }
 
 export async function deleteTestCase(testCaseID: string) {
   return apiClient.request("delete", "/v1/test-cases/{testCaseID}", {
-    params: {path: {testCaseID}},
+    params: { path: { testCaseID } },
   });
 }
 
-export function useDeleteTestCaseMutation(){
+export function useDeleteTestCaseMutation() {
   return $api.useMutation("delete", "/v1/test-cases/{testCaseID}");
 }
 
@@ -149,4 +164,20 @@ export async function rejectSuggestedTestCase(testCaseID: string) {
   return apiClient.request("delete", "/v1/test-cases/{testCaseID}/reject", {
     params: { path: { testCaseID } },
   });
+}
+
+export function useScriptTestCasesQuery(testPlanID: number) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/script-test-cases", {
+    params: { path: { testPlanID } },
+  });
+}
+
+export async function getScriptTestCasesByTestPlanID(testPlanID: number) {
+  return apiClient.request(
+    "get",
+    "/v1/test-plans/{testPlanID}/script-test-cases",
+    {
+      params: { path: { testPlanID } },
+    },
+  );
 }

@@ -44,6 +44,7 @@ import { useMemo, useState } from "react";
 import { IconTrash } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
 import { findProjectTestPlansQueryOptions } from "@/data/queries/test-plans";
+import { useTranslation } from "react-i18next";
 
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
@@ -57,6 +58,7 @@ export const Route = createFileRoute(
 
 function ListProjectTestPlans() {
   const { projectId } = Route.useParams();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const deleteMutation = useDeleteTestPlanMutation();
   const {
@@ -83,43 +85,48 @@ function ListProjectTestPlans() {
   const completedCount = plans.filter((plan) => plan.is_complete).length;
   const activeCount = plans.length - completedCount;
 
-  if (isLoading) return <LoadingState label="Loading test plans..." />;
-  if (error) return <ErrorState title="Error loading test plans" />;
+  if (isLoading) return <LoadingState label={t("test_plans.loading")} />;
+  if (error) return <ErrorState title={t("test_plans.error")} />;
 
   const handleDelete = async (testPlanID: string) => {
+  try {
     await deleteMutation.mutateAsync({
       params: { path: { testPlanID } },
     });
-    toaster.success({ title: "Test plan deleted successfully" });
+
+    toaster.success({ title: t("test_plans.delete.success") });
     await refetch();
-  };
+  } catch (err: any) {
+    toaster.error({
+      title: t("test_plans.delete.error"),
+      description: err?.message,
+    });
+  }
+};
 
   return (
     <Box w="full">
       <PageHeaderCard
-        title="Test Plans"
-        description="Track progress, execute runs, and manage plan lifecycle for this project."
+        title={t("test_plans")}
+        description={t("test_plans.header_description")}
         badges={
           <>
             <Badge colorPalette="brand" variant="subtle">
-              {plans.length} total
+              {plans.length} {t("test_plans.total")}
             </Badge>
             <Badge colorPalette="green" variant="subtle">
-              {completedCount} completed
+              {completedCount} {t("test_plans.completed")}
             </Badge>
             <Badge colorPalette="orange" variant="subtle">
-              {activeCount} active
+              {activeCount} {t("test_plans.active")}
             </Badge>
           </>
         }
         actions={
-          <Link
-            to="/projects/$projectId/test-plans/new"
-            params={{ projectId: `${projectId}` }}
-          >
+          <Link to="/projects/$projectId/test-plans/new" params={{ projectId: `${projectId}` }}>
             <Button colorPalette="brand">
               <IconPlus />
-              New Test Plan
+              {t("test_plans.create_new")}
             </Button>
           </Link>
         }
@@ -130,15 +137,15 @@ function ListProjectTestPlans() {
           <Input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search by ID, description, or kind"
+            placeholder={t("test_plans.search_placeholder")}
           />
         </InputGroup>
       </PageToolbarCard>
 
       {filteredPlans.length === 0 ? (
         <EmptyState
-          title="No test plans found"
-          description="Create a plan or adjust the search filter."
+          title={t("test_plans.empty")}
+          description={t("test_plans.empty_description")}
         />
       ) : (
         <Stack gap={4}>
@@ -174,14 +181,10 @@ function ListProjectTestPlans() {
                           {title}
                         </Heading>
                         <Text fontSize="sm" color="fg.subtle">
-                          Start:{" "}
-                          {formatHumanDate(entry.start_at, {
-                            fallback: "Not scheduled",
-                          })}{" "}
-                          | End:{" "}
-                          {formatHumanDate(entry.scheduled_end_at, {
-                            fallback: "Not scheduled",
-                          })}
+                          {t("test_plans.start")}:{" "}
+                          {formatHumanDate(entry.start_at, { fallback: t("test_plans.not_scheduled") })}{" "}
+                          | {t("test_plans.end")}:{" "}
+                          {formatHumanDate(entry.scheduled_end_at, { fallback: t("test_plans.not_scheduled") })}
                         </Text>
                       </Stack>
                       <HStack gap={2} flexWrap="wrap">
@@ -189,14 +192,18 @@ function ListProjectTestPlans() {
                           colorPalette={entry.is_complete ? "green" : "orange"}
                           variant="subtle"
                         >
-                          {entry.is_complete ? "Completed" : "In Progress"}
+                          {entry.is_complete
+                            ? t("test_plans.status.completed")
+                            : t("test_plans.status.in_progress")}
                         </Badge>
                         <Badge
                           colorPalette={entry.is_locked ? "red" : "gray"}
                           variant="subtle"
                         >
                           <Icon as={IconLock} />
-                          {entry.is_locked ? "Locked" : "Open"}
+                          {entry.is_locked
+                            ? t("test_plans.status.locked")
+                            : t("test_plans.status.open")}
                         </Badge>
                         {entry.kind && (
                           <Badge colorPalette="blue" variant="subtle">
@@ -214,36 +221,36 @@ function ListProjectTestPlans() {
                       gap={3}
                     >
                       <MetricCard
-                        label="Total Cases"
+                        label={t("test_plans.metric.total")}
                         value={total}
                         icon={IconListCheck}
                         tone="brand"
                         variant="emphasis"
-                        helperText="Cases in this plan"
+                        helperText={t("test_plans.metric.total_helper")}
                       />
                       <MetricCard
-                        label="Passed"
+                        label={t("test_plans.metric.passed")}
                         value={passed}
                         icon={IconCheck}
                         tone="success"
                         variant="subtle"
-                        helperText="Validated outcomes"
+                        helperText={t("test_plans.metric.passed_helper")}
                       />
                       <MetricCard
-                        label="Failed"
+                        label={t("test_plans.metric.failed")}
                         value={failed}
                         icon={IconX}
                         tone="danger"
                         variant="subtle"
-                        helperText="Needs triage"
+                        helperText={t("test_plans.metric.failed_helper")}
                       />
                       <MetricCard
-                        label="Pending"
+                        label={t("test_plans.metric.pending")}
                         value={pending}
                         icon={IconClock}
                         tone="warning"
                         variant="subtle"
-                        helperText="Awaiting execution"
+                        helperText={t("test_plans.metric.pending_helper")}
                       />
                     </Grid>
 
@@ -255,24 +262,15 @@ function ListProjectTestPlans() {
                           to="/projects/$projectId/test-plans/$testPlanID/execute"
                           params={{ projectId, testPlanID }}
                         >
-                          <Button
-                            variant="outline"
-                            colorPalette="green"
-                            size="sm"
-                          >
+                          <Button variant="outline" colorPalette="green" size="sm">
                             <IconPlayerPlay />
-                            Start Session
+                            {t("test_plans.start_session")}
                           </Button>
                         </Link>
                       ) : (
-                        <Button
-                          variant="outline"
-                          colorPalette="green"
-                          size="sm"
-                          disabled
-                        >
+                        <Button variant="outline" colorPalette="green" size="sm" disabled>
                           <IconPlayerPlay />
-                          Start Session
+                          {t("test_plans.start_session")}
                         </Button>
                       )}
 
@@ -281,24 +279,15 @@ function ListProjectTestPlans() {
                           to="/projects/$projectId/test-plans/$testPlanID"
                           params={{ projectId, testPlanID }}
                         >
-                          <Button
-                            variant="outline"
-                            colorPalette="brand"
-                            size="sm"
-                          >
+                          <Button variant="outline" colorPalette="brand" size="sm">
                             <IconListCheck />
-                            View Plan
+                            {t("test_plans.view_plan")}
                           </Button>
                         </Link>
                       ) : (
-                        <Button
-                          variant="outline"
-                          colorPalette="brand"
-                          size="sm"
-                          disabled
-                        >
+                        <Button variant="outline" colorPalette="brand" size="sm" disabled>
                           <IconListCheck />
-                          View Plan
+                          {t("test_plans.view_plan")}
                         </Button>
                       )}
 
@@ -312,12 +301,12 @@ function ListProjectTestPlans() {
                             disabled={!hasId}
                           >
                             <IconTrash />
-                            Delete
+                            {t("test_plans.delete")}
                           </Button>
                         }
-                        title="Delete test plan?"
-                        description="This action cannot be undone."
-                        confirmLabel="Delete"
+                        title={t("test_plans.delete_confirm_title")}
+                        description={t("test_plans.delete_confirm_description")}
+                        confirmLabel={t("test_plans.delete")}
                         onConfirm={() => handleDelete(testPlanID)}
                       />
                     </Flex>

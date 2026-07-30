@@ -2,22 +2,32 @@
 package v1
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
+	"github.com/golang-malawi/qatarina/internal/runnerclient"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
+	"github.com/golang-malawi/qatarina/internal/validation"
 	"github.com/golang-malawi/qatarina/pkg/problemdetail"
 	"github.com/google/uuid"
 )
@@ -149,16 +159,105 @@ func GetOneTestCase(testCaseService services.TestCaseService) fiber.Handler {
 //	@Summary		Create a new Test Case
 //	@Description	Create a new Test Case
 //	@Tags			test-cases
-//	@Accept			json
+//	@Accept			json,multipart/form-data
 //	@Produce		json
 //	@Param			request	body		schema.CreateTestCaseRequest	true	"Create Test Case data"
+//	@Param			script_file	formData	file	false	"Script file"
 //	@Success		200		{object}	schema.TestCaseResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases [post]
-func CreateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+func CreateTestCase(testCaseService services.TestCaseService, projectService services.ProjectService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.CreateTestCaseRequest)
+
+		userID := authutil.GetAuthUserID(c)
+		request.CreatedByID = strconv.Itoa(int(userID))
+
+		fileHeader, err := c.FormFile("script_file")
+		hasFile := err == nil && fileHeader != nil
+
+		if hasFile {
+			form, err := c.MultipartForm()
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to parse multipart form", "error", err)
+				return problemdetail.BadRequest(c, "failed to parse multipart form")
+			}
+
+			if vals, ok := form.Value["project_id"]; ok && len(vals) > 0 {
+				if pid, err := strconv.ParseInt(vals[0], 10, 64); err == nil {
+					request.ProjectID = pid
+				}
+			}
+			// … populate other fields …
+
+			// ✅ Guard: block scripts if project setting disabled
+			project, _ := projectService.FindByID(c.Context(), request.ProjectID)
+			if !project.AutomatedTestingEnabled {
+				return problemdetail.BadRequest(c, "Automated testing is disabled for this project")
+			}
+
+			// continue with saving file…
+			saveDir := filepath.Join(cfg.Storage.LocalPath, "scripts")
+			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+				return problemdetail.ServerErrorProblem(c, "failed to create save directory")
+			}
+			savePath := filepath.Join(saveDir, fileHeader.Filename)
+			normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+			request.ScriptPath = normalizedRelative
+
+			if err := c.SaveFile(fileHeader, savePath); err != nil {
+				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
+			}
+
+			if errors := validation.ValidateStruct(request); errors != nil {
+				return problemdetail.ValidationErrors(c, "invalid data in request", errors)
+			}
+		} else {
+			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+				if validationErrors {
+					return problemdetail.ValidationErrors(c, "invalid data in request", err)
+				}
+				return problemdetail.BadRequest(c, "failed to parse data in request")
+			}
+		}
+
+		testCase, err := testCaseService.Create(context.Background(), request)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponse(testCase))
+	}
+}
+
+// ExecuteTestCase godoc
+//
+//	@ID				ExecuteTestCase
+//	@Summary		Execute a Test Case and create a Test Run
+//	@Description	Execute a test case by running its script against the configured runner
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			test_case_id	path		string						true	"Test Case ID"
+//	@Param			request			body		schema.ExecuteTestCaseRequest	true	"Execution request data"
+//	@Success		202		{object}	schema.TestRunResponse
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		404		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/{test_case_id}/execute [post]
+func ExecuteTestCase(testCaseService services.TestCaseService, testRunService services.TestRunService, logger logging.Logger, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		caseID := c.Params("test_case_id")
+		userID := authutil.GetAuthUserID(c)
+
+		testCase, err := testCaseService.FindByID(c.Context(), caseID)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test case", "error", err)
+			return problemdetail.NotFound(c, "test case not found")
+		}
+
+		request := new(schema.ExecuteTestCaseRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
@@ -167,14 +266,179 @@ func CreateTestCase(testCaseService services.TestCaseService, logger logging.Log
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
-		testCase, err := testCaseService.Create(context.Background(), request)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to create a test case", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
+		// Resolve relative script path to absolute path
+		var resolvedScriptPath string
+		if testCase.ScriptPath.Valid && testCase.ScriptPath.String != "" {
+			resolvedScriptPath = filepath.Join(cfg.Storage.LocalPath, testCase.ScriptPath.String)
+		} else {
+			resolvedScriptPath = "" // fallback if no script path
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(testCase))
+		testRunReq := &schema.TestRunRequest{
+			ProjectID:    testCase.ProjectID.Int32,
+			TestPlanID:   request.TestPlanID,
+			TestCaseID:   caseID,
+			OwnerID:      int32(userID),
+			TestedByID:   int32(userID),
+			AssignedToID: int32(userID),
+			Code:         testCase.Code,
+			Runner:       testCase.Runner.String,
+			ScriptPath:   resolvedScriptPath,
+		}
+
+		createdRun, err := testRunService.Create(c.Context(), testRunReq)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to create test run")
+		}
+
+		// Get WebSocket URL for the runner based on test case runner type
+		var wsURL string
+		runner := testCase.Runner.String
+		if runner == "" {
+			runner = request.Runner
+		}
+
+		switch runner {
+		case "basi":
+			wsURL = cfg.Runner.BasiWSURL
+		case "playwright":
+			wsURL = cfg.Runner.PlaywrightWSURL
+		case "cypress":
+			wsURL = cfg.Runner.CypressWSURL
+		case "browseruse":
+			wsURL = cfg.Runner.BrowserUseWSURL
+		default:
+			logger.Error(loggedmodule.ApiTestCases, "invalid runner type", "runner", runner)
+			return problemdetail.BadRequest(c, "invalid runner specified")
+		}
+
+		// Start execution asynchronously (non-blocking)
+		go func() {
+			err := runnerclient.StreamRunnerAndCommit(
+				testRunService,
+				createdRun.ID.String(),
+				testRunReq,
+				wsURL,
+				userID,
+			)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestRuns, "failed to stream runner during execution", "error", err, "testRunID", createdRun.ID)
+			}
+		}()
+
+		// Return immediately with test run details (HTTP 202 Accepted)
+		return c.Status(fiber.StatusAccepted).JSON(schema.NewTestRunResponseFromEntity(createdRun))
 	}
+}
+
+// ValidateTestCaseScript godoc
+//
+//	@ID             ValidateTestCaseScript
+//	@Summary        Validate a runner script without creating a test case
+//	@Description    Validate a test script by sending it to the configured runner before creation
+//	@Tags           test-cases
+//	@Accept         multipart/form-data
+//	@Produce        json
+//	@Param          script_file formData file true "Script file"
+//	@Param          runner      formData string true "Runner"
+//	@Success        200 {object} map[string]interface{}
+//	@Failure        400 {object} problemdetail.ProblemDetail
+//	@Failure        500 {object} problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/validate-script [post]
+func ValidateTestCaseScript(logger logging.Logger, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		fileHeader, err := c.FormFile("script_file")
+		if err != nil || fileHeader == nil {
+			return problemdetail.BadRequest(c, "script file is required")
+		}
+
+		runner := c.FormValue("runner")
+		if runner == "" {
+			return problemdetail.BadRequest(c, "runner is required")
+		}
+
+		file, err := fileHeader.Open()
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to open script file", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to read script file")
+		}
+		defer file.Close()
+
+		output, state, status, err := postScriptToRunner(file, fileHeader.Filename, runner, cfg)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to validate script", "error", err)
+			return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %v", err))
+		}
+
+		if status != http.StatusOK || state == dbsqlc.TestRunStateFailed {
+			return problemdetail.BadRequest(c, fmt.Sprintf("script validation failed: %s", output))
+		}
+
+		// Build relative path for consistency
+		normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+
+		return c.JSON(fiber.Map{
+			"valid":       true,
+			"output":      output,
+			"state":       string(state),
+			"script_path": normalizedRelative,
+		})
+	}
+}
+
+func postScriptToRunner(file multipart.File, filename, runner string, cfg *config.Config) (string, dbsqlc.TestRunState, int, error) {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	formFile, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	if _, err := io.Copy(formFile, file); err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	writer.WriteField("runner", runner)
+	if err := writer.Close(); err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+
+	var runnerURL string
+	switch runner {
+	case "basi":
+		runnerURL = cfg.Runner.BasiURL
+	case "playwright":
+		runnerURL = cfg.Runner.PlaywrightURL
+	case "cypress":
+		runnerURL = cfg.Runner.CypressURL
+	case "browseruse":
+		runnerURL = cfg.Runner.BrowserUseURL
+	default:
+		return "", dbsqlc.TestRunStateFailed, 0, fmt.Errorf("invalid runner specified")
+	}
+
+	resp, err := http.Post(runnerURL, writer.FormDataContentType(), &buf)
+	if err != nil {
+		return "", dbsqlc.TestRunStateFailed, 0, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var output string
+	var msgs []schema.RunnerMessage
+	if err := json.Unmarshal(body, &msgs); err != nil {
+		output = string(body)
+	} else {
+		var logs []string
+		for _, m := range msgs {
+			logs = append(logs, fmt.Sprintf("[%s] %s", m.Type, m.Content))
+		}
+		output = strings.Join(logs, "\n")
+	}
+
+	return output, determineStateFromRunnerOutput(output), resp.StatusCode, nil
 }
 
 // BulkCreateTestCases godoc
@@ -215,38 +479,73 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 
 // UpdateTestCase godoc
 //
-//	@ID				UpdateTestCase
-//	@Summary		Update a Test Case
-//	@Description	Update a Test Case
-//	@Tags			test-cases
-//	@Accept			json
-//	@Produce		json
-//	@Param			testCaseID	path		string		true	"Test Case ID"
-//	@Param			request		body		schema.UpdateTestCaseRequest	true	"Test Case update data"
-//	@Success		200			{object}	schema.TestCaseResponse
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/test-cases/{testCaseID} [post]
-func UpdateTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+//	@ID             UpdateTestCase
+//	@Summary        Update a Test Case
+//	@Description    Update a Test Case
+//	@Tags           test-cases
+//	@Accept         json,multipart/form-data
+//	@Produce        json
+//	@Param          testCaseID  path        string      true    "Test Case ID"
+//	@Param          request     body        schema.UpdateTestCaseRequest    true    "Test Case update data"
+//	@Param          script_file formData    file    false   "Script file"
+//	@Success        200         {object}    schema.TestCaseResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID} [post]
+func UpdateTestCase(testCaseService services.TestCaseService, projectService services.ProjectService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.UpdateTestCaseRequest)
-		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
-			if validationErrors {
-				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+		fileHeader, err := c.FormFile("script_file")
+		hasFile := err == nil && fileHeader != nil
+
+		if hasFile {
+			form, err := c.MultipartForm()
+			if err != nil {
+				return problemdetail.BadRequest(c, "failed to parse multipart form")
 			}
-			logger.Error(loggedmodule.ApiTestCases, "failed to parse request data", "error", err)
-			return problemdetail.BadRequest(c, "failed to parse data in request")
+
+			if vals, ok := form.Value["id"]; ok && len(vals) > 0 {
+				request.ID = vals[0]
+			}
+			if vals, ok := form.Value["project_id"]; ok && len(vals) > 0 {
+				if pid, err := strconv.ParseInt(vals[0], 10, 64); err == nil {
+					request.ProjectID = pid
+				}
+			}
+			// … populate other fields …
+
+			// ✅ Guard: block scripts if project setting disabled
+			project, _ := projectService.FindByID(c.Context(), request.ProjectID)
+			if !project.AutomatedTestingEnabled {
+				return problemdetail.BadRequest(c, "Automated testing is disabled for this project")
+			}
+
+			saveDir := filepath.Join(cfg.Storage.LocalPath, "scripts")
+			if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+				return problemdetail.ServerErrorProblem(c, "failed to create save directory")
+			}
+			savePath := filepath.Join(saveDir, fileHeader.Filename)
+			normalizedRelative := filepath.ToSlash(filepath.Join("scripts", fileHeader.Filename))
+			request.ScriptPath = normalizedRelative
+
+			if err := c.SaveFile(fileHeader, savePath); err != nil {
+				return problemdetail.ServerErrorProblem(c, "failed to save uploaded file")
+			}
+		} else {
+			if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+				if validationErrors {
+					return problemdetail.ValidationErrors(c, "invalid data in request", err)
+				}
+				return problemdetail.BadRequest(c, "failed to parse data in request")
+			}
 		}
 
-		_, err := testCaseService.Update(context.Background(), request)
+		updated, err := testCaseService.Update(context.Background(), request)
 		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+			return problemdetail.ServerErrorProblem(c, "failed to update test case")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test cases updated",
-		})
+		return c.JSON(schema.NewTestCaseResponse(updated))
 	}
 }
 
@@ -285,16 +584,19 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 
 // ListAssignedTestCases godoc
 //
-//	@ID				ListAssignedTestCases
-//	@Summary		List Test Cases assigned to the current user
-//	@Description	List Test Cases assigned to the current user
-//	@Tags			test-cases
-//	@Accept			json
-//	@Produce		json
-//	@Success		200			{object}	schema.AssignedTestCaseListResponse
-//	@Failure		400			{object}	problemdetail.ProblemDetail
-//	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/me/test-cases/inbox [get]
+//	@ID             ListAssignedTestCases
+//	@Summary        List Test Cases assigned to the current user
+//	@Description    List Test Cases assigned to the current user
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          page        query       int     false   "Page number (1-based)"
+//	@Param          pageSize    query       int     false   "Page size"
+//	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Success        200         {object}    schema.AssignedTestCaseListResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/me/test-cases/inbox [get]
 func ListAssignedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		userID := authutil.GetAuthUserID(ctx)
@@ -303,7 +605,7 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 		offset := (page - 1) * pageSize
 		includeClosed := ctx.QueryBool("includeClosed", false)
 
-		testCases, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset), includeClosed)
+		testCases, totalCount, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset), includeClosed)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch assigned test cases", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
@@ -311,7 +613,13 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 
 		return ctx.JSON(schema.AssignedTestCaseListResponse{
 			TestCases: testCases,
+			Pagination: &schema.Pagination{
+				Page:     page,
+				PageSize: pageSize,
+				Total:    totalCount,
+			},
 		})
+
 	}
 }
 
@@ -657,6 +965,66 @@ func RejectSuggestedTestCase(testCaseService services.TestCaseService, logger lo
 
 		return c.JSON(fiber.Map{
 			"message": "Suggested test case rejected",
+		})
+	}
+}
+
+// determineStateFromRunnerOutput inspects the runner output and decides pass/fail
+func determineStateFromRunnerOutput(output string) dbsqlc.TestRunState {
+	lower := strings.ToLower(output)
+
+	// treat common success phrases
+	if strings.Contains(lower, "pass") ||
+		strings.Contains(lower, "success") ||
+		strings.Contains(lower, "all tests passed") {
+		return dbsqlc.TestRunStatePassed
+	}
+
+	// treat common failure/error phrases
+	if strings.Contains(lower, "fail") ||
+		strings.Contains(lower, "error") ||
+		strings.Contains(lower, "stderr") ||
+		strings.Contains(lower, "assertion failed") ||
+		strings.Contains(lower, "exception") {
+		return dbsqlc.TestRunStateFailed
+	}
+
+	// fallback if nothing matched
+	return dbsqlc.TestRunStatePending
+}
+
+// GetScriptTestPlanTestCases godoc
+//
+// @ID          GetScriptTestPlanTestCases
+// @Summary     List all script-based test cases of a test plan
+// @Description Returns only test cases that have a runner and script_path set
+// @Tags        test-cases, test-plans
+// @Accept      json
+// @Produce     json
+// @Param       testPlanID path int true "Test Plan ID"
+// @Success     200 {object} schema.TestCaseListResponse
+// @Failure     400 {object} problemdetail.ProblemDetail
+// @Failure     500 {object} problemdetail.ProblemDetail
+// @Router      /v1/test-plans/{testPlanID}/script-test-cases [get]
+func GetScriptTestPlanTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID == 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
+		testCases, err := testCaseService.FindScriptCasesByPlanID(c.Context(), int64(testPlanID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				logger.Info(loggedmodule.ApiTestPlans, "no script test cases found", "error", err)
+				return c.JSON(schema.TestCaseListResponse{})
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to fetch script test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to fetch script test cases")
+		}
+
+		return c.JSON(schema.TestCaseListResponse{
+			TestCases: schema.NewTestCaseResponseList(testCases),
 		})
 	}
 }

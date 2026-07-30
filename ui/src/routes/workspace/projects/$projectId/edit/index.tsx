@@ -5,16 +5,18 @@ import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { projectUpdateSchema } from "@/data/forms/project-schemas";
 import { projectCreationFields } from "@/data/forms/project-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/projects/$projectId/edit/")({
   component: EditProject,
 });
 
 function EditProject() {
+  const { t } = useTranslation();
   const params = Route.useParams();
   const updateProjectMutation = useUpdateProjectMutation();
   const { data: project } = useProjectQuery(params.projectId);
-  const { data: projects } = useProjectsQuery(); 
+  const { data: projects } = useProjectsQuery();
   const redirect = useNavigate();
 
   const handleSubmit = async (values: any) => {
@@ -23,7 +25,7 @@ function EditProject() {
         params: { path: { projectID: params.projectId } },
         body: {
           id: project?.id ?? Number(params.projectId),
-          project_owner_id: project?.owner_user_id ?? 0, 
+          project_owner_id: project?.owner_user_id ?? 0,
           name: values.name,
           code: values.code,
           description: values.description,
@@ -36,16 +38,17 @@ function EditProject() {
       });
 
       toaster.create({
-        title: "Project updated.",
-        description: "Your project changes were saved.",
+        title: t("projects.update.success"),
+        description: t("projects.update.saved"),
         type: "success",
         duration: 9000,
       });
+
       redirect({ to: "/workspace/projects" });
     } catch {
       toaster.create({
-        title: "Update failed.",
-        description: "Could not update project. Please try again.",
+        title: t("projects.update.error"),
+        description: t("projects.update.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -54,7 +57,8 @@ function EditProject() {
 
   return (
     <Box>
-      <Heading size="3xl">Edit Project</Heading>
+      <Heading size="3xl">{t("projects.edit")}</Heading>
+
       {project ? (
         <DynamicForm
           schema={projectUpdateSchema}
@@ -62,7 +66,7 @@ function EditProject() {
             ...projectCreationFields,
             {
               name: "parent_project_id",
-              label: "Parent Project",
+              label: t("projects.parent_project"),
               type: "select",
               options: (projects?.projects ?? []).map((p) => ({
                 label: p.title ?? "",
@@ -83,12 +87,12 @@ function EditProject() {
             environments: [],
           }}
           onSubmit={handleSubmit}
-          submitText="Update Project"
+          submitText={t("projects.update")}
           layout="vertical"
           spacing={4}
         />
       ) : (
-        <Heading size="md">Loading project...</Heading>
+        <Heading size="md">{t("projects.loading")}</Heading>
       )}
     </Box>
   );

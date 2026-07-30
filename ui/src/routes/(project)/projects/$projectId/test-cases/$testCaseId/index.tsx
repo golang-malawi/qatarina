@@ -242,7 +242,7 @@ function ViewTestCase() {
               <Alert.Indicator />
               <Alert.Content>
                 <Alert.Description>
-                  A test case can belong to only one test plan.
+                  A test case can belong to more than one test plan.
                 </Alert.Description>
               </Alert.Content>
             </Alert.Root>

@@ -1,9 +1,4 @@
-import {
-  Select,
-  createListCollection,
-  Field,
-  Portal,
-} from "@chakra-ui/react";
+import { Select, createListCollection, Field, Portal } from "@chakra-ui/react";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 import { useTranslation } from "react-i18next";
@@ -26,11 +21,11 @@ const countryOptions = createListCollection({
 });
 
 export function CountryDropdown({ value, onChange }: CountryDropdownProps) {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <Field.Root>
-      <Field.Label>{t("country")}</Field.Label>
+      {/* Removed Field.Label to avoid duplication */}
       <Select.Root
         collection={countryOptions}
         value={value ? [value] : []}

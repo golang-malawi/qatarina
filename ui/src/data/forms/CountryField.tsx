@@ -1,9 +1,13 @@
 import { CountryDropdown } from "@/components/form/CountryDropdown";
 
-export const CountryField = ({ value, onChange, onBlur: _onBlur }: {
+export const CountryField = ({
+  value,
+  onChange,
+  onBlur: _onBlur,
+}: {
   value: unknown;
   onChange: (val: unknown) => void;
   onBlur: () => void;
-}) => (
-  <CountryDropdown value={value as string} onChange={onChange} />
-)
+}) => {
+  return <CountryDropdown value={value as string} onChange={onChange} />;
+};

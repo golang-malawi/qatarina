@@ -15,6 +15,7 @@ export type TestCaseListQueryParams = {
   search?: string;
   kind?: string;
   isDraft?: boolean;
+  module?: string;
 };
 
 export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
@@ -22,14 +23,18 @@ export const findTestCaseAllQueryOptions = (params?: TestCaseListQueryParams) =>
     params: { query: params },
   });
 
-export const findTestCaseInboxQueryOptions = (includeClosed: boolean) =>
+export const findTestCaseInboxQueryOptions = (
+  includeClosed: boolean,
+  page: number = 1,
+  pageSize: number = 25,
+) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", includeClosed],
+    queryKey: ["testCases", "inbox", includeClosed, page, pageSize],
     queryFn: async (): Promise<AssignedTestCaseListResponse> => {
-      const res = await getInboxTestCases({ includeClosed });
+      const res = await getInboxTestCases({ includeClosed, page, pageSize });
       return (res?.data ?? res) as AssignedTestCaseListResponse;
     },
-});
+  });
 
 export const findTestCaseInboxByIdQueryOptions = (id: string) =>
   queryOptions({
@@ -63,6 +68,17 @@ export const testCasesByProjectIdQueryOptions = (
 ) =>
   $api.queryOptions("get", "/v1/projects/{projectID}/test-cases", {
     params: { path: { projectID }, query: params },
+    queryKey: [
+      "projectTestCases",
+      projectID,
+      params?.page,
+      params?.pageSize,
+      params?.sortBy,
+      params?.sortOrder,
+      params?.search,
+      params?.kind,
+      params?.isDraft,
+    ],
   });
 
 export const findTestCaseSummaryQueryOptions = $api.queryOptions(

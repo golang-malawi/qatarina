@@ -222,13 +222,15 @@ type Project struct {
 	// URL to Monday.com if available
 	MondayUrl sql.NullString
 	// The ID of the owner or creator of the project
-	OwnerUserID      int32
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	DeletedAt        sql.NullTime
-	Code             string
-	ParentProjectID  sql.NullInt32
-	TestcaseTemplate sql.NullString
+	OwnerUserID             int32
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	DeletedAt               sql.NullTime
+	Code                    string
+	ParentProjectID         sql.NullInt32
+	TestcaseTemplate        sql.NullString
+	AutomatedTestingEnabled bool
+	SupportedRunners        []string
 }
 
 type ProjectTester struct {
@@ -241,6 +243,17 @@ type ProjectTester struct {
 	Role      string
 	IsActive  bool
 	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+}
+
+type Report struct {
+	ID        uuid.UUID
+	ProjectID int32
+	Name      string
+	Type      string
+	Status    string
+	CreatedAt sql.NullTime
+	FilePath  sql.NullString
 	UpdatedAt sql.NullTime
 }
 
@@ -267,8 +280,10 @@ type TestCase struct {
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
 	// Project for the test cases
-	ProjectID sql.NullInt32
-	Suggested sql.NullBool
+	ProjectID  sql.NullInt32
+	Suggested  sql.NullBool
+	Runner     sql.NullString
+	ScriptPath sql.NullString
 }
 
 type TestCaseSequence struct {
@@ -313,6 +328,12 @@ type TestPlan struct {
 	EnvironmentID sql.NullInt32
 }
 
+type TestPlanCase struct {
+	TestPlanID   int64
+	TestCaseID   uuid.UUID
+	AssignedToID int64
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID
@@ -323,11 +344,11 @@ type TestPlansCase struct {
 type TestRun struct {
 	ID                    uuid.UUID
 	ProjectID             int32
-	TestPlanID            int32
+	TestPlanID            sql.NullInt32
 	TestCaseID            uuid.UUID
 	OwnerID               int32
-	TestedByID            int32
-	AssignedToID          int32
+	TestedByID            sql.NullInt32
+	AssignedToID          sql.NullInt32
 	AssigneeCanChangeCode sql.NullBool
 	Code                  string
 	ExternalIssueID       sql.NullString
@@ -349,7 +370,7 @@ type TestRunResult struct {
 	Status     TestRunState
 	Result     string
 	Notes      sql.NullString
-	ExecutedBy int32
+	ExecutedBy sql.NullInt32
 	ExecutedAt time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time

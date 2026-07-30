@@ -70,6 +70,7 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID/unarchive", apiv1.UnarchiveProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/test-case-template", apiv1.GetProjectTestCaseTemplate(api.ProjectsService, api.logger))
 		projectsV1.Post("/:projectID/test-case-template", apiv1.AddProjectTestCaseTemplate(api.ProjectsService, api.logger))
+		projectsV1.Post("/:projectID/automated-testing", apiv1.UpdateAutomatedTesting(api.ProjectsService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -100,19 +101,21 @@ func (api *API) routes() {
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
-		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
+		testCasesV1.Post("/validate-script", apiv1.ValidateTestCaseScript(api.logger, api.Config))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
 		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
-		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
 		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/mark-draft", apiv1.MarkTestCaseAsDraft(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/unmark-draft", apiv1.UnMarkTestCaseAsDraft(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/accept", apiv1.AcceptSuggestedTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Delete("/:testCaseID/reject", apiv1.RejectSuggestedTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:test_case_id/execute", apiv1.ExecuteTestCase(api.TestCasesService, api.TestRunsService, api.logger, api.Config))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
@@ -124,6 +127,7 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID", apiv1.UpdateTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Get("/:testPlanID/test-cases", apiv1.GetTestPlanTestCases(api.TestCasesService, api.logger))
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID/script-test-cases", apiv1.GetScriptTestPlanTestCases(api.TestCasesService, api.logger))
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
@@ -139,7 +143,9 @@ func (api *API) routes() {
 		testRunsV1.Get("/:testRunID", apiv1.GetOneTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID", apiv1.UpdateTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/commit", apiv1.CommitTestRun(api.TestRunsService, api.logger))
-		testRunsV1.Post("/:testRunID/execute", apiv1.ExecuteTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID/feedback", apiv1.RecordTestRunFeedback(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:testRunID/execute", apiv1.ExecuteTestRun(api.TestRunsService, api.TestCasesService, api.logger, api.Config))
+		testRunsV1.Get("/:testRunID/stream", apiv1.StreamTestRunLogs(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
 	}
@@ -182,6 +188,15 @@ func (api *API) routes() {
 	environmentsV1 := router.Group("/v1/environments", authenticationMiddleware)
 	{
 		environmentsV1.Get("/:envID", apiv1.GetEnvironment(api.EnvironmentService, api.logger))
+	}
+
+	reportsV1 := projectsV1.Group("/:projectID/reports", authenticationMiddleware)
+	{
+		reportsV1.Get("", apiv1.ListReports(api.ReportService, api.logger))
+		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
+		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
+		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
 	}
 
 	// Serves the app at the root path  "/"

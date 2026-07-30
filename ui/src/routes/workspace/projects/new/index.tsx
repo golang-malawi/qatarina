@@ -6,13 +6,14 @@ import { toaster } from "@/components/ui/toaster";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import { projectCreationSchema } from "@/data/forms/project-schemas";
 import { projectCreationFields } from "@/data/forms/project-field-configs";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/projects/new/")({
   component: CreateProject,
 });
 
-
 function CreateProject() {
+  const { t } = useTranslation();
   const createProjectMutation = useCreateProjectMutation();
   const redirect = useNavigate();
 
@@ -38,8 +39,8 @@ function CreateProject() {
 
       if (res) {
         toaster.create({
-          title: "Project created.",
-          description: "We've created your Project.",
+          title: t("projects.create.success"),
+          description: t("projects.create.description"),
           type: "success",
           duration: 9000,
         });
@@ -47,8 +48,8 @@ function CreateProject() {
       }
     } catch {
       toaster.create({
-        title: "Project creation failed.",
-        description: "Failed to create project. Please try again.",
+        title: t("projects.create.error"),
+        description: t("projects.create.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -57,12 +58,13 @@ function CreateProject() {
 
   return (
     <Box>
-      <Heading size="3xl">Create a New Project</Heading>
+      <Heading size="3xl">{t("projects.create_new")}</Heading>
+
       <DynamicForm
         schema={projectCreationSchema}
         fields={projectCreationFields}
         onSubmit={handleSubmit}
-        submitText="Create Project"
+        submitText={t("projects.create")}
         layout="vertical"
         spacing={4}
       />

@@ -1,17 +1,22 @@
 export default function createAuthHeaders() {
-    const raw = localStorage.getItem("auth.user");
-    if (!raw) return {};
+  // Try both keys for safety
+  const rawUser = localStorage.getItem("auth.user");
+  const token = localStorage.getItem("access_token");
 
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  if (rawUser) {
     try {
-        const user = JSON.parse(raw);
-        if (user.token) {
-            return {
-                    Authorization: `Bearer ${user.token}`,
-            };
-        }
+      const user = JSON.parse(rawUser);
+      if (user.token) {
+        return { Authorization: `Bearer ${user.token}` };
+      }
     } catch {
-        // ignore parse errors
+      // ignore parse errors
     }
-    return {};
-   
+  }
+
+  return {};
 }
