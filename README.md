@@ -63,6 +63,14 @@ $ ./qatarina server
 
 More documentation about the project is in [./docs/developer.md](./docs/developer.md)
 
+## Running with Docker
+
+```sh
+$ docker compose up
+
+$ docker exec -t qatarina-qatarina-1 /bin/qatarina  --config /opt/qatarina.yaml user new --name "Admin Admin" --email "admin@example.com" --password "changeme"
+```
+
 ## Contributing
 
 Contributions are welcome! Here's how to get started:

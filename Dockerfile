@@ -33,6 +33,7 @@ COPY --from=go-builder /bin/qatarina /bin/qatarina
 COPY qatarina.example.yaml /opt/qatarina.yaml
 
 VOLUME     ["/opt/", "/data/" ]
-
+EXPOSE 4597
+EXPOSE 80
 ENTRYPOINT [ "/bin/qatarina" ]
 CMD        [ "server", "--config", "/opt/qatarina.yaml" ]
