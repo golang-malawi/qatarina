@@ -29,6 +29,8 @@ type TestPlanService interface {
 	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
 	DeleteComment(ctx context.Context, commentID string) error
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
+
+	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -366,4 +368,30 @@ func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentI
 		return "", err
 	}
 	return id.String(), nil
+}
+
+func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, request *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, testCaseIDStr := range request.TestCaseIDs {
+		testCaseID, err := uuid.Parse(testCaseIDStr)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, uid := range request.UserIDs {
+			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+				TestPlanID:   request.PlanID,
+				TestCaseID:   testCaseID,
+				AssignedToID: uid,
+			}); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &testPlan, nil
 }
