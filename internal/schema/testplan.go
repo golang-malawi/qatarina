@@ -34,6 +34,13 @@ type AssignTestsToPlanRequest struct {
 	PlannedTests []TestCaseAssignment `json:"planned_tests" validate:"required,min=1,max=100"`
 }
 
+type BatchAssignTestCasesToPlanRequest struct {
+    ProjectID   int64    `json:"project_id" validate:"required"`
+    PlanID      int64    `json:"test_plan_id" validate:"required"`
+    TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
+    UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
+}
+
 type TestPlanResponseItem struct {
 	ID              int64                  `json:"id"`
 	ProjectID       int32                  `json:"project_id"`

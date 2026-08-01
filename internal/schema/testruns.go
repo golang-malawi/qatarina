@@ -76,7 +76,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 			IsClosed:       false,
 			TestedOn:       testDate,
 			ActualResult:   entryNormalized,
-			ExpectedResult: fmt.Sprintf("Expected different behavior"),
+			ExpectedResult: "Expected different behavior",
 			State:          dbsqlc.TestRunStateFailed,
 		}
 		testRuns = append(testRuns, item)
