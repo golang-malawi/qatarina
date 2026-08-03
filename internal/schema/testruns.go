@@ -64,6 +64,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 
 	testRuns := make([]CommitTestRunResult, 0)
 	for _, entry := range items {
+		
 
 		entryNormalized := strings.Replace(entry, "-", "", 1)
 		entryNormalized = strings.Replace(entryNormalized, "*", "", 1)
