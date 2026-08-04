@@ -382,11 +382,11 @@ func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, reques
 			return nil, err
 		}
 
-		for _, uid := range request.UserIDs {
+		for _, userID := range request.UserIDs {
 			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
 				TestPlanID:   request.PlanID,
 				TestCaseID:   testCaseID,
-				AssignedToID: uid,
+				AssignedToID: userID,
 			}); err != nil {
 				return nil, err
 			}
