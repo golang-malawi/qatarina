@@ -13,6 +13,7 @@ import {
   WrapItem,
   Separator,
 } from "@chakra-ui/react";
+import { Checkbox } from "@/components/ui/checkbox";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { components } from "@/lib/api/v1";
@@ -39,9 +40,11 @@ export function SheetView({
   projectMap,
   environmentMap,
   onBackToStandard,
-  includeClosed,
+  includeClosed: initialIncludeClosed,
 }: SheetViewProps) {
   const { t } = useTranslation();
+  const [includeClosed, setIncludeClosed] = useState(initialIncludeClosed);
+  const [moduleFilter, setModuleFilter] = useState<string>("");
   const [sheetStatuses, setSheetStatuses] = useState<Record<string, "passed" | "failed">>({});
   const [sheetNotes, setSheetNotes] = useState<Record<string, string>>({});
   const [selectedTestCaseForDetails, setSelectedTestCaseForDetails] =
@@ -85,6 +88,20 @@ export function SheetView({
     () => data?.pages.flatMap((page: any) => page?.test_cases ?? []) ?? [],
     [data]
   );
+
+  // Derive module options from loaded test cases
+  const moduleOptions = useMemo(() => {
+    return Array.from(
+      new Set(testCases.map((tc) => (tc as any)?.feature_or_module).filter(Boolean))
+    ).map((v) => ({ label: v as string, value: v as string }));
+  }, [testCases]);
+
+  // Apply feature/module filter client-side
+  const filteredTestCases = useMemo(() => {
+    return testCases.filter(
+      (tc) => !moduleFilter || (tc as any)?.feature_or_module === moduleFilter
+    );
+  }, [testCases, moduleFilter]);
 
   // Infinite scroll observer
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -183,10 +200,40 @@ export function SheetView({
 
   return (
     <Box display="flex" flexDirection="column" h="full" w="full" p={0} m={0}>
-      <Flex justify="space-between" align="center" mb={1} px={2} pt={1} flexShrink={0}>
-        <Heading size="md" color="fg.heading">
-          {t("test_cases.sheet_view.title", "Test Case Sheet View")}
-        </Heading>
+      {/* Header bar with actions and filters */}
+      <Flex justify="space-between" align="center" mb={2} px={2} pt={1} flexShrink={0} wrap="wrap" gap={2}>
+        <Flex align="center" gap={4}>
+          <Heading size="md" color="fg.heading">
+            {t("test_cases.sheet_view.title", "Test Case Sheet View")}
+          </Heading>
+          
+          <Checkbox
+            checked={includeClosed}
+            onCheckedChange={(e) => setIncludeClosed(e.checked as boolean)}
+          >
+            {t("test_cases.show_closed", "Show closed test cases")}
+          </Checkbox>
+
+          <select
+            value={moduleFilter}
+            onChange={(e) => setModuleFilter(e.target.value)}
+            style={{
+              padding: "4px 8px",
+              borderRadius: "4px",
+              border: "1px solid #cbd5e1",
+              background: "#ffffff",
+              fontSize: "13px",
+            }}
+          >
+            <option value="">{t("common.all", "All")}</option>
+            {moduleOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </Flex>
+
         <Button
           size="xs"
           variant="outline"
@@ -213,9 +260,9 @@ export function SheetView({
           </Table.Header>
 
           <Table.Body>
-            {testCases.length > 0 ? (
-              testCases.map((tc, index) => {
-                const isLast = index === testCases.length - 1;
+            {filteredTestCases.length > 0 ? (
+              filteredTestCases.map((tc, index) => {
+                const isLast = index === filteredTestCases.length - 1;
                 const rowBg = index % 2 === 0 ? "white" : "gray.50";
                 return (
                   <TestCaseRow
