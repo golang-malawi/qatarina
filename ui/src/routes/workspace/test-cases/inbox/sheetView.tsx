@@ -9,7 +9,12 @@ import {
   Text,
   Badge,
   Spinner,
+  Wrap,
+  WrapItem,
+  Separator,
 } from "@chakra-ui/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { components } from "@/lib/api/v1";
 import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -263,7 +268,7 @@ export function SheetView({
           onClick={() => setSelectedTestCaseForDetails(null)}
         >
           <Box
-            w="400px"
+            w="480px"
             bg="white"
             h="full"
             p={6}
@@ -272,9 +277,10 @@ export function SheetView({
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
             display="flex"
             flexDirection="column"
+            gap={4}
           >
-            <Flex justify="space-between" align="center" mb={4}>
-              <Heading size="sm">{t("test_cases.sheet_view.steps_title", "Test Case Steps")}</Heading>
+            <Flex justify="space-between" align="center">
+              <Heading size="sm">{t("test_cases.sheet_view.details_title", "Test Case Details")}</Heading>
               <Button
                 size="xs"
                 variant="ghost"
@@ -284,28 +290,142 @@ export function SheetView({
               </Button>
             </Flex>
 
-            <Box mb={4}>
-              <Text fontWeight="bold" fontSize="xs" color="gray.500">
-                {t("test_cases.column.title", "TITLE").toUpperCase()}
-              </Text>
-              <Text fontWeight="semibold" fontSize="md">
+            {/* Code & Title Header */}
+            <Box>
+              <Flex align="center" gap={2} mb={1}>
+                {selectedTestCaseForDetails.code && (
+                  <Badge variant="outline" colorPalette="gray" size="sm">
+                    {selectedTestCaseForDetails.code}
+                  </Badge>
+                )}
+                {(selectedTestCaseForDetails as any).kind && (
+                  <Badge variant="solid" colorPalette="purple" size="sm">
+                    {(selectedTestCaseForDetails as any).kind}
+                  </Badge>
+                )}
+              </Flex>
+              <Text fontWeight="semibold" fontSize="md" color="gray.800">
                 {selectedTestCaseForDetails.title}
               </Text>
             </Box>
 
+            <Separator />
+
+            {/* Metadata Properties Grid */}
+            <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3}>
+              <Box>
+                <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                  {t("test_cases.column.project", "PROJECT").toUpperCase()}
+                </Text>
+                <Text fontSize="sm" color="gray.700">
+                  {projectMap[selectedTestCaseForDetails.project_id ?? -1] ?? t("common.unknown", "Unknown")}
+                </Text>
+              </Box>
+
+              <Box>
+                <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                  {t("test_cases.column.environment", "ENVIRONMENT").toUpperCase()}
+                </Text>
+                <Text fontSize="sm" color="gray.700">
+                  {selectedTestCaseForDetails.environment_id && environmentMap[selectedTestCaseForDetails.environment_id]
+                    ? environmentMap[selectedTestCaseForDetails.environment_id]
+                    : t("test_cases.sheet_view.not_specified", "Not specified")}
+                </Text>
+              </Box>
+
+              {(selectedTestCaseForDetails as any).status && (
+                <Box>
+                  <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                    {t("test_cases.column.status", "STATUS").toUpperCase()}
+                  </Text>
+                  <Badge variant="subtle" colorPalette="blue" size="xs">
+                    {(selectedTestCaseForDetails as any).status}
+                  </Badge>
+                </Box>
+              )}
+
+              {(selectedTestCaseForDetails as any).priority && (
+                <Box>
+                  <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                    {t("test_cases.column.priority", "PRIORITY").toUpperCase()}
+                  </Text>
+                  <Badge variant="subtle" colorPalette="orange" size="xs">
+                    {(selectedTestCaseForDetails as any).priority}
+                  </Badge>
+                </Box>
+              )}
+            </Box>
+
+            {/* Tags */}
+            {((selectedTestCaseForDetails as any).tags?.length ?? 0) > 0 && (
+              <Box>
+                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                  {t("test_cases.details.tags", "TAGS")}
+                </Text>
+                <Wrap gap={1}>
+                  {(selectedTestCaseForDetails as any).tags.map((tag: string, idx: number) => (
+                    <WrapItem key={idx}>
+                      <Badge variant="subtle" colorPalette="teal" size="xs">
+                        {tag}
+                      </Badge>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+            )}
+
+            <Separator />
+
+            {/* Preconditions with Markdown Support */}
+            {(selectedTestCaseForDetails as any).preconditions && (
+              <Box>
+                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                  {t("test_cases.details.preconditions", "PRECONDITIONS")}
+                </Text>
+                <Box color="gray.700" fontSize="sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {(selectedTestCaseForDetails as any).preconditions}
+                  </ReactMarkdown>
+                </Box>
+              </Box>
+            )}
+
+            {/* Description & Steps with Markdown Support */}
             <Box flex="1">
-              <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={2}>
+              <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
                 {t("test_cases.sheet_view.description_and_steps", "DESCRIPTION & STEPS")}
               </Text>
-              <Text fontSize="sm" whiteSpace="pre-wrap" color="gray.700">
-                {selectedTestCaseForDetails.description || t("test_cases.sheet_view.no_steps", "No detailed steps provided.")}
-              </Text>
+              {selectedTestCaseForDetails.description ? (
+                <Box color="gray.700" fontSize="sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {selectedTestCaseForDetails.description}
+                  </ReactMarkdown>
+                </Box>
+              ) : (
+                <Text fontSize="sm" color="gray.500">
+                  {t("test_cases.sheet_view.no_steps", "No detailed steps provided.")}
+                </Text>
+              )}
             </Box>
+
+            {/* Expected Result with Markdown Support */}
+            {(selectedTestCaseForDetails as any).expected_result && (
+              <Box>
+                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                  {t("test_cases.details.expected_result", "EXPECTED RESULT")}
+                </Text>
+                <Box color="gray.700" fontSize="sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {(selectedTestCaseForDetails as any).expected_result}
+                  </ReactMarkdown>
+                </Box>
+              </Box>
+            )}
 
             <Button
               size="sm"
               variant="outline"
-              mt={4}
+              mt="auto"
               onClick={() => setSelectedTestCaseForDetails(null)}
             >
               {t("test_cases.sheet_view.close", "Close")}
@@ -390,7 +510,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               px={1}
               onClick={onViewDetails}
             >
-              {t("test_cases.sheet_view.view_steps", "View Steps")}
+              {t("test_cases.sheet_view.view_steps", "View Details")}
             </Button>
           </Flex>
         </Table.Cell>
