@@ -1,0 +1,37 @@
+services:
+  qatarina:
+    build: .
+    #image: golang-malawi/qatarina
+    volumes:
+      - "./:/opt/"
+    ports:
+      - "4597:4597"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - qatarina_network
+  db:
+    image: postgres:18-alpine
+    container_name: "qatarina-database"
+    expose:
+    - 5432
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-qatarina}
+      POSTGRES_USER: ${POSTGRES_USER:-qatarina
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    # volumes:
+      # - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qatarina_network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB:-qatarina}", "-U", "${POSTGRES_USER:-qatarina}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: 
+
+networks:
+  qatarina_network:
