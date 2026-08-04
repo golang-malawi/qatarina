@@ -533,7 +533,7 @@ func BatchAssignTestCasesToPlan(testPlanService services.TestPlanService, logger
         _, err := testPlanService.BatchAssignTestCasesToPlan(c.Context(), request)
         if err != nil {
             logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
-            return problemdetail.ServerErrorProblem(c, "failed to process request")
+            return problemdetail.BadRequest(c, "failed to process request")
         }
 
         return c.JSON(fiber.Map{
