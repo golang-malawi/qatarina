@@ -132,6 +132,8 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 
+		testPlansV1.Post("/:testPlanID/test-cases/batch", apiv1.BatchAssignTestCasesToPlan(api.TestPlansService, api.logger))
+		
 		commentsV1 := testPlansV1.Group("/:testPlanID/comments")
 		{
 			commentsV1.Get("", apiv1.ListTestPlanComments(api.TestPlansService, api.logger))

@@ -29,6 +29,8 @@ type TestPlanService interface {
 	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
 	DeleteComment(ctx context.Context, commentID string) error
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
+
+	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -98,10 +100,7 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 
 	var enriched []schema.TestPlanResponseItem
 	for _, plan := range plans {
-		// Count assigned test cases
 		cases, _ := t.queries.ListTestCasesByPlan(ctx, plan.ID)
-
-		// Get run stats
 		runStats, _ := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(plan.ID), Valid: true})
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
@@ -154,26 +153,55 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 	return t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 }
 
-// AddTestCaseToPlan implements TestPlanService.
-func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
-	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
+type testCaseAssignment struct {
+	TestCaseID   uuid.UUID
+	AssignedToID int64
+}
+
+func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, assignments []testCaseAssignment) (*dbsqlc.GetTestPlanRow, error) {
+	testPlan, err := t.queries.GetTestPlan(ctx, planID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, assignedTestCase := range request.PlannedTests {
-		for _, uid := range assignedTestCase.UserIDs {
-			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-				TestPlanID:   request.PlanID,
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				AssignedToID: uid,
-			}); err != nil {
-				return nil, err
-			}
+	for _, a := range assignments {
+		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+			TestPlanID:   planID,
+			TestCaseID:   a.TestCaseID,
+			AssignedToID: a.AssignedToID,
+		}); err != nil {
+			return nil, err
 		}
 	}
 
 	return &testPlan, nil
+}
+
+// AddTestCaseToPlan implements TestPlanService.
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+	var assignments []testCaseAssignment
+	for _, pt := range request.PlannedTests {
+		tcID := uuid.MustParse(pt.TestCaseID)
+		for _, uid := range pt.UserIDs {
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+		}
+	}
+	return t.assignTestCases(ctx, request.PlanID, assignments)
+}
+
+// BatchAssignTestCasesToPlan implements TestPlanService.
+func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, request *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+	var assignments []testCaseAssignment
+	for _, tcIDStr := range request.TestCaseIDs {
+		tcID, err := uuid.Parse(tcIDStr)
+		if err != nil {
+			return nil, err
+		}
+		for _, uid := range request.UserIDs {
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+		}
+	}
+	return t.assignTestCases(ctx, request.PlanID, assignments)
 }
 
 func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
@@ -193,13 +221,11 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
 
-	// Get assigned cases
 	cases, err := t.queries.ListTestCasesByPlan(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test cases for plan %d: %w", id, err)
 	}
 
-	// Get run statistics
 	runStats, err := t.queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(id), Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test run statistics for plan %d: %w", id, err)
@@ -231,7 +257,6 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
-	// Build response test cases with multiple assigned testers
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
