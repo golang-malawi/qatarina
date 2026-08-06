@@ -391,34 +391,4 @@ func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentI
 		return "", err
 	}
 	return id.String(), nil
-<<<<<<< HEAD
 }
-=======
-}
-
-func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, request *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
-	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, testCaseIDStr := range request.TestCaseIDs {
-		testCaseID, err := uuid.Parse(testCaseIDStr)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, uid := range request.UserIDs {
-			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-				TestPlanID:   request.PlanID,
-				TestCaseID:   testCaseID,
-				AssignedToID: uid,
-			}); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return &testPlan, nil
-}
->>>>>>> d6d74f0 (created a service for batch assignment of the test cases to a testplan)
