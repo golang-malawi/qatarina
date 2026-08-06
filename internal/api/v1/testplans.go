@@ -457,11 +457,32 @@ func CreateTestPlanComment(testPlanService services.TestPlanService, logger logg
 			}
 			return problemdetail.BadRequest(c, "failed to parse request")
 		}
+
+		// Extract testPlanID from route parameters if not populated in body
+		if req.TestPlanID == 0 {
+			testPlanID, err := c.ParamsInt("testPlanID")
+			if err != nil {
+				return problemdetail.BadRequest(c, "invalid test plan ID")
+			}
+			req.TestPlanID = int64(testPlanID)
+		}
+
+		// Verify that the test plan exists before proceeding
+		_, err := testPlanService.GetOneTestPlan(c.Context(), req.TestPlanID)
+		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "test plan not found")
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to fetch test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to verify test plan existence")
+		}
+
 		comment, err := testPlanService.CreateComment(c.Context(), req)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to create comment", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to create comment")
 		}
+
 		return c.JSON(comment)
 	}
 }
