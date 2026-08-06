@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/context/AuthContext"; 
+import { useAuth } from "@/context/AuthContext";
 import {
   useTestPlanCommentsQuery,
   useCreateCommentMutation,
@@ -42,12 +42,12 @@ function TestPlanComments() {
         },
       });
       setNewComment("");
-      toaster.success({ title: t("comments.addSuccess", "Comment added") });
+      toaster.success({ title: t("test_plans.comments.add_success", "Comment added") });
       await refetch();
     } catch (err: any) {
       toaster.error({
-        title: t("comments.addError", "Failed to add comment"),
-        description: err?.message || t("common.unexpectedError", "An unexpected error occurred"),
+        title: t("test_plans.comments.add_error", "Failed to add comment"),
+        description: err?.message || t("test_plans.comments.unexpected_error", "An unexpected error occurred"),
       });
     }
   };
@@ -57,11 +57,11 @@ function TestPlanComments() {
       await deleteMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId, commentID: String(commentId) } },
       });
-      toaster.success({ title: t("comments.deleteSuccess", "Comment deleted") });
+      toaster.success({ title: t("test_plans.comments.delete_success", "Comment deleted") });
       await refetch();
     } catch (err: any) {
       toaster.error({
-        title: t("comments.deleteError", "Failed to delete comment"),
+        title: t("test_plans.comments.delete_error", "Failed to delete comment"),
         description: err?.message,
       });
     }
@@ -84,10 +84,10 @@ function TestPlanComments() {
           <Input
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder={t("comments.placeholder", "Write a comment...")}
+            placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
           />
           <Button onClick={handleAdd} colorPalette="brand">
-            {t("common.add", "Add")}
+            {t("test_plans.comments.add", "Add")}
           </Button>
         </Flex>
 
@@ -111,7 +111,7 @@ function TestPlanComments() {
                 colorPalette="red"
                 onClick={() => c.id && handleDelete(c.id)}
               >
-                {t("common.delete", "Delete")}
+                {t("test_plans.comments.delete", "Delete")}
               </Button>
               <Button
                 size="sm"
@@ -119,7 +119,7 @@ function TestPlanComments() {
                 colorPalette="brand"
                 onClick={() => c.content && handleConvert(c.content)}
               >
-                {t("comments.convertToTestCase", "Convert to Test Case")}
+                {t("test_plans.comments.convert", "Convert to Test Case")}
               </Button>
             </Flex>
           </Box>
