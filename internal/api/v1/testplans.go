@@ -513,31 +513,30 @@ func ConvertCommentToTestCase(testPlanService services.TestPlanService, logger l
 	}
 }
 
-
 func BatchAssignTestCasesToPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        request := new(schema.BatchAssignTestCasesToPlanRequest)
-        if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
-            if validationErrors {
-                return problemdetail.ValidationErrors(c, "invalid data in request", err)
-            }
-            logger.Error(loggedmodule.ApiTestPlans, "failed to parse request data", "error", err)
-            return problemdetail.BadRequest(c, "failed to parse data in request")
-        }
+	return func(c *fiber.Ctx) error {
+		request := new(schema.BatchAssignTestCasesToPlanRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to parse request data", "error", err)
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
 
-        planID, _ := common.ParseIDFromCtx(c, "testPlanID")
-        if request.PlanID != planID {
-            return problemdetail.BadRequest(c, "plan_id in request body and param do not match")
-        }
+		planID, _ := common.ParseIDFromCtx(c, "testPlanID")
+		if request.PlanID != planID {
+			return problemdetail.BadRequest(c, "plan_id in request body and param do not match")
+		}
 
-        _, err := testPlanService.BatchAssignTestCasesToPlan(c.Context(), request)
-        if err != nil {
-            logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
-            return problemdetail.BadRequest(c, "failed to process request")
-        }
+		_, err := testPlanService.BatchAssignTestCasesToPlan(c.Context(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
 
-        return c.JSON(fiber.Map{
-            "message": "Test cases created and assigned",
-        })
-    }
+		return c.JSON(fiber.Map{
+			"message": "Test cases created and assigned",
+		})
+	}
 }
