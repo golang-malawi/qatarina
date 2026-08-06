@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "@/context/AuthContext"; 
 import {
   useTestPlanCommentsQuery,
   useCreateCommentMutation,
@@ -16,12 +18,13 @@ export const Route = createFileRoute(
 });
 
 function TestPlanComments() {
-  const { projectId, testPlanID } = Route.useParams();
-  
-  // Ensure your query handles testPlanID correctly (parsed as number if required by your API types)
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { testPlanID } = Route.useParams();
+
   const numericTestPlanId = Number(testPlanID);
   const { data, refetch } = useTestPlanCommentsQuery(numericTestPlanId);
-  
+
   const createMutation = useCreateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
   const convertMutation = useConvertCommentMutation();
@@ -29,19 +32,19 @@ function TestPlanComments() {
   const [newComment, setNewComment] = useState("");
 
   const handleAdd = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user?.id) return;
     try {
       await createMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId } },
-        body: { user_id: 1, content: newComment }, // TODO: replace with actual logged-in user ID if available
+        body: { user_id: user.id, content: newComment },
       });
       setNewComment("");
-      toaster.success({ title: "Comment added" });
+      toaster.success({ title: t("comments.addSuccess", "Comment added") });
       await refetch();
     } catch (err: any) {
-      toaster.error({ 
-        title: "Failed to add comment", 
-        description: err?.message || "An unexpected error occurred" 
+      toaster.error({
+        title: t("comments.addError", "Failed to add comment"),
+        description: err?.message || t("common.unexpectedError", "An unexpected error occurred"),
       });
     }
   };
@@ -51,12 +54,12 @@ function TestPlanComments() {
       await deleteMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId, commentID: commentId } },
       });
-      toaster.success({ title: "Comment deleted" });
+      toaster.success({ title: t("comments.deleteSuccess", "Comment deleted") });
       await refetch();
     } catch (err: any) {
-      toaster.error({ 
-        title: "Failed to delete comment", 
-        description: err?.message 
+      toaster.error({
+        title: t("comments.deleteError", "Failed to delete comment"),
+        description: err?.message,
       });
     }
   };
@@ -66,12 +69,14 @@ function TestPlanComments() {
       await convertMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId, commentID: commentId } },
       });
-      toaster.success({ title: "Converted to test case successfully" });
+      toaster.success({
+        title: t("comments.convertSuccess", "Converted to test case successfully"),
+      });
       await refetch();
     } catch (err: any) {
-      toaster.error({ 
-        title: "Failed to convert comment", 
-        description: err?.message 
+      toaster.error({
+        title: t("comments.convertError", "Failed to convert comment"),
+        description: err?.message,
       });
     }
   };
@@ -83,10 +88,10 @@ function TestPlanComments() {
           <Input
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
+            placeholder={t("comments.placeholder", "Write a comment...")}
           />
           <Button onClick={handleAdd} colorPalette="brand">
-            Add
+            {t("common.add", "Add")}
           </Button>
         </Flex>
 
@@ -99,7 +104,9 @@ function TestPlanComments() {
             borderRadius="md"
             bg="bg.surface"
           >
-            <Text fontWeight="bold" mb={1}>{c.user_name}</Text>
+            <Text fontWeight="bold" mb={1}>
+              {c.user_name}
+            </Text>
             <Text mb={3}>{c.content}</Text>
             <Flex gap={2}>
               <Button
@@ -108,7 +115,7 @@ function TestPlanComments() {
                 colorPalette="red"
                 onClick={() => handleDelete(c.id)}
               >
-                Delete
+                {t("common.delete", "Delete")}
               </Button>
               <Button
                 size="sm"
@@ -116,7 +123,7 @@ function TestPlanComments() {
                 colorPalette="brand"
                 onClick={() => handleConvert(c.id)}
               >
-                Convert to Test Case
+                {t("comments.convertToTestCase", "Convert to Test Case")}
               </Button>
             </Flex>
           </Box>
