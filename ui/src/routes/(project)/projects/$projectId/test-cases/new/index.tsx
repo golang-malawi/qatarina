@@ -1,6 +1,5 @@
 import { Alert, Box, Heading, Spinner, Text } from "@chakra-ui/react";
-import { useNavigate } from "@tanstack/react-router";
-import { createFileRoute } from "@tanstack/react-router";
+import { useNavigate, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
@@ -14,14 +13,24 @@ import {
 } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 
+type NewTestCaseSearch = {
+  title?: string;
+};
+
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/new/",
 )({
+  validateSearch: (search: Record<string, unknown>): NewTestCaseSearch => {
+    return {
+      title: (search.title as string) || "",
+    };
+  },
   component: NewTestCases,
 });
 
 function NewTestCases() {
   const params = Route.useParams();
+  const search = Route.useSearch();
   const redirect = useNavigate();
   const project_id = params.projectId;
   const createTestCaseMutation = useCreateTestCaseMutation();
@@ -44,7 +53,6 @@ function NewTestCases() {
     try {
       const result = await validateTestCaseScript(file, runner);
       setScriptValidationStatus("success");
-      // Show the runner that was used in the success message from backend
       const message = result.output || `Script validated successfully using ${runner}.`;
       setScriptValidationMessage(message);
     } catch (error) {
@@ -91,7 +99,6 @@ function NewTestCases() {
             ...field,
             type: "custom",
             customComponent: ({ onChange, formValues: fv }: { onChange: (file: File | null) => void; formValues?: Record<string, any> }) => {
-              // Keep ref in sync with current form values
               if (fv) {
                 formValuesRef.current = fv;
               }
@@ -118,29 +125,29 @@ function NewTestCases() {
                       </Alert.Root>
                     )}
 
-                  {scriptValidationStatus === "success" && (
-                    <Alert.Root status="success" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description wordBreak="break-word">
-                          {scriptValidationMessage || "Script validated successfully."}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
+                    {scriptValidationStatus === "success" && (
+                      <Alert.Root status="success" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word">
+                            {scriptValidationMessage || "Script validated successfully."}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
 
-                  {scriptValidationStatus === "failed" && (
-                    <Alert.Root status="error" borderRadius="md">
-                      <Alert.Indicator />
-                      <Alert.Content>
-                        <Alert.Description wordBreak="break-word" maxWidth="100%">
-                          {scriptValidationMessage}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert.Root>
-                  )}
+                    {scriptValidationStatus === "failed" && (
+                      <Alert.Root status="error" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word" maxWidth="100%">
+                            {scriptValidationMessage}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
+                  </Box>
                 </Box>
-              </Box>
               );
             },
           };
@@ -181,10 +188,9 @@ function NewTestCases() {
       return;
     }
 
-    let body:any;
+    let body: any;
 
     if (values.script_file) {
-      // File present - use FormData
       const formData = new FormData();
       formData.append("project_id", project_id.toString());
       formData.append("kind", values.kind);
@@ -195,12 +201,10 @@ function NewTestCases() {
       formData.append("is_draft", (values.is_draft ?? false).toString());
       tags.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file);
-
       formData.append("runner", values.runner);
 
       body = formData;
     } else {
-      // No file - send JSON
       body = {
         project_id: Number(project_id),
         kind: values.kind,
@@ -265,7 +269,7 @@ function NewTestCases() {
         layout="vertical"
         spacing={4}
         defaultValues={{
-          title: "",
+          title: search.title || "",
           code: "",
           feature_or_module: "",
           kind: "",

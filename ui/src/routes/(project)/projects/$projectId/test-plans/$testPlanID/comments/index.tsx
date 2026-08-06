@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,7 +7,6 @@ import {
   useTestPlanCommentsQuery,
   useCreateCommentMutation,
   useDeleteCommentMutation,
-  useConvertCommentMutation,
 } from "@/services/TestPlanService";
 import { toaster } from "@/components/ui/toaster";
 
@@ -20,23 +19,27 @@ export const Route = createFileRoute(
 function TestPlanComments() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { testPlanID } = Route.useParams();
+  const navigate = useNavigate();
+  const { projectId, testPlanID } = Route.useParams();
 
   const numericTestPlanId = Number(testPlanID);
-  const { data, refetch } = useTestPlanCommentsQuery(numericTestPlanId);
+  const { data, refetch } = useTestPlanCommentsQuery(testPlanID);
 
   const createMutation = useCreateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
-  const convertMutation = useConvertCommentMutation();
 
   const [newComment, setNewComment] = useState("");
 
   const handleAdd = async () => {
-    if (!newComment.trim() || !user?.id) return;
+    if (!newComment.trim() || !user?.user_id) return;
     try {
       await createMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId } },
-        body: { user_id: user.id, content: newComment },
+        body: {
+          user_id: user.user_id,
+          test_plan_id: numericTestPlanId,
+          content: newComment,
+        },
       });
       setNewComment("");
       toaster.success({ title: t("comments.addSuccess", "Comment added") });
@@ -49,10 +52,10 @@ function TestPlanComments() {
     }
   };
 
-  const handleDelete = async (commentId: number) => {
+  const handleDelete = async (commentId: number | string) => {
     try {
       await deleteMutation.mutateAsync({
-        params: { path: { testPlanID: numericTestPlanId, commentID: commentId } },
+        params: { path: { testPlanID: numericTestPlanId, commentID: String(commentId) } },
       });
       toaster.success({ title: t("comments.deleteSuccess", "Comment deleted") });
       await refetch();
@@ -64,21 +67,14 @@ function TestPlanComments() {
     }
   };
 
-  const handleConvert = async (commentId: number) => {
-    try {
-      await convertMutation.mutateAsync({
-        params: { path: { testPlanID: numericTestPlanId, commentID: commentId } },
-      });
-      toaster.success({
-        title: t("comments.convertSuccess", "Converted to test case successfully"),
-      });
-      await refetch();
-    } catch (err: any) {
-      toaster.error({
-        title: t("comments.convertError", "Failed to convert comment"),
-        description: err?.message,
-      });
-    }
+  const handleConvert = (content: string) => {
+    navigate({
+      to: "/projects/$projectId/test-cases/new",
+      params: { projectId },
+      search: {
+        title: content,
+      },
+    });
   };
 
   return (
@@ -113,7 +109,7 @@ function TestPlanComments() {
                 size="sm"
                 variant="outline"
                 colorPalette="red"
-                onClick={() => handleDelete(c.id)}
+                onClick={() => c.id && handleDelete(c.id)}
               >
                 {t("common.delete", "Delete")}
               </Button>
@@ -121,7 +117,7 @@ function TestPlanComments() {
                 size="sm"
                 variant="outline"
                 colorPalette="brand"
-                onClick={() => handleConvert(c.id)}
+                onClick={() => c.content && handleConvert(c.content)}
               >
                 {t("comments.convertToTestCase", "Convert to Test Case")}
               </Button>
