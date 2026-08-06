@@ -63,3 +63,7 @@ export async function addProjectTemplate(
     body: data,
   });
 }
+
+export function useUpdateAutomatedTestingMutation() {
+  return $api.useMutation("post", "/v1/projects/{projectID}/automated-testing");
+}

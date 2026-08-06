@@ -70,6 +70,7 @@ func (api *API) routes() {
 		projectsV1.Post("/:projectID/unarchive", apiv1.UnarchiveProject(api.ProjectsService, api.logger))
 		projectsV1.Get("/:projectID/test-case-template", apiv1.GetProjectTestCaseTemplate(api.ProjectsService, api.logger))
 		projectsV1.Post("/:projectID/test-case-template", apiv1.AddProjectTestCaseTemplate(api.ProjectsService, api.logger))
+		projectsV1.Post("/:projectID/automated-testing", apiv1.UpdateAutomatedTesting(api.ProjectsService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
@@ -100,7 +101,7 @@ func (api *API) routes() {
 	testCasesV1 := router.Group("/v1/test-cases", authenticationMiddleware)
 	{
 		testCasesV1.Get("", apiv1.ListTestCases(api.TestCasesService, api.logger))
-		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.logger, api.Config))
+		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
 		testCasesV1.Post("/validate-script", apiv1.ValidateTestCaseScript(api.logger, api.Config))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
@@ -108,7 +109,7 @@ func (api *API) routes() {
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
 		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Get("/:testCaseID", apiv1.GetOneTestCase(api.TestCasesService))
-		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.logger, api.Config))
+		testCasesV1.Post("/:testCaseID", apiv1.UpdateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
 		testCasesV1.Delete("/:testCaseID", apiv1.DeleteTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/mark-draft", apiv1.MarkTestCaseAsDraft(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/unmark-draft", apiv1.UnMarkTestCaseAsDraft(api.TestCasesService, api.logger))
