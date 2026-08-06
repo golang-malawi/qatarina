@@ -4,11 +4,11 @@ import {
   TestCaseListQueryParams,
 } from "@/data/queries/test-cases";
 import { Button, Flex, Heading, HStack } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   markTestCaseAsDraft,
-  deleteTestCase,
+  unMarkTestCaseAsDraft, 
 } from "@/services/TestCaseService";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
@@ -21,34 +21,12 @@ export const Route = createFileRoute("/workspace/test-cases/")({
 });
 
 type TestCase = components["schemas"]["schema.TestCaseResponse"];
-
 type TestCaseListResponse =
   components["schemas"]["schema.TestCaseListResponse"];
 
 function TestCasePage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-
-  const markDraftMutation = useMutation({
-    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
-    onSuccess: () => {
-      toaster.create({
-        title: t("test_cases.toast.success"),
-        description: t("test_cases.mark_draft.success"),
-        type: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/test-cases"],
-      });
-    },
-    onError: () => {
-      toaster.create({
-        title: t("test_cases.toast.error"),
-        description: t("test_cases.mark_draft.error"),
-        type: "error",
-      });
-    },
-  });
 
   const queryFactory = React.useCallback(
     ({
@@ -87,7 +65,7 @@ function TestCasePage() {
           </Link>
           <Button colorPalette="success">
             {t("test_cases.import_from_excel")}
-          </Button>{" "}
+          </Button>
         </HStack>
       </Flex>
 
@@ -146,32 +124,29 @@ function TestCasePage() {
           { name: "view", label: t("test_cases.view"), icon: LuEye },
           { name: "edit", label: t("test_cases.edit"), icon: LuPencil },
           {
-            name: "mark-draft",
-            label: t("test_cases.mark_as_draft"),
-            onClick: (row) =>
-              row.id && markDraftMutation.mutate(String(row.id)),
-          },
-          {
-            name: "delete",
-            label: t("test_cases.delete"),
-            color: "fg.error",
-            onClick: (row) => {
-              if (row.id) {
-                deleteTestCase(String(row.id))
-                  .then(() => {
-                    toaster.success({
-                      title: t("test_cases.delete.success"),
-                    });
-                    queryClient.invalidateQueries(
-                      findTestCaseAllQueryOptions({}),
-                    );
-                  })
-                  .catch((err) => {
-                    toaster.error({
-                      title: t("test_cases.delete.error"),
-                      description: err?.message,
-                    });
-                  });
+            name: "toggle-draft",
+            label: (row) =>
+              row.is_draft
+                ? t("test_cases.unMark_as_draft")
+                : t("test_cases.mark_as_draft"),
+            onClick: async (row) => {
+              if (!row.id) return;
+              try {
+                if (row.is_draft) {
+                  await unMarkTestCaseAsDraft(String(row.id));
+                  toaster.success({ title: t("test_cases.unMark_draft.success") });
+                } else {
+                  await markTestCaseAsDraft(String(row.id));
+                  toaster.success({ title: t("test_cases.mark_draft.success") });
+                }
+                queryClient.invalidateQueries(findTestCaseAllQueryOptions({}));
+              } catch (err: any) {
+                toaster.error({
+                  title: row.is_draft
+                    ? t("test_cases.unmark_draft.error")
+                    : t("test_cases.mark_draft.error"),
+                  description: err?.message,
+                });
               }
             },
           },
