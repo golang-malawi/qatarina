@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
   Box,
@@ -11,32 +11,39 @@ import {
   Flex,
   Alert,
   Stack,
-  Spinner, 
+  Spinner,
   Code,
+  Badge,
 } from "@chakra-ui/react";
-import { AppDialog } from "@/components/ui/app-dialog";
-
-import { useTestCaseQuery } from "@/services/TestCaseService";
-import { useProjectTestPlansQuery } from "@/services/TestPlanService";
-import { assignTestersToTestPlan } from "@/services/TestPlanService";
-import { useTestersQuery } from "@/services/TesterService";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+
+import { AppDialog } from "@/components/ui/app-dialog";
+import { useTestCaseQuery, branchTestCase } from "@/services/TestCaseService";
+import {
+  useProjectTestPlansQuery,
+  assignTestersToTestPlan,
+} from "@/services/TestPlanService";
+import { useTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
 )({
   component: ViewTestCase,
-  validateSearch: (search: {tab?: string}) => search,
+  validateSearch: (search: { tab?: string }) => search,
 });
 
 function ViewTestCase() {
   const { projectId, testCaseId } = Route.useParams();
   const search = Route.useSearch();
-  const defaultTab = search.tab === "usage" ? "usage" : "description";
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const { data, isLoading, error } = useTestCaseQuery(testCaseId);
+  const activeTab = search.tab ?? "description";
+
+  const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useTestersQuery();
 
@@ -45,9 +52,7 @@ function ViewTestCase() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
 
-  const navigate = useNavigate();
-
-  /** Optimistic UI state */
+  /** Optimistic UI state for tester assignment */
   const [optimisticAssignment, setOptimisticAssignment] = useState<{
     test_plan_id: string | null;
     testers: string[];
@@ -60,21 +65,33 @@ function ViewTestCase() {
       </Flex>
     );
   }
-  if (error) return <Text color="fg.error">Error loading test case</Text>;
 
-  const testCase = data;
-  if (!testCase) return <Text color="fg.muted">No data found</Text>;
+  if (error) {
+    return <Text color="fg.error">Error loading test case</Text>;
+  }
+
+  if (!testCase) {
+    return <Text color="fg.muted">No data found</Text>;
+  }
 
   /** ---------- DERIVED ---------- */
   const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
-
   const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
+
+  const handleTabChange = (details: { value: string }) => {
+    navigate({
+      to: "/projects/$projectId/test-cases/$testCaseId",
+      params: { projectId, testCaseId },
+      search: { tab: details.value },
+      replace: true,
+    });
+  };
 
   return (
     <Box
       p={6}
       bg="bg.surface"
-      border="sm"
+      border="1px solid"
       borderColor="border.subtle"
       borderRadius="xl"
       shadow="card"
@@ -83,128 +100,176 @@ function ViewTestCase() {
       gap={6}
     >
       {/* Header */}
-      <Stack gap={1}>
-        <Heading size="lg" color="fg.heading">
-          {testCase.title}
-        </Heading>
-        <Text fontSize="sm" color="fg.subtle">
-          Code: {testCase.code} • Feature: {testCase.feature_or_module}
-        </Text>
-        <Text fontSize="sm" color="fg.subtle">
-          Project ID: {projectId}
-        </Text>
+      <Stack gap={2}>
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={4}>
+          <Box>
+            <Heading size="lg" color="fg.heading">
+              {testCase.title}
+            </Heading>
+            <Text fontSize="sm" color="fg.subtle" mt={1}>
+              Code: <strong>{testCase.code}</strong> • Feature:{" "}
+              <strong>{testCase.feature_or_module}</strong>
+            </Text>
+            <Text fontSize="sm" color="fg.subtle">
+              Project ID: {projectId}
+            </Text>
+          </Box>
+
+          {/* Action Buttons */}
+          <Flex gap={2}>
+            <Button
+              size="sm"
+              colorPalette="brand"
+              onClick={async () => {
+                try {
+                  const branched = await branchTestCase(testCaseId);
+                  const newId = branched?.data?.id;
+
+                  if (!newId) {
+                    throw new Error(
+                      "Branching did not return a new test case ID",
+                    );
+                  }
+
+                  toaster.success({
+                    title: t("test_cases.branch.success"),
+                    description: t("test_cases.branch.success_description"),
+                  });
+
+                  navigate({
+                    to: "/projects/$projectId/test-cases/$testCaseId/edit",
+                    params: { projectId, testCaseId: newId },
+                    search: { isBranched: true },
+                  });
+                } catch (err: any) {
+                  toaster.error({
+                    title: t("test_cases.branch.error"),
+                    description:
+                      err?.message || "Could not branch test case.",
+                  });
+                }
+              }}
+            >
+              {t("test_cases.branch", "Branch")}
+            </Button>
+          </Flex>
+        </Flex>
       </Stack>
 
-      <Tabs.Root defaultValue={defaultTab}>
+      {/* Tabs */}
+      <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
-          {/* <Tabs.Trigger value="metadata">Metadata</Tabs.Trigger>
-          <Tabs.Trigger value="tags">Tags</Tabs.Trigger>
-          <Tabs.Trigger value="documents">Documents</Tabs.Trigger> */}
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
         </Tabs.List>
 
-        {/* DESCRIPTION */}
+        {/* DESCRIPTION TAB */}
         <Tabs.Content value="description">
-          <Box
-            p={4}
-            bg="bg.subtle"
-            rounded="lg"
-            border="sm"
-            borderColor="border.subtle"
-          >
-            {/* Description */}
-            {testCase.description ? (
-              <ReactMarkdown
-                components={{
-                  h1: (props) => <Heading size="lg" mb={2} {...props} />,
-                  h2: (props) => <Heading size="md" mb={2} {...props} />,
-                  h3: (props) => <Heading size="sm" mb={2} {...props} />,
-                  p: (props) => <Text mb={2} {...props} />,
-                  code: (props) => <Code colorScheme="yellow" {...props} />,
-                  ul: (props) => (
-                    <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
-                  ),
-                  ol: (props) => (
-                    <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
-                  ),
-                  li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-                  blockquote: (props) => (
-                    <blockquote
-                      style={{
-                        paddingLeft: "1rem",
-                        borderLeft: "4px solid #CBD5E0",
-                        color: "#4A5568",
-                        fontStyle: "italic",
-                        margin: "0.5rem 0",
-                      }}
-                      {...props}
-                    />
-                  ),
-                  a: (props) => (
-                    <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
-                  ),
-                }}
-              >
-                {testCase.description}
-              </ReactMarkdown>
-            ) : (
-              <Text color="fg.subtle">No description provided.</Text>
-            )}    
+          <Stack gap={4} mt={4}>
+            <Box
+              p={4}
+              bg="bg.subtle"
+              rounded="lg"
+              border="1px solid"
+              borderColor="border.subtle"
+            >
+              {testCase.description ? (
+                <ReactMarkdown
+                  components={{
+                    h1: (props) => <Heading size="lg" mb={2} {...props} />,
+                    h2: (props) => <Heading size="md" mb={2} {...props} />,
+                    h3: (props) => <Heading size="sm" mb={2} {...props} />,
+                    p: (props) => <Text mb={2} {...props} />,
+                    code: (props) => <Code colorPalette="yellow" {...props} />,
+                    ul: (props) => (
+                      <ul
+                        style={{ paddingLeft: "1.25rem", listStyleType: "disc" }}
+                        {...props}
+                      />
+                    ),
+                    ol: (props) => (
+                      <ol
+                        style={{
+                          paddingLeft: "1.25rem",
+                          listStyleType: "decimal",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    li: (props) => (
+                      <li style={{ marginBottom: "0.25rem" }} {...props} />
+                    ),
+                    blockquote: (props) => (
+                      <blockquote
+                        style={{
+                          paddingLeft: "1rem",
+                          borderLeft: "4px solid var(--chakra-colors-border-emphasized)",
+                          color: "var(--chakra-colors-fg-muted)",
+                          fontStyle: "italic",
+                          margin: "0.5rem 0",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    a: (props) => (
+                      <a
+                        style={{
+                          color: "var(--chakra-colors-brand-solid)",
+                          textDecoration: "underline",
+                        }}
+                        {...props}
+                      />
+                    ),
+                  }}
+                >
+                  {testCase.description}
+                </ReactMarkdown>
+              ) : (
+                <Text color="fg.subtle">No description provided.</Text>
+              )}
+            </Box>
 
             {/* Tags */}
-            <Box mb={3}>
+            <Box>
               {testCase.tags?.length ? (
                 <Flex gap={2} wrap="wrap">
                   {testCase.tags.map((tag: string) => (
-                    <Box
-                      key={tag}
-                      px={3}
-                      py={1}
-                      bg="brand.subtle"
-                      color="brand.fg"
-                      fontSize="xs"
-                      fontWeight="medium"
-                      rounded="full"
-                    >
+                    <Badge key={tag} colorPalette="brand" variant="subtle">
                       {tag}
-                    </Box>
+                    </Badge>
                   ))}
                 </Flex>
               ) : (
                 <Text fontSize="sm" color="fg.subtle">
-                  No tags
+                  No tags attached.
                 </Text>
               )}
             </Box>
 
             {/* Metadata */}
             <Box
-              p={3}
+              p={4}
               bg="bg.surface"
               rounded="md"
-              border="sm"
+              border="1px solid"
               borderColor="border.subtle"
               shadow="sm"
             >
-              <Stack gap={2} fontSize="sm" color="fg.muted">
+              <Stack gap={2.5} fontSize="sm" color="fg.muted">
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Type:</Text>
-                  <Text>{testCase.kind}</Text>
+                  <Text>{testCase.kind ?? "Manual"}</Text>
                 </Flex>
-
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Created By:</Text>
-                  <Text>User ID {testCase.created_by}</Text>
+                  <Text>User ID {testCase.created_by ?? "N/A"}</Text>
                 </Flex>
-
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Status:</Text>
-                  <Text color={testCase.is_draft ? "fg.warning" : "fg.success"}>
+                  <Badge colorPalette={testCase.is_draft ? "yellow" : "green"}>
                     {testCase.is_draft ? "Draft" : "Published"}
-                  </Text>
+                  </Badge>
                 </Flex>
-
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Created At:</Text>
                   <Text>
@@ -213,7 +278,6 @@ function ViewTestCase() {
                       : "N/A"}
                   </Text>
                 </Flex>
-
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Updated At:</Text>
                   <Text>
@@ -222,22 +286,37 @@ function ViewTestCase() {
                       : "N/A"}
                   </Text>
                 </Flex>
+                {testCase.parent_test_case_id && (
+                  <Flex justify="space-between">
+                    <Text fontWeight="semibold">Branched From:</Text>
+                    <Link
+                      to="/projects/$projectId/test-cases/$testCaseId"
+                      params={{
+                        projectId,
+                        testCaseId: testCase.parent_test_case_id,
+                      }}
+                      style={{
+                        color: "var(--chakra-colors-brand-solid)",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {testCase.parent_code ?? testCase.parent_test_case_id} —{" "}
+                      {testCase.parent_title ?? "Parent Test Case"}
+                    </Link>
+                  </Flex>
+                )}
               </Stack>
             </Box>
-          </Box>
+          </Stack>
         </Tabs.Content>
 
-        {/* DOCUMENTS */}
-        <Tabs.Content value="documents">
-          <Text color="fg.muted">No documents uploaded yet.</Text>
-        </Tabs.Content>
-
-        {/* ===================== USAGE & ASSIGNMENT ===================== */}
+       {/* USAGE & ASSIGNMENT TAB */}
         <Tabs.Content value="usage">
           <Stack mt={4} gap={4}>
             <Heading size="sm" color="fg.heading">
               Assign to Test Plan
             </Heading>
+
             <Alert.Root status="info">
               <Alert.Indicator />
               <Alert.Content>
@@ -247,12 +326,11 @@ function ViewTestCase() {
               </Alert.Content>
             </Alert.Root>
 
-            {/* TEST PLANS */}
+            {/* Test Plans Checkbox Group */}
             {testPlansQuery.data?.test_plans?.length ? (
               <CheckboxGroup
                 value={effectivePlanId ? [effectivePlanId] : []}
                 onValueChange={(value) => {
-                  // 🚫 HARD VALIDATION — only one allowed
                   if (value.length > 1) return;
                   setSelectedPlanId(value[0] ?? null);
                 }}
@@ -261,7 +339,6 @@ function ViewTestCase() {
                   <Fieldset.Legend fontSize="sm">
                     Available test plans
                   </Fieldset.Legend>
-
                   <Fieldset.Content>
                     {testPlansQuery.data.test_plans.map((plan: any) => (
                       <Checkbox.Root
@@ -287,40 +364,40 @@ function ViewTestCase() {
             )}
 
             {/* ASSIGN CTA */}
-            <Button
-              mt={4}
-              size="sm"
-              colorPalette="brand"
-              disabled={!effectivePlanId}
-              onClick={() => setAssignOpen(true)}
-            >
-              Assign testers
-            </Button>
+            <Box>
+              <Button
+                mt={2}
+                size="sm"
+                colorPalette="brand"
+                disabled={!effectivePlanId}
+                onClick={() => setAssignOpen(true)}
+              >
+                Assign testers
+              </Button>
+            </Box>
 
-            {/* -------- Assigned testers preview (OPTIMISTIC) -------- */}
+            {/* Assigned Testers Preview */}
             <Box mt={4}>
               <Heading size="xs" mb={2} color="fg.heading">
                 Assigned testers
               </Heading>
-
               {optimisticAssignment?.testers?.length ? (
                 <Flex gap={2} wrap="wrap">
                   {optimisticAssignment.testers.map((uid) => {
                     const tester = testersQuery.data?.testers?.find(
                       (t: any) => t.user_id.toString() === uid,
                     );
-
                     return (
                       <Box
                         key={uid}
-                        px={2}
+                        px={3}
                         py={1}
                         bg="bg.muted"
                         rounded="md"
                         fontSize="sm"
                         color="fg.muted"
                       >
-                        {tester?.name ?? "Unknown"}
+                        {tester?.name ?? `User ID: ${uid}`}
                       </Box>
                     );
                   })}
@@ -333,7 +410,7 @@ function ViewTestCase() {
             </Box>
           </Stack>
 
-          {/* ===================== ASSIGN TESTERS DIALOG ===================== */}
+          {/* Dialog Modal for Tester Assignment */}
           <AppDialog
             open={assignOpen}
             onOpenChange={() => setAssignOpen(false)}
@@ -343,7 +420,6 @@ function ViewTestCase() {
                 <Button variant="outline" onClick={() => setAssignOpen(false)}>
                   Cancel
                 </Button>
-
                 <Button
                   colorPalette="brand"
                   disabled={selectedTesters.length === 0}
@@ -362,38 +438,29 @@ function ViewTestCase() {
                     };
 
                     try {
-                      await assignTestersToTestPlan(
-                        effectivePlanId,
-                        payload,
-                      );
-
+                      await assignTestersToTestPlan(effectivePlanId, payload);
                       setOptimisticAssignment({
                         test_plan_id: effectivePlanId,
                         testers: selectedTesters,
                       });
-
                       setAssignOpen(false);
-
                       toaster.success({
                         title: "Assignment successful",
                         description: "Test case assigned to plan and testers.",
                       });
-
                       navigate({
                         to: "/projects/$projectId/test-cases",
                         params: { projectId },
                       });
                     } catch (err: any) {
                       console.error("Failed to assign test case:", err);
-
-                     
                       toaster.error({
                         title: "Assignment failed",
-                        description: err?.message || "Could not assign test case to plan.",
+                        description:
+                          err?.message || "Could not assign test case to plan.",
                       });
                     }
                   }}
-                   
                 >
                   Confirm assignment
                 </Button>
@@ -408,8 +475,7 @@ function ViewTestCase() {
                 <Fieldset.Legend fontSize="sm">
                   Select at least one tester
                 </Fieldset.Legend>
-
-                <Fieldset.Content>
+                <Fieldset.Content gap={2} mt={2}>
                   {testersQuery.data?.testers?.map((tester: any) => (
                     <Checkbox.Root
                       key={tester.user_id}
