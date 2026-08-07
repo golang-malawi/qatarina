@@ -99,6 +99,10 @@ function CreateNewTestPlan() {
       return;
     }
 
+    const toISODate = (dateStr: string) => new Date(dateStr + "T00:00:00").toISOString();
+
+
+
     const res = await createTestPlanMutation.mutateAsync({
       body: {
         project_id: parseInt(projectId!),
@@ -114,6 +118,7 @@ function CreateNewTestPlan() {
         })),
       },
     });
+
 
     if (res) {
       toaster.create({
