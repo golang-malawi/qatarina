@@ -159,6 +159,31 @@ components:
       - old_password
       - user_id
       type: object
+    schema.CommentListResponse:
+      properties:
+        comments:
+          items:
+            $ref: '#/components/schemas/schema.CommentResponseItem'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.CommentResponseItem:
+      properties:
+        content:
+          type: string
+        created_at:
+          type: string
+        id:
+          type: string
+        test_plan_id:
+          type: integer
+        updated_at:
+          type: string
+        user_id:
+          type: integer
+        user_name:
+          type: string
+      type: object
     schema.CommitTestRunResult:
       properties:
         actual_result:
@@ -198,6 +223,19 @@ components:
             $ref: '#/components/schemas/schema.UserCompact'
           type: array
           uniqueItems: false
+      type: object
+    schema.CreateComment:
+      properties:
+        content:
+          type: string
+        test_plan_id:
+          type: integer
+        user_id:
+          type: integer
+      required:
+      - content
+      - test_plan_id
+      - user_id
       type: object
     schema.CreateOrgRequest:
       properties:
@@ -4167,6 +4205,157 @@ paths:
       summary: Close a Test Plan
       tags:
       - test-plans
+  /v1/test-plans/{testPlanID}/comments:
+    get:
+      operationId: ListTestPlanComments
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.CommentListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List all comments for a test plan
+      tags:
+      - test-plans
+      - comments
+    post:
+      operationId: CreateTestPlanComment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateComment'
+        description: Comment payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.CommentResponseItem'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Add a new comment to a test plan
+      tags:
+      - test-plans
+      - comments
+  /v1/test-plans/{testPlanID}/comments/{commentID}:
+    delete:
+      operationId: DeleteTestPlanComment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Comment ID
+        in: path
+        name: commentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a comment from a test plan
+      tags:
+      - test-plans
+      - comments
+  /v1/test-plans/{testPlanID}/comments/{commentID}/convert:
+    post:
+      operationId: ConvertCommentToTestCase
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Comment ID
+        in: path
+        name: commentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Convert a comment into a test case
+      tags:
+      - test-plans
+      - comments
+      - test-cases
   /v1/test-plans/{testPlanID}/environment:
     post:
       description: Change environment of a Test Plan
