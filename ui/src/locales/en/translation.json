@@ -235,6 +235,7 @@
   "test_plans.assigned_testers": "Assigned Testers",
   "test_plans.no_testers": "No testers assigned.",
   "test_plans.select_testers": "Select testers",
+  "test_plans.select_all_cases": "Select all test cases",
   "test_plans.confirm_assignment": "Confirm Assignment",
   "test_plans.no_users": "No users available to assign.",
   "test_plans.runs": "Test Runs",
