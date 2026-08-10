@@ -637,6 +637,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/automated-testing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update project automated testing setting
+         * @description Enable or disable automated testing capability for a project and configure supported runners
+         */
+        post: operations["UpdateAutomatedTesting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/environments": {
         parameters: {
             query?: never;
@@ -1250,6 +1270,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/branch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Branch a Test Case
+         * @description Create a new test case by branching from an existing one.
+         */
+        post: operations["BranchTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/mark-draft": {
         parameters: {
             query?: never;
@@ -1496,6 +1536,58 @@ export interface paths {
          * @description Close a Test Plan
          */
         post: operations["CloseTestPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all comments for a test plan */
+        get: operations["ListTestPlanComments"];
+        put?: never;
+        /** Add a new comment to a test plan */
+        post: operations["CreateTestPlanComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/comments/{commentID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a comment from a test plan */
+        delete: operations["DeleteTestPlanComment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/comments/{commentID}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Convert a comment into a test case */
+        post: operations["ConvertCommentToTestCase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2018,6 +2110,18 @@ export interface components {
             old_password: string;
             user_id: number;
         };
+        "schema.CommentListResponse": {
+            comments?: components["schemas"]["schema.CommentResponseItem"][];
+        };
+        "schema.CommentResponseItem": {
+            content?: string;
+            created_at?: string;
+            id?: string;
+            test_plan_id?: number;
+            updated_at?: string;
+            user_id?: number;
+            user_name?: string;
+        };
         "schema.CommitTestRunResult": {
             actual_result: string;
             environment_id?: number;
@@ -2032,6 +2136,11 @@ export interface components {
         "schema.CompactUserListResponse": {
             total?: number;
             users?: components["schemas"]["schema.UserCompact"][];
+        };
+        "schema.CreateComment": {
+            content: string;
+            test_plan_id: number;
+            user_id: number;
         };
         "schema.CreateOrgRequest": {
             address?: string;
@@ -2073,12 +2182,11 @@ export interface components {
             feature_or_module: string;
             is_draft?: boolean;
             kind: string;
+            parent_test_case_id?: string;
             project_id?: number;
-            /** @description "basi", "playwright", "cypress", "browseruse" */
             runner?: string;
-            /** @description optional; used for "playwright" and "cypress" runner types */
             script_path?: string;
-            tags: string[];
+            tags?: string[];
             title: string;
         };
         "schema.CreateTestPlan": {
@@ -2166,6 +2274,7 @@ export interface components {
             uptimeSeconds?: number;
         };
         "schema.NewProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2173,6 +2282,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id?: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2209,6 +2319,7 @@ export interface components {
             projects?: components["schemas"]["schema.ProjectResponse"][];
         };
         "schema.ProjectResponse": {
+            automated_testing_enabled?: boolean;
             code?: string;
             created_at?: string;
             description?: string;
@@ -2220,6 +2331,7 @@ export interface components {
             monday_url?: string;
             owner_user_id?: number;
             parent_project_id?: number;
+            supported_runners?: string[];
             title?: string;
             trello_url?: string;
             updated_at?: string;
@@ -2284,6 +2396,9 @@ export interface components {
             is_draft?: boolean;
             kind?: string;
             notes?: string;
+            parent_code?: string;
+            parent_test_case_id?: string;
+            parent_title?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -2389,6 +2504,11 @@ export interface components {
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
         };
+        "schema.UpdateAutomatedTestingRequest": {
+            automated_testing_enabled?: boolean;
+            project_id: number;
+            supported_runners?: string[];
+        };
         "schema.UpdateOrgRequest": {
             address?: string;
             country?: string;
@@ -2407,6 +2527,7 @@ export interface components {
             type: string;
         };
         "schema.UpdateProjectRequest": {
+            automated_testing_enabled?: boolean;
             code: string;
             description: string;
             environments?: components["schemas"]["schema.EnvironmentRequest"][];
@@ -2415,6 +2536,7 @@ export interface components {
             name: string;
             parent_project_id?: number;
             project_owner_id: number;
+            supported_runners?: string[];
             version: string;
             website_url: string;
         };
@@ -2425,6 +2547,7 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];
@@ -3613,6 +3736,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.ProjectResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateAutomatedTesting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Automated testing state */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateAutomatedTestingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Bad Request */
@@ -4974,6 +5145,60 @@ export interface operations {
             };
         };
     };
+    BranchTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Parent Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     MarkTestCaseAsDraft: {
         parameters: {
             query?: never;
@@ -5608,6 +5833,179 @@ export interface operations {
                 "application/json": Record<string, never>;
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListTestPlanComments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateTestPlanComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Comment payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateComment"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentResponseItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteTestPlanComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Comment ID */
+                commentID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ConvertCommentToTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Comment ID */
+                commentID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

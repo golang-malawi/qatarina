@@ -25,6 +25,12 @@ type TestPlanService interface {
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
 	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
+	ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error)
+	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
+	DeleteComment(ctx context.Context, commentID string) error
+	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
+
+	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -157,26 +163,55 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 	return t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 }
 
-// AddTestCaseToPlan implements TestPlanService.
-func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
-	testPlan, err := t.queries.GetTestPlan(ctx, request.PlanID)
+type testCaseAssignment struct {
+	TestCaseID   uuid.UUID
+	AssignedToID int64
+}
+
+func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, assignments []testCaseAssignment) (*dbsqlc.GetTestPlanRow, error) {
+	testPlan, err := t.queries.GetTestPlan(ctx, planID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, assignedTestCase := range request.PlannedTests {
-		for _, uid := range assignedTestCase.UserIDs {
-			if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
-				TestPlanID:   request.PlanID,
-				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
-				AssignedToID: uid,
-			}); err != nil {
-				return nil, err
-			}
+	for _, a := range assignments {
+		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
+			TestPlanID:   planID,
+			TestCaseID:   a.TestCaseID,
+			AssignedToID: a.AssignedToID,
+		}); err != nil {
+			return nil, err
 		}
 	}
 
 	return &testPlan, nil
+}
+
+// AddTestCaseToPlan implements TestPlanService.
+func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+	var assignments []testCaseAssignment
+	for _, pt := range request.PlannedTests {
+		tcID := uuid.MustParse(pt.TestCaseID)
+		for _, uid := range pt.UserIDs {
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+		}
+	}
+	return t.assignTestCases(ctx, request.PlanID, assignments)
+}
+
+// BatchAssignTestCasesToPlan implements TestPlanService.
+func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, request *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error) {
+	var assignments []testCaseAssignment
+	for _, tcIDStr := range request.TestCaseIDs {
+		tcID, err := uuid.Parse(tcIDStr)
+		if err != nil {
+			return nil, err
+		}
+		for _, uid := range request.UserIDs {
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+		}
+	}
+	return t.assignTestCases(ctx, request.PlanID, assignments)
 }
 
 func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
@@ -299,4 +334,70 @@ func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, env
 		EnvironmentID: common.NewNullInt32(int32(envID)),
 	}
 	return t.queries.ChangeEnvironment(ctx, params)
+}
+
+func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error) {
+	rows, err := t.queries.ListCommentsByTestPlan(ctx, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	comments := make([]schema.CommentResponseItem, 0, len(rows))
+	for _, r := range rows {
+		comments = append(comments, schema.CommentResponseItem{
+			ID:         r.ID.String(),
+			TestPlanID: r.TestPlanID,
+			UserID:     r.UserID,
+			UserName:   r.DisplayName.String,
+			Content:    r.Content,
+			CreatedAt:  r.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:  r.UpdatedAt.Time.Format(time.RFC3339),
+		})
+	}
+	return comments, nil
+}
+
+func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error) {
+	id := uuid.New()
+	row, err := t.queries.CreateComment(ctx, dbsqlc.CreateCommentParams{
+		ID:         id,
+		TestPlanID: req.TestPlanID,
+		UserID:     req.UserID,
+		Content:    req.Content,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &schema.CommentResponseItem{
+		ID:         row.ID.String(),
+		TestPlanID: row.TestPlanID,
+		UserID:     row.UserID,
+		Content:    row.Content,
+		CreatedAt:  row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:  row.UpdatedAt.Time.Format(time.RFC3339),
+	}, nil
+}
+
+func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) error {
+	id, err := uuid.Parse(commentID)
+	if err != nil {
+		return err
+	}
+	_, err = t.queries.DeleteComment(ctx, id)
+	return err
+}
+
+func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error) {
+	cid, err := uuid.Parse(commentID)
+	if err != nil {
+		return "", err
+	}
+	newID := uuid.New()
+	id, err := t.queries.ConvertCommentToTestCase(ctx, dbsqlc.ConvertCommentToTestCaseParams{
+		ID:        cid,
+		NewTestID: newID,
+	})
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
 }

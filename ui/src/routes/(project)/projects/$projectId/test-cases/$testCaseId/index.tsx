@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
   Box,
@@ -13,6 +13,7 @@ import {
   Stack,
   Spinner,
   Code,
+  Badge,
 } from "@chakra-ui/react";
 
 import { AppDialog } from "@/components/ui/app-dialog";
@@ -21,6 +22,14 @@ import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/Te
 import { useProjectTestersQuery } from "@/services/TesterService";    
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+
+import { AppDialog } from "@/components/ui/app-dialog";
+import { useTestCaseQuery, branchTestCase } from "@/services/TestCaseService";
+import {
+  useProjectTestPlansQuery,
+  assignTestersToTestPlan,
+} from "@/services/TestPlanService";
+import { useTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
 
@@ -34,18 +43,19 @@ export const Route = createFileRoute(
 function ViewTestCase() {
   const { projectId, testCaseId } = Route.useParams();
   const search = Route.useSearch();
-  const defaultTab = search.tab === "usage" ? "usage" : "description";
-  const { t } = useTranslation();
+const navigate = useNavigate();
+const { t } = useTranslation();
+const activeTab = search.tab ?? "description";
 
-  const { data, isLoading, error } = useTestCaseQuery(testCaseId);
+  const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useProjectTestersQuery(Number(projectId)); 
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
-  const navigate = useNavigate();
-  
+
+  /** Optimistic UI state for tester assignment */
   const [optimisticAssignment, setOptimisticAssignment] = useState<{
     test_plan_id: string | null;
     testers: string[];
@@ -59,19 +69,31 @@ function ViewTestCase() {
     );
   }
 
-  if (error) return <Text color="fg.error">Error loading test case</Text>;
+  if (error) {
+    return <Text color="fg.error">Error loading test case</Text>;
+  }
 
-  const testCase = data;
-  if (!testCase) return <Text color="fg.muted">No data found</Text>;
+  if (!testCase) {
+    return <Text color="fg.muted">No data found</Text>;
+  }
 
   const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
   const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
+
+  const handleTabChange = (details: { value: string }) => {
+    navigate({
+      to: "/projects/$projectId/test-cases/$testCaseId",
+      params: { projectId, testCaseId },
+      search: { tab: details.value },
+      replace: true,
+    });
+  };
 
   return (
     <Box
       p={6}
       bg="bg.surface"
-      border="sm"
+      border="1px solid"
       borderColor="border.subtle"
       borderRadius="xl"
       shadow="card"
@@ -80,25 +102,70 @@ function ViewTestCase() {
       gap={6}
     >
       {/* Header */}
-      <Stack gap={1}>
-        <Heading size="lg" color="fg.heading">
-          {testCase.title}
-        </Heading>
-        <Text fontSize="sm" color="fg.subtle">
-          Code: {testCase.code} • Feature: {testCase.feature_or_module}
-        </Text>
-        <Text fontSize="sm" color="fg.subtle">
-          Project ID: {projectId}
-        </Text>
+      <Stack gap={2}>
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={4}>
+          <Box>
+            <Heading size="lg" color="fg.heading">
+              {testCase.title}
+            </Heading>
+            <Text fontSize="sm" color="fg.subtle" mt={1}>
+              Code: <strong>{testCase.code}</strong> • Feature:{" "}
+              <strong>{testCase.feature_or_module}</strong>
+            </Text>
+            <Text fontSize="sm" color="fg.subtle">
+              Project ID: {projectId}
+            </Text>
+          </Box>
+
+          {/* Action Buttons */}
+          <Flex gap={2}>
+            <Button
+              size="sm"
+              colorPalette="brand"
+              onClick={async () => {
+                try {
+                  const branched = await branchTestCase(testCaseId);
+                  const newId = branched?.data?.id;
+
+                  if (!newId) {
+                    throw new Error(
+                      "Branching did not return a new test case ID",
+                    );
+                  }
+
+                  toaster.success({
+                    title: t("test_cases.branch.success"),
+                    description: t("test_cases.branch.success_description"),
+                  });
+
+                  navigate({
+                    to: "/projects/$projectId/test-cases/$testCaseId/edit",
+                    params: { projectId, testCaseId: newId },
+                    search: { isBranched: true },
+                  });
+                } catch (err: any) {
+                  toaster.error({
+                    title: t("test_cases.branch.error"),
+                    description:
+                      err?.message || "Could not branch test case.",
+                  });
+                }
+              }}
+            >
+              {t("test_cases.branch", "Branch")}
+            </Button>
+          </Flex>
+        </Flex>
       </Stack>
 
-      <Tabs.Root defaultValue={defaultTab}>
+      {/* Tabs */}
+      <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
         </Tabs.List>
 
-        {/* DESCRIPTION */}
+        {/* DESCRIPTION TAB */}
         <Tabs.Content value="description">
           <Box p={4} bg="bg.subtle" rounded="lg" border="sm" borderColor="border.subtle">
             {testCase.description ? (
@@ -157,17 +224,19 @@ function ViewTestCase() {
               </Alert.Content>
             </Alert.Root>
 
-            {/* TEST PLANS */}
+            {/* Test Plans Checkbox Group */}
             {testPlansQuery.data?.test_plans?.length ? (
               <CheckboxGroup
                 value={effectivePlanId ? [effectivePlanId] : []}
                 onValueChange={(value) => {
-                  if (value.length > 1) return; 
+                  if (value.length > 1) return;
                   setSelectedPlanId(value[0] ?? null);
                 }}
               >
                 <Fieldset.Root mt={3}>
-                  <Fieldset.Legend fontSize="sm">Available test plans</Fieldset.Legend>
+                  <Fieldset.Legend fontSize="sm">
+                    Available test plans
+                  </Fieldset.Legend>
                   <Fieldset.Content>
                     {testPlansQuery.data.test_plans.map((plan: any) => (
                       <Checkbox.Root
@@ -190,17 +259,19 @@ function ViewTestCase() {
             )}
 
             {/* ASSIGN CTA */}
-            <Button
-              mt={4}
-              size="sm"
-              colorPalette="brand"
-              disabled={!effectivePlanId}
-              onClick={() => setAssignOpen(true)}
-            >
-              Assign testers
-            </Button>
+            <Box>
+              <Button
+                mt={2}
+                size="sm"
+                colorPalette="brand"
+                disabled={!effectivePlanId}
+                onClick={() => setAssignOpen(true)}
+              >
+                Assign testers
+              </Button>
+            </Box>
 
-            {/* -------- Assigned testers preview (OPTIMISTIC) -------- */}
+            {/* Assigned Testers Preview */}
             <Box mt={4}>
               <Heading size="xs" mb={2} color="fg.heading">
                 Assigned testers
@@ -212,8 +283,16 @@ function ViewTestCase() {
                       (t: any) => t.user_id?.toString() === uid,
                     );
                     return (
-                      <Box key={uid} px={2} py={1} bg="bg.muted" rounded="md" fontSize="sm" color="fg.muted">
-                        {tester?.name ?? "Unknown"}
+                      <Box
+                        key={uid}
+                        px={3}
+                        py={1}
+                        bg="bg.muted"
+                        rounded="md"
+                        fontSize="sm"
+                        color="fg.muted"
+                      >
+                        {tester?.name ?? `User ID: ${uid}`}
                       </Box>
                     );
                   })}
@@ -224,7 +303,7 @@ function ViewTestCase() {
             </Box>
           </Stack>
 
-          {/* ===================== ASSIGN TESTERS DIALOG ===================== */}
+          {/* Dialog Modal for Tester Assignment */}
           <AppDialog
             open={assignOpen}
             onOpenChange={() => setAssignOpen(false)}
@@ -252,11 +331,10 @@ function ViewTestCase() {
                     try {
                       await assignTestersToTestPlan(effectivePlanId, payload);
                       setOptimisticAssignment({
-                      test_plan_id: effectivePlanId,
-                      testers: selectedTesters,
-                    });
-
-                                          setAssignOpen(false);
+                        test_plan_id: effectivePlanId,
+                        testers: selectedTesters,
+                      });
+                      setAssignOpen(false);
                       toaster.success({
                         title: "Assignment successful",
                         description: "Test case assigned to plan and testers.",
@@ -269,7 +347,8 @@ function ViewTestCase() {
                       console.error("Failed to assign test case:", err);
                       toaster.error({
                         title: "Assignment failed",
-                        description: err?.message || "Could not assign test case to plan.",
+                        description:
+                          err?.message || "Could not assign test case to plan.",
                       });
                     }
                   }}
@@ -318,4 +397,3 @@ function ViewTestCase() {
     </Box>
   );
 }
-

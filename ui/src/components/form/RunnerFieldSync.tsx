@@ -5,12 +5,14 @@ interface RunnerFieldSyncProps {
   value: string;
   onChange: (val: string) => void;
   onRunnerChange: (runner: string) => void;
+  supportedRunners?: string[];
 }
 
 export function RunnerFieldSync({
   value,
   onChange,
   onRunnerChange,
+  supportedRunners,
 }: RunnerFieldSyncProps) {
   // Sync selectedRunner whenever the form value changes
   useEffect(() => {
@@ -26,6 +28,7 @@ export function RunnerFieldSync({
         onChange(val);
         onRunnerChange(val);
       }}
+      supportedRunners={supportedRunners}
     />
   );
 }

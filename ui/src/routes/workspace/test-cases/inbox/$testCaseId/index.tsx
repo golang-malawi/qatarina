@@ -24,7 +24,7 @@ import {
 } from "@tanstack/react-query";
 import {
   markTestCaseAsDraft,
-  unmarkTestCaseAsDraft,  
+  unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
 import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
@@ -127,7 +127,7 @@ function TestCaseInboxItem() {
   const toggleDraftMutation = useMutation({
     mutationFn: async () => {
       if (isDraft) {
-        return unmarkTestCaseAsDraft(testCaseId);
+        return unMarkTestCaseAsDraft(testCaseId);
       }
       return markTestCaseAsDraft(testCaseId);
     },

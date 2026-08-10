@@ -66,15 +66,17 @@ SELECT * FROM projects WHERE id = $1;
 
 -- name: UpdateProject :execrows
 UPDATE projects SET
-  title = $2,
-  code = $3,
-  description = $4,
-  website_url = $5,
-  version = $6,
-  github_url = $7,
-  owner_user_id = $8,
-  parent_project_id = $9,
-  updated_at = NOW()
+    title = $2,
+    code = $3,
+    description = $4,
+    website_url = $5,
+    version = $6,
+    github_url = $7,
+    owner_user_id = $8,
+    parent_project_id = $9,
+    automated_testing_enabled = $10,
+    supported_runners = $11,
+    updated_at = NOW()
 WHERE id = $1;
 
 -- name: DeleteProject :execrows
@@ -84,13 +86,16 @@ DELETE FROM projects WHERE id = $1;
 INSERT INTO projects (
     title, code, description, version, is_active, is_public, website_url,
     github_url, trello_url, jira_url, monday_url,
-    owner_user_id, created_at, updated_at, deleted_at
+    owner_user_id, created_at, updated_at, deleted_at,
+    automated_testing_enabled, supported_runners
 )
-VALUES(
-    $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10,
-    $11, $12, $13, $14, $15
-) RETURNING id;
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11,
+    $12, $13, $14, $15,
+    $16, $17
+)
+RETURNING id;
 
 -- name: ArchiveProject :one
 UPDATE projects
@@ -113,11 +118,42 @@ WHERE id = $1;
 -- name: GetProjectTestCaseTemplate :one
 SELECT testcase_template FROM projects WHERE id = $1;
 
+-- name: UpdateAutomatedTesting :exec
+UPDATE projects
+SET
+    automated_testing_enabled = $2,
+    supported_runners = $3,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: ListTestCases :many
 SELECT * FROM test_cases ORDER BY created_at DESC;
 
 -- name: GetTestCase :one
 SELECT * FROM test_cases WHERE id = $1;
+
+-- name: GetTestCaseWithParent :one
+SELECT 
+  tc.id,
+  tc.project_id,
+  tc.created_by_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_at,
+  tc.updated_at,
+  tc.runner,
+  tc.script_path,
+  tc.parent_test_case_id,
+  parent.code AS parent_code,
+  parent.title AS parent_title
+FROM test_cases tc
+LEFT JOIN test_cases parent ON parent.id = tc.parent_test_case_id
+WHERE tc.id = $1;
 
 -- name: ListTestCasesByProject :many
 SELECT * FROM test_cases WHERE project_id = $1;
@@ -754,3 +790,65 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'In Progress') AS in_progress,
     COUNT(*) FILTER (WHERE status = 'Failed') AS failed
 FROM reports WHERE project_id = $1;
+
+-- name: ListCommentsByTestPlan :many
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.user_id,
+    u.display_name,   
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.test_plan_id = $1
+ORDER BY c.created_at DESC;
+
+-- name: GetComment :one
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.user_id,
+    u.display_name,
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.id = $1;
+
+-- name: CreateComment :one
+INSERT INTO test_plan_comments (id, test_plan_id, user_id, content, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING 
+    id,
+    test_plan_id,
+    user_id,
+    content,
+    created_at,
+    updated_at;
+
+-- name: DeleteComment :execrows
+DELETE FROM test_plan_comments WHERE id = $1;
+
+-- name: ConvertCommentToTestCase :one
+INSERT INTO test_cases (
+    id, project_id, created_by_id, kind, code, title, description,
+    is_draft, created_at, updated_at
+)
+SELECT 
+    sqlc.arg(new_test_id)::uuid,  
+    tp.project_id,
+    c.user_id,
+    'comment-derived',
+    '',
+    'From Comment',
+    c.content,
+    false,
+    NOW(),
+    NOW()
+FROM test_plan_comments c
+JOIN test_plans tp ON tp.id = c.test_plan_id
+WHERE c.id = $1
+RETURNING id;
