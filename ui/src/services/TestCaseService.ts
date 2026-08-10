@@ -6,6 +6,12 @@ export function useTestCasesQuery() {
   return $api.useQuery("get", "/v1/test-cases");
 }
 
+export function useProjectTestersQuery(projectID: string) {
+  return $api.useQuery("get", "/v1/projects/{projectID}/testers", {
+    params: { path: { projectID: Number(projectID) } },  
+  });
+}
+
 export function useTestCaseQuery(testCaseID: string) {
   return $api.useQuery("get", "/v1/test-cases/{testCaseID}", {
     params: { path: { testCaseID } },

@@ -73,6 +73,12 @@ func ZeroOrTime(t *time.Time) time.Time {
 	return *t
 }
 
+// FormatNullDateTime formats an sql.NullTime using time.DateTime, returning an empty string if invalid.
+func FormatNullDateTime(t sql.NullTime) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.Format(time.DateTime)
 func NewNullUUID(value string) uuid.NullUUID {
 	if value == "" {
 		return uuid.NullUUID{Valid: false}
