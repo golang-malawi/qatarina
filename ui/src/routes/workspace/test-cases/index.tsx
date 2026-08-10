@@ -127,14 +127,14 @@ function TestCasePage() {
             name: "toggle-draft",
             label: (row) =>
               row.is_draft
-                ? t("test_cases.unMark_as_draft")
+                ? t("test_cases.unmark_as_draft")
                 : t("test_cases.mark_as_draft"),
             onClick: async (row) => {
               if (!row.id) return;
               try {
                 if (row.is_draft) {
                   await unMarkTestCaseAsDraft(String(row.id));
-                  toaster.success({ title: t("test_cases.unMark_draft.success") });
+                  toaster.success({ title: t("test_cases.unmark_draft.success") });
                 } else {
                   await markTestCaseAsDraft(String(row.id));
                   toaster.success({ title: t("test_cases.mark_draft.success") });
