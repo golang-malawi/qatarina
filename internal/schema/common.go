@@ -22,5 +22,5 @@ func formatSqlDateTime(t sql.NullTime) string {
 
 type MessageResponse struct {
 	Message          string `json:"message"`
-	DeveloperMessage string `json:"developerMessage,omitempty"`
+	DeveloperMessage string `json:"developer_message,omitempty"`
 }
