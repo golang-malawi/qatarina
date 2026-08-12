@@ -796,3 +796,65 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'In Progress') AS in_progress,
     COUNT(*) FILTER (WHERE status = 'Failed') AS failed
 FROM reports WHERE project_id = $1;
+
+-- name: ListCommentsByTestPlan :many
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.user_id,
+    u.display_name,   
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.test_plan_id = $1
+ORDER BY c.created_at DESC;
+
+-- name: GetComment :one
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.user_id,
+    u.display_name,
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.id = $1;
+
+-- name: CreateComment :one
+INSERT INTO test_plan_comments (id, test_plan_id, user_id, content, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING 
+    id,
+    test_plan_id,
+    user_id,
+    content,
+    created_at,
+    updated_at;
+
+-- name: DeleteComment :execrows
+DELETE FROM test_plan_comments WHERE id = $1;
+
+-- name: ConvertCommentToTestCase :one
+INSERT INTO test_cases (
+    id, project_id, created_by_id, kind, code, title, description,
+    is_draft, created_at, updated_at
+)
+SELECT 
+    sqlc.arg(new_test_id)::uuid,  
+    tp.project_id,
+    c.user_id,
+    'comment-derived',
+    '',
+    'From Comment',
+    c.content,
+    false,
+    NOW(),
+    NOW()
+FROM test_plan_comments c
+JOIN test_plans tp ON tp.id = c.test_plan_id
+WHERE c.id = $1
+RETURNING id;

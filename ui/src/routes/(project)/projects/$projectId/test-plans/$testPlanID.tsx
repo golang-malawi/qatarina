@@ -50,7 +50,8 @@ type NavItem = {
     | "/projects/$projectId/test-plans/$testPlanID/execute"
     | "/projects/$projectId/test-plans/$testPlanID/test-cases"
     | "/projects/$projectId/test-plans/$testPlanID/test-runs"
-    | "/projects/$projectId/test-plans/$testPlanID/testers";
+    | "/projects/$projectId/test-plans/$testPlanID/testers"
+    | "/projects/$projectId/test-plans/$testPlanID/comments";
   exact?: boolean;
 };
 
@@ -117,6 +118,7 @@ function ViewTestPlan() {
     { label: t("test_plans.nav.test_cases"), path: "/projects/$projectId/test-plans/$testPlanID/test-cases" },
     { label: t("test_plans.nav.test_runs"), path: "/projects/$projectId/test-plans/$testPlanID/test-runs" },
     { label: t("test_plans.nav.testers"), path: "/projects/$projectId/test-plans/$testPlanID/testers" },
+    { label: t("test_plans.nav.comments"), path: "/projects/$projectId/test-plans/$testPlanID/comments" },
   ];
 
   if (isLoading) return <LoadingState label={t("test_plans.loading")} />;

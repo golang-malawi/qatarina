@@ -342,7 +342,6 @@ export default function ListProjectTestCases() {
                     await queryClient.invalidateQueries({
                       queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
                     });
-                    window.location.href = `/projects/${projectId}/test-cases`;
                   } catch (err: any) {
                     toaster.error({
                       title: t("test_cases.delete.error"),

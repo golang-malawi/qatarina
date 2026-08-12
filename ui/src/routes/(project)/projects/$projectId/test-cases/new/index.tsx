@@ -1,9 +1,7 @@
-import { Alert, Box, Heading, Spinner, Text, Button } from "@chakra-ui/react";
-import { useNavigate } from "@tanstack/react-router";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { Alert, Box, Button, Heading, Spinner, Text } from "@chakra-ui/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { validateTestCaseScript, useCreateTestCaseMutation } from "@/services/TestCaseService";
 import { useProjectQuery, useProjectTestCaseTemplateQuery } from "@/services/ProjectService";
 import { toaster } from "@/components/ui/toaster";
@@ -17,15 +15,25 @@ import {
 } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 
+type NewTestCaseSearch = {
+  title?: string;
+};
+
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/new/",
 )({
+  validateSearch: (search: Record<string, unknown>): NewTestCaseSearch => {
+    return {
+      title: (search.title as string) || "",
+    };
+  },
   component: NewTestCases,
 });
 
 function NewTestCases() {
   const { t } = useTranslation();
   const params = Route.useParams();
+const search = Route.useSearch();
   const navigate = useNavigate();
   const project_id = params.projectId;
 
@@ -180,6 +188,28 @@ function NewTestCases() {
                         </Alert.Content>
                       </Alert.Root>
                     )}
+
+                    {scriptValidationStatus === "success" && (
+                      <Alert.Root status="success" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word">
+                            {scriptValidationMessage || "Script validated successfully."}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
+
+                    {scriptValidationStatus === "failed" && (
+                      <Alert.Root status="error" borderRadius="md">
+                        <Alert.Indicator />
+                        <Alert.Content>
+                          <Alert.Description wordBreak="break-word" maxWidth="100%">
+                            {scriptValidationMessage}
+                          </Alert.Description>
+                        </Alert.Content>
+                      </Alert.Root>
+                    )}
                   </Box>
                 </Box>
               );
@@ -310,7 +340,7 @@ function NewTestCases() {
         layout="vertical"
         spacing={4}
         defaultValues={{
-          title: "",
+          title: search.title || "",
           code: "",
           feature_or_module: "",
           kind: "",
