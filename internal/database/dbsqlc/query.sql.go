@@ -413,7 +413,7 @@ func (q *Queries) CreateNewTestRun(ctx context.Context, arg CreateNewTestRunPara
 
 const createOrg = `-- name: CreateOrg :one
 INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now())
 RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at
 `
 
@@ -869,6 +869,20 @@ func (q *Queries) DeleteComment(ctx context.Context, id uuid.UUID) (int64, error
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const deleteEnvironment = `-- name: DeleteEnvironment :exec
+DELETE FROM environments WHERE id = $1 AND project_id = $2
+`
+
+type DeleteEnvironmentParams struct {
+	ID        int32
+	ProjectID sql.NullInt32
+}
+
+func (q *Queries) DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) error {
+	_, err := q.db.ExecContext(ctx, deleteEnvironment, arg.ID, arg.ProjectID)
+	return err
 }
 
 const deleteOrg = `-- name: DeleteOrg :exec
@@ -1806,7 +1820,7 @@ func (q *Queries) GetTestCaseExecutionSummary(ctx context.Context, executedBy sq
 }
 
 const getTestCaseWithParent = `-- name: GetTestCaseWithParent :one
-SELECT 
+SELECT
   tc.id,
   tc.project_id,
   tc.created_by_id,
@@ -3893,6 +3907,29 @@ type UpdateAutomatedTestingParams struct {
 
 func (q *Queries) UpdateAutomatedTesting(ctx context.Context, arg UpdateAutomatedTestingParams) error {
 	_, err := q.db.ExecContext(ctx, updateAutomatedTesting, arg.ID, arg.AutomatedTestingEnabled, pq.Array(arg.SupportedRunners))
+	return err
+}
+
+const updateEnvironment = `-- name: UpdateEnvironment :exec
+UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5
+`
+
+type UpdateEnvironmentParams struct {
+	Name        string
+	BaseUrl     sql.NullString
+	Description sql.NullString
+	ID          int32
+	ProjectID   sql.NullInt32
+}
+
+func (q *Queries) UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) error {
+	_, err := q.db.ExecContext(ctx, updateEnvironment,
+		arg.Name,
+		arg.BaseUrl,
+		arg.Description,
+		arg.ID,
+		arg.ProjectID,
+	)
 	return err
 }
 

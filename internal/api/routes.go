@@ -65,6 +65,8 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-cases/blocked", apiv1.ListBlockedTestCases(api.TestCasesService, api.logger))
 		projectsV1.Get("/:projectID/environments", apiv1.ListEnvironments(api.EnvironmentService, api.logger))
 		projectsV1.Post("/:projectID/environments", apiv1.CreateEnvironment(api.EnvironmentService, api.logger))
+		projectsV1.Post("/:projectID/environments/:environmentID", apiv1.UpdateEnvironment(api.EnvironmentService, api.logger))
+		projectsV1.Delete("/:projectID/environments/:environmentID", apiv1.DeleteEnvironment(api.EnvironmentService, api.logger))
 		projectsV1.Get("/:projectID/test-cases/suggested", apiv1.ListSuggestedTestCases(api.TestCasesService, api.logger))
 		projectsV1.Post("/:projectID/archive", apiv1.ArchiveProject(api.ProjectsService, api.logger))
 		projectsV1.Post("/:projectID/unarchive", apiv1.UnarchiveProject(api.ProjectsService, api.logger))

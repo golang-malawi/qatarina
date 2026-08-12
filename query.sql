@@ -133,7 +133,7 @@ SELECT * FROM test_cases ORDER BY created_at DESC;
 SELECT * FROM test_cases WHERE id = $1;
 
 -- name: GetTestCaseWithParent :one
-SELECT 
+SELECT
   tc.id,
   tc.project_id,
   tc.created_by_id,
@@ -730,7 +730,7 @@ GROUP BY tr.test_case_id;
 
 -- name: CreateOrg :one
 INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now())
 RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at;
 
 -- name: GetOrgByID :one
@@ -762,6 +762,12 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
+
+-- name: DeleteEnvironment :exec
+DELETE FROM environments WHERE id = $1 AND project_id = $2;
+
+-- name: UpdateEnvironment :exec
+UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5;
 
 -- name: ListReportsByProject :many
 SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
