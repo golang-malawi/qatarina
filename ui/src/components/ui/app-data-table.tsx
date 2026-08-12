@@ -498,8 +498,15 @@ export function AppDataTable<TData, TResponse>({
   });
 
   const selectedRows = React.useMemo(() => {
+    // Fallback direct extraction from rawData using rowSelection map keys if getRowId is provided
+    if (getRowId) {
+      return rawData.filter((row, index) => {
+        const id = getRowId(row, index);
+        return !!rowSelection[id];
+      });
+    }
     return table.getSelectedRowModel().rows.map((row) => row.original);
-  }, [table, rowSelection]);
+  }, [table, rowSelection, rawData, getRowId]);
 
   React.useEffect(() => {
     if (!onRowSelectionChangeRows) return;
