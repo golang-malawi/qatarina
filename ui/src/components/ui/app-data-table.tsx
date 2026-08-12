@@ -9,17 +9,18 @@ import {
   Icon,
   IconButton,
   Input,
-  Menu,
   NativeSelect,
-  Portal,
   Spinner,
   Stack,
   Table,
   Text,
+  Menu,
 } from "@chakra-ui/react";
 import {
   ColumnDef,
   SortingState,
+  RowSelectionState,
+  OnChangeFn,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -118,10 +119,13 @@ export interface AppDataTableProps<TData, TResponse> {
   pageSize?: number;
   defaultSort?: { key: string; desc?: boolean };
   enableRowSelection?: boolean;
-  onRowSelectionChange?: (rows: TData[]) => void;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  onRowSelectionChangeRows?: (rows: TData[]) => void;
   onRowClick?: (row: TData) => void;
   rowActions?: AppTableRowAction<TData>[];
   rowActionsLabel?: string;
+  renderBulkActions?: (selectedRows: TData[]) => React.ReactNode;
   dataAccessor?: (response: TResponse | undefined) => TData[];
   paginationAccessor?: (
     response: TResponse | undefined,
@@ -179,10 +183,13 @@ export function AppDataTable<TData, TResponse>({
   pageSize = 10,
   defaultSort,
   enableRowSelection = false,
-  onRowSelectionChange,
+  rowSelection: externalRowSelection,
+  onRowSelectionChange: externalOnRowSelectionChange,
+  onRowSelectionChangeRows,
   onRowClick,
   rowActions,
   rowActionsLabel = "Actions",
+  renderBulkActions,
   dataAccessor,
   paginationAccessor,
   getRowId,
@@ -202,7 +209,10 @@ export function AppDataTable<TData, TResponse>({
     pageIndex: 0,
     pageSize,
   });
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({});
+
+  const rowSelection = externalRowSelection ?? internalRowSelection;
+  const setRowSelection = externalOnRowSelectionChange ?? setInternalRowSelection;
 
   const sortKeyById = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -294,61 +304,55 @@ export function AppDataTable<TData, TResponse>({
       if (visibleActions.length === 0) return null;
 
       return (
-        <Menu.Root positioning={{ placement: "bottom-end" }}>
+        <Menu.Root>
           <Menu.Trigger asChild>
             <Button size="sm" variant="outline" colorPalette="brand">
               {rowActionsLabel}
             </Button>
           </Menu.Trigger>
-          <Portal>
-            <Menu.Positioner zIndex="3000">
-              <Menu.Content
-                bg="bg.surface"
-                border="sm"
-                borderColor="border.subtle"
-              >
-                {visibleActions.map((action) => {
-                  const resolvedLabel =
-                    typeof action.label === "function"
-                      ? action.label(row)
-                      : action.label;
-                  const name =
-                    action.name ??
-                    (typeof action.label === "string"
-                      ? action.label
-                      : "action");
-                  const disabled =
-                    typeof action.disabled === "function"
-                      ? action.disabled(row)
-                      : action.disabled;
-                  const href: string =
-                    typeof action.link === "function"
-                      ? action.link(row)
-                      : (action.link ?? `${action.href ?? ""}`);
-                  return (
-                    <Menu.Item
-                      key={name}
-                      value={name}
-                      disabled={disabled}
-                      color={action.color}
-                      onClick={() => {
-                        if (disabled) return;
-                        action.onClick?.(row);
-                        if (href) {
-                          navigate({ to: href });
-                        }
-                      }}
-                    >
-                      <HStack gap="2">
-                        {renderActionIcon(action.icon)}
-                        <Text>{resolvedLabel}</Text>
-                      </HStack>
-                    </Menu.Item>
-                  );
-                })}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
+          <Menu.Positioner>
+            <Menu.Content bg="bg.surface" border="1px solid" borderColor="border.subtle" shadow="md">
+              {visibleActions.map((action) => {
+                const resolvedLabel =
+                  typeof action.label === "function"
+                    ? action.label(row)
+                    : action.label;
+                const name =
+                  action.name ??
+                  (typeof action.label === "string"
+                    ? action.label
+                    : "action");
+                const disabled =
+                  typeof action.disabled === "function"
+                    ? action.disabled(row)
+                    : action.disabled;
+                const href: string =
+                  typeof action.link === "function"
+                    ? action.link(row)
+                    : (action.link ?? `${action.href ?? ""}`);
+                return (
+                  <Menu.Item
+                    key={name}
+                    value={name}
+                    disabled={disabled}
+                    color={action.color}
+                    onClick={() => {
+                      if (disabled) return;
+                      action.onClick?.(row);
+                      if (href) {
+                        navigate({ to: href });
+                      }
+                    }}
+                  >
+                    <HStack gap="2">
+                      {renderActionIcon(action.icon)}
+                      <Text>{resolvedLabel}</Text>
+                    </HStack>
+                  </Menu.Item>
+                );
+              })}
+            </Menu.Content>
+          </Menu.Positioner>
         </Menu.Root>
       );
     },
@@ -493,20 +497,21 @@ export function AppDataTable<TData, TResponse>({
     getRowId,
   });
 
+  const selectedRows = React.useMemo(() => {
+    return table.getSelectedRowModel().rows.map((row) => row.original);
+  }, [table, rowSelection]);
+
   React.useEffect(() => {
-    if (!onRowSelectionChange) return;
-    const selectedRows = table
-      .getSelectedRowModel()
-      .rows.map((row) => row.original);
-    onRowSelectionChange(selectedRows);
-  }, [onRowSelectionChange, table, rowSelection]);
+    if (!onRowSelectionChangeRows) return;
+    onRowSelectionChangeRows(selectedRows);
+  }, [onRowSelectionChangeRows, selectedRows]);
 
   const headerGroups = table.getHeaderGroups();
   const rows = table.getRowModel().rows;
   const colSpan = table.getAllColumns().length || 1;
 
   return (
-    <Stack gap="5" w="full">
+    <Stack gap="4" w="full">
       {(title || description) && (
         <Box>
           {title && (
@@ -522,23 +527,48 @@ export function AppDataTable<TData, TResponse>({
         </Box>
       )}
 
-      {(showGlobalFilter || enableRowSelection) && (
-        <Flex align="center" justify="space-between" gap="4" wrap="wrap">
-          {showGlobalFilter && (
-            <Input
-              value={globalFilter ?? ""}
-              onChange={(event) => setGlobalFilter(event.target.value)}
-              placeholder={filterPlaceholder}
-              maxW="sm"
-              bg="bg.surface"
-              borderColor="border.subtle"
-            />
-          )}
-          {enableRowSelection && (
-            <Text fontSize="sm" color="fg.subtle">
-              {table.getSelectedRowModel().rows.length} selected
-            </Text>
-          )}
+      {showGlobalFilter && (
+        <Input
+          value={globalFilter ?? ""}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          placeholder={filterPlaceholder}
+          maxW="sm"
+          bg="bg.surface"
+          borderColor="border.subtle"
+        />
+      )}
+
+      {enableRowSelection && (
+        <Flex align="center" gap="3">
+          <Checkbox.Root
+            checked={table.getIsAllPageRowsSelected()}
+            onCheckedChange={({ checked }) =>
+              table.toggleAllPageRowsSelected(!!checked)
+            }
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label fontSize="sm" fontWeight="medium">
+              Select all test cases
+            </Checkbox.Label>
+          </Checkbox.Root>
+          <Text fontSize="sm" color="fg.subtle">
+            | {selectedRows.length} selected
+          </Text>
+          {selectedRows.length > 0 &&
+            (renderBulkActions ? (
+              renderBulkActions(selectedRows)
+            ) : (
+              <Button
+                size="sm"
+                colorPalette="brand"
+                onClick={() => {
+                  console.log("Selected:", selectedRows);
+                }}
+              >
+                Manage selected
+              </Button>
+            ))}
         </Flex>
       )}
 
@@ -551,7 +581,7 @@ export function AppDataTable<TData, TResponse>({
       )}
 
       <Box
-        border="sm"
+        border="1px solid"
         borderColor="border.subtle"
         borderRadius="xl"
         overflow="hidden"

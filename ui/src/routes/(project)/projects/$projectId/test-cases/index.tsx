@@ -7,6 +7,7 @@ import {
   Table,
   Tabs,
   Text,
+  Menu,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,6 +57,8 @@ export default function ListProjectTestCases() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const [moduleFilter, setModuleFilter] = useState<string>("");
+  const [selectedRows, setSelectedRows] = useState<TestCase[]>([]);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   const queryFactory = React.useCallback(
     ({
@@ -163,6 +166,38 @@ export default function ListProjectTestCases() {
     }
   };
 
+  const handleBulkUseInTestSession = () => {
+    if (selectedRows.length === 0) return;
+    const firstId = String(selectedRows[0].id ?? "");
+    if (!firstId) return;
+    navigate({
+      to: `/projects/${projectId}/test-cases/${firstId}?tab=usage`,
+    } as any);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) return;
+    try {
+      await Promise.all(
+        selectedRows.map((row) => {
+          if (row.id) return deleteTestCase(String(row.id));
+          return Promise.resolve();
+        })
+      );
+      toaster.success({ title: t("test_cases.delete.success") });
+      await queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+      });
+      setSelectedRows([]);
+      setRowSelection({});
+    } catch (err: any) {
+      toaster.error({
+        title: t("test_cases.delete.error"),
+        description: err?.message,
+      });
+    }
+  };
+
   return (
     <div>
       <Toaster />
@@ -223,135 +258,164 @@ export default function ListProjectTestCases() {
             />
           </Box>
 
-          <AppDataTable<TestCase, TestCaseListResponse>
-            // @ts-expect-error TODO(sevenreup)
-            query={queryFactory}
-            columns={columns}
-            defaultSort={{ key: "created_at", desc: true }}
-            showGlobalFilter
-            filterPlaceholder={t("test_cases.search_placeholder")}
-            dataAccessor={(response) =>
-              (response?.test_cases ?? []) as TestCase[]
-            }
-            paginationAccessor={(response) => {
-              const pagination = response?.pagination;
-              if (!pagination) return undefined;
-              return {
-                total: pagination.total ?? 0,
-                page: pagination.page ?? 1,
-                pageSize: pagination.pageSize ?? 10,
-              };
-            }}
-            rowActions={[
-              {
-                name: "view",
-                label: t("test_cases.view"),
-                icon: LuEye,
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
-              },
-              {
-                name: "edit",
-                label: t("test_cases.edit"),
-                icon: LuPencil,
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
-              },
-              {
-                name: "branch",
-                label: t("test_cases.branch"),
-                icon: LuGitBranch,
-                onClick: async (row) => {
-                  if (!row.id) return;
-                  try {
-                    const branched = await branchTestCase(String(row.id));
-                    const newId = branched?.data?.id ?? (branched as any)?.id;
+          <Box mt={4}>
+            <AppDataTable<TestCase, TestCaseListResponse>
+              // @ts-expect-error TODO(sevenreup)
+              query={queryFactory}
+              columns={columns}
+              defaultSort={{ key: "created_at", desc: true }}
+              showGlobalFilter
+              filterPlaceholder={t("test_cases.search_placeholder")}
+              enableRowSelection={true}
+              rowSelection={rowSelection}
+              onRowSelectionChange={(newSelection) => {
+                setRowSelection(newSelection);
+              }}
+              onRowSelectionChangeRows={(rows) => {
+                setSelectedRows(rows);
+              }}
+              renderBulkActions={() => (
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button size="sm" colorPalette="brand">
+                      Manage selected
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content bg="bg.surface" border="1px solid" borderColor="border.subtle" shadow="md">
+                      <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
+                        {t("test_cases.use_in_test_session")}
+                      </Menu.Item>
+                      <Menu.Item value="delete" color="fg.error" onClick={handleBulkDelete}>
+                        {t("test_cases.delete")}
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
+              )}
+              dataAccessor={(response) => {
+                return (response?.test_cases ?? []) as TestCase[];
+              }}
+              paginationAccessor={(response) => {
+                const pagination = response?.pagination;
+                if (!pagination) return undefined;
+                return {
+                  total: pagination.total ?? 0,
+                  page: pagination.page ?? 1,
+                  pageSize: pagination.pageSize ?? 10,
+                };
+              }}
+              rowActions={[
+                {
+                  name: "view",
+                  label: t("test_cases.view"),
+                  icon: LuEye,
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
+                },
+                {
+                  name: "edit",
+                  label: t("test_cases.edit"),
+                  icon: LuPencil,
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
+                },
+                {
+                  name: "branch",
+                  label: t("test_cases.branch"),
+                  icon: LuGitBranch,
+                  onClick: async (row) => {
+                    if (!row.id) return;
+                    try {
+                      const branched = await branchTestCase(String(row.id));
+                      const newId = branched?.data?.id ?? (branched as any)?.id;
 
-                    if (!newId) {
-                      throw new Error(
-                        "Branching did not return a new test case ID",
-                      );
+                      if (!newId) {
+                        throw new Error(
+                          "Branching did not return a new test case ID",
+                        );
+                      }
+
+                      toaster.success({
+                        title: t("test_cases.branch.success"),
+                        description: t("test_cases.branch.success_description"),
+                      });
+
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                      });
+
+                      navigate({
+                        to: "/projects/$projectId/test-cases/$testCaseId/edit",
+                        params: { projectId, testCaseId: String(newId) },
+                        search: { isBranched: true },
+                      });
+                    } catch (err: any) {
+                      toaster.error({
+                        title: t("test_cases.branch.error"),
+                        description: err?.message || "Could not branch test case.",
+                      });
                     }
-
-                    toaster.success({
-                      title: t("test_cases.branch.success"),
-                      description: t("test_cases.branch.success_description"),
-                    });
-
-                    await queryClient.invalidateQueries({
-                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-                    });
-
-                    navigate({
-                      to: "/projects/$projectId/test-cases/$testCaseId/edit",
-                      params: { projectId, testCaseId: String(newId) },
-                      search: { isBranched: true },
-                    });
-                  } catch (err: any) {
-                    toaster.error({
-                      title: t("test_cases.branch.error"),
-                      description: err?.message || "Could not branch test case.",
-                    });
-                  }
+                  },
                 },
-              },
-              {
-                name: "toggle-draft",
-                label: (row) =>
-                  row.is_draft
-                    ? t("test_cases.unmark_as_draft")
-                    : t("test_cases.mark_as_draft"),
-                onClick: async (row) => {
-                  if (!row.id) return;
-                  try {
-                    if (row.is_draft) {
-                      await unMarkTestCaseAsDraft(String(row.id));
-                      toaster.success({ title: t("test_cases.unmark_draft.success") });
-                    } else {
-                      await markTestCaseAsDraft(String(row.id));
-                      toaster.success({ title: t("test_cases.mark_draft.success") });
+                {
+                  name: "toggle-draft",
+                  label: (row) =>
+                    row.is_draft
+                      ? t("test_cases.unmark_as_draft")
+                      : t("test_cases.mark_as_draft"),
+                  onClick: async (row) => {
+                    if (!row.id) return;
+                    try {
+                      if (row.is_draft) {
+                        await unMarkTestCaseAsDraft(String(row.id));
+                        toaster.success({ title: t("test_cases.unmark_draft.success") });
+                      } else {
+                        await markTestCaseAsDraft(String(row.id));
+                        toaster.success({ title: t("test_cases.mark_draft.success") });
+                      }
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                      });
+                    } catch (err: any) {
+                      toaster.error({
+                        title: row.is_draft
+                          ? t("test_cases.unmark_draft.error")
+                          : t("test_cases.mark_draft.error"),
+                        description: err?.message,
+                      });
                     }
-                    await queryClient.invalidateQueries({
-                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-                    });
-                  } catch (err: any) {
-                    toaster.error({
-                      title: row.is_draft
-                        ? t("test_cases.unmark_draft.error")
-                        : t("test_cases.mark_draft.error"),
-                      description: err?.message,
-                    });
-                  }
+                  },
                 },
-              },
-              {
-                name: "use",
-                label: t("test_cases.use_in_test_session"),
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
-              },
-              {
-                name: "delete",
-                label: t("test_cases.delete"),
-                color: "fg.error",
-                onClick: async (row) => {
-                  if (!row.id) return;
-                  try {
-                    await deleteTestCase(String(row.id));
-                    toaster.success({ title: t("test_cases.delete.success") });
-                    await queryClient.invalidateQueries({
-                      queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-                    });
-                  } catch (err: any) {
-                    toaster.error({
-                      title: t("test_cases.delete.error"),
-                      description: err?.message,
-                    });
-                  }
+                {
+                  name: "use",
+                  label: t("test_cases.use_in_test_session"),
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
                 },
-              },
-            ]}
-          />
+                {
+                  name: "delete",
+                  label: t("test_cases.delete"),
+                  color: "fg.error",
+                  onClick: async (row) => {
+                    if (!row.id) return;
+                    try {
+                      await deleteTestCase(String(row.id));
+                      toaster.success({ title: t("test_cases.delete.success") });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                      });
+                    } catch (err: any) {
+                      toaster.error({
+                        title: t("test_cases.delete.error"),
+                        description: err?.message,
+                      });
+                    }
+                  },
+                },
+              ]}
+            />
+          </Box>
         </Tabs.Content>
         <Tabs.Content value="completed">
           <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
