@@ -8,6 +8,10 @@ import {
   Tabs,
   Text,
   Menu,
+  CheckboxGroup,
+  Checkbox,
+  Fieldset,
+  For,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,6 +19,7 @@ import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   TestCaseListQueryParams,
@@ -35,6 +40,7 @@ import {
   unMarkTestCaseAsDraft,
   deleteTestCase,
 } from "@/services/TestCaseService";
+import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
@@ -59,6 +65,10 @@ export default function ListProjectTestCases() {
   const [moduleFilter, setModuleFilter] = useState<string>("");
   const [selectedRows, setSelectedRows] = useState<TestCase[]>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
+  const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
+  const [bulkSelectedUsers, setBulkSelectedUsers] = useState<string[]>([]);
 
   const queryFactory = React.useCallback(
     ({
@@ -81,6 +91,9 @@ export default function ListProjectTestCases() {
   );
 
   const { data: usersData } = useUsersQuery();
+ 
+  const { data: testPlansData } = useProjectTestPlansQuery(projectId);
+  
   const userMap = Object.fromEntries(
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
@@ -129,7 +142,6 @@ export default function ListProjectTestCases() {
 
     try {
       const response = await importTestCasesFromFile(projectId, file);
-
       const msg = response.message;
 
       let toastType: "success" | "warning" | "info" = "success";
@@ -146,11 +158,7 @@ export default function ListProjectTestCases() {
         title = "Import successful";
       }
 
-      toaster.create({
-        title,
-        description: msg,
-        type: toastType,
-      });
+      toaster.create({ title, description: msg, type: toastType });
 
       await queryClient.invalidateQueries({
         queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
@@ -168,11 +176,10 @@ export default function ListProjectTestCases() {
 
   const handleBulkUseInTestSession = () => {
     if (selectedRows.length === 0) return;
-    const firstId = String(selectedRows[0].id ?? "");
-    if (!firstId) return;
-    navigate({
-      to: `/projects/${projectId}/test-cases/${firstId}?tab=usage`,
-    } as any);
+    setBulkAssignOpen(true);
+    setBulkAssignStep("plan");
+    setSelectedTestPlans([]);
+    setBulkSelectedUsers([]);
   };
 
   const handleBulkDelete = async () => {
@@ -197,6 +204,10 @@ export default function ListProjectTestCases() {
       });
     }
   };
+
+  const projectTestPlans = Array.isArray(testPlansData)
+    ? testPlansData
+    : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [];
 
   return (
     <div>
@@ -433,6 +444,188 @@ export default function ListProjectTestCases() {
           <SuggestedTestCasesTab projectID={projectId} />
         </Tabs.Content>
       </Tabs.Root>
+
+      {/* Bulk assign modal - Step 1: Select Test Plans with Checkboxes */}
+      {bulkAssignStep === "plan" && (
+        <AppDialog
+          open={bulkAssignOpen}
+          onOpenChange={(event) => {
+            if (!event.open) {
+              setBulkAssignOpen(false);
+              setBulkAssignStep("plan");
+              setSelectedTestPlans([]);
+            }
+          }}
+          title={t("test_plans.bulk_assign_title")}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setBulkAssignOpen(false)}>
+                {t("test_plans.cancel")}
+              </Button>
+              <Button
+                colorPalette="brand"
+                disabled={selectedTestPlans.length === 0}
+                onClick={() => {
+                  setBulkAssignStep("users");
+                }}
+              >
+                {t("test_plans.confirm_assignment")}
+              </Button>
+            </>
+          }
+        >
+          <Box fontSize="sm" mb={3} color="fg.muted">
+            Select test plan(s) to add {selectedRows.length} test case(s)
+          </Box>
+          <Box maxH="300px" overflowY="auto" pr={2}>
+            {projectTestPlans.length === 0 ? (
+              <Text fontSize="sm" color="fg.muted" py={4} textAlign="center">
+                No test plans found for this project.
+              </Text>
+            ) : (
+              <CheckboxGroup
+                value={selectedTestPlans}
+                onValueChange={setSelectedTestPlans}
+              >
+                <Fieldset.Root>
+                  <Fieldset.Content>
+                    <For each={projectTestPlans}>
+                      {(plan: any) => (
+                        <Checkbox.Root
+                          key={plan.id}
+                          value={String(plan.id)}
+                          p={3}
+                          mb={2}
+                          border="1px solid"
+                          borderColor={
+                            selectedTestPlans.includes(String(plan.id))
+                              ? "border.positive"
+                              : "border.subtle"
+                          }
+                          borderRadius="md"
+                          bg={
+                            selectedTestPlans.includes(String(plan.id))
+                              ? "bg.muted"
+                              : "transparent"
+                          }
+                          width="100%"
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                          <Checkbox.Label width="100%">
+                            <Text fontWeight="medium">
+                              {plan.description || plan.name || `Test Plan #${plan.id}`}
+                            </Text>
+                            <Text fontSize="xs" color="fg.muted">
+                              Kind: {plan.kind || "N/A"} · Status: {plan.status || "N/A"}
+                            </Text>
+                          </Checkbox.Label>
+                        </Checkbox.Root>
+                      )}
+                    </For>
+                  </Fieldset.Content>
+                </Fieldset.Root>
+              </CheckboxGroup>
+            )}
+          </Box>
+        </AppDialog>
+      )}
+
+      {/* Bulk assign modal - Step 2: Select Users */}
+      {bulkAssignStep === "users" && (
+        <AppDialog
+          open={bulkAssignOpen}
+          onOpenChange={(event) => {
+            if (!event.open) {
+              setBulkAssignOpen(false);
+              setBulkAssignStep("plan");
+              setSelectedTestPlans([]);
+            }
+          }}
+          title={t("test_plans.bulk_assign_title")}
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBulkAssignStep("plan");
+                }}
+              >
+                {t("test_plans.cancel")}
+              </Button>
+              <Button
+                colorPalette="brand"
+                disabled={bulkSelectedUsers.length === 0}
+                onClick={async () => {
+                  try {
+                    await Promise.all(
+                      selectedTestPlans.map((planId) =>
+                        assignTestersToTestPlan(planId, {
+                          project_id: Number(projectId),
+                          test_plan_id: Number(planId),
+                          planned_tests: selectedRows.map((row) => ({
+                            test_case_id: String(row.id),
+                            user_ids: bulkSelectedUsers.map(Number),
+                          })),
+                        })
+                      )
+                    );
+
+                    toaster.create({
+                      title: "Success",
+                      description: `Successfully assigned ${selectedRows.length} test case(s) to test plan(s)`,
+                      type: "success",
+                    });
+
+                    await queryClient.invalidateQueries({
+                      queryKey: ["get", "/v1/test-plans/{testPlanID}/test-cases"],
+                    });
+
+                    setBulkSelectedUsers([]);
+                    setBulkAssignOpen(false);
+                    setBulkAssignStep("plan");
+                    setSelectedTestPlans([]);
+                    setSelectedRows([]);
+                    setRowSelection({});
+                  } catch (err: any) {
+                    toaster.create({
+                      title: "Assignment failed",
+                      description: err?.message || "Failed to assign test cases to test plan",
+                      type: "error",
+                    });
+                  }
+                }}
+              >
+                {t("test_plans.confirm_assignment")}
+              </Button>
+            </>
+          }
+        >
+          <Box fontSize="sm" mb={3} color="fg.muted">
+            {t("test_plans.bulk_assign_description", {
+              count: selectedRows.length,
+            })}
+          </Box>
+          <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
+            <Fieldset.Root>
+              <Fieldset.Legend fontSize="sm">
+                {t("test_plans.select_testers")}
+              </Fieldset.Legend>
+              <Fieldset.Content>
+                <For each={userMap ? Object.entries(userMap) : []}>
+                  {([userId, userName]) => (
+                    <Checkbox.Root key={userId} value={userId}>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{String(userName)}</Checkbox.Label>
+                    </Checkbox.Root>
+                  )}
+                </For>
+              </Fieldset.Content>
+            </Fieldset.Root>
+          </CheckboxGroup>
+        </AppDialog>
+      )}
     </div>
   );
 }
