@@ -35,10 +35,10 @@ type AssignTestsToPlanRequest struct {
 }
 
 type BatchAssignTestCasesToPlanRequest struct {
-    ProjectID   int64    `json:"project_id" validate:"required"`
-    PlanID      int64    `json:"test_plan_id" validate:"required"`
-    TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
-    UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
+	ProjectID   int64    `json:"project_id" validate:"required"`
+	PlanID      int64    `json:"test_plan_id" validate:"required"`
+	TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
+	UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
 }
 
 type TestPlanResponseItem struct {
@@ -124,19 +124,22 @@ type ChangeEnvironmentRequest struct {
 }
 
 type CreateComment struct {
-	TestPlanID int64  `json:"test_plan_id" validate:"required"`
-	UserID     int64  `json:"user_id" validate:"required"`
-	Content    string `json:"content" validate:"required"`
+	TestPlanID      int64   `json:"test_plan_id" validate:"required"`
+	ParentCommentID *string `json:"parent_comment_id,omitempty"`
+	UserID          int64   `json:"user_id" validate:"required"`
+	Content         string  `json:"content" validate:"required"`
 }
 
 type CommentResponseItem struct {
-	ID         string `json:"id"`
-	TestPlanID int64  `json:"test_plan_id"`
-	UserID     int64  `json:"user_id"`
-	UserName   string `json:"user_name"`
-	Content    string `json:"content"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	ID              string                `json:"id"`
+	TestPlanID      int64                 `json:"test_plan_id"`
+	ParentCommentID *string               `json:"parent_comment_id,omitempty"`
+	UserID          int64                 `json:"user_id"`
+	UserName        string                `json:"user_name"`
+	Content         string                `json:"content"`
+	Replies         []CommentResponseItem `json:"replies,omitempty"`
+	CreatedAt       string                `json:"created_at"`
+	UpdatedAt       string                `json:"updated_at"`
 }
 
 type CommentListResponse struct {
