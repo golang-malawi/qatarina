@@ -20,16 +20,10 @@ export const Route = createFileRoute(
 // Helper function to format timestamp string verbatim or prevent unwanted browser timezone shifts
 function formatCommentDate(dateStr?: string) {
   if (!dateStr) return "";
-  // If the backend returns a standard ISO or RFC3339 string, we slice out the local time parts 
-  // or parse it safely. If it has a 'Z' or offset, we can parse it as a local date:
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
 
-    // Use UTC methods if your database stores actual UTC, 
-    // or local methods if your database stores raw local wall-clock time from time.Now().
-    // Since time.Now() stores local server wall-clock time, we read its UTC components 
-    // to prevent the browser from shifting it further:
     const month = d.toLocaleString(undefined, { month: "short" });
     const day = d.getUTCDate();
     const year = d.getUTCFullYear();
@@ -51,11 +45,13 @@ function CommentItem({
   numericTestPlanId,
   projectId,
   refetch,
+  isReply = false,
 }: {
   comment: Comment;
   numericTestPlanId: number;
   projectId: string;
   refetch: () => void;
+  isReply?: boolean;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -120,21 +116,25 @@ function CommentItem({
 
   return (
     <Box
-      p={4}
+      p={isReply ? 3 : 4}
       borderWidth="1px"
       borderColor="border.subtle"
       borderRadius="md"
-      bg="bg.surface"
+      bg={isReply ? "bg.subtle" : "bg.surface"}
     >
       <Flex justify="space-between" align="center" mb={1}>
-        <Text fontWeight="bold">{comment.user_name}</Text>
+        <Text fontWeight="bold" fontSize={isReply ? "sm" : "md"}>
+          {comment.user_name}
+        </Text>
         {formattedDate && (
           <Text fontSize="xs" color="fg.muted">
             {formattedDate}
           </Text>
         )}
       </Flex>
-      <Text mb={3}>{comment.content}</Text>
+      <Text mb={3} fontSize={isReply ? "sm" : "md"} color={isReply ? "fg.muted" : "fg.default"}>
+        {comment.content}
+      </Text>
 
       {/* GitHub-style inline reply box */}
       <Flex gap={2} mb={3}>
@@ -167,6 +167,7 @@ function CommentItem({
           {t("test_plans.comments.convert", "Convert to Test Case")}
         </Button>
 
+        {/* View/Hide Replies button is now cleanly aligned with other actions */}
         {hasReplies && (
           <Button
             size="sm"
@@ -190,6 +191,7 @@ function CommentItem({
               numericTestPlanId={numericTestPlanId}
               projectId={projectId}
               refetch={refetch}
+              isReply={true}
             />
           ))}
         </Stack>
