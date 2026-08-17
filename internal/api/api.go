@@ -29,6 +29,7 @@ type API struct {
 	OrgService            services.OrgService
 	EnvironmentService    services.EnvironmentService
 	ReportService         services.ReportService
+	DocumentService       services.DocumentService
 }
 
 func NewAPI(config *config.Config) *API {
@@ -59,6 +60,7 @@ func NewAPI(config *config.Config) *API {
 		OrgService:            services.NewOrgService(dbConn, logger),
 		EnvironmentService:    environmentService,
 		ReportService:         reportService,
+		DocumentService:       services.NewDocumentService(dbConn, logger),
 	}
 }
 
