@@ -31,6 +31,7 @@ type API struct {
 	OrgService              services.OrgService
 	EnvironmentService      services.EnvironmentService
 	ReportService           services.ReportService
+	DocumentService         services.DocumentService
 	Storage                 afero.Fs
 }
 
@@ -63,6 +64,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 		OrgService:              services.NewOrgService(dbConn, logger),
 		EnvironmentService:      environmentService,
 		ReportService:           reportService,
+		DocumentService:         services.NewDocumentService(dbConn, logger),
 		Storage:                 fs,
 	}
 }
