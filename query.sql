@@ -866,7 +866,7 @@ ORDER BY created_at DESC;
 
 -- name: GetProjectDocument :one
 SELECT * FROM project_documents 
-WHERE id = $1 AND project_id = $2;
+WHERE id = $1;
 
 -- name: CreateProjectDocument :one
 INSERT INTO project_documents (

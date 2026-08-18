@@ -1624,16 +1624,11 @@ func (q *Queries) GetProjectCount(ctx context.Context) (int64, error) {
 
 const getProjectDocument = `-- name: GetProjectDocument :one
 SELECT id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at FROM project_documents 
-WHERE id = $1 AND project_id = $2
+WHERE id = $1
 `
 
-type GetProjectDocumentParams struct {
-	ID        uuid.UUID
-	ProjectID int64
-}
-
-func (q *Queries) GetProjectDocument(ctx context.Context, arg GetProjectDocumentParams) (ProjectDocument, error) {
-	row := q.db.QueryRowContext(ctx, getProjectDocument, arg.ID, arg.ProjectID)
+func (q *Queries) GetProjectDocument(ctx context.Context, id uuid.UUID) (ProjectDocument, error) {
+	row := q.db.QueryRowContext(ctx, getProjectDocument, id)
 	var i ProjectDocument
 	err := row.Scan(
 		&i.ID,

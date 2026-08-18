@@ -215,7 +215,7 @@ func (api *API) routes() {
 	documentsV1 := projectsV1.Group("/:projectID/documents")
 	{
 		documentsV1.Get("", apiv1.ListProjectDocuments(api.DocumentService, api.logger))
-		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
+		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger, api.Config))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
 
