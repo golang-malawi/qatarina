@@ -14,7 +14,7 @@ import (
 
 type DocumentService interface {
 	FindAllByProjectID(ctx context.Context, projectID int64) ([]schema.ProjectDocumentResponseItem, error)
-	Create(ctx context.Context, projectID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error)
+	Create(ctx context.Context, projectID int64, uploaderID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error)
 	Delete(ctx context.Context, documentID string) error
 }
 
@@ -50,13 +50,17 @@ func (s *documentService) FindAllByProjectID(ctx context.Context, projectID int6
 	return documents, nil
 }
 
-func (s *documentService) Create(ctx context.Context, projectID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error) {
+func (s *documentService) Create(ctx context.Context, projectID int64, uploaderID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error) {
 	docID := uuid.New()
+
 	row, err := s.queries.CreateProjectDocument(ctx, dbsqlc.CreateProjectDocumentParams{
-		ID:        docID,
-		ProjectID: projectID,
-		Name:      req.Name,
-		FilePath:  req.FilePath,
+		ID:         docID,
+		ProjectID:  projectID,
+		UploaderID: uploaderID,
+		Name:       req.Name,
+		FilePath:   req.FilePath,
+		FileSize:   sql.NullInt64{Int64: req.FileSize, Valid: req.FileSize > 0},
+		MimeType:   sql.NullString{String: req.MimeType, Valid: req.MimeType != ""},
 	})
 	if err != nil {
 		return nil, err

@@ -3,9 +3,13 @@ package v1
 import (
 	"database/sql"
 	"errors"
+	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -47,27 +51,65 @@ func ListProjectDocuments(docService services.DocumentService, logger logging.Lo
 //
 //	@Summary		Upload/Create a document for a project
 //	@Tags			projects
-//	@Accept			json
+//	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			projectID	path		int								true	"Project ID"
-//	@Param			request		body		schema.CreateProjectDocumentRequest	true	"Document Data"
+//	@Param			projectID	path		int		true	"Project ID"
+//	@Param			name		formData	string	false	"Document Name"
+//	@Param			file		formData	file	true	"Document File"
 //	@Success		200			{object}	map[string]any
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID}/documents [post]
-func CreateProjectDocument(docService services.DocumentService, logger logging.Logger) fiber.Handler {
+func CreateProjectDocument(docService services.DocumentService, logger logging.Logger, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
 		if err != nil {
 			return problemdetail.BadRequest(c, "invalid parameter for projectID")
 		}
 
-		var request schema.CreateProjectDocumentRequest
-		if _, err := common.ParseBodyThenValidate(c, &request); err != nil {
-			return problemdetail.ValidationErrors(c, "invalid data in the request", err)
+		uploaderID := authutil.GetAuthUserID(c)
+		if uploaderID == 0 {
+			return problemdetail.NotAuthorizedProblem(c, "unauthorized")
 		}
 
-		doc, err := docService.Create(c.Context(), projectID, &request)
+		name := c.FormValue("name")
+
+		fileHeader, err := c.FormFile("file")
+		if err != nil {
+			return problemdetail.BadRequest(c, "file is required")
+		}
+
+		if name == "" {
+			name = fileHeader.Filename
+		}
+
+		fileSize := fileHeader.Size
+		mimeType := fileHeader.Header.Get("Content-Type")
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		saveDir := filepath.Join(cfg.Storage.LocalPath, "documents")
+		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to create storage directory")
+		}
+
+		savePath := filepath.Join(saveDir, fileHeader.Filename)
+		normalizedRelative := filepath.ToSlash(filepath.Join("documents", fileHeader.Filename))
+
+		if err := c.SaveFile(fileHeader, savePath); err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to save uploaded file", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to save file")
+		}
+
+		request := &schema.CreateProjectDocumentRequest{
+			Name:     name,
+			FilePath: normalizedRelative,
+			FileSize: fileSize,
+			MimeType: mimeType,
+		}
+
+		doc, err := docService.Create(c.Context(), projectID, int64(uploaderID), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiProjects, "failed to create project document", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
@@ -90,7 +132,7 @@ func CreateProjectDocument(docService services.DocumentService, logger logging.L
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		404			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
-//	@Router			/v1/documents/{documentID} [delete]
+//	@Router /v1/projects/{projectID}/documents/{documentID} [delete]
 func DeleteProjectDocument(docService services.DocumentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		documentID := c.Params("documentID")
