@@ -105,9 +105,18 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
 			ID:              plan.ID,
-			Description:     plan.Description.String,
+			ProjectID:       plan.ProjectID,
+			EnvironmentID:   plan.EnvironmentID.Int32,
+			AssignedToID:    plan.AssignedToID,
+			CreatedByID:     plan.CreatedByID,
+			UpdatedByID:     plan.UpdatedByID,
 			Kind:            string(plan.Kind),
+			Description:     plan.Description.String,
+			StartAt:         plan.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
 			NumTestCases:    int32(len(cases)),
+			NumFailures:     plan.NumFailures,
 			PassedCount:     runStats.PassedCount,
 			FailedCount:     runStats.FailedCount,
 			PendingCount:    runStats.PendingCount,
@@ -115,6 +124,8 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
+			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
 		})
 	}
 	return enriched, nil
@@ -133,9 +144,18 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
 			ID:              plan.ID,
-			Description:     plan.Description.String,
+			ProjectID:       plan.ProjectID,
+			EnvironmentID:   plan.EnvironmentID.Int32,
+			AssignedToID:    plan.AssignedToID,
+			CreatedByID:     plan.CreatedByID,
+			UpdatedByID:     plan.UpdatedByID,
 			Kind:            string(plan.Kind),
+			Description:     plan.Description.String,
+			StartAt:         plan.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  plan.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        plan.ClosedAt.Time.Format(time.DateTime),
 			NumTestCases:    int32(len(cases)),
+			NumFailures:     plan.NumFailures,
 			PassedCount:     runStats.PassedCount,
 			FailedCount:     runStats.FailedCount,
 			PendingCount:    runStats.PendingCount,
@@ -143,6 +163,8 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
+			CreatedAt:       plan.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       plan.UpdatedAt.Time.Format(time.DateTime),
 		})
 	}
 	return enriched, nil

@@ -35,10 +35,10 @@ type AssignTestsToPlanRequest struct {
 }
 
 type BatchAssignTestCasesToPlanRequest struct {
-    ProjectID   int64    `json:"project_id" validate:"required"`
-    PlanID      int64    `json:"test_plan_id" validate:"required"`
-    TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
-    UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
+	ProjectID   int64    `json:"project_id" validate:"required"`
+	PlanID      int64    `json:"test_plan_id" validate:"required"`
+	TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
+	UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
 }
 
 type TestPlanResponseItem struct {
@@ -74,8 +74,15 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, c
 		res = append(res, TestPlanResponseItem{
 			ID:              e.ID,
 			ProjectID:       e.ProjectID,
+			EnvironmentID:   e.EnvironmentID.Int32,
+			AssignedToID:    e.AssignedToID,
+			CreatedByID:     e.CreatedByID,
+			UpdatedByID:     e.UpdatedByID,
 			Kind:            string(e.Kind),
 			Description:     e.Description.String,
+			StartAt:         e.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  e.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        e.ClosedAt.Time.Format(time.DateTime),
 			NumTestCases:    e.NumTestCases,
 			PassedCount:     stats.PassedCount,
 			FailedCount:     stats.FailedCount,
@@ -84,6 +91,8 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, c
 			IsComplete:      e.IsComplete.Bool,
 			IsLocked:        e.IsLocked.Bool,
 			HasReport:       e.HasReport.Bool,
+			CreatedAt:       e.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       e.UpdatedAt.Time.Format(time.DateTime),
 		})
 	}
 	return res

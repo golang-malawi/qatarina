@@ -39,14 +39,17 @@ import {
   useProjectTestPlansQuery,
 } from "@/services/TestPlanService";
 import type { components } from "@/lib/api/v1";
-import { formatHumanDate } from "@/lib/date-time";
+import { formatHumanDateTime } from "@/lib/date-time";
 import { useMemo, useState } from "react";
 import { IconTrash } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
 import { findProjectTestPlansQueryOptions } from "@/data/queries/test-plans";
 import { useTranslation } from "react-i18next";
 
-type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
+type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"] & {
+  start_date?: string;
+  end_date?: string;
+};
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/",
@@ -89,20 +92,20 @@ function ListProjectTestPlans() {
   if (error) return <ErrorState title={t("test_plans.error")} />;
 
   const handleDelete = async (testPlanID: string) => {
-  try {
-    await deleteMutation.mutateAsync({
-      params: { path: { testPlanID } },
-    });
+    try {
+      await deleteMutation.mutateAsync({
+        params: { path: { testPlanID } },
+      });
 
-    toaster.success({ title: t("test_plans.delete.success") });
-    await refetch();
-  } catch (err: any) {
-    toaster.error({
-      title: t("test_plans.delete.error"),
-      description: err?.message,
-    });
-  }
-};
+      toaster.success({ title: t("test_plans.delete.success") });
+      await refetch();
+    } catch (err: any) {
+      toaster.error({
+        title: t("test_plans.delete.error"),
+        description: err?.message,
+      });
+    }
+  };
 
   return (
     <Box w="full">
@@ -160,6 +163,12 @@ function ListProjectTestPlans() {
             const pending = entry.pending_count ?? 0;
             const total = entry.num_test_cases ?? passed + failed + pending;
 
+            const startVal = entry.start_at || entry.start_date;
+            const endVal = entry.scheduled_end_at || entry.end_date;
+
+            const formattedStart = startVal ? formatHumanDateTime(startVal) : "";
+            const formattedEnd = endVal ? formatHumanDateTime(endVal) : "";
+
             return (
               <Card.Root
                 key={entry.id ?? `${title}-${index}`}
@@ -182,9 +191,9 @@ function ListProjectTestPlans() {
                         </Heading>
                         <Text fontSize="sm" color="fg.subtle">
                           {t("test_plans.start")}:{" "}
-                          {formatHumanDate(entry.start_at, { fallback: t("test_plans.not_scheduled") })}{" "}
+                          {formattedStart || t("test_plans.not_scheduled")}{" "}
                           | {t("test_plans.end")}:{" "}
-                          {formatHumanDate(entry.scheduled_end_at, { fallback: t("test_plans.not_scheduled") })}
+                          {formattedEnd || t("test_plans.not_scheduled")}
                         </Text>
                       </Stack>
                       <HStack gap={2} flexWrap="wrap">
