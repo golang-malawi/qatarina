@@ -51,6 +51,7 @@ import { Route as projectProjectsProjectIdReportsIndexRouteImport } from './rout
 import { Route as projectProjectsProjectIdOverviewIndexRouteImport } from './routes/(project)/projects/$projectId/overview/index'
 import { Route as projectProjectsProjectIdInsightsIndexRouteImport } from './routes/(project)/projects/$projectId/insights/index'
 import { Route as projectProjectsProjectIdEnvironmentsIndexRouteImport } from './routes/(project)/projects/$projectId/environments/index'
+import { Route as projectProjectsProjectIdDocumentsIndexRouteImport } from './routes/(project)/projects/$projectId/documents/index'
 import { Route as projectProjectsProjectIdFeaturesIndexRouteImport } from './routes/(project)/projects/$projectId/Features/index'
 import { Route as projectProjectsProjectIdTestersNewRouteImport } from './routes/(project)/projects/$projectId/testers/new'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID'
@@ -62,6 +63,7 @@ import { Route as projectProjectsProjectIdTestPlansNewIndexRouteImport } from '.
 import { Route as projectProjectsProjectIdTestCasesNewIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/new/index'
 import { Route as projectProjectsProjectIdTestCasesTestCaseIdIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/$testCaseId/index'
 import { Route as projectProjectsProjectIdEnvironmentsNewIndexRouteImport } from './routes/(project)/projects/$projectId/environments/new/index'
+import { Route as projectProjectsProjectIdDocumentsNewIndexRouteImport } from './routes/(project)/projects/$projectId/documents/new/index'
 import { Route as projectProjectsProjectIdTestersEditTesterIdRouteImport } from './routes/(project)/projects/$projectId/testers/edit/$testerId'
 import { Route as projectProjectsProjectIdTestCasesTestCaseIdEditRouteImport } from './routes/(project)/projects/$projectId/test-cases/$testCaseId/edit'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/testers/index'
@@ -303,6 +305,12 @@ const projectProjectsProjectIdEnvironmentsIndexRoute =
     path: '/environments/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
+const projectProjectsProjectIdDocumentsIndexRoute =
+  projectProjectsProjectIdDocumentsIndexRouteImport.update({
+    id: '/documents/',
+    path: '/documents/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
 const projectProjectsProjectIdFeaturesIndexRoute =
   projectProjectsProjectIdFeaturesIndexRouteImport.update({
     id: '/Features/',
@@ -367,6 +375,12 @@ const projectProjectsProjectIdEnvironmentsNewIndexRoute =
   projectProjectsProjectIdEnvironmentsNewIndexRouteImport.update({
     id: '/environments/new/',
     path: '/environments/new/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
+const projectProjectsProjectIdDocumentsNewIndexRoute =
+  projectProjectsProjectIdDocumentsNewIndexRouteImport.update({
+    id: '/documents/new/',
+    path: '/documents/new/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
 const projectProjectsProjectIdTestersEditTesterIdRoute =
@@ -449,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/documents/': typeof projectProjectsProjectIdDocumentsIndexRoute
   '/projects/$projectId/environments/': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/overview/': typeof projectProjectsProjectIdOverviewIndexRoute
@@ -463,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/workspace/testers/view/$testerId/': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
   '/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/projects/$projectId/documents/new/': typeof projectProjectsProjectIdDocumentsNewIndexRoute
   '/projects/$projectId/environments/new/': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
@@ -509,6 +525,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/projects/$projectId/Features': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/projects/$projectId/documents': typeof projectProjectsProjectIdDocumentsIndexRoute
   '/projects/$projectId/environments': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/projects/$projectId/insights': typeof projectProjectsProjectIdInsightsIndexRoute
   '/projects/$projectId/overview': typeof projectProjectsProjectIdOverviewIndexRoute
@@ -523,6 +540,7 @@ export interface FileRoutesByTo {
   '/workspace/testers/view/$testerId': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
   '/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/projects/$projectId/documents/new': typeof projectProjectsProjectIdDocumentsNewIndexRoute
   '/projects/$projectId/environments/new': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
@@ -572,6 +590,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/test-plans/$testPlanID': typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   '/(project)/projects/$projectId/testers/new': typeof projectProjectsProjectIdTestersNewRoute
   '/(project)/projects/$projectId/Features/': typeof projectProjectsProjectIdFeaturesIndexRoute
+  '/(project)/projects/$projectId/documents/': typeof projectProjectsProjectIdDocumentsIndexRoute
   '/(project)/projects/$projectId/environments/': typeof projectProjectsProjectIdEnvironmentsIndexRoute
   '/(project)/projects/$projectId/insights/': typeof projectProjectsProjectIdInsightsIndexRoute
   '/(project)/projects/$projectId/overview/': typeof projectProjectsProjectIdOverviewIndexRoute
@@ -586,6 +605,7 @@ export interface FileRoutesById {
   '/workspace/testers/view/$testerId/': typeof WorkspaceTestersViewTesterIdIndexRoute
   '/(project)/projects/$projectId/test-cases/$testCaseId/edit': typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
   '/(project)/projects/$projectId/testers/edit/$testerId': typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  '/(project)/projects/$projectId/documents/new/': typeof projectProjectsProjectIdDocumentsNewIndexRoute
   '/(project)/projects/$projectId/environments/new/': typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   '/(project)/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/(project)/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
@@ -635,6 +655,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans/$testPlanID'
     | '/projects/$projectId/testers/new'
     | '/projects/$projectId/Features/'
+    | '/projects/$projectId/documents/'
     | '/projects/$projectId/environments/'
     | '/projects/$projectId/insights/'
     | '/projects/$projectId/overview/'
@@ -649,6 +670,7 @@ export interface FileRouteTypes {
     | '/workspace/testers/view/$testerId/'
     | '/projects/$projectId/test-cases/$testCaseId/edit'
     | '/projects/$projectId/testers/edit/$testerId'
+    | '/projects/$projectId/documents/new/'
     | '/projects/$projectId/environments/new/'
     | '/projects/$projectId/test-cases/$testCaseId/'
     | '/projects/$projectId/test-cases/new/'
@@ -695,6 +717,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-plans/$testPlanID'
     | '/projects/$projectId/testers/new'
     | '/projects/$projectId/Features'
+    | '/projects/$projectId/documents'
     | '/projects/$projectId/environments'
     | '/projects/$projectId/insights'
     | '/projects/$projectId/overview'
@@ -709,6 +732,7 @@ export interface FileRouteTypes {
     | '/workspace/testers/view/$testerId'
     | '/projects/$projectId/test-cases/$testCaseId/edit'
     | '/projects/$projectId/testers/edit/$testerId'
+    | '/projects/$projectId/documents/new'
     | '/projects/$projectId/environments/new'
     | '/projects/$projectId/test-cases/$testCaseId'
     | '/projects/$projectId/test-cases/new'
@@ -757,6 +781,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/test-plans/$testPlanID'
     | '/(project)/projects/$projectId/testers/new'
     | '/(project)/projects/$projectId/Features/'
+    | '/(project)/projects/$projectId/documents/'
     | '/(project)/projects/$projectId/environments/'
     | '/(project)/projects/$projectId/insights/'
     | '/(project)/projects/$projectId/overview/'
@@ -771,6 +796,7 @@ export interface FileRouteTypes {
     | '/workspace/testers/view/$testerId/'
     | '/(project)/projects/$projectId/test-cases/$testCaseId/edit'
     | '/(project)/projects/$projectId/testers/edit/$testerId'
+    | '/(project)/projects/$projectId/documents/new/'
     | '/(project)/projects/$projectId/environments/new/'
     | '/(project)/projects/$projectId/test-cases/$testCaseId/'
     | '/(project)/projects/$projectId/test-cases/new/'
@@ -1088,6 +1114,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof projectProjectsProjectIdEnvironmentsIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
+    '/(project)/projects/$projectId/documents/': {
+      id: '/(project)/projects/$projectId/documents/'
+      path: '/documents'
+      fullPath: '/projects/$projectId/documents/'
+      preLoaderRoute: typeof projectProjectsProjectIdDocumentsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
     '/(project)/projects/$projectId/Features/': {
       id: '/(project)/projects/$projectId/Features/'
       path: '/Features'
@@ -1163,6 +1196,13 @@ declare module '@tanstack/react-router' {
       path: '/environments/new'
       fullPath: '/projects/$projectId/environments/new/'
       preLoaderRoute: typeof projectProjectsProjectIdEnvironmentsNewIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
+    '/(project)/projects/$projectId/documents/new/': {
+      id: '/(project)/projects/$projectId/documents/new/'
+      path: '/documents/new'
+      fullPath: '/projects/$projectId/documents/new/'
+      preLoaderRoute: typeof projectProjectsProjectIdDocumentsNewIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
     '/(project)/projects/$projectId/testers/edit/$testerId': {
@@ -1343,6 +1383,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdTestPlansTestPlanIDRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren
   projectProjectsProjectIdTestersNewRoute: typeof projectProjectsProjectIdTestersNewRoute
   projectProjectsProjectIdFeaturesIndexRoute: typeof projectProjectsProjectIdFeaturesIndexRoute
+  projectProjectsProjectIdDocumentsIndexRoute: typeof projectProjectsProjectIdDocumentsIndexRoute
   projectProjectsProjectIdEnvironmentsIndexRoute: typeof projectProjectsProjectIdEnvironmentsIndexRoute
   projectProjectsProjectIdInsightsIndexRoute: typeof projectProjectsProjectIdInsightsIndexRoute
   projectProjectsProjectIdOverviewIndexRoute: typeof projectProjectsProjectIdOverviewIndexRoute
@@ -1353,6 +1394,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdTestersIndexRoute: typeof projectProjectsProjectIdTestersIndexRoute
   projectProjectsProjectIdTestCasesTestCaseIdEditRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdEditRoute
   projectProjectsProjectIdTestersEditTesterIdRoute: typeof projectProjectsProjectIdTestersEditTesterIdRoute
+  projectProjectsProjectIdDocumentsNewIndexRoute: typeof projectProjectsProjectIdDocumentsNewIndexRoute
   projectProjectsProjectIdEnvironmentsNewIndexRoute: typeof projectProjectsProjectIdEnvironmentsNewIndexRoute
   projectProjectsProjectIdTestCasesTestCaseIdIndexRoute: typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   projectProjectsProjectIdTestCasesNewIndexRoute: typeof projectProjectsProjectIdTestCasesNewIndexRoute
@@ -1375,6 +1417,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdTestersNewRoute,
     projectProjectsProjectIdFeaturesIndexRoute:
       projectProjectsProjectIdFeaturesIndexRoute,
+    projectProjectsProjectIdDocumentsIndexRoute:
+      projectProjectsProjectIdDocumentsIndexRoute,
     projectProjectsProjectIdEnvironmentsIndexRoute:
       projectProjectsProjectIdEnvironmentsIndexRoute,
     projectProjectsProjectIdInsightsIndexRoute:
@@ -1395,6 +1439,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdTestCasesTestCaseIdEditRoute,
     projectProjectsProjectIdTestersEditTesterIdRoute:
       projectProjectsProjectIdTestersEditTesterIdRoute,
+    projectProjectsProjectIdDocumentsNewIndexRoute:
+      projectProjectsProjectIdDocumentsNewIndexRoute,
     projectProjectsProjectIdEnvironmentsNewIndexRoute:
       projectProjectsProjectIdEnvironmentsNewIndexRoute,
     projectProjectsProjectIdTestCasesTestCaseIdIndexRoute:

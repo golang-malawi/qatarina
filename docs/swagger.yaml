@@ -252,16 +252,6 @@ components:
       required:
       - name
       type: object
-    schema.CreateProjectDocumentRequest:
-      properties:
-        file_path:
-          type: string
-        name:
-          type: string
-      required:
-      - file_path
-      - name
-      type: object
     schema.CreateProjectModuleRequest:
       properties:
         code:
@@ -1469,50 +1459,6 @@ paths:
       summary: Get dashboard summary
       tags:
       - dashboard
-  /v1/documents/{documentID}:
-    delete:
-      parameters:
-      - description: Document ID (UUID)
-        in: path
-        name: documentID
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                additionalProperties:
-                  type: string
-                type: object
-          description: OK
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-          description: Bad Request
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-          description: Not Found
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/problemdetail.ProblemDetail'
-          description: Internal Server Error
-      summary: Delete a project document
-      tags:
-      - projects
   /v1/environments/{envID}:
     get:
       description: Get details of a single environment by ID
@@ -2473,10 +2419,10 @@ paths:
           type: integer
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: '#/components/schemas/schema.CreateProjectDocumentRequest'
-        description: Document Data
+              type: file
+        description: Document File
         required: true
       responses:
         "200":
@@ -2499,6 +2445,50 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Upload/Create a document for a project
+      tags:
+      - projects
+  /v1/projects/{projectID}/documents/{documentID}:
+    delete:
+      parameters:
+      - description: Document ID (UUID)
+        in: path
+        name: documentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a project document
       tags:
       - projects
   /v1/projects/{projectID}/environments:
