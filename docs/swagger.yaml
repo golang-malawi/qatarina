@@ -175,6 +175,13 @@ components:
           type: string
         id:
           type: string
+        parent_comment_id:
+          type: string
+        replies:
+          items:
+            $ref: '#/components/schemas/schema.CommentResponseItem'
+          type: array
+          uniqueItems: false
         test_plan_id:
           type: integer
         updated_at:
@@ -227,6 +234,8 @@ components:
     schema.CreateComment:
       properties:
         content:
+          type: string
+        parent_comment_id:
           type: string
         test_plan_id:
           type: integer

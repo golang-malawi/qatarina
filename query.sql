@@ -801,6 +801,7 @@ FROM reports WHERE project_id = $1;
 SELECT 
     c.id,
     c.test_plan_id,
+    c.parent_comment_id,
     c.user_id,
     u.display_name,   
     c.content,
@@ -815,6 +816,7 @@ ORDER BY c.created_at DESC;
 SELECT 
     c.id,
     c.test_plan_id,
+    c.parent_comment_id,
     c.user_id,
     u.display_name,
     c.content,
@@ -825,11 +827,12 @@ JOIN users u ON u.id = c.user_id
 WHERE c.id = $1;
 
 -- name: CreateComment :one
-INSERT INTO test_plan_comments (id, test_plan_id, user_id, content, created_at, updated_at)
-VALUES ($1, $2, $3, $4, NOW(), NOW())
+INSERT INTO test_plan_comments (id, test_plan_id, parent_comment_id, user_id, content, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 RETURNING 
     id,
     test_plan_id,
+    parent_comment_id,
     user_id,
     content,
     created_at,
