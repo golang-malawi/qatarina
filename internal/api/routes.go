@@ -137,7 +137,7 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 
 		testPlansV1.Post("/:testPlanID/test-cases/batch", apiv1.BatchAssignTestCasesToPlan(api.TestPlansService, api.logger))
-		
+
 		commentsV1 := testPlansV1.Group("/:testPlanID/comments")
 		{
 			commentsV1.Get("", apiv1.ListTestPlanComments(api.TestPlansService, api.logger))
@@ -209,7 +209,14 @@ func (api *API) routes() {
 		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
 		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
 		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
-		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger))
+	}
+
+	documentsV1 := projectsV1.Group("/:projectID/documents")
+	{
+		documentsV1.Get("", apiv1.ListProjectDocuments(api.DocumentService, api.logger))
+		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger, api.Config))
+		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
 
 	// Serves the app at the root path  "/"

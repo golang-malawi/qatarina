@@ -40,6 +40,7 @@ export const ProjectLinkItems: NavItem[] = [
   { path: "/projects/$projectId/testers", name: "Testers", icon: FiUsers },
   { path: "/projects/$projectId/reports", name: "Reports", icon: FiFileText },
   { path: "/projects/$projectId/insights", name: "Insights", icon: FiFileText },
-  { path: "/projects/$projectId/settings", name: "Settings", icon: FiSettings },
   { path: "/projects/$projectId/environments", name: "Environments", icon: FiDatabase },
+  { path: "/projects/$projectId/documents", name: "Documents", icon: FiFileText },
+  { path: "/projects/$projectId/settings", name: "Settings", icon: FiSettings },
 ];
