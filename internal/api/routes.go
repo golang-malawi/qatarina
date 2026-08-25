@@ -119,6 +119,7 @@ func (api *API) routes() {
 		testCasesV1.Delete("/:testCaseID/reject", apiv1.RejectSuggestedTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:test_case_id/execute", apiv1.ExecuteTestCase(api.TestCasesService, api.TestRunsService, api.logger, api.Config))
 		testCasesV1.Post("/:testCaseID/branch", apiv1.BranchTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/transfer", apiv1.TransferTestCase(api.TestCasesService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
@@ -137,7 +138,7 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 
 		testPlansV1.Post("/:testPlanID/test-cases/batch", apiv1.BatchAssignTestCasesToPlan(api.TestPlansService, api.logger))
-		
+
 		commentsV1 := testPlansV1.Group("/:testPlanID/comments")
 		{
 			commentsV1.Get("", apiv1.ListTestPlanComments(api.TestPlansService, api.logger))

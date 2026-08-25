@@ -1073,3 +1073,43 @@ func BranchTestCase(testCaseService services.TestCaseService, logger logging.Log
 		return c.JSON(schema.NewTestCaseResponseFromRow(branched))
 	}
 }
+
+// TransferTestCase godoc
+//
+//	@ID             TransferTestCase
+//	@Summary        Transfer a Test Case to another project
+//	@Description    Transfer an existing test case to a different project ID and feature/module
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string                      true    "Test Case ID"
+//	@Param          request     body        schema.TransferTestCaseRequest true    "Transfer request data"
+//	@Success        200         {object}    schema.TestCaseResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID}/transfer [post]
+func TransferTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		request := new(schema.TransferTestCaseRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		// Pass the whole request struct so it includes FeatureOrModule
+		updated, err := testCaseService.Transfer(c.Context(), testCaseID, *request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to transfer test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to transfer test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponseFromRow(updated))
+	}
+}
