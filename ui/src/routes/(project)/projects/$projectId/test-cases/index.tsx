@@ -25,7 +25,7 @@ import {
   TestCaseListQueryParams,
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
-import { LuEye, LuGitBranch, LuPencil } from "react-icons/lu";
+import { LuEye, LuGitBranch, LuPencil, LuArrowRightLeft } from "react-icons/lu";
 import {
   useClosedTestCasesQuery,
   useFailingTestCasesQuery,
@@ -39,11 +39,13 @@ import {
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,
   deleteTestCase,
+  transferTestCase,
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
+import { useProjectsQuery } from "@/services/ProjectService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -69,6 +71,11 @@ export default function ListProjectTestCases() {
   const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
   const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
   const [bulkSelectedUsers, setBulkSelectedUsers] = useState<string[]>([]);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [targetProjectId, setTargetProjectId] = useState<string>("");
+  const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
+  const [testCaseToTransfer, setTestCaseToTransfer] = useState<TestCase | null>(null);
+  const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
 
   const queryFactory = React.useCallback(
     ({
@@ -91,9 +98,13 @@ export default function ListProjectTestCases() {
   );
 
   const { data: usersData } = useUsersQuery();
- 
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
-  
+  const { data: projectsData } = useProjectsQuery();
+
+  const projectsList = Array.isArray(projectsData)
+    ? projectsData
+    : (projectsData as any)?.projects ?? (projectsData as any)?.data ?? [];
+ 
   const userMap = Object.fromEntries(
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
@@ -182,6 +193,23 @@ export default function ListProjectTestCases() {
     setBulkSelectedUsers([]);
   };
 
+  const handleTransferClick = (row: TestCase) => {
+    setTestCaseToTransfer(row);
+    setTargetProjectId("");
+    setTargetFeatureOrModule("");
+    setProjectSearchQuery("");
+    setTransferModalOpen(true);
+  };
+
+  const handleBulkTransferClick = () => {
+    if (selectedRows.length === 0) return;
+    setTestCaseToTransfer(null);
+    setTargetProjectId("");
+    setTargetFeatureOrModule("");
+    setProjectSearchQuery("");
+    setTransferModalOpen(true);
+  };
+
   const handleBulkDelete = async () => {
     if (selectedRows.length === 0) return;
     try {
@@ -208,6 +236,16 @@ export default function ListProjectTestCases() {
   const projectTestPlans = Array.isArray(testPlansData)
     ? testPlansData
     : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [];
+
+  const filteredProjects = projectsList
+    .filter((p: any) => String(p.id) !== String(projectId))
+    .filter((proj: any) => {
+      const query = projectSearchQuery.toLowerCase().trim();
+      if (!query) return true;
+      const name = (proj.name || proj.title || "").toLowerCase();
+      const code = (proj.code || "").toLowerCase();
+      return name.includes(query) || code.includes(query);
+    });
 
   return (
     <div>
@@ -297,6 +335,9 @@ export default function ListProjectTestCases() {
                       <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
                         {t("test_cases.use_in_test_session")}
                       </Menu.Item>
+                      <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
+                        {t("test_cases.transfer")}
+                      </Menu.Item>
                       <Menu.Item value="delete" color="fg.error" onClick={handleBulkDelete}>
                         {t("test_cases.delete")}
                       </Menu.Item>
@@ -368,6 +409,12 @@ export default function ListProjectTestCases() {
                       });
                     }
                   },
+                },
+                {
+                  name: "transfer",
+                  label: t("test_cases.transfer"),
+                  icon: LuArrowRightLeft,
+                  onClick: (row) => handleTransferClick(row),
                 },
                 {
                   name: "toggle-draft",
@@ -626,6 +673,186 @@ export default function ListProjectTestCases() {
           </CheckboxGroup>
         </AppDialog>
       )}
+
+      {/* Transfer Test Case Modal */}
+      <AppDialog
+        open={transferModalOpen}
+        onOpenChange={(event) => {
+          if (!event.open) {
+            setTransferModalOpen(false);
+            setTestCaseToTransfer(null);
+            setTargetProjectId("");
+            setTargetFeatureOrModule("");
+            setProjectSearchQuery("");
+          }
+        }}
+        title={testCaseToTransfer ? t("test_cases.transfer") : `Transfer ${selectedRows.length} Test Case(s)`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTransferModalOpen(false)}>
+              {t("test_plans.cancel")}
+            </Button>
+            <Button
+              colorPalette="brand"
+              disabled={!targetProjectId || !targetFeatureOrModule.trim()}
+              onClick={async () => {
+                try {
+                  const targetIdNum = Number(targetProjectId);
+                  const featureOrModuleVal = targetFeatureOrModule.trim();
+
+                  if (testCaseToTransfer?.id) {
+                    await transferTestCase(String(testCaseToTransfer.id), {
+                      target_project_id: targetIdNum,
+                      feature_or_module: featureOrModuleVal,
+                    });
+                  } else {
+                    await Promise.all(
+                      selectedRows.map((row) => {
+                        if (row.id) {
+                          return transferTestCase(String(row.id), {
+                            target_project_id: targetIdNum,
+                            feature_or_module: featureOrModuleVal,
+                          });
+                        }
+                        return Promise.resolve();
+                      })
+                    );
+                  }
+
+                  toaster.success({
+                    title: "Transfer successful",
+                    description: "Test case(s) moved to the target project successfully.",
+                  });
+
+                  await queryClient.invalidateQueries({
+                    queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                  });
+
+                  setTransferModalOpen(false);
+                  setTestCaseToTransfer(null);
+                  setTargetProjectId("");
+                  setTargetFeatureOrModule("");
+                  setProjectSearchQuery("");
+                  setSelectedRows([]);
+                  setRowSelection({});
+                } catch (err: any) {
+                  toaster.error({
+                    title: "Transfer failed",
+                    description: err?.message || "Failed to transfer test case(s)",
+                  });
+                }
+              }}
+            >
+              Confirm Transfer
+            </Button>
+          </>
+        }
+      >
+        <Box fontSize="sm" mb={3} color="fg.muted">
+          {testCaseToTransfer
+            ? `Select the destination project and feature/module to move test case "${testCaseToTransfer.title}" (${testCaseToTransfer.code}):`
+            : `Select the destination project and feature/module to move ${selectedRows.length} selected test case(s):`}
+        </Box>
+        
+        <Fieldset.Root>
+          <Fieldset.Content>
+            <Box mb={3} position="relative">
+              <Text fontSize="xs" fontWeight="medium" mb={1}>Target Project</Text>
+              
+              <input
+                type="text"
+                placeholder="Search or select a project..."
+                value={projectSearchQuery}
+                onFocus={() => {
+                  if (!projectSearchQuery && !targetProjectId) {
+                    setProjectSearchQuery(" ");
+                  }
+                }}
+                onChange={(e) => {
+                  setProjectSearchQuery(e.target.value);
+                  if (targetProjectId) {
+                    setTargetProjectId("");
+                    setTargetFeatureOrModule("");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (filteredProjects.length === 1) {
+                      const proj = filteredProjects[0];
+                      setTargetProjectId(String(proj.id));
+                      setProjectSearchQuery(proj.name || proj.title || "");
+                      setTargetFeatureOrModule("");
+                    }
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--chakra-colors-border-subtle)",
+                  background: "var(--chakra-colors-bg-surface)",
+                }}
+              />
+
+              {projectSearchQuery !== "" && !targetProjectId && (
+                <Box
+                  position="absolute"
+                  top="100%"
+                  left="0"
+                  right="0"
+                  mt={1}
+                  maxH="200px"
+                  overflowY="auto"
+                  bg="bg.surface"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                  borderRadius="md"
+                  boxShadow="md"
+                  zIndex={10}
+                >
+                  {filteredProjects.length === 0 ? (
+                    <Box p={2} fontSize="sm" color="fg.muted" textAlign="center">
+                      No matching projects found
+                    </Box>
+                  ) : (
+                    filteredProjects.map((proj: any) => (
+                      <Box
+                        key={proj.id}
+                        px={3}
+                        py={2}
+                        fontSize="sm"
+                        cursor="pointer"
+                        _hover={{ bg: "bg.muted" }}
+                        onClick={() => {
+                          setTargetProjectId(String(proj.id));
+                          setProjectSearchQuery(proj.name || proj.title || "");
+                          setTargetFeatureOrModule("");
+                        }}
+                      >
+                        <Text fontWeight="medium">{proj.name || proj.title}</Text>
+                        {proj.code && (
+                          <Text fontSize="xs" color="fg.muted">Code: {proj.code}</Text>
+                        )}
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              )}
+            </Box>
+
+            <Box>
+              <Text fontSize="xs" fontWeight="medium" mb={1}>Target Feature or Module</Text>
+              <SelectFeatureModule
+                key={targetProjectId}
+                projectId={targetProjectId}
+                value={targetFeatureOrModule}
+                onChange={setTargetFeatureOrModule}
+              />
+            </Box>
+          </Fieldset.Content>
+        </Fieldset.Root>
+      </AppDialog>
     </div>
   );
 }
@@ -821,7 +1048,7 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
             <Table.Cell>{tc.title}</Table.Cell>
             <Table.Cell>{tc.description}</Table.Cell>
             <Table.Cell>
-              <Flex gap={2}>
+              <Flex gap="2">
                 <Button
                   size="sm"
                   colorPalette="green"

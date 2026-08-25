@@ -187,3 +187,17 @@ export async function branchTestCase(testCaseID: string) {
     params: { path: { testCaseID } },
   });
 }
+
+export function useTransferTestCaseMutation() {
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}/transfer");
+}
+
+export async function transferTestCase(
+  testCaseID: string,
+  data: components["schemas"]["schema.TransferTestCaseRequest"], // adjust schema name if needed based on generated types
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/transfer", {
+    params: { path: { testCaseID } },
+    body: data as any,
+  });
+}
