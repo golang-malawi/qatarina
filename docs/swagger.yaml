@@ -1038,6 +1038,16 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.TransferTestCaseRequest:
+      properties:
+        feature_or_module:
+          type: string
+        target_project_id:
+          type: integer
+      required:
+      - feature_or_module
+      - target_project_id
+      type: object
     schema.UpdateAutomatedTestingRequest:
       properties:
         automated_testing_enabled:
@@ -3749,6 +3759,46 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Reject a suggested Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/transfer:
+    post:
+      description: Transfer an existing test case to a different project ID and feature/module
+      operationId: TransferTestCase
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.TransferTestCaseRequest'
+        description: Transfer request data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Transfer a Test Case to another project
       tags:
       - test-cases
   /v1/test-cases/{testCaseID}/unmark-draft:

@@ -198,3 +198,8 @@ type SugestedTestCaseResponse struct {
 	TestCaseResponse
 	Suggested bool `json:"suggested"`
 }
+
+type TransferTestCaseRequest struct {
+	TargetProjectID int64  `json:"target_project_id" validate:"required"`
+	FeatureOrModule string `json:"feature_or_module" validate:"required"`
+}
