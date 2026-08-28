@@ -354,9 +354,12 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([
 	if err != nil {
 		return nil, err
 	}
-	comments := make([]schema.CommentResponseItem, 0, len(rows))
+
+	commentMap := make(map[string]*schema.CommentResponseItem)
+	var rootComments []schema.CommentResponseItem
+
 	for _, r := range rows {
-		comments = append(comments, schema.CommentResponseItem{
+		item := schema.CommentResponseItem{
 			ID:         r.ID.String(),
 			TestPlanID: r.TestPlanID,
 			UserID:     r.UserID,
@@ -364,29 +367,64 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([
 			Content:    r.Content,
 			CreatedAt:  r.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:  r.UpdatedAt.Time.Format(time.RFC3339),
-		})
+		}
+		if r.ParentCommentID.Valid {
+			parentStr := r.ParentCommentID.UUID.String()
+			item.ParentCommentID = &parentStr
+		}
+		commentMap[item.ID] = &item
 	}
-	return comments, nil
+
+	for _, item := range commentMap {
+		if item.ParentCommentID != nil {
+			if parent, exists := commentMap[*item.ParentCommentID]; exists {
+				parent.Replies = append(parent.Replies, *item)
+			}
+		} else {
+			rootComments = append(rootComments, *item)
+		}
+	}
+
+	return rootComments, nil
 }
 
 func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error) {
 	id := uuid.New()
+
+	var parentUUID uuid.NullUUID
+	if req.ParentCommentID != nil && *req.ParentCommentID != "" {
+		parsedUUID, err := uuid.Parse(*req.ParentCommentID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parent comment ID: %w", err)
+		}
+		parentUUID = uuid.NullUUID{UUID: parsedUUID, Valid: true}
+	}
+
 	row, err := t.queries.CreateComment(ctx, dbsqlc.CreateCommentParams{
-		ID:         id,
-		TestPlanID: req.TestPlanID,
-		UserID:     req.UserID,
-		Content:    req.Content,
+		ID:              id,
+		TestPlanID:      req.TestPlanID,
+		ParentCommentID: parentUUID,
+		UserID:          req.UserID,
+		Content:         req.Content,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	var parentStr *string
+	if row.ParentCommentID.Valid {
+		s := row.ParentCommentID.UUID.String()
+		parentStr = &s
+	}
+
 	return &schema.CommentResponseItem{
-		ID:         row.ID.String(),
-		TestPlanID: row.TestPlanID,
-		UserID:     row.UserID,
-		Content:    row.Content,
-		CreatedAt:  row.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:  row.UpdatedAt.Time.Format(time.RFC3339),
+		ID:              row.ID.String(),
+		TestPlanID:      row.TestPlanID,
+		ParentCommentID: parentStr,
+		UserID:          row.UserID,
+		Content:         row.Content,
+		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
 	}, nil
 }
 

@@ -2137,6 +2137,8 @@ export interface components {
             content?: string;
             created_at?: string;
             id?: string;
+            parent_comment_id?: string;
+            replies?: components["schemas"]["schema.CommentResponseItem"][];
             test_plan_id?: number;
             updated_at?: string;
             user_id?: number;
@@ -2159,6 +2161,7 @@ export interface components {
         };
         "schema.CreateComment": {
             content: string;
+            parent_comment_id?: string;
             test_plan_id: number;
             user_id: number;
         };
