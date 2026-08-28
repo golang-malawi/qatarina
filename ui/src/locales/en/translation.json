@@ -24,6 +24,7 @@
   "test_cases.edit": "Edit",
   "test_cases.mark_as_draft": "Mark as Draft",
   "test_cases.delete": "Delete",
+  "test_cases.transfer": "Transfer",
   "test_cases.column.code": "Code",
   "test_cases.column.title": "Title",
   "test_cases.column.kind": "Kind",
@@ -49,7 +50,6 @@
   "test_cases.details.preconditions": "Preconditions",
   "test_cases.details.expected_result": "Expected Result",
   "test_cases.show_closed": "Show closed test cases",
-
   "test_cases.sheet_view.close": "Close",
   "test_cases.sheet_view.view_steps": "View Description",
   "test_cases.sheet_view.not_specified": "Not specified",

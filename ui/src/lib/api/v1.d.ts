@@ -1330,6 +1330,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer a Test Case to another project
+         * @description Transfer an existing test case to a different project ID and feature/module
+         */
+        post: operations["TransferTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/unmark-draft": {
         parameters: {
             query?: never;
@@ -2506,6 +2526,10 @@ export interface components {
         };
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
+        };
+        "schema.TransferTestCaseRequest": {
+            feature_or_module: string;
+            target_project_id: number;
         };
         "schema.UpdateAutomatedTestingRequest": {
             automated_testing_enabled?: boolean;
@@ -5272,6 +5296,52 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    TransferTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Transfer request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.TransferTestCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseResponse"];
                 };
             };
             /** @description Bad Request */

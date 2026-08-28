@@ -535,7 +535,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     const lastRun = runsList.find((r: any) => r.test_case_id === tc.id);
 
     return (
-      <Table.Row ref={ref} bg={rowBg} _hover={{ bg: "blue.50" }}>
+      <Table.Row ref={ref} bg={rowBg} _hover={{ bg: "blue.50" }} opacity={tc.is_closed ? 0.5 : 1}>
         {/* Code Column */}
         <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
           <Text fontWeight="medium" fontSize="xs" truncate title={tc.code || `#${tc.id}`}>

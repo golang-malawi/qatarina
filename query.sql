@@ -402,6 +402,14 @@ UPDATE test_cases SET suggested = $2 WHERE id = $1;
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
+-- name: TransferTestCase :exec
+UPDATE test_cases 
+SET project_id = $2, 
+    code = $3, 
+    feature_or_module = $4,
+    updated_at = NOW()
+WHERE id = $1;
+
 -- name: ListTestPlansByProject :many
 SELECT * FROM test_plans WHERE project_id = $1;
 
