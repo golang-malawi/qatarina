@@ -213,6 +213,13 @@ func (api *API) routes() {
 		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
 	}
 
+	jiraV1 := router.Group("/v1/jira", authenticationMiddleware)
+	{
+		jiraV1.Post("/projects", apiv1.GetAllJiraProjects(api.logger))
+		jiraV1.Post("/project", apiv1.GetJiraProject(api.logger))
+		jiraV1.Post("/issues", apiv1.CreateJiraIssue(api.logger))
+	}
+
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{
 		Root:         http.FS(frontendAssets),
