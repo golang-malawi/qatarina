@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	_ "github.com/golang-malawi/qatarina/docs"
+
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
 	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
