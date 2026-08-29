@@ -7,21 +7,26 @@ import {
   Table,
   Tabs,
   Text,
+  Menu,
+  CheckboxGroup,
+  Checkbox,
+  Fieldset,
+  For,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   TestCaseListQueryParams,
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
-import { LuEye, LuPencil } from "react-icons/lu";
+import { LuEye, LuGitBranch, LuPencil, LuArrowRightLeft } from "react-icons/lu";
 import {
-  markTestCaseAsDraft,
   useClosedTestCasesQuery,
   useFailingTestCasesQuery,
   useScheduledTestCasesQuery,
@@ -30,10 +35,17 @@ import {
   useSuggestedTestCasesQuery,
   approveSuggestedTestCase,
   rejectSuggestedTestCase,
+  branchTestCase,
+  markTestCaseAsDraft,
+  unMarkTestCaseAsDraft,
+  deleteTestCase,
+  transferTestCase,
 } from "@/services/TestCaseService";
+import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
-import { deleteTestCase } from "@/services/TestCaseService";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "@tanstack/react-router";
+import { useProjectsQuery } from "@/services/ProjectService";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/",
@@ -49,30 +61,21 @@ type TestCaseListResponse =
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const [moduleFilter, setModuleFilter] = useState<string>("");
-
-  const markDraftMutation = useMutation({
-    mutationFn: async (id: string) => await markTestCaseAsDraft(id),
-    onSuccess: () => {
-      toaster.create({
-        title: t("test_cases.toast.success"),
-        description: t("test_cases.mark_draft.success"),
-        type: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
-      });
-    },
-    onError: () => {
-      toaster.create({
-        title: t("test_cases.toast.error"),
-        description: t("test_cases.mark_draft.error"),
-        type: "error",
-      });
-    },
-  });
+  const [selectedRows, setSelectedRows] = useState<TestCase[]>([]);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
+  const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
+  const [bulkSelectedUsers, setBulkSelectedUsers] = useState<string[]>([]);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [targetProjectId, setTargetProjectId] = useState<string>("");
+  const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
+  const [testCaseToTransfer, setTestCaseToTransfer] = useState<TestCase | null>(null);
+  const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
 
   const queryFactory = React.useCallback(
     ({
@@ -95,6 +98,13 @@ export default function ListProjectTestCases() {
   );
 
   const { data: usersData } = useUsersQuery();
+  const { data: testPlansData } = useProjectTestPlansQuery(projectId);
+  const { data: projectsData } = useProjectsQuery();
+
+  const projectsList = Array.isArray(projectsData)
+    ? projectsData
+    : (projectsData as any)?.projects ?? (projectsData as any)?.data ?? [];
+ 
   const userMap = Object.fromEntries(
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
   );
@@ -133,10 +143,6 @@ export default function ListProjectTestCases() {
     },
   ];
 
-  // const { data: testCases } = useSuspenseQuery(
-  //   testCasesByProjectIdQueryOptions(projectId),
-  // );
-
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -147,7 +153,6 @@ export default function ListProjectTestCases() {
 
     try {
       const response = await importTestCasesFromFile(projectId, file);
-
       const msg = response.message;
 
       let toastType: "success" | "warning" | "info" = "success";
@@ -158,17 +163,13 @@ export default function ListProjectTestCases() {
         title = "No new test cases imported";
       } else if (msg.includes("skipped") && !msg.startsWith("Imported 0")) {
         toastType = "success";
-        title = "Imported completed with duplicates";
+        title = "Import completed with duplicates";
       } else {
         toastType = "success";
         title = "Import successful";
       }
 
-      toaster.create({
-        title,
-        description: msg,
-        type: toastType,
-      });
+      toaster.create({ title, description: msg, type: toastType });
 
       await queryClient.invalidateQueries({
         queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
@@ -183,6 +184,68 @@ export default function ListProjectTestCases() {
       });
     }
   };
+
+  const handleBulkUseInTestSession = () => {
+    if (selectedRows.length === 0) return;
+    setBulkAssignOpen(true);
+    setBulkAssignStep("plan");
+    setSelectedTestPlans([]);
+    setBulkSelectedUsers([]);
+  };
+
+  const handleTransferClick = (row: TestCase) => {
+    setTestCaseToTransfer(row);
+    setTargetProjectId("");
+    setTargetFeatureOrModule("");
+    setProjectSearchQuery("");
+    setTransferModalOpen(true);
+  };
+
+  const handleBulkTransferClick = () => {
+    if (selectedRows.length === 0) return;
+    setTestCaseToTransfer(null);
+    setTargetProjectId("");
+    setTargetFeatureOrModule("");
+    setProjectSearchQuery("");
+    setTransferModalOpen(true);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) return;
+    try {
+      await Promise.all(
+        selectedRows.map((row) => {
+          if (row.id) return deleteTestCase(String(row.id));
+          return Promise.resolve();
+        })
+      );
+      toaster.success({ title: t("test_cases.delete.success") });
+      await queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+      });
+      setSelectedRows([]);
+      setRowSelection({});
+    } catch (err: any) {
+      toaster.error({
+        title: t("test_cases.delete.error"),
+        description: err?.message,
+      });
+    }
+  };
+
+  const projectTestPlans = Array.isArray(testPlansData)
+    ? testPlansData
+    : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [];
+
+  const filteredProjects = projectsList
+    .filter((p: any) => String(p.id) !== String(projectId))
+    .filter((proj: any) => {
+      const query = projectSearchQuery.toLowerCase().trim();
+      if (!query) return true;
+      const name = (proj.name || proj.title || "").toLowerCase();
+      const code = (proj.code || "").toLowerCase();
+      return name.includes(query) || code.includes(query);
+    });
 
   return (
     <div>
@@ -244,78 +307,173 @@ export default function ListProjectTestCases() {
             />
           </Box>
 
-          <AppDataTable<TestCase, TestCaseListResponse>
-            // @ts-expect-error TODO(sevenreup)
-            query={queryFactory}
-            columns={columns}
-            defaultSort={{ key: "created_at", desc: true }}
-            showGlobalFilter
-            filterPlaceholder={t("test_cases.search_placeholder")}
-            dataAccessor={(response) =>
-              (response?.test_cases ?? []) as TestCase[]
-            }
-            paginationAccessor={(response) => {
-              const pagination = response?.pagination;
-              if (!pagination) return undefined;
-              return {
-                total: pagination.total ?? 0,
-                page: pagination.page ?? 1,
-                pageSize: pagination.pageSize ?? 10,
-              };
-            }}
-            rowActions={[
-              {
-                name: "view",
-                label: t("test_cases.view"),
-                icon: LuEye,
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
-              },
-              {
-                name: "edit",
-                label: t("test_cases.edit"),
-                icon: LuPencil,
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
-              },
-              {
-                name: "mark-draft",
-                label: t("test_cases.mark_as_draft"),
-                onClick: (row) =>
-                  row.id && markDraftMutation.mutate(String(row.id)),
-              },
-              {
-                name: "use",
-                label: t("test_cases.use_in_test_session"),
-                link: (row) =>
-                  `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
-              },
-              {
-                name: "delete",
-                label: t("test_cases.delete"),
-                color: "fg.error",
-                onClick: async (row) => {
-                  if (row.id) {
+          <Box mt={4}>
+            <AppDataTable<TestCase, TestCaseListResponse>
+              // @ts-expect-error TODO(sevenreup)
+              query={queryFactory}
+              columns={columns}
+              defaultSort={{ key: "created_at", desc: true }}
+              showGlobalFilter
+              filterPlaceholder={t("test_cases.search_placeholder")}
+              enableRowSelection={true}
+              rowSelection={rowSelection}
+              onRowSelectionChange={(newSelection) => {
+                setRowSelection(newSelection);
+              }}
+              onRowSelectionChangeRows={(rows) => {
+                setSelectedRows(rows);
+              }}
+              renderBulkActions={() => (
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button size="sm" colorPalette="brand">
+                      Manage selected
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content bg="bg.surface" border="1px solid" borderColor="border.subtle" shadow="md">
+                      <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
+                        {t("test_cases.use_in_test_session")}
+                      </Menu.Item>
+                      <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
+                        {t("test_cases.transfer")}
+                      </Menu.Item>
+                      <Menu.Item value="delete" color="fg.error" onClick={handleBulkDelete}>
+                        {t("test_cases.delete")}
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
+              )}
+              dataAccessor={(response) => {
+                return (response?.test_cases ?? []) as TestCase[];
+              }}
+              paginationAccessor={(response) => {
+                const pagination = response?.pagination;
+                if (!pagination) return undefined;
+                return {
+                  total: pagination.total ?? 0,
+                  page: pagination.page ?? 1,
+                  pageSize: pagination.pageSize ?? 10,
+                };
+              }}
+              rowActions={[
+                {
+                  name: "view",
+                  label: t("test_cases.view"),
+                  icon: LuEye,
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}`,
+                },
+                {
+                  name: "edit",
+                  label: t("test_cases.edit"),
+                  icon: LuPencil,
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}/edit`,
+                },
+                {
+                  name: "branch",
+                  label: t("test_cases.branch"),
+                  icon: LuGitBranch,
+                  onClick: async (row) => {
+                    if (!row.id) return;
+                    try {
+                      const branched = await branchTestCase(String(row.id));
+                      const newId = branched?.data?.id ?? (branched as any)?.id;
+
+                      if (!newId) {
+                        throw new Error(
+                          "Branching did not return a new test case ID",
+                        );
+                      }
+
+                      toaster.success({
+                        title: t("test_cases.branch.success"),
+                        description: t("test_cases.branch.success_description"),
+                      });
+
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                      });
+
+                      navigate({
+                        to: "/projects/$projectId/test-cases/$testCaseId/edit",
+                        params: { projectId, testCaseId: String(newId) },
+                        search: { isBranched: true },
+                      });
+                    } catch (err: any) {
+                      toaster.error({
+                        title: t("test_cases.branch.error"),
+                        description: err?.message || "Could not branch test case.",
+                      });
+                    }
+                  },
+                },
+                {
+                  name: "transfer",
+                  label: t("test_cases.transfer"),
+                  icon: LuArrowRightLeft,
+                  onClick: (row) => handleTransferClick(row),
+                },
+                {
+                  name: "toggle-draft",
+                  label: (row) =>
+                    row.is_draft
+                      ? t("test_cases.unmark_as_draft")
+                      : t("test_cases.mark_as_draft"),
+                  onClick: async (row) => {
+                    if (!row.id) return;
+                    try {
+                      if (row.is_draft) {
+                        await unMarkTestCaseAsDraft(String(row.id));
+                        toaster.success({ title: t("test_cases.unmark_draft.success") });
+                      } else {
+                        await markTestCaseAsDraft(String(row.id));
+                        toaster.success({ title: t("test_cases.mark_draft.success") });
+                      }
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                      });
+                    } catch (err: any) {
+                      toaster.error({
+                        title: row.is_draft
+                          ? t("test_cases.unmark_draft.error")
+                          : t("test_cases.mark_draft.error"),
+                        description: err?.message,
+                      });
+                    }
+                  },
+                },
+                {
+                  name: "use",
+                  label: t("test_cases.use_in_test_session"),
+                  link: (row) =>
+                    `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
+                },
+                {
+                  name: "delete",
+                  label: t("test_cases.delete"),
+                  color: "fg.error",
+                  onClick: async (row) => {
+                    if (!row.id) return;
                     try {
                       await deleteTestCase(String(row.id));
-                      toaster.success({
-                        title: t("test_cases.delete.success"),
+                      toaster.success({ title: t("test_cases.delete.success") });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
                       });
-                      queryClient.invalidateQueries(
-                        testCasesByProjectIdQueryOptions(projectId),
-                      );
-                      window.location.href = `/projects/${projectId}/test-cases`;
                     } catch (err: any) {
                       toaster.error({
                         title: t("test_cases.delete.error"),
                         description: err?.message,
                       });
                     }
-                  }
+                  },
                 },
-              },
-            ]}
-          />
+              ]}
+            />
+          </Box>
         </Tabs.Content>
         <Tabs.Content value="completed">
           <ClosedTestCasesTab projectID={projectId} userMap={userMap} />
@@ -333,6 +491,368 @@ export default function ListProjectTestCases() {
           <SuggestedTestCasesTab projectID={projectId} />
         </Tabs.Content>
       </Tabs.Root>
+
+      {/* Bulk assign modal - Step 1: Select Test Plans with Checkboxes */}
+      {bulkAssignStep === "plan" && (
+        <AppDialog
+          open={bulkAssignOpen}
+          onOpenChange={(event) => {
+            if (!event.open) {
+              setBulkAssignOpen(false);
+              setBulkAssignStep("plan");
+              setSelectedTestPlans([]);
+            }
+          }}
+          title={t("test_plans.bulk_assign_title")}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setBulkAssignOpen(false)}>
+                {t("test_plans.cancel")}
+              </Button>
+              <Button
+                colorPalette="brand"
+                disabled={selectedTestPlans.length === 0}
+                onClick={() => {
+                  setBulkAssignStep("users");
+                }}
+              >
+                {t("test_plans.confirm_assignment")}
+              </Button>
+            </>
+          }
+        >
+          <Box fontSize="sm" mb={3} color="fg.muted">
+            Select test plan(s) to add {selectedRows.length} test case(s)
+          </Box>
+          <Box maxH="300px" overflowY="auto" pr={2}>
+            {projectTestPlans.length === 0 ? (
+              <Text fontSize="sm" color="fg.muted" py={4} textAlign="center">
+                No test plans found for this project.
+              </Text>
+            ) : (
+              <CheckboxGroup
+                value={selectedTestPlans}
+                onValueChange={setSelectedTestPlans}
+              >
+                <Fieldset.Root>
+                  <Fieldset.Content>
+                    <For each={projectTestPlans}>
+                      {(plan: any) => (
+                        <Checkbox.Root
+                          key={plan.id}
+                          value={String(plan.id)}
+                          p={3}
+                          mb={2}
+                          border="1px solid"
+                          borderColor={
+                            selectedTestPlans.includes(String(plan.id))
+                              ? "border.positive"
+                              : "border.subtle"
+                          }
+                          borderRadius="md"
+                          bg={
+                            selectedTestPlans.includes(String(plan.id))
+                              ? "bg.muted"
+                              : "transparent"
+                          }
+                          width="100%"
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control />
+                          <Checkbox.Label width="100%">
+                            <Text fontWeight="medium">
+                              {plan.description || plan.name || `Test Plan #${plan.id}`}
+                            </Text>
+                            <Text fontSize="xs" color="fg.muted">
+                              Kind: {plan.kind || "N/A"} · Status: {plan.status || "N/A"}
+                            </Text>
+                          </Checkbox.Label>
+                        </Checkbox.Root>
+                      )}
+                    </For>
+                  </Fieldset.Content>
+                </Fieldset.Root>
+              </CheckboxGroup>
+            )}
+          </Box>
+        </AppDialog>
+      )}
+
+      {/* Bulk assign modal - Step 2: Select Users */}
+      {bulkAssignStep === "users" && (
+        <AppDialog
+          open={bulkAssignOpen}
+          onOpenChange={(event) => {
+            if (!event.open) {
+              setBulkAssignOpen(false);
+              setBulkAssignStep("plan");
+              setSelectedTestPlans([]);
+            }
+          }}
+          title={t("test_plans.bulk_assign_title")}
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBulkAssignStep("plan");
+                }}
+              >
+                {t("test_plans.cancel")}
+              </Button>
+              <Button
+                colorPalette="brand"
+                disabled={bulkSelectedUsers.length === 0}
+                onClick={async () => {
+                  try {
+                    await Promise.all(
+                      selectedTestPlans.map((planId) =>
+                        assignTestersToTestPlan(planId, {
+                          project_id: Number(projectId),
+                          test_plan_id: Number(planId),
+                          planned_tests: selectedRows.map((row) => ({
+                            test_case_id: String(row.id),
+                            user_ids: bulkSelectedUsers.map(Number),
+                          })),
+                        })
+                      )
+                    );
+
+                    toaster.create({
+                      title: "Success",
+                      description: `Successfully assigned ${selectedRows.length} test case(s) to test plan(s)`,
+                      type: "success",
+                    });
+
+                    await queryClient.invalidateQueries({
+                      queryKey: ["get", "/v1/test-plans/{testPlanID}/test-cases"],
+                    });
+
+                    setBulkSelectedUsers([]);
+                    setBulkAssignOpen(false);
+                    setBulkAssignStep("plan");
+                    setSelectedTestPlans([]);
+                    setSelectedRows([]);
+                    setRowSelection({});
+                  } catch (err: any) {
+                    toaster.create({
+                      title: "Assignment failed",
+                      description: err?.message || "Failed to assign test cases to test plan",
+                      type: "error",
+                    });
+                  }
+                }}
+              >
+                {t("test_plans.confirm_assignment")}
+              </Button>
+            </>
+          }
+        >
+          <Box fontSize="sm" mb={3} color="fg.muted">
+            {t("test_plans.bulk_assign_description", {
+              count: selectedRows.length,
+            })}
+          </Box>
+          <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
+            <Fieldset.Root>
+              <Fieldset.Legend fontSize="sm">
+                {t("test_plans.select_testers")}
+              </Fieldset.Legend>
+              <Fieldset.Content>
+                <For each={userMap ? Object.entries(userMap) : []}>
+                  {([userId, userName]) => (
+                    <Checkbox.Root key={userId} value={userId}>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{String(userName)}</Checkbox.Label>
+                    </Checkbox.Root>
+                  )}
+                </For>
+              </Fieldset.Content>
+            </Fieldset.Root>
+          </CheckboxGroup>
+        </AppDialog>
+      )}
+
+      {/* Transfer Test Case Modal */}
+      <AppDialog
+        open={transferModalOpen}
+        onOpenChange={(event) => {
+          if (!event.open) {
+            setTransferModalOpen(false);
+            setTestCaseToTransfer(null);
+            setTargetProjectId("");
+            setTargetFeatureOrModule("");
+            setProjectSearchQuery("");
+          }
+        }}
+        title={testCaseToTransfer ? t("test_cases.transfer") : `Transfer ${selectedRows.length} Test Case(s)`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setTransferModalOpen(false)}>
+              {t("test_plans.cancel")}
+            </Button>
+            <Button
+              colorPalette="brand"
+              disabled={!targetProjectId || !targetFeatureOrModule.trim()}
+              onClick={async () => {
+                try {
+                  const targetIdNum = Number(targetProjectId);
+                  const featureOrModuleVal = targetFeatureOrModule.trim();
+
+                  if (testCaseToTransfer?.id) {
+                    await transferTestCase(String(testCaseToTransfer.id), {
+                      target_project_id: targetIdNum,
+                      feature_or_module: featureOrModuleVal,
+                    });
+                  } else {
+                    await Promise.all(
+                      selectedRows.map((row) => {
+                        if (row.id) {
+                          return transferTestCase(String(row.id), {
+                            target_project_id: targetIdNum,
+                            feature_or_module: featureOrModuleVal,
+                          });
+                        }
+                        return Promise.resolve();
+                      })
+                    );
+                  }
+
+                  toaster.success({
+                    title: "Transfer successful",
+                    description: "Test case(s) moved to the target project successfully.",
+                  });
+
+                  await queryClient.invalidateQueries({
+                    queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
+                  });
+
+                  setTransferModalOpen(false);
+                  setTestCaseToTransfer(null);
+                  setTargetProjectId("");
+                  setTargetFeatureOrModule("");
+                  setProjectSearchQuery("");
+                  setSelectedRows([]);
+                  setRowSelection({});
+                } catch (err: any) {
+                  toaster.error({
+                    title: "Transfer failed",
+                    description: err?.message || "Failed to transfer test case(s)",
+                  });
+                }
+              }}
+            >
+              Confirm Transfer
+            </Button>
+          </>
+        }
+      >
+        <Box fontSize="sm" mb={3} color="fg.muted">
+          {testCaseToTransfer
+            ? `Select the destination project and feature/module to move test case "${testCaseToTransfer.title}" (${testCaseToTransfer.code}):`
+            : `Select the destination project and feature/module to move ${selectedRows.length} selected test case(s):`}
+        </Box>
+        
+        <Fieldset.Root>
+          <Fieldset.Content>
+            <Box mb={3} position="relative">
+              <Text fontSize="xs" fontWeight="medium" mb={1}>Target Project</Text>
+              
+              <input
+                type="text"
+                placeholder="Search or select a project..."
+                value={projectSearchQuery}
+                onFocus={() => {
+                  if (!projectSearchQuery && !targetProjectId) {
+                    setProjectSearchQuery(" ");
+                  }
+                }}
+                onChange={(e) => {
+                  setProjectSearchQuery(e.target.value);
+                  if (targetProjectId) {
+                    setTargetProjectId("");
+                    setTargetFeatureOrModule("");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (filteredProjects.length === 1) {
+                      const proj = filteredProjects[0];
+                      setTargetProjectId(String(proj.id));
+                      setProjectSearchQuery(proj.name || proj.title || "");
+                      setTargetFeatureOrModule("");
+                    }
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--chakra-colors-border-subtle)",
+                  background: "var(--chakra-colors-bg-surface)",
+                }}
+              />
+
+              {projectSearchQuery !== "" && !targetProjectId && (
+                <Box
+                  position="absolute"
+                  top="100%"
+                  left="0"
+                  right="0"
+                  mt={1}
+                  maxH="200px"
+                  overflowY="auto"
+                  bg="bg.surface"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                  borderRadius="md"
+                  boxShadow="md"
+                  zIndex={10}
+                >
+                  {filteredProjects.length === 0 ? (
+                    <Box p={2} fontSize="sm" color="fg.muted" textAlign="center">
+                      No matching projects found
+                    </Box>
+                  ) : (
+                    filteredProjects.map((proj: any) => (
+                      <Box
+                        key={proj.id}
+                        px={3}
+                        py={2}
+                        fontSize="sm"
+                        cursor="pointer"
+                        _hover={{ bg: "bg.muted" }}
+                        onClick={() => {
+                          setTargetProjectId(String(proj.id));
+                          setProjectSearchQuery(proj.name || proj.title || "");
+                          setTargetFeatureOrModule("");
+                        }}
+                      >
+                        <Text fontWeight="medium">{proj.name || proj.title}</Text>
+                        {proj.code && (
+                          <Text fontSize="xs" color="fg.muted">Code: {proj.code}</Text>
+                        )}
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              )}
+            </Box>
+
+            <Box>
+              <Text fontSize="xs" fontWeight="medium" mb={1}>Target Feature or Module</Text>
+              <SelectFeatureModule
+                key={targetProjectId}
+                projectId={targetProjectId}
+                value={targetFeatureOrModule}
+                onChange={setTargetFeatureOrModule}
+              />
+            </Box>
+          </Fieldset.Content>
+        </Fieldset.Root>
+      </AppDialog>
     </div>
   );
 }
@@ -517,8 +1037,7 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
         <Table.Row>
           <Table.ColumnHeader>{t("test_cases.column.code")}</Table.ColumnHeader>
           <Table.ColumnHeader>{t("test_cases.column.title")}</Table.ColumnHeader>
-          <Table.ColumnHeader>{t("test_cases.column.description")}</Table.ColumnHeader>{" "}
-          {/* NEW COLUMN */}
+          <Table.ColumnHeader>{t("test_cases.column.description")}</Table.ColumnHeader>
           <Table.ColumnHeader>{t("test_cases.column.actions")}</Table.ColumnHeader>
         </Table.Row>
       </Table.Header>
@@ -527,9 +1046,9 @@ function SuggestedTestCasesTab({ projectID }: { projectID: string }) {
           <Table.Row key={tc.id}>
             <Table.Cell>{tc.code}</Table.Cell>
             <Table.Cell>{tc.title}</Table.Cell>
-            <Table.Cell>{tc.description}</Table.Cell> {/* SHOW DESCRIPTION */}
+            <Table.Cell>{tc.description}</Table.Cell>
             <Table.Cell>
-              <Flex gap={2}>
+              <Flex gap="2">
                 <Button
                   size="sm"
                   colorPalette="green"

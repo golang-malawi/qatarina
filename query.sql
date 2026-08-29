@@ -132,6 +132,29 @@ SELECT * FROM test_cases ORDER BY created_at DESC;
 -- name: GetTestCase :one
 SELECT * FROM test_cases WHERE id = $1;
 
+-- name: GetTestCaseWithParent :one
+SELECT
+  tc.id,
+  tc.project_id,
+  tc.created_by_id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.is_draft,
+  tc.tags,
+  tc.created_at,
+  tc.updated_at,
+  tc.runner,
+  tc.script_path,
+  tc.parent_test_case_id,
+  parent.code AS parent_code,
+  parent.title AS parent_title
+FROM test_cases tc
+LEFT JOIN test_cases parent ON parent.id = tc.parent_test_case_id
+WHERE tc.id = $1;
+
 -- name: ListTestCasesByProject :many
 SELECT * FROM test_cases WHERE project_id = $1;
 
@@ -378,6 +401,14 @@ SELECT * FROM test_cases WHERE project_id = $1 AND suggested = $2;
 UPDATE test_cases SET suggested = $2 WHERE id = $1;
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
+
+-- name: TransferTestCase :exec
+UPDATE test_cases 
+SET project_id = $2, 
+    code = $3, 
+    feature_or_module = $4,
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: ListTestPlansByProject :many
 SELECT * FROM test_plans WHERE project_id = $1;
@@ -707,7 +738,7 @@ GROUP BY tr.test_case_id;
 
 -- name: CreateOrg :one
 INSERT INTO orgs (  name, address, country, github_url, website_url, created_by_id, created_at, updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, now(), now()) 
+) VALUES ($1, $2, $3, $4, $5, $6, now(), now())
 RETURNING id, name, address, country, github_url, website_url, created_by_id, created_at, updated_at;
 
 -- name: GetOrgByID :one
@@ -740,6 +771,12 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
 
+-- name: DeleteEnvironment :exec
+DELETE FROM environments WHERE id = $1 AND project_id = $2;
+
+-- name: UpdateEnvironment :exec
+UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5;
+
 -- name: ListReportsByProject :many
 SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
 
@@ -767,3 +804,68 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'In Progress') AS in_progress,
     COUNT(*) FILTER (WHERE status = 'Failed') AS failed
 FROM reports WHERE project_id = $1;
+
+-- name: ListCommentsByTestPlan :many
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.parent_comment_id,
+    c.user_id,
+    u.display_name,   
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.test_plan_id = $1
+ORDER BY c.created_at DESC;
+
+-- name: GetComment :one
+SELECT 
+    c.id,
+    c.test_plan_id,
+    c.parent_comment_id,
+    c.user_id,
+    u.display_name,
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.id = $1;
+
+-- name: CreateComment :one
+INSERT INTO test_plan_comments (id, test_plan_id, parent_comment_id, user_id, content, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+RETURNING 
+    id,
+    test_plan_id,
+    parent_comment_id,
+    user_id,
+    content,
+    created_at,
+    updated_at;
+
+-- name: DeleteComment :execrows
+DELETE FROM test_plan_comments WHERE id = $1;
+
+-- name: ConvertCommentToTestCase :one
+INSERT INTO test_cases (
+    id, project_id, created_by_id, kind, code, title, description,
+    is_draft, created_at, updated_at
+)
+SELECT 
+    sqlc.arg(new_test_id)::uuid,  
+    tp.project_id,
+    c.user_id,
+    'comment-derived',
+    '',
+    'From Comment',
+    c.content,
+    false,
+    NOW(),
+    NOW()
+FROM test_plan_comments c
+JOIN test_plans tp ON tp.id = c.test_plan_id
+WHERE c.id = $1
+RETURNING id;

@@ -24,8 +24,8 @@ type TestCaseService interface {
 	// FindAllPaged retrieves test cases with pagination, sorting, and filtering
 	FindAllPaged(context.Context, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
-	// FindAllByID retrieves all test cases in the database by Project ID
-	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
+	// FindAllByID retrieves all test cases in the database by test case ID
+	FindByID(context.Context, string) (*dbsqlc.GetTestCaseWithParentRow, error)
 
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
@@ -90,6 +90,8 @@ type TestCaseService interface {
 
 	// FindScriptCasesByPlanID is used to list all script test cases assigned to a test plan
 	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
+
+	Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -163,7 +165,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
-			ParentTestCaseID: sql.NullInt32{},
+			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
 			CreatedByID:      1,
@@ -246,7 +248,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		FeatureOrModule:  common.NullString(request.FeatureOrModule),
 		Title:            request.Title,
 		Description:      request.Description,
-		ParentTestCaseID: sql.NullInt32{},
+		ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
 		CreatedByID:      int32(userID),
@@ -432,9 +434,13 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 }
 
 // FindAllByID implements TestCaseService.
-func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
-	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
-	return &tc, err
+func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.GetTestCaseWithParentRow, error) {
+	uuidID := uuid.MustParse(id)
+	tc, err := t.queries.GetTestCaseWithParent(ctx, uuidID)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }
 
 // FindAllByProjectID implements TestCaseService.
@@ -857,4 +863,57 @@ func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID st
 
 func (t *testCaseServiceImpl) FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error) {
 	return t.queries.ListScriptTestCasesByPlan(ctx, int64(testPlanID))
+}
+
+func (t *testCaseServiceImpl) Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error) {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid UUID: %w", err)
+	}
+
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+	tx := dbsqlc.New(sqlTx)
+
+	// Fetch target project to generate proper code prefix
+	targetProject, err := t.queries.GetProject(ctx, int32(req.TargetProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target project: %w", err)
+	}
+
+	prefixKey := strings.ToLower(targetProject.Code)
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.TargetProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	newCode, err := GenerateNextCode(ctx, tx, req.TargetProjectID, &targetProject, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the test case with the new project ID, new code, and target feature/module
+	if err := tx.TransferTestCase(ctx, dbsqlc.TransferTestCaseParams{
+		ID:              id,
+		ProjectID:       common.NewNullInt32(int32(req.TargetProjectID)),
+		Code:            newCode,
+		FeatureOrModule: common.NullString(req.FeatureOrModule),
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	tc, err := t.queries.GetTestCase(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }

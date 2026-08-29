@@ -104,7 +104,7 @@ export async function markTestCaseAsDraft(testCaseID: string) {
     params: { path: { testCaseID } },
   });
 }
-export async function unmarkTestCaseAsDraft(testCaseID: string) {
+export async function unMarkTestCaseAsDraft(testCaseID: string) {
   return apiClient.request("post", "/v1/test-cases/{testCaseID}/unmark-draft", {
     params: { path: { testCaseID } },
   });
@@ -180,4 +180,24 @@ export async function getScriptTestCasesByTestPlanID(testPlanID: number) {
       params: { path: { testPlanID } },
     },
   );
+}
+
+export async function branchTestCase(testCaseID: string) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/branch", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export function useTransferTestCaseMutation() {
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}/transfer");
+}
+
+export async function transferTestCase(
+  testCaseID: string,
+  data: components["schemas"]["schema.TransferTestCaseRequest"], // adjust schema name if needed based on generated types
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/transfer", {
+    params: { path: { testCaseID } },
+    body: data as any,
+  });
 }

@@ -34,6 +34,13 @@ type AssignTestsToPlanRequest struct {
 	PlannedTests []TestCaseAssignment `json:"planned_tests" validate:"required,min=1,max=100"`
 }
 
+type BatchAssignTestCasesToPlanRequest struct {
+	ProjectID   int64    `json:"project_id" validate:"required"`
+	PlanID      int64    `json:"test_plan_id" validate:"required"`
+	TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
+	UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
+}
+
 type TestPlanResponseItem struct {
 	ID              int64                  `json:"id"`
 	ProjectID       int32                  `json:"project_id"`
@@ -67,8 +74,15 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, c
 		res = append(res, TestPlanResponseItem{
 			ID:              e.ID,
 			ProjectID:       e.ProjectID,
+			EnvironmentID:   e.EnvironmentID.Int32,
+			AssignedToID:    e.AssignedToID,
+			CreatedByID:     e.CreatedByID,
+			UpdatedByID:     e.UpdatedByID,
 			Kind:            string(e.Kind),
 			Description:     e.Description.String,
+			StartAt:         e.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:  e.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:        e.ClosedAt.Time.Format(time.DateTime),
 			NumTestCases:    e.NumTestCases,
 			PassedCount:     stats.PassedCount,
 			FailedCount:     stats.FailedCount,
@@ -77,6 +91,8 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, c
 			IsComplete:      e.IsComplete.Bool,
 			IsLocked:        e.IsLocked.Bool,
 			HasReport:       e.HasReport.Bool,
+			CreatedAt:       e.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:       e.UpdatedAt.Time.Format(time.DateTime),
 		})
 	}
 	return res
@@ -114,4 +130,27 @@ type TestPlanSummary struct {
 
 type ChangeEnvironmentRequest struct {
 	EnvironmentID int64 `json:"environment_id" validate:"required"`
+}
+
+type CreateComment struct {
+	TestPlanID      int64   `json:"test_plan_id" validate:"required"`
+	ParentCommentID *string `json:"parent_comment_id,omitempty"`
+	UserID          int64   `json:"user_id" validate:"required"`
+	Content         string  `json:"content" validate:"required"`
+}
+
+type CommentResponseItem struct {
+	ID              string                `json:"id"`
+	TestPlanID      int64                 `json:"test_plan_id"`
+	ParentCommentID *string               `json:"parent_comment_id,omitempty"`
+	UserID          int64                 `json:"user_id"`
+	UserName        string                `json:"user_name"`
+	Content         string                `json:"content"`
+	Replies         []CommentResponseItem `json:"replies,omitempty"`
+	CreatedAt       string                `json:"created_at"`
+	UpdatedAt       string                `json:"updated_at"`
+}
+
+type CommentListResponse struct {
+	Comments []CommentResponseItem `json:"comments"`
 }

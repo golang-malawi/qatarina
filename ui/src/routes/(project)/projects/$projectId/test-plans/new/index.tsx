@@ -77,6 +77,20 @@ function CreateNewTestPlan() {
   }
 
   const testers = testersQuery.data?.testers ?? [];
+  const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
+  const allSelected =
+    testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
+
+  function handleSelectAll(checked: boolean) {
+    if (checked) {
+      setSelectedTestCases((prev) => {
+        const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
+        return testCaseIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
+      });
+    } else {
+      setSelectedTestCases([]);
+    }
+  }
 
   async function handleSubmit(data: CreateTestPlanForm) {
     const { isValid, unassigned } = validateTestCaseAssignments(selectedTestCases);
@@ -215,6 +229,24 @@ function CreateNewTestPlan() {
             {t("test_plans.bulk_assign")}
           </Button>
         </Flex>
+
+        <Box
+          mb={4}
+          p={4}
+          border="sm"
+          borderColor="border.subtle"
+          borderRadius="lg"
+          bg="bg.surface"
+        >
+          <Checkbox.Root
+            checked={allSelected}
+            onCheckedChange={(e) => handleSelectAll(e.checked === true)}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label>{t("test_plans.select_all_cases")}</Checkbox.Label>
+          </Checkbox.Root>
+        </Box>
 
         {testCases.test_cases?.map((testCase) => (
           <Box

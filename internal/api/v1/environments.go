@@ -110,3 +110,59 @@ func CreateEnvironment(environmentService services.EnvironmentService, logger lo
 		return c.Status(fiber.StatusCreated).JSON(env)
 	}
 }
+
+func UpdateEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for project ID")
+		}
+		environmentID, err := c.ParamsInt("environmentID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for environment ID")
+		}
+
+		request := new(schema.UpdateEnvironmentRequest)
+		validationErrors, err := common.ParseBodyThenValidate(c, request)
+		if err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		request.ProjectID = int64(projectID)
+		request.ID = int64(environmentID)
+
+		env, err := environmentService.Update(c.Context(), request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiEnvironments, "failed to update environment", "error", err, "projectID", projectID)
+			return problemdetail.ServerErrorProblem(c, "failed to update environment")
+		}
+
+		return c.JSON(env)
+	}
+}
+
+func DeleteEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID, err := c.ParamsInt("projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for project ID")
+		}
+		environmentID, err := c.ParamsInt("environmentID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for environment ID")
+		}
+		err = environmentService.Delete(c.Context(), int64(projectID), int64(environmentID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiEnvironments, "failed to delete environment", "error", err, "projectID", projectID)
+			return problemdetail.ServerErrorProblem(c, "failed to delete environment")
+		}
+
+		return c.JSON(schema.MessageResponse{
+			Message: "operation completed successfully",
+		})
+	}
+}

@@ -227,7 +227,7 @@ func CreateTestCase(testCaseService services.TestCaseService, projectService ser
 			return problemdetail.ServerErrorProblem(c, "failed to create a test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(testCase))
+		return c.JSON(schema.NewTestCaseResponseFromRow(testCase))
 	}
 }
 
@@ -545,7 +545,7 @@ func UpdateTestCase(testCaseService services.TestCaseService, projectService ser
 			return problemdetail.ServerErrorProblem(c, "failed to update test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(updated))
+		return c.JSON(schema.NewTestCaseResponseFromRow(updated))
 	}
 }
 
@@ -873,7 +873,7 @@ func SuggestTestCase(testCaseService services.TestCaseService, logger logging.Lo
 			return problemdetail.ServerErrorProblem(c, "failed to suggest test case")
 		}
 
-		return c.JSON(schema.NewTestCaseResponse(tc))
+		return c.JSON(schema.NewTestCaseResponseFromRow(tc))
 	}
 }
 
@@ -1026,5 +1026,90 @@ func GetScriptTestPlanTestCases(testCaseService services.TestCaseService, logger
 		return c.JSON(schema.TestCaseListResponse{
 			TestCases: schema.NewTestCaseResponseList(testCases),
 		})
+	}
+}
+
+// BranchTestCase godoc
+//
+//	@ID             BranchTestCase
+//	@Summary        Branch a Test Case
+//	@Description    Create a new test case by branching from an existing one.
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string  true    "Parent Test Case ID"
+//	@Success        200 {object}    schema.TestCaseResponse
+//	@Failure        400 {object}    problemdetail.ProblemDetail
+//	@Failure        404 {object}    problemdetail.ProblemDetail
+//	@Failure        500 {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID}/branch [post]
+func BranchTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		parentID := c.Params("testCaseID")
+		parent, err := testCaseService.FindByID(c.Context(), parentID)
+		if err != nil {
+			return problemdetail.NotFound(c, "parent test case not found")
+		}
+
+		req := &schema.CreateTestCaseRequest{
+			ProjectID:        int64(parent.ProjectID.Int32),
+			Kind:             string(parent.Kind),
+			FeatureOrModule:  parent.FeatureOrModule.String,
+			Title:            parent.Title + " (branch)",
+			Description:      parent.Description,
+			Tags:             parent.Tags,
+			IsDraft:          true,
+			Runner:           parent.Runner.String,
+			ScriptPath:       parent.ScriptPath.String,
+			ParentTestCaseID: parentID,
+			CreatedByID:      strconv.Itoa(int(authutil.GetAuthUserID(c))),
+		}
+
+		branched, err := testCaseService.Create(c.Context(), req)
+		if err != nil {
+			return problemdetail.ServerErrorProblem(c, "failed to branch test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponseFromRow(branched))
+	}
+}
+
+// TransferTestCase godoc
+//
+//	@ID             TransferTestCase
+//	@Summary        Transfer a Test Case to another project
+//	@Description    Transfer an existing test case to a different project ID and feature/module
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string                      true    "Test Case ID"
+//	@Param          request     body        schema.TransferTestCaseRequest true    "Transfer request data"
+//	@Success        200         {object}    schema.TestCaseResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID}/transfer [post]
+func TransferTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		request := new(schema.TransferTestCaseRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		// Pass the whole request struct so it includes FeatureOrModule
+		updated, err := testCaseService.Transfer(c.Context(), testCaseID, *request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to transfer test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to transfer test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponseFromRow(updated))
 	}
 }

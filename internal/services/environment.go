@@ -16,6 +16,8 @@ import (
 type EnvironmentService interface {
 	FindByProjectID(ctx context.Context, projectID int64) (*schema.EnvironmentListResponse, error)
 	FindByID(ctx context.Context, envID int64) (*schema.EnvironmentResponse, error)
+	Update(ctx context.Context, request *schema.UpdateEnvironmentRequest) (*schema.EnvironmentResponse, error)
+	Delete(ctx context.Context, projectID, envID int64) error
 	Create(ctx context.Context, projectID int64, req *schema.EnvironmentRequest) (*schema.EnvironmentResponse, error)
 }
 
@@ -101,4 +103,40 @@ func (s *environmentServiceImpl) Create(ctx context.Context, projectID int64, re
 		CreatedAt:   env.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   env.UpdatedAt.Format(time.RFC3339),
 	}, nil
+}
+
+func (s *environmentServiceImpl) Update(ctx context.Context, req *schema.UpdateEnvironmentRequest) (*schema.EnvironmentResponse, error) {
+	policy := bluemonday.StrictPolicy()
+
+	name := policy.Sanitize(strings.TrimSpace(req.Name))
+	description := policy.Sanitize(strings.TrimSpace(req.Description))
+
+	var baseURL string
+	if req.BaseURL != "" {
+		if _, err := url.ParseRequestURI(req.BaseURL); err != nil {
+			return nil, fmt.Errorf("invalid base URL: %w", err)
+		}
+		baseURL = policy.Sanitize(strings.TrimSpace(req.BaseURL))
+	}
+
+	err := s.queries.UpdateEnvironment(ctx, dbsqlc.UpdateEnvironmentParams{
+		ID:          int32(req.ID),
+		ProjectID:   common.NewNullInt32(int32(req.ProjectID)),
+		Name:        name,
+		Description: common.NullString(description),
+		BaseUrl:     common.NullString(baseURL),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.FindByID(ctx, req.ID)
+}
+
+func (s *environmentServiceImpl) Delete(ctx context.Context, projectID, environmentID int64) error {
+	err := s.queries.DeleteEnvironment(ctx, dbsqlc.DeleteEnvironmentParams{
+		ID:        int32(environmentID),
+		ProjectID: common.NewNullInt32(int32(projectID)),
+	})
+	return err
 }

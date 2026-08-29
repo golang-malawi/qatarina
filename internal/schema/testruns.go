@@ -64,6 +64,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 
 	testRuns := make([]CommitTestRunResult, 0)
 	for _, entry := range items {
+		
 
 		entryNormalized := strings.Replace(entry, "-", "", 1)
 		entryNormalized = strings.Replace(entryNormalized, "*", "", 1)
@@ -76,7 +77,7 @@ func ParseIssuesFromMarkdownList(userID int64, testDate time.Time, content strin
 			IsClosed:       false,
 			TestedOn:       testDate,
 			ActualResult:   entryNormalized,
-			ExpectedResult: fmt.Sprintf("Expected different behavior"),
+			ExpectedResult: "Expected different behavior",
 			State:          dbsqlc.TestRunStateFailed,
 		}
 		testRuns = append(testRuns, item)
