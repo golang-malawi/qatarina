@@ -1,6 +1,6 @@
 module github.com/golang-malawi/qatarina
 
-go 1.25.1
+go 1.26.5
 
 require (
 	github.com/go-playground/validator/v10 v10.22.0
@@ -12,6 +12,7 @@ require (
 	github.com/google/go-github/v62 v62.0.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/hopesain/jira-gopher v0.1.1
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/jung-kurt/gofpdf v1.16.2
