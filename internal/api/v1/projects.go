@@ -272,6 +272,11 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 
 		if platform.CreateDefaultTestPlan {
 			logger.Info("projectsv1", "creating a new default Test Plan to get projects ")
+			t, err := time.Parse(time.DateOnly, time.Now().Format(time.DateOnly))
+			if err != nil {
+				logger.Error(loggedmodule.ApiProjects, "Failed to parse time.DateOnly for default test plan")
+			}
+
 			newDefaultTestPlan := &schema.CreateTestPlan{
 				ProjectID:      int64(project.ID),
 				Kind:           string(dbsqlc.TestKindGeneral),
@@ -285,7 +290,7 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 				PlannedTests:   []schema.TestCaseAssignment{},
 			}
 
-			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan)
+			_, err = testPlanService.Create(context.Background(), newDefaultTestPlan)
 			if err != nil {
 				logger.Error(loggedmodule.ApiProjects, "failed to create a default test plan for project", "projectID", project.ID, "error", err)
 			}

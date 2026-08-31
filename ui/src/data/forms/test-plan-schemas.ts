@@ -4,10 +4,10 @@ import { z } from 'zod';
 export const testPlanCreationSchema = z.object({
   kind: z.string().min(1, 'Test plan kind is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  start_at: z.string().min(1, 'Start date is required'),
+  start_at: z.string().date(),
   environment_id: z.string().optional(),
-  closed_at: z.string().optional(),
-  scheduled_end_at: z.string().min(1, 'Scheduled end date is required'),
+  closed_at: z.string().date().optional(),
+  scheduled_end_at: z.string().date(),
 });
 
 export type TestPlanCreationFormValues = z.infer<typeof testPlanCreationSchema>;
@@ -16,10 +16,10 @@ export type TestPlanCreationFormValues = z.infer<typeof testPlanCreationSchema>;
 export const testPlanUpdateSchema = z.object({
   kind: z.string().min(1, 'Test plan kind is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  start_at: z.string().min(1, 'Start date is required'),
+  start_at: z.string().date(),
   environment_id: z.string().optional(),
-  closed_at: z.string().optional(),
-  scheduled_end_at: z.string().min(1, 'Scheduled end date is required'),
+  closed_at: z.string().date().optional(),
+  scheduled_end_at: z.string().date(),
 });
 
 export type TestPlanUpdateFormValues = z.infer<typeof testPlanUpdateSchema>; 
