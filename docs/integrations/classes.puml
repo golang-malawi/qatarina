@@ -1,0 +1,63 @@
+@startuml qatarina-integration-class-diagram
+
+skinparam classAttributeIconSize 0
+
+class User {
+  - id : UUID
+  - name : string
+  - email : string
+}
+
+class Project {
+  - id : UUID
+  - ownerId : UUID
+  - name : string
+}
+
+class PlatformCredential {
+  - id : UUID
+  - projectId : UUID
+  - platform : string
+  - username : string
+  - accessTokenEncrypted : string
+  - domain : string
+}
+
+class ProjectLink {
+  - id : UUID
+  - projectId : UUID
+  - credentialId : UUID
+  - platform : string
+  - externalProjectRef : string
+  - externalProjectName : string
+}
+
+interface IssueSender {
+  + SendIssue(issueTitle : string, issueDescription : string, project : Project) : (string, error)
+}
+
+class JiraIssueSender {
+  + SendIssue(issueTitle : string, issueDescription : string, project : Project) : (string, error)
+}
+
+class GitHubIssueSender {
+  + SendIssue(issueTitle : string, issueDescription : string, project : Project) : (string, error)
+}
+
+class PlatformIntegrationService {
+  + SendIssue(issueTitle : string, issueDescription : string, project : Project) : (string, error)
+  - resolveSender(platform : string) : IssueSender
+}
+
+IssueSender <|.. JiraIssueSender
+IssueSender <|.. GitHubIssueSender
+
+User "1" -- "0..*" Project : owns
+Project "1" -- "0..*" PlatformCredential : holds
+Project "1" -- "0..*" ProjectLink : linked via
+PlatformCredential "1" -- "0..*" ProjectLink : used by
+
+PlatformIntegrationService --> IssueSender : delegates to
+PlatformIntegrationService ..> ProjectLink : resolves credential from
+
+@enduml
