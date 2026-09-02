@@ -1,0 +1,49 @@
+@startuml qatarina-integration-db-diagram
+
+skinparam linetype ortho
+
+entity "user" as user {
+  * id : uuid <<PK>>
+  --
+  name : varchar
+  email : varchar
+  created_at : timestamp
+}
+
+entity "project" as project {
+  * id : uuid <<PK>>
+  --
+  * owner_id : uuid <<FK>>
+  name : varchar
+  created_at : timestamp
+}
+
+entity "platform_credential" as credential {
+  * id : uuid <<PK>>
+  --
+  * project_id : uuid <<FK>>
+  platform : varchar
+  username : varchar
+  access_token_encrypted : text
+  domain : varchar
+  created_at : timestamp
+}
+
+entity "project_link" as link {
+  * id : uuid <<PK>>
+  --
+  * project_id : uuid <<FK>>
+  * credential_id : uuid <<FK>>
+  platform : varchar
+  external_project_ref : varchar
+  external_project_name : varchar
+  created_at : timestamp
+  ' unique (project_id, platform)
+}
+
+user ||--o{ project : owns
+project ||--o{ credential : "holds credentials for"
+project ||--o{ link : "linked via"
+credential ||--o{ link : "used by"
+
+@enduml
