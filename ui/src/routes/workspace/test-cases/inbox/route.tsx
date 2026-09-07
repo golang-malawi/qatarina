@@ -35,6 +35,7 @@ function TestCasePageInbox() {
   const [page, setPage] = React.useState(1);
   const [pageSize] = React.useState(10);
   const [isSheetView, setIsSheetView] = useState(false);
+  const [isGrouped, setIsGrouped] = useState(false);
 
   // Fetch inbox test cases with pagination parameters
   const {
@@ -130,7 +131,7 @@ function TestCasePageInbox() {
     (tc) => !moduleFilter || tc?.feature_or_module === moduleFilter
   );
 
-  // Group filtered test cases by module/feature for a directory/tree-like view
+  // Grouped structure for tree-like view when isGrouped is true
   const groupedByModule = filteredTestCases.reduce((acc, tc) => {
     const moduleName = tc.feature_or_module || "Unassigned Module";
     if (!acc[moduleName]) {
@@ -190,91 +191,156 @@ function TestCasePageInbox() {
             >
               Show closed test cases
             </Checkbox>
-            <Box mt={2}>
-              <select
-                value={moduleFilter}
-                onChange={(e) => {
-                  setModuleFilter(e.target.value);
-                  setPage(1);
-                }}
+            <Flex mt={3} gap={2} align="center">
+              <Box flex="1">
+                <select
+                  value={moduleFilter}
+                  onChange={(e) => {
+                    setModuleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  style={{ width: "100%", padding: "6px" }}
+                >
+                  <option value="">All Modules</option>
+                  {moduleOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </Box>
+              <Button
+                size="sm"
+                variant={isGrouped ? "solid" : "outline"}
+                colorPalette="brand"
+                onClick={() => setIsGrouped(!isGrouped)}
+                title={isGrouped ? "Ungroup list" : "Group by Module/Feature"}
               >
-                <option value="">All</option>
-                {moduleOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </Box>
+                {isGrouped ? "Ungroup" : "Group"}
+              </Button>
+            </Flex>
           </Box>
 
           <Box flex="1" overflowY="auto">
-            {Object.keys(groupedByModule).length > 0 ? (
-              Object.entries(groupedByModule).map(([moduleName, tcs]) => (
-                <Box key={moduleName} mb={2}>
-                  {/* Tree-like Directory Header for Module/Feature */}
-                  <Box
-                    px={4}
-                    py={2}
-                    bg="bg.subtle"
-                    borderBottom="sm"
-                    borderColor="border.subtle"
-                  >
-                    <Text fontWeight="bold" fontSize="xs" color="fg.muted" textTransform="uppercase">
-                      📂 {moduleName} ({tcs.length})
-                    </Text>
-                  </Box>
+            {isGrouped ? (
+              // Grouped tree-like view
+              Object.keys(groupedByModule).length > 0 ? (
+                Object.entries(groupedByModule).map(([moduleName, tcs]) => (
+                  <Box key={moduleName} mb={2}>
+                    <Box
+                      px={4}
+                      py={2}
+                      bg="bg.subtle"
+                      borderBottom="sm"
+                      borderColor="border.subtle"
+                    >
+                      <Text fontWeight="bold" fontSize="xs" color="fg.muted" textTransform="uppercase">
+                        📂 {moduleName} ({tcs.length})
+                      </Text>
+                    </Box>
 
-                  {tcs.map((tc, idx) => {
-                    const counts = summaryMap.get(tc.id ?? "") ?? {
-                      usage_count: 0,
-                      success_count: 0,
-                      failure_count: 0,
-                    };
-                    return (
-                      <Box
-                        key={tc.id ?? idx}
-                        p={4}
-                        pl={6} // Indent items under the module group header
-                        borderBottom="sm"
-                        borderColor="border.subtle"
-                        _hover={{ bg: "bg.subtle", cursor: "pointer" }}
-                        opacity={tc.is_closed ? 0.5 : 1}
-                      >
-                        <Link
-                          to="/workspace/test-cases/inbox/$testCaseId"
-                          params={{ testCaseId: tc.id ?? "" }}
-                          title={tc.description ?? ""}
+                    {tcs.map((tc, idx) => {
+                      const counts = summaryMap.get(tc.id ?? "") ?? {
+                        usage_count: 0,
+                        success_count: 0,
+                        failure_count: 0,
+                      };
+                      return (
+                        <Box
+                          key={tc.id ?? idx}
+                          p={4}
+                          pl={6}
+                          borderBottom="sm"
+                          borderColor="border.subtle"
+                          _hover={{ bg: "bg.subtle", cursor: "pointer" }}
+                          opacity={tc.is_closed ? 0.5 : 1}
                         >
-                          <Flex direction="column">
-                            <Text fontWeight="semibold" fontSize="md">
-                              {tc.title}
-                            </Text>
-                            <Text fontSize="sm" color="fg.subtle">
-                              {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
-                            </Text>
-                          </Flex>
-                          <Stack direction="row" mt={2} gap={2}>
-                            <Badge colorPalette="info" variant="subtle">
-                              {counts.usage_count} tests performed
-                            </Badge>
-                            <Badge colorPalette="success" variant="subtle">
-                              Success: {counts.success_count}
-                            </Badge>
-                            <Badge colorPalette="danger" variant="subtle">
-                              Failed: {counts.failure_count}
-                            </Badge>
-                          </Stack>
-                        </Link>
-                      </Box>
-                    );
-                  })}
+                          <Link
+                            to="/workspace/test-cases/inbox/$testCaseId"
+                            params={{ testCaseId: tc.id ?? "" }}
+                            title={tc.description ?? ""}
+                          >
+                            <Flex direction="column">
+                              <Text fontWeight="semibold" fontSize="md">
+                                {tc.title}
+                              </Text>
+                              <Text fontSize="sm" color="fg.subtle">
+                                {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
+                              </Text>
+                            </Flex>
+                            <Stack direction="row" mt={2} gap={2}>
+                              <Badge colorPalette="info" variant="subtle">
+                                {counts.usage_count} tests performed
+                              </Badge>
+                              <Badge colorPalette="success" variant="subtle">
+                                Success: {counts.success_count}
+                              </Badge>
+                              <Badge colorPalette="danger" variant="subtle">
+                                Failed: {counts.failure_count}
+                              </Badge>
+                            </Stack>
+                          </Link>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ))
+              ) : (
+                <Box p={6} textAlign="center" color="fg.subtle">
+                  No test cases found.
                 </Box>
-              ))
+              )
             ) : (
-              <Box p={6} textAlign="center" color="fg.subtle">
-                No test cases found.
-              </Box>
+              // Default flat list view
+              filteredTestCases.length > 0 ? (
+                filteredTestCases.map((tc, idx) => {
+                  const counts = summaryMap.get(tc.id ?? "") ?? {
+                    usage_count: 0,
+                    success_count: 0,
+                    failure_count: 0,
+                  };
+                  return (
+                    <Box
+                      key={tc.id ?? idx}
+                      p={4}
+                      borderBottom="sm"
+                      borderColor="border.subtle"
+                      _hover={{ bg: "bg.subtle", cursor: "pointer" }}
+                      opacity={tc.is_closed ? 0.5 : 1}
+                    >
+                      <Link
+                        to="/workspace/test-cases/inbox/$testCaseId"
+                        params={{ testCaseId: tc.id ?? "" }}
+                        title={tc.description ?? ""}
+                      >
+                        <Flex direction="column">
+                          <Text fontWeight="semibold" fontSize="md">
+                            {tc.title}
+                          </Text>
+                          <Text fontSize="sm" color="fg.subtle">
+                            {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
+                          </Text>
+                        </Flex>
+                        <Stack direction="row" mt={2} gap={2}>
+                          <Badge colorPalette="info" variant="subtle">
+                            {counts.usage_count} tests performed
+                          </Badge>
+                          <Badge colorPalette="success" variant="subtle">
+                            Success: {counts.success_count}
+                          </Badge>
+                          <Badge colorPalette="danger" variant="subtle">
+                            Failed: {counts.failure_count}
+                          </Badge>
+                        </Stack>
+                      </Link>
+                    </Box>
+                  );
+                })
+              ) : (
+                <Box p={6} textAlign="center" color="fg.subtle">
+                  No test cases found.
+                </Box>
+              )
             )}
           </Box>
 
