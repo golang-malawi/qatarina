@@ -35,7 +35,6 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { toaster } from "@/components/ui/toaster";
 import { ErrorState, LoadingState } from "@/components/ui/page-states";
 import { PageHeaderCard } from "@/components/ui/page-header-card";
-import { TEST_PLAN_KINDS } from "@/common/constants/test-plan-kind";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
 import $api from "@/lib/api/query";
@@ -139,10 +138,9 @@ function ViewTestPlan() {
     }
   };
 
-  const kindLabel =
-    (TEST_PLAN_KINDS[testPlan.kind as keyof typeof TEST_PLAN_KINDS] as string) ??
-    testPlan.kind ??
-    t("test_plans.not_available");
+  const kindLabel = testPlan.kind
+    ? t(`test_cases.kind.${testPlan.kind}`)
+    : t("test_plans.not_available");
 
   const totalCases = testPlan.num_test_cases ?? 0;
   const passedCases = testPlan.passed_count ?? 0;
