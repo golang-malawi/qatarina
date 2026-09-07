@@ -31,7 +31,8 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 
 function TestCasePageInbox() {
   const [includeClosed, setIncludeClosed] = React.useState(false);
-  const [moduleFilter, setModuleFilter] = React.useState<string>("");
+  const [filterType, setFilterType] = React.useState<string>("");
+  const [filterValue, setFilterValue] = React.useState<string>("");
   const [page, setPage] = React.useState(1);
   const [pageSize] = React.useState(10);
   const [isSheetView, setIsSheetView] = useState(false);
@@ -89,9 +90,52 @@ function TestCasePageInbox() {
     });
   });
 
-  const moduleOptions = Array.from(
-    new Set(testCases.map((tc) => tc?.feature_or_module).filter(Boolean))
-  ).map((v) => ({ label: v, value: v }));
+  // Build secondary options strictly based on available test cases in the current inbox list
+  const getSubOptions = () => {
+    switch (filterType) {
+      case "project": {
+        const presentProjectIds = Array.from(
+          new Set(testCases.map((tc) => tc.project_id).filter(Boolean))
+        );
+        return presentProjectIds.map((id) => ({
+          label: projectMap[id as number] ?? `Project ${id}`,
+          value: id!.toString(),
+        }));
+      }
+      case "environment": {
+        const presentEnvIds = Array.from(
+          new Set(testCases.map((tc) => tc.environment_id).filter(Boolean))
+        );
+        return presentEnvIds.map((id) => ({
+          label: environmentMap[id as number] ?? `Environment ${id}`,
+          value: id!.toString(),
+        }));
+      }
+      case "module":
+        return Array.from(
+          new Set(testCases.map((tc) => tc?.feature_or_module).filter(Boolean))
+        ).map((v) => ({ label: v, value: v }));
+      case "date": {
+        const dateStrs = Array.from(
+          new Set(
+            testCases
+              .map((tc) => (tc?.created_at ? tc.created_at.substring(0, 7) : null))
+              .filter(Boolean)
+          )
+        );
+        return dateStrs.map((dateStr) => {
+          const [year, month] = (dateStr as string).split("-");
+          const dateObj = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+          const shortMonthLabel = dateObj.toLocaleString("en", { month: "short", year: "numeric" });
+          return { label: shortMonthLabel, value: dateStr as string };
+        });
+      }
+      default:
+        return [];
+    }
+  };
+
+  const subOptions = getSubOptions();
 
   const {
     data: summary,
@@ -127,9 +171,23 @@ function TestCasePageInbox() {
     });
   });
 
-  const filteredTestCases = testCases.filter(
-    (tc) => !moduleFilter || tc?.feature_or_module === moduleFilter
-  );
+  const filteredTestCases = testCases.filter((tc) => {
+    if (!filterType || !filterValue) return true;
+
+    if (filterType === "project") {
+      return tc?.project_id?.toString() === filterValue;
+    }
+    if (filterType === "environment") {
+      return tc?.environment_id?.toString() === filterValue;
+    }
+    if (filterType === "module") {
+      return tc?.feature_or_module === filterValue;
+    }
+    if (filterType === "date") {
+      return tc?.created_at && tc.created_at.startsWith(filterValue);
+    }
+    return true;
+  });
 
   // Grouped structure for tree-like view when isGrouped is true
   const groupedByModule = filteredTestCases.reduce((acc, tc) => {
@@ -142,13 +200,14 @@ function TestCasePageInbox() {
   }, {} as Record<string, typeof filteredTestCases>);
 
   const totalPages = Math.ceil((pagination?.total ?? 0) / pageSize) || 1;
+  const isFiltered = Boolean(filterType && filterValue);
 
   return (
     <Flex h="100vh" direction={{ base: "column", md: "row" }}>
-      {/* Left Pane - Test Case List / Navigation */}
+      {/* Left Pane - Test Case List / Navigation with increased width */}
       {!isSheetView && (
         <Box
-          w={{ base: "full", md: "sm" }}
+          w={{ base: "full", md: "lg" }}
           borderRight="sm"
           borderColor="border.subtle"
           bg="bg.surface"
@@ -156,13 +215,14 @@ function TestCasePageInbox() {
           display="flex"
           flexDirection="column"
         >
-          <Box p={6} borderBottom="sm" borderColor="border.subtle">
-            <Heading size="lg" color="fg.heading">
+          <Box p={4} borderBottom="sm" borderColor="border.subtle">
+            <Heading size="md" color="fg.heading">
               Test Case Inbox
             </Heading>
 
-            <Flex mt={4} gap={2}>
+            <Flex mt={3} gap={2}>
               <Button
+                size="sm"
                 colorPalette="brand"
                 variant="outline"
                 onClick={() => setIsSheetView(true)}
@@ -170,19 +230,19 @@ function TestCasePageInbox() {
                 Sheet View
               </Button>
               <Link to="/workspace/test-cases/inbox/suggest">
-                <Button colorPalette="brand">Suggest Test Case</Button>
+                <Button size="sm" colorPalette="brand">Suggest Test Case</Button>
               </Link>
             </Flex>
 
             <Input
               placeholder="Search for Test Cases..."
-              mt={4}
+              mt={3}
+              size="sm"
               variant="outline"
               focusRingColor="brand.focusRing"
-              flex="1"
             />
             <Checkbox
-              mt={4}
+              mt={3}
               checked={includeClosed}
               onCheckedChange={(e) => {
                 setIncludeClosed(e.checked as boolean);
@@ -191,39 +251,61 @@ function TestCasePageInbox() {
             >
               Show closed test cases
             </Checkbox>
+
+            {/* Compact filters and group button on the same line with original font styling */}
             <Flex mt={3} gap={2} align="center">
               <Box flex="1">
                 <select
-                  value={moduleFilter}
+                  value={filterType}
                   onChange={(e) => {
-                    setModuleFilter(e.target.value);
+                    setFilterType(e.target.value);
+                    setFilterValue("");
                     setPage(1);
                   }}
-                  style={{ width: "100%", padding: "6px" }}
+                  style={{ width: "100%", padding: "6px 8px", fontSize: "14px" }}
                 >
-                  <option value="">All Modules</option>
-                  {moduleOptions.map((opt) => (
+                  <option value="">Filter Type...</option>
+                  <option value="project">Project</option>
+                  <option value="environment">Environment</option>
+                  <option value="module">Module / Feature</option>
+                  <option value="date">Date (Year-Month)</option>
+                </select>
+              </Box>
+
+              <Box flex="1">
+                <select
+                  value={filterValue}
+                  onChange={(e) => {
+                    setFilterValue(e.target.value);
+                    setPage(1);
+                  }}
+                  disabled={!filterType}
+                  style={{ width: "100%", padding: "6px 8px", fontSize: "14px", opacity: filterType ? 1 : 0.6 }}
+                >
+                  <option value="">Filter Value...</option>
+                  {subOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
               </Box>
-              <Button
-                size="sm"
-                variant={isGrouped ? "solid" : "outline"}
-                colorPalette="brand"
-                onClick={() => setIsGrouped(!isGrouped)}
-                title={isGrouped ? "Ungroup list" : "Group by Module/Feature"}
-              >
-                {isGrouped ? "Ungroup" : "Group"}
-              </Button>
+
+              <Box flex="none">
+                <Button
+                  size="sm"
+                  variant={isGrouped ? "solid" : "outline"}
+                  colorPalette="brand"
+                  onClick={() => setIsGrouped(!isGrouped)}
+                >
+                  {isGrouped ? "Ungroup" : "Group by Module"}
+                </Button>
+              </Box>
             </Flex>
           </Box>
 
           <Box flex="1" overflowY="auto">
             {isGrouped ? (
-              // Grouped tree-like view
               Object.keys(groupedByModule).length > 0 ? (
                 Object.entries(groupedByModule).map(([moduleName, tcs]) => (
                   <Box key={moduleName} mb={2}>
@@ -248,8 +330,8 @@ function TestCasePageInbox() {
                       return (
                         <Box
                           key={tc.id ?? idx}
-                          p={4}
-                          pl={6}
+                          p={3}
+                          pl={5}
                           borderBottom="sm"
                           borderColor="border.subtle"
                           _hover={{ bg: "bg.subtle", cursor: "pointer" }}
@@ -261,10 +343,10 @@ function TestCasePageInbox() {
                             title={tc.description ?? ""}
                           >
                             <Flex direction="column">
-                              <Text fontWeight="semibold" fontSize="md">
+                              <Text fontWeight="semibold" fontSize="sm">
                                 {tc.title}
                               </Text>
-                              <Text fontSize="sm" color="fg.subtle">
+                              <Text fontSize="xs" color="fg.subtle">
                                 {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
                               </Text>
                             </Flex>
@@ -286,12 +368,11 @@ function TestCasePageInbox() {
                   </Box>
                 ))
               ) : (
-                <Box p={6} textAlign="center" color="fg.subtle">
+                <Box p={6} textAlign="center" color="fg.subtle" fontSize="sm">
                   No test cases found.
                 </Box>
               )
             ) : (
-              // Default flat list view
               filteredTestCases.length > 0 ? (
                 filteredTestCases.map((tc, idx) => {
                   const counts = summaryMap.get(tc.id ?? "") ?? {
@@ -302,7 +383,7 @@ function TestCasePageInbox() {
                   return (
                     <Box
                       key={tc.id ?? idx}
-                      p={4}
+                      p={3}
                       borderBottom="sm"
                       borderColor="border.subtle"
                       _hover={{ bg: "bg.subtle", cursor: "pointer" }}
@@ -314,10 +395,10 @@ function TestCasePageInbox() {
                         title={tc.description ?? ""}
                       >
                         <Flex direction="column">
-                          <Text fontWeight="semibold" fontSize="md">
+                          <Text fontWeight="semibold" fontSize="sm">
                             {tc.title}
                           </Text>
-                          <Text fontSize="sm" color="fg.subtle">
+                          <Text fontSize="xs" color="fg.subtle">
                             {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
                           </Text>
                         </Flex>
@@ -337,35 +418,37 @@ function TestCasePageInbox() {
                   );
                 })
               ) : (
-                <Box p={6} textAlign="center" color="fg.subtle">
+                <Box p={6} textAlign="center" color="fg.subtle" fontSize="sm">
                   No test cases found.
                 </Box>
               )
             )}
           </Box>
 
-          {/* Standard Pagination Controls */}
-          <Box p={4} borderTop="sm" borderColor="border.subtle" bg="bg.surface">
-            <Flex justify="space-between" align="center">
-              <Button
-                size="sm"
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </Button>
-              <Text fontSize="sm">
-                Page {page} of {totalPages}
-              </Text>
-              <Button
-                size="sm"
-                onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
-                disabled={page >= totalPages}
-              >
-                Next
-              </Button>
-            </Flex>
-          </Box>
+          {/* Standard Pagination Controls (Hidden when a client-side filter is active) */}
+          {!isFiltered && (
+            <Box p={3} borderTop="sm" borderColor="border.subtle" bg="bg.surface">
+              <Flex justify="space-between" align="center">
+                <Button
+                  size="xs"
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Text fontSize="xs">
+                  Page {page} of {totalPages}
+                </Text>
+                <Button
+                  size="xs"
+                  onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </Flex>
+            </Box>
+          )}
         </Box>
       )}
 
