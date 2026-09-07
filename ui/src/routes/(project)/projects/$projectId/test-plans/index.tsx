@@ -169,6 +169,10 @@ function ListProjectTestPlans() {
             const formattedStart = startVal ? formatHumanDateTime(startVal) : "";
             const formattedEnd = endVal ? formatHumanDateTime(endVal) : "";
 
+            const kindLabel = entry.kind
+              ? t(`test_cases.kind.${entry.kind}`)
+              : null;
+
             return (
               <Card.Root
                 key={entry.id ?? `${title}-${index}`}
@@ -214,9 +218,9 @@ function ListProjectTestPlans() {
                             ? t("test_plans.status.locked")
                             : t("test_plans.status.open")}
                         </Badge>
-                        {entry.kind && (
+                        {kindLabel && (
                           <Badge colorPalette="blue" variant="subtle">
-                            {entry.kind}
+                            {kindLabel}
                           </Badge>
                         )}
                       </HStack>
