@@ -8,7 +8,8 @@ create table platform_credentials (
     user_id integer not null,
     created_at timestamp without time zone default now(),
     updated_at timestamp without time zone default now(),
-    CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE 
+    CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    
 );
 
 COMMENT ON COLUMN platform_credentials.platform IS "The platform can either be JIRA, GITHUB or TRELLO ";
