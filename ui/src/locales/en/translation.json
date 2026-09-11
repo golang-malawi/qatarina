@@ -618,5 +618,15 @@
   "environments.new.placeholder.description": "Optional description",
   "environments.new.placeholder.base_url": "https://example.com",
   "environments.new.validation.name_required": "Name is required",
-  "environments.new.validation.url": "Must be a valid URL"
+  "environments.new.validation.url": "Must be a valid URL",
+  "test_cases.kind.general": "General",
+  "test_cases.kind.adhoc": "Adhoc",
+  "test_cases.kind.triage": "Triage",
+  "test_cases.kind.integration": "Integration",
+  "test_cases.kind.user_acceptance": "User acceptance",
+  "test_cases.kind.regression": "Regression",
+  "test_cases.kind.security": "Security",
+  "test_cases.kind.user_interface": "User interface",
+  "test_cases.kind.scenario": "Scenario",
+  "test_cases.select_kind_placeholder": "Select Test Kind"
 }

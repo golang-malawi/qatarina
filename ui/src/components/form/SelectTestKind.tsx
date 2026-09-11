@@ -1,52 +1,28 @@
 import { createListCollection, Portal, Select } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 
 export type SelectTestKindProps = {
   onChange: (value: string) => void;
   value?: string;
 };
 
-const testKinds = createListCollection({
-  items: [
-    {
-      label: "General",
-      value: "general",
-    },
-    {
-      label: "Adhoc",
-      value: "adhoc",
-    },
-    {
-      label: "Triage",
-      value: "triage",
-    },
-    {
-      label: "Integration",
-      value: "integration",
-    },
-    {
-      label: "User acceptance",
-      value: "user_acceptance",
-    },
-    {
-      label: "Regression",
-      value: "regression",
-    },
-    {
-      label: "Security",
-      value: "security",
-    },
-    {
-      label: "User interface",
-      value: "user_interface",
-    },
-    {
-      label: "Scenario",
-      value: "scenario",
-    },
-  ],
-});
-
 export default function SelectTestKind({ onChange, value }: SelectTestKindProps) {
+  const { t } = useTranslation();
+
+  const testKinds = createListCollection({
+    items: [
+      { label: t("test_cases.kind.general"), value: "general" },
+      { label: t("test_cases.kind.adhoc"), value: "adhoc" },
+      { label: t("test_cases.kind.triage"), value: "triage" },
+      { label: t("test_cases.kind.integration"), value: "integration" },
+      { label: t("test_cases.kind.user_acceptance"), value: "user_acceptance" },
+      { label: t("test_cases.kind.regression"), value: "regression" },
+      { label: t("test_cases.kind.security"), value: "security" },
+      { label: t("test_cases.kind.user_interface"), value: "user_interface" },
+      { label: t("test_cases.kind.scenario"), value: "scenario" },
+    ],
+  });
+
   return (
     <Select.Root
       collection={testKinds}
@@ -56,7 +32,7 @@ export default function SelectTestKind({ onChange, value }: SelectTestKindProps)
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>
-          <Select.ValueText placeholder="Select Test Kind" />
+          <Select.ValueText placeholder={t("test_cases.select_kind_placeholder")} />
         </Select.Trigger>
         <Select.IndicatorGroup>
           <Select.Indicator />
@@ -77,4 +53,3 @@ export default function SelectTestKind({ onChange, value }: SelectTestKindProps)
     </Select.Root>
   );
 }
-
