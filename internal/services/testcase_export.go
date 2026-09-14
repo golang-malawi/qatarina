@@ -1,9 +1,9 @@
 package services
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -11,7 +11,6 @@ import (
 )
 
 type ExportFileService struct {
-	FileName  string
 	TestCases []TestCase
 }
 
@@ -25,25 +24,27 @@ type TestCase struct {
 	IsDraft         bool
 }
 
-func (e *ExportFileService) ToCSV() error {
-	fileExtension := ".csv"
-	f := e.FileName + fileExtension
+func (e *ExportFileService) ToCSV() ([]byte, error) {
+	var buffer bytes.Buffer
 
-	file, err := os.Create(f)
-	if err != nil {
-		return fmt.Errorf("unable to create %s file: %w", f, err)
+	writer := csv.NewWriter(&buffer)
+
+	csvHeader := []string{
+		"Title",
+		"Description",
+		"Kind",
+		"Code",
+		"FeatureOrModule",
+		"Tags",
+		"IsDraft",
 	}
-	defer file.Close()
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	csvHeader := []string{"Title", "Description", "Kind", "Code", "FeatureOrModule", "Tags", "IsDraft"}
-	var csvData [][]string
-	csvData = append(csvData, csvHeader)
+	if err := writer.Write(csvHeader); err != nil {
+		return nil, fmt.Errorf("unable to write CSV header: %w", err)
+	}
 
 	for _, testCase := range e.TestCases {
-		csvData = append(csvData, []string{
+		record := []string{
 			testCase.Title,
 			testCase.Description,
 			testCase.Kind,
@@ -51,21 +52,23 @@ func (e *ExportFileService) ToCSV() error {
 			testCase.FeatureOrModule,
 			strings.Join(testCase.Tags, ","),
 			strconv.FormatBool(testCase.IsDraft),
-		})
+		}
+
+		if err := writer.Write(record); err != nil {
+			return nil, fmt.Errorf("unable to write CSV record: %w", err)
+		}
 	}
 
-	if err := writer.WriteAll(csvData); err != nil {
-		return fmt.Errorf("unable to write CSV records for file %s: %w", f, err)
+	writer.Flush()
+
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("unable to flush CSV data: %w", err)
 	}
 
-	return nil
-
+	return buffer.Bytes(), nil
 }
 
-func (e *ExportFileService) ToXLSX() error {
-	fileExtension := ".xlsx"
-	fName := e.FileName + fileExtension
-
+func (e *ExportFileService) ToXLSX() ([]byte, error) {
 	file := excelize.NewFile()
 	defer file.Close()
 
@@ -91,9 +94,11 @@ func (e *ExportFileService) ToXLSX() error {
 		file.SetCellValue(defaultSheet, fmt.Sprintf("G%d", row), testCase.IsDraft)
 	}
 
-	if err := file.SaveAs(fName); err != nil {
-		return fmt.Errorf("unable to save the xlsx file %s: %w", fName, err)
+	var buffer bytes.Buffer
+
+	if err := file.Write(&buffer); err != nil {
+		return nil, fmt.Errorf("unable to write XLSX data: %w", err)
 	}
 
-	return nil
+	return buffer.Bytes(), nil
 }
