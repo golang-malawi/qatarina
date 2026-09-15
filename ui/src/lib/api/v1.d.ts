@@ -1390,6 +1390,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/export-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export test cases to a CSV or XLSX file
+         * @description Export test cases to a CSV or XLSX file
+         */
+        post: operations["ExportFileFromTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/import-file": {
         parameters: {
             query?: never;
@@ -2267,6 +2287,20 @@ export interface components {
             notes?: string;
             result: string;
             status: string;
+        };
+        "schema.ExportTestCasesRequest": {
+            fileformat?: string;
+            filename?: string;
+            testcases: components["schemas"]["schema.ExportedTestCase"][];
+        };
+        "schema.ExportedTestCase": {
+            code?: string;
+            description?: string;
+            featureOrModule?: string;
+            isDraft?: boolean;
+            kind?: string;
+            tags?: string[];
+            title?: string;
         };
         "schema.HealthStatus": {
             message?: string;
@@ -5430,6 +5464,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ExportFileFromTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Export request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ExportTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/octet-stream": string;
                 };
             };
             /** @description Bad Request */
