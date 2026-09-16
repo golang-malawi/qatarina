@@ -206,7 +206,7 @@ function TestPlanComments() {
   const { projectId, testPlanID } = Route.useParams();
 
   const numericTestPlanId = Number(testPlanID);
-  const { data, refetch } = useTestPlanCommentsQuery(testPlanID);
+  const { data, refetch } = useTestPlanCommentsQuery(Number(testPlanID));
 
   const createMutation = useCreateCommentMutation();
   const [newComment, setNewComment] = useState("");
