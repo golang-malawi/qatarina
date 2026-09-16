@@ -12,6 +12,9 @@ import {
   Checkbox,
   Fieldset,
   For,
+  Select,
+  Input,
+  createListCollection,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +43,7 @@ import {
   unMarkTestCaseAsDraft,
   deleteTestCase,
   transferTestCase,
+  exportTestCasesToFile,
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
@@ -76,6 +80,10 @@ export default function ListProjectTestCases() {
   const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
   const [testCaseToTransfer, setTestCaseToTransfer] = useState<TestCase | null>(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFileName, setExportFileName] = useState<string>("");
+  const [exportFileFormat, setExportFileFormat] = useState<"CSV" | "XLSX">("XLSX");
+  const [exporting, setExporting] = useState(false);
 
   const queryFactory = React.useCallback(
     ({
@@ -107,6 +115,17 @@ export default function ListProjectTestCases() {
  
   const userMap = Object.fromEntries(
     (usersData?.users ?? []).map((u: any) => [u.id, u.displayName]),
+  );
+
+  const fileFormatCollection = React.useMemo(
+    () =>
+      createListCollection({
+        items: [
+          { label: "CSV (.csv)", value: "CSV" },
+          { label: "Excel (.xlsx)", value: "XLSX" },
+        ],
+      }),
+    [],
   );
 
   const columns: AppTableColumn<TestCase>[] = [
@@ -233,6 +252,52 @@ export default function ListProjectTestCases() {
     }
   };
 
+  const handleExportClick = () => {
+    if (selectedRows.length === 0) return;
+    setExportFileName(`test-cases-${new Date().toISOString().slice(0, 10)}`);
+    setExportFileFormat("XLSX");
+    setExportModalOpen(true);
+  };
+
+  const handleExportConfirm = async () => {
+    if (selectedRows.length === 0) return;
+    try {
+      setExporting(true);
+
+      const testcases = selectedRows.map((row) => ({
+        title: row.title ?? "",
+        description: row.description ?? "",
+        kind: row.kind ?? "",
+        code: row.code ?? "",
+        featureOrModule:
+          (row as any).feature_or_module ?? (row as any).featureOrModule ?? "",
+        tags: Array.isArray((row as any).tags)
+          ? ((row as any).tags as string[])
+          : [],
+        isDraft: Boolean((row as any).is_draft ?? (row as any).isDraft),
+      }));
+
+      await exportTestCasesToFile({
+        filename: exportFileName.trim(),
+        fileformat: exportFileFormat,
+        testcases,
+      });
+
+      toaster.success({
+        title: "Export successful",
+        description: `Exported ${testcases.length} test case(s) as ${exportFileFormat}.`,
+      });
+      setExportModalOpen(false);
+    } catch (err: any) {
+      toaster.error({
+        title: "Export failed",
+        description: err?.message || "Failed to export test cases",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const projectTestPlans = Array.isArray(testPlansData)
     ? testPlansData
     : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [];
@@ -334,6 +399,9 @@ export default function ListProjectTestCases() {
                     <Menu.Content bg="bg.surface" border="1px solid" borderColor="border.subtle" shadow="md">
                       <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
                         {t("test_cases.use_in_test_session")}
+                      </Menu.Item>
+                      <Menu.Item value="export" onClick={handleExportClick}>
+                        Export
                       </Menu.Item>
                       <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
                         {t("test_cases.transfer")}
@@ -673,6 +741,87 @@ export default function ListProjectTestCases() {
           </CheckboxGroup>
         </AppDialog>
       )}
+
+      {/* Export Test Cases Modal */}
+      <AppDialog
+        open={exportModalOpen}
+        onOpenChange={(event) => {
+          if (!event.open) {
+            setExportModalOpen(false);
+            setExportFileName("");
+          }
+        }}
+        title={`Export ${selectedRows.length} Test Case(s)`}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setExportModalOpen(false)}
+            >
+              {t("test_plans.cancel")}
+            </Button>
+            <Button
+              colorPalette="brand"
+              disabled={selectedRows.length === 0}
+              loading={exporting}
+              onClick={handleExportConfirm}
+            >
+              Export
+            </Button>
+          </>
+        }
+      >
+        <Box fontSize="sm" mb={3} color="fg.muted">
+          Choose a file name and format to export {selectedRows.length}{" "}
+          selected test case(s).
+        </Box>
+        <Fieldset.Root>
+          <Fieldset.Content>
+            <Box mb={3}>
+              <Text fontSize="xs" fontWeight="medium" mb={1}>
+                File name
+              </Text>
+              <Input
+                value={exportFileName}
+                onChange={(e) => setExportFileName(e.target.value)}
+                placeholder="e.g. login-tests"
+              />
+            </Box>
+            <Box>
+              <Text fontSize="xs" fontWeight="medium" mb={1}>
+                File format
+              </Text>
+              <Select.Root
+                collection={fileFormatCollection}
+                value={[exportFileFormat]}
+                onValueChange={(details) =>
+                  setExportFileFormat(details.value[0] as "CSV" | "XLSX")
+                }
+              >
+                <Select.HiddenSelect />
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText placeholder="Select format" />
+                  </Select.Trigger>
+                  <Select.IndicatorGroup>
+                    <Select.Indicator />
+                  </Select.IndicatorGroup>
+                </Select.Control>
+                <Select.Positioner>
+                  <Select.Content>
+                    {fileFormatCollection.items.map((item) => (
+                      <Select.Item key={item.value} item={item}>
+                        <Select.ItemText>{item.label}</Select.ItemText>
+                        <Select.ItemIndicator />
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Select.Root>
+            </Box>
+          </Fieldset.Content>
+        </Fieldset.Root>
+      </AppDialog>
 
       {/* Transfer Test Case Modal */}
       <AppDialog

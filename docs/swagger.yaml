@@ -490,6 +490,41 @@ components:
       - result
       - status
       type: object
+    schema.ExportTestCasesRequest:
+      properties:
+        fileformat:
+          type: string
+        filename:
+          type: string
+        testcases:
+          items:
+            $ref: '#/components/schemas/schema.ExportedTestCase'
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - testcases
+      type: object
+    schema.ExportedTestCase:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        featureOrModule:
+          type: string
+        isDraft:
+          type: boolean
+        kind:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      type: object
     schema.HealthStatus:
       properties:
         message:
@@ -3879,6 +3914,43 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create multiple Test Cases at once
+      tags:
+      - test-cases
+  /v1/test-cases/export-file:
+    post:
+      description: Export test cases to a CSV or XLSX file
+      operationId: ExportFileFromTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ExportTestCasesRequest'
+        description: Export request data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            application/octet-stream:
+              schema:
+                format: binary
+                type: string
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Export test cases to a CSV or XLSX file
       tags:
       - test-cases
   /v1/test-cases/import-file:
