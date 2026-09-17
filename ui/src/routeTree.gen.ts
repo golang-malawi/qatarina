@@ -36,6 +36,7 @@ import { Route as WorkspaceTestCasesInboxIndexRouteImport } from './routes/works
 import { Route as WorkspaceProjectsNewIndexRouteImport } from './routes/workspace/projects/new/index'
 import { Route as WorkspaceOrganizationsNewIndexRouteImport } from './routes/workspace/organizations/new/index'
 import { Route as WorkspaceOrganizationsIdIndexRouteImport } from './routes/workspace/organizations/$id/index'
+import { Route as projectProjectsProjectIdIndexRouteImport } from './routes/(project)/projects/$projectId/index'
 import { Route as WorkspaceUsersViewUserIDRouteImport } from './routes/workspace/users/view/$userID'
 import { Route as WorkspaceUsersUserIDEditRouteImport } from './routes/workspace/users/$userID/edit'
 import { Route as WorkspaceTestCasesInboxSuggestRouteImport } from './routes/workspace/test-cases/inbox/suggest'
@@ -212,6 +213,12 @@ const WorkspaceOrganizationsIdIndexRoute =
     id: '/organizations/$id/',
     path: '/organizations/$id/',
     getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const projectProjectsProjectIdIndexRoute =
+  projectProjectsProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
 const WorkspaceUsersViewUserIDRoute =
   WorkspaceUsersViewUserIDRouteImport.update({
@@ -436,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
@@ -476,7 +484,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRouteRouteWithChildren
   '/': typeof appIndexRoute
-  '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
   '/workspace/testers/invite': typeof WorkspaceTestersInviteRoute
   '/test-plans': typeof appTestPlansIndexRoute
   '/login': typeof authLoginIndexRoute
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/projects/$projectId': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new': typeof WorkspaceProjectsNewIndexRoute
@@ -559,6 +567,7 @@ export interface FileRoutesById {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/(project)/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
@@ -622,6 +631,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/projects/$projectId/'
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
@@ -662,7 +672,6 @@ export interface FileRouteTypes {
   to:
     | '/workspace'
     | '/'
-    | '/projects/$projectId'
     | '/workspace/testers/invite'
     | '/test-plans'
     | '/login'
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/projects/$projectId'
     | '/workspace/organizations/$id'
     | '/workspace/organizations/new'
     | '/workspace/projects/new'
@@ -744,6 +754,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/(project)/projects/$projectId/'
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
@@ -982,6 +993,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspace/organizations/$id/'
       preLoaderRoute: typeof WorkspaceOrganizationsIdIndexRouteImport
       parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/(project)/projects/$projectId/': {
+      id: '/(project)/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof projectProjectsProjectIdIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
     '/workspace/users/view/$userID': {
       id: '/workspace/users/view/$userID'
@@ -1336,6 +1354,7 @@ const projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren =
   )
 
 interface projectProjectsProjectIdRouteRouteChildren {
+  projectProjectsProjectIdIndexRoute: typeof projectProjectsProjectIdIndexRoute
   projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   projectProjectsProjectIdEnvironmentsEnvironmentIdRoute: typeof projectProjectsProjectIdEnvironmentsEnvironmentIdRoute
@@ -1361,6 +1380,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
 
 const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteRouteChildren =
   {
+    projectProjectsProjectIdIndexRoute: projectProjectsProjectIdIndexRoute,
     projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute:
       projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute,
     projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute:
