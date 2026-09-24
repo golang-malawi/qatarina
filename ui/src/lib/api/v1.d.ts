@@ -265,6 +265,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resets a user's password
+         * @description Resets a user's password without requiring the old one
+         */
+        post: operations["ResetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/signup": {
         parameters: {
             query?: never;
@@ -2413,6 +2433,11 @@ export interface components {
             status?: string;
             type?: string;
         };
+        "schema.ResetPasswordRequest": {
+            confirm_password: string;
+            new_password: string;
+            user_id: number;
+        };
         "schema.SignUpRequest": {
             display_name: string;
             email: string;
@@ -2676,6 +2701,51 @@ export interface operations {
         };
         responses: {
             /** @description Password changed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ResetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Password reset request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
