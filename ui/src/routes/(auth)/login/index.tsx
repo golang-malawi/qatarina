@@ -30,6 +30,7 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import { getLastProjectPath } from "@/lib/last-project";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { toaster } from "@/components/ui/toaster";
 
 const fallback = "/" as const;
 
@@ -109,6 +110,12 @@ function LoginPage() {
         message = (error as { message: string }).message;
       }
       setLoginError(message);
+      // The inline message above stays as a fallback in case the toaster
+      // isn't mounted on this route.
+      toaster.error({
+        title: t("login_failed", "Login failed"),
+        description: message,
+      });
     },
   });
 
@@ -220,8 +227,8 @@ function LoginPage() {
 
         <Stack pt={2} direction="row" justifyContent="center">
           <Text>{t("new_user")}</Text>
-          <ChakraLink href="#" color="fg.accent">
-            {t("create_account")}
+          <ChakraLink color="fg.accent" asChild>
+            <Link to="/signup">{t("create_account")}</Link>
           </ChakraLink>
         </Stack>
 
