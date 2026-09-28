@@ -32,6 +32,7 @@ func (api *API) routes() {
 	authV1 := router.Group("/v1/auth", authenticationMiddleware)
 	{
 		authV1.Post("/change-password", apiv1.ChangePassword(api.AuthService, api.logger))
+		authV1.Post("/reset-password", apiv1.ResetPassword(api.AuthService, api.logger))
 	}
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)

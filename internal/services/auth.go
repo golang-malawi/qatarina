@@ -20,7 +20,7 @@ var ErrUserAlreadyExists = errors.New("user with given email already exists")
 type AuthService interface {
 	SignIn(*schema.LoginRequest) (*schema.LoginResponse, error)
 	SignUp(*schema.SignUpRequest) (*schema.LoginResponse, error)
-	ResetPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error
 	ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error
 }
 
@@ -138,8 +138,30 @@ func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginRe
 	return res, nil
 }
 
-func (a *authServiceImpl) ResetPassword(ctx context.Context, email string) error {
-	panic("not implemented")
+func (a *authServiceImpl) ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error {
+	// Confirm the target user exists
+	if _, err := a.queries.GetUser(ctx, int32(request.UserID)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrInvalidCredentials // or add: var ErrUserNotFound = errors.New("user not found")
+		}
+		return fmt.Errorf("failed to fetch target user: %w", err)
+	}
+
+	if request.NewPassword != request.ConfirmPassword {
+		return errors.New("new password and confirmation do not match")
+	}
+
+	err := a.queries.ChangeUserPassword(ctx, dbsqlc.ChangeUserPasswordParams{
+		ID:        int32(request.UserID),
+		Password:  common.MustHashPassword(request.NewPassword),
+		UpdatedAt: common.NewNullTime(time.Now()),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reset password: %w", err)
+	}
+
+	a.logger.Info("auth-service", "password reset", "target_user_id", request.UserID)
+	return nil
 }
 
 func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error {
