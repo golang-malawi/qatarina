@@ -86,11 +86,18 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 
 func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginResponse, error) {
 	_, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
-	// TODO: make this error handling better - this is clunky
-	if !errors.Is(err, sql.ErrNoRows) {
-		a.logger.Error("auth-service", "user with given email already exists", "email", request.Email, "error", err)
+	switch {
+	case err == nil:
+		// A row came back, so the email is already registered.
+		a.logger.Debug("auth-service", "user with given email already exists", "email", request.Email)
 		return nil, ErrUserAlreadyExists
+	case !errors.Is(err, sql.ErrNoRows):
+		// Anything other than "no rows" is a real failure (e.g. the database
+		// is down); it must not be reported as a duplicate email.
+		a.logger.Error("auth-service", "failed to check for existing user", "email", request.Email, "error", err)
+		return nil, fmt.Errorf("failed to check for existing user: %w", err)
 	}
+	// sql.ErrNoRows: the email is free, continue with registration.
 
 	// TODO: create organization for the user
 
