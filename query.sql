@@ -328,6 +328,7 @@ INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
+  AND (sqlc.arg(projects) IS NULL OR tr.project_id IN (sqlc.arg(projects)))
 GROUP BY tc.id
 ORDER BY tc.created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
@@ -403,9 +404,9 @@ UPDATE test_cases SET suggested = $2 WHERE id = $1;
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
 -- name: TransferTestCase :exec
-UPDATE test_cases 
-SET project_id = $2, 
-    code = $3, 
+UPDATE test_cases
+SET project_id = $2,
+    code = $3,
     feature_or_module = $4,
     updated_at = NOW()
 WHERE id = $1;
@@ -806,12 +807,12 @@ SELECT
 FROM reports WHERE project_id = $1;
 
 -- name: ListCommentsByTestPlan :many
-SELECT 
+SELECT
     c.id,
     c.test_plan_id,
     c.parent_comment_id,
     c.user_id,
-    u.display_name,   
+    u.display_name,
     c.content,
     c.created_at,
     c.updated_at
@@ -821,7 +822,7 @@ WHERE c.test_plan_id = $1
 ORDER BY c.created_at DESC;
 
 -- name: GetComment :one
-SELECT 
+SELECT
     c.id,
     c.test_plan_id,
     c.parent_comment_id,
@@ -837,7 +838,7 @@ WHERE c.id = $1;
 -- name: CreateComment :one
 INSERT INTO test_plan_comments (id, test_plan_id, parent_comment_id, user_id, content, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-RETURNING 
+RETURNING
     id,
     test_plan_id,
     parent_comment_id,
@@ -854,8 +855,8 @@ INSERT INTO test_cases (
     id, project_id, created_by_id, kind, code, title, description,
     is_draft, created_at, updated_at
 )
-SELECT 
-    sqlc.arg(new_test_id)::uuid,  
+SELECT
+    sqlc.arg(new_test_id)::uuid,
     tp.project_id,
     c.user_id,
     'comment-derived',
