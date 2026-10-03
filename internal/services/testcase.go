@@ -62,7 +62,7 @@ type TestCaseService interface {
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
-	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error)
+	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -581,12 +581,13 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
-func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error) {
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error) {
 	rows, err := t.queries.TestCaseListByAssignedUser(ctx, dbsqlc.TestCaseListByAssignedUserParams{
-		UserID:        userID,
-		RowLimit:      limit,
-		RowOffset:     offset,
-		IncludeClosed: includeClosed,
+		UserID:        params.UserID,
+		RowLimit:      int32(params.PageSize),
+		RowOffset:     int32(params.Page),
+		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -619,8 +620,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 
 	// Count query
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
-		UserID:        userID,
-		IncludeClosed: includeClosed,
+		UserID:        params.UserID,
+		IncludeClosed: params.IncludeClosed,
 	})
 	if err != nil {
 		return res, 0, err
