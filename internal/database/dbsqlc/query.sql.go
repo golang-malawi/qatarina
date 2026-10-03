@@ -3744,7 +3744,7 @@ INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
   AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND ($3 IS NULL OR tr.project_id IN ($3))
+  AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
 GROUP BY tc.id
 ORDER BY tc.created_at DESC
 LIMIT $5::int OFFSET $4::int
@@ -3753,7 +3753,7 @@ LIMIT $5::int OFFSET $4::int
 type TestCaseListByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
-	Projects      interface{}
+	Projects      []int32
 	RowOffset     int32
 	RowLimit      int32
 }
@@ -3781,7 +3781,7 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 	rows, err := q.db.QueryContext(ctx, testCaseListByAssignedUser,
 		arg.UserID,
 		arg.IncludeClosed,
-		arg.Projects,
+		pq.Array(arg.Projects),
 		arg.RowOffset,
 		arg.RowLimit,
 	)

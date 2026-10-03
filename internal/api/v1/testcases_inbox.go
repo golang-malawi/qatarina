@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -34,11 +35,13 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 		pageSize := ctx.QueryInt("pageSize", 20)
 		offset := (page - 1) * pageSize
 		includeClosed := ctx.QueryBool("includeClosed", false)
-		var filteredProjects []string
+		var filteredProjects []int32
 		if raw := ctx.Query("projects", ""); raw != "" {
 			for _, p := range strings.Split(raw, ",") {
 				if p = strings.TrimSpace(p); p != "" {
-					filteredProjects = append(filteredProjects, p)
+					if projectID, err := strconv.Atoi(p); err == nil {
+						filteredProjects = append(filteredProjects, int32(projectID))
+					}
 				}
 			}
 		}
