@@ -98,6 +98,8 @@ func (api *API) routes() {
 	meV1 := router.Group("/v1/me", authenticationMiddleware)
 	{
 		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
+		meV1.Get("/test-cases/inbox/unseen-count", apiv1.GetInboxUnseenCount(api.TestCasesService, api.logger))
+		meV1.Post("/test-cases/inbox/:testCaseID/view", apiv1.MarkInboxTestCaseViewed(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/summary", apiv1.GetExecutionSummary(api.TestCasesService, api.logger))
 	}
 
