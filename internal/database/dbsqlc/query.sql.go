@@ -3466,6 +3466,24 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const markAssignedTestCaseViewed = `-- name: MarkAssignedTestCaseViewed :exec
+UPDATE test_plan_cases
+SET viewed_at = now()
+WHERE test_case_id = $1
+  AND assigned_to_id = $2
+  AND viewed_at IS NULL
+`
+
+type MarkAssignedTestCaseViewedParams struct {
+	TestCaseID uuid.UUID
+	UserID     int64
+}
+
+func (q *Queries) MarkAssignedTestCaseViewed(ctx context.Context, arg MarkAssignedTestCaseViewedParams) error {
+	_, err := q.db.ExecContext(ctx, markAssignedTestCaseViewed, arg.TestCaseID, arg.UserID)
+	return err
+}
+
 const searchProject = `-- name: SearchProject :many
 SELECT id, title, description, version, is_active, is_public, website_url, github_url, trello_url, jira_url, monday_url, owner_user_id, created_at, updated_at, deleted_at, code, parent_project_id, testcase_template, automated_testing_enabled, supported_runners FROM projects
 WHERE title ILIKE '%' || $1 || '%'
@@ -3720,6 +3738,27 @@ func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, projectID sql
 	return count, err
 }
 
+const testCaseCountUnseenByAssignedUser = `-- name: TestCaseCountUnseenByAssignedUser :one
+SELECT COUNT(*)
+FROM (
+  SELECT tc.id
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = $1
+  GROUP BY tc.id
+  HAVING COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
+    AND BOOL_OR(pc.viewed_at IS NULL)
+) sub
+`
+
+func (q *Queries) TestCaseCountUnseenByAssignedUser(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, testCaseCountUnseenByAssignedUser, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const testCaseListByAssignedUser = `-- name: TestCaseListByAssignedUser :many
 SELECT
   tc.id,
@@ -3737,7 +3776,8 @@ SELECT
   MAX(pc.test_plan_id)::int AS test_plan_id,
   MAX(pc.assigned_to_id)::int AS assigned_to_id,
   COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
@@ -3775,6 +3815,7 @@ type TestCaseListByAssignedUserRow struct {
 	AssignedToID    int32
 	EnvironmentID   int32
 	IsClosed        bool
+	IsViewed        bool
 }
 
 func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseListByAssignedUserParams) ([]TestCaseListByAssignedUserRow, error) {
@@ -3809,6 +3850,7 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 			&i.AssignedToID,
 			&i.EnvironmentID,
 			&i.IsClosed,
+			&i.IsViewed,
 		); err != nil {
 			return nil, err
 		}
