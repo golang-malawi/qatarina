@@ -24,6 +24,7 @@ import { Route as WorkspaceIntegrationsIndexRouteImport } from './routes/workspa
 import { Route as WorkspaceDashboardIndexRouteImport } from './routes/workspace/dashboard/index'
 import { Route as UiTableDemoIndexRouteImport } from './routes/ui/table-demo/index'
 import { Route as UiDynamicFormDemoIndexRouteImport } from './routes/ui/dynamic-form-demo/index'
+import { Route as authSignupIndexRouteImport } from './routes/(auth)/signup/index'
 import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
 import { Route as appTestPlansIndexRouteImport } from './routes/(app)/test-plans/index'
@@ -145,6 +146,11 @@ const UiTableDemoIndexRoute = UiTableDemoIndexRouteImport.update({
 const UiDynamicFormDemoIndexRoute = UiDynamicFormDemoIndexRouteImport.update({
   id: '/ui/dynamic-form-demo/',
   path: '/ui/dynamic-form-demo/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authSignupIndexRoute = authSignupIndexRouteImport.update({
+  id: '/(auth)/signup/',
+  path: '/signup/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authLogoutIndexRoute = authLogoutIndexRouteImport.update({
@@ -428,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/test-plans/': typeof appTestPlansIndexRoute
   '/login/': typeof authLoginIndexRoute
   '/logout/': typeof authLogoutIndexRoute
+  '/signup/': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo/': typeof UiTableDemoIndexRoute
   '/workspace/dashboard/': typeof WorkspaceDashboardIndexRoute
@@ -488,6 +495,7 @@ export interface FileRoutesByTo {
   '/test-plans': typeof appTestPlansIndexRoute
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
+  '/signup': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo': typeof UiTableDemoIndexRoute
   '/workspace/dashboard': typeof WorkspaceDashboardIndexRoute
@@ -552,6 +560,7 @@ export interface FileRoutesById {
   '/(app)/test-plans/': typeof appTestPlansIndexRoute
   '/(auth)/login/': typeof authLoginIndexRoute
   '/(auth)/logout/': typeof authLogoutIndexRoute
+  '/(auth)/signup/': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo/': typeof UiTableDemoIndexRoute
   '/workspace/dashboard/': typeof WorkspaceDashboardIndexRoute
@@ -616,6 +625,7 @@ export interface FileRouteTypes {
     | '/test-plans/'
     | '/login/'
     | '/logout/'
+    | '/signup/'
     | '/ui/dynamic-form-demo/'
     | '/ui/table-demo/'
     | '/workspace/dashboard/'
@@ -676,6 +686,7 @@ export interface FileRouteTypes {
     | '/test-plans'
     | '/login'
     | '/logout'
+    | '/signup'
     | '/ui/dynamic-form-demo'
     | '/ui/table-demo'
     | '/workspace/dashboard'
@@ -739,6 +750,7 @@ export interface FileRouteTypes {
     | '/(app)/test-plans/'
     | '/(auth)/login/'
     | '/(auth)/logout/'
+    | '/(auth)/signup/'
     | '/ui/dynamic-form-demo/'
     | '/ui/table-demo/'
     | '/workspace/dashboard/'
@@ -799,6 +811,7 @@ export interface RootRouteChildren {
   projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
   authLoginIndexRoute: typeof authLoginIndexRoute
   authLogoutIndexRoute: typeof authLogoutIndexRoute
+  authSignupIndexRoute: typeof authSignupIndexRoute
   UiDynamicFormDemoIndexRoute: typeof UiDynamicFormDemoIndexRoute
   UiTableDemoIndexRoute: typeof UiTableDemoIndexRoute
 }
@@ -908,6 +921,13 @@ declare module '@tanstack/react-router' {
       path: '/ui/dynamic-form-demo'
       fullPath: '/ui/dynamic-form-demo/'
       preLoaderRoute: typeof UiDynamicFormDemoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(auth)/signup/': {
+      id: '/(auth)/signup/'
+      path: '/signup'
+      fullPath: '/signup/'
+      preLoaderRoute: typeof authSignupIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/logout/': {
@@ -1437,6 +1457,7 @@ const rootRouteChildren: RootRouteChildren = {
     projectProjectsProjectIdRouteRouteWithChildren,
   authLoginIndexRoute: authLoginIndexRoute,
   authLogoutIndexRoute: authLogoutIndexRoute,
+  authSignupIndexRoute: authSignupIndexRoute,
   UiDynamicFormDemoIndexRoute: UiDynamicFormDemoIndexRoute,
   UiTableDemoIndexRoute: UiTableDemoIndexRoute,
 }
