@@ -80,6 +80,8 @@ components:
           type: boolean
         is_draft:
           type: boolean
+        is_viewed:
+          type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
         project_id:
@@ -546,6 +548,11 @@ components:
           type: string
       type: object
     schema.ImportProjectRequest:
+      type: object
+    schema.InboxUnseenCountResponse:
+      properties:
+        unseen_count:
+          type: integer
       type: object
     schema.LoginRequest:
       properties:
@@ -1644,6 +1651,66 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: List Test Cases assigned to the current user
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}/view:
+    post:
+      description: Mark a Test Case in the current user's inbox as viewed
+      operationId: MarkInboxTestCaseViewed
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Mark a Test Case in the current user's inbox as viewed
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/unseen-count:
+    get:
+      description: Count open Test Cases assigned to the current user that they have
+        not viewed yet
+      operationId: GetInboxUnseenCount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxUnseenCountResponse'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Count unseen Test Cases in the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/summary:
