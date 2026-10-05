@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -23,6 +23,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  markInboxTestCaseViewed,
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
@@ -64,6 +65,21 @@ function TestCaseInboxItem() {
   );
 
   const env = environments.find((e: any) => e.id === tc.environment_id);
+
+  const markViewedMutation = useMutation({
+    mutationFn: () => markInboxTestCaseViewed(testCaseId),
+    onSuccess: () => {
+      // Refreshes the inbox list, this item and the unseen count
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
+    },
+  });
+
+  useEffect(() => {
+    if (!tc.is_viewed) {
+      markViewedMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testCaseId, tc.is_viewed]);
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
