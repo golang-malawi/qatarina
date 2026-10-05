@@ -163,6 +163,7 @@ type AssignedTestCase struct {
 	AssignedToID    int32           `json:"assigned_to_id"`
 	EnvironmentID   int32           `json:"environment_id"`
 	IsClosed        bool            `json:"is_closed"`
+	IsViewed        bool            `json:"is_viewed"`
 }
 
 type TestCaseExecutionSummary struct {

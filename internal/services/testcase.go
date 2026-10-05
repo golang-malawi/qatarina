@@ -63,6 +63,10 @@ type TestCaseService interface {
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
+	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
+	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
+	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
+	MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -615,6 +619,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 			AssignedToID:    int32(row.AssignedToID),
 			EnvironmentID:   row.EnvironmentID,
 			IsClosed:        row.IsClosed,
+			IsViewed:        row.IsViewed,
 		})
 	}
 
@@ -628,6 +633,30 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	}
 
 	return res, total, nil
+}
+
+func (t *testCaseServiceImpl) CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error) {
+	count, err := t.queries.TestCaseCountUnseenByAssignedUser(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count unseen assigned test cases: %w", err)
+	}
+	return count, nil
+}
+
+func (t *testCaseServiceImpl) MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	err = t.queries.MarkAssignedTestCaseViewed(ctx, dbsqlc.MarkAssignedTestCaseViewedParams{
+		TestCaseID: id,
+		UserID:     userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to mark test case as viewed: %w", err)
+	}
+	return nil
 }
 
 func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {

@@ -7,3 +7,7 @@ type InboxFilterParams struct {
 	IncludeClosed bool    `json:"include_closed"`
 	Projects      []int32 `json:"projects"` // Projects to filter by
 }
+
+type InboxUnseenCountResponse struct {
+	UnseenCount int64 `json:"unseen_count"`
+}
