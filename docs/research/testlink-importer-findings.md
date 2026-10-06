@@ -15,17 +15,24 @@ TestLink's data model is substantially richer than Qatarina's current schema in 
 ## 1. Test Case Steps — Blocking
 
 TestLink stores test cases as versioned records where each version contains ordered **steps**, each with:
-- `step_number`
-- `actions` (HTML)
-- `expected_results` (HTML)
-- `execution_type` (manual / automated)
+- ✅ `step_number`
+- ✅ `actions` (HTML)
+- ⌛️ `expected_results` (HTML)
+- ✅ `execution_type` (manual / automated)
 
 Tables: `tcsteps`, `execution_tcsteps`  
 XML field: `<steps><step>…</step></steps>`
 
 **Qatarina gap:** No `steps` concept exists. The `test_cases` table has a single `description` field. Steps would have to be concatenated into `description`, losing all structure, ordering, per-step expected results, and per-step execution results.
 
-**What needs to be added:** A `test_case_steps` table linked to `test_cases` with at minimum: `step_number`, `action`, `expected_result`, `execution_type`.
+**Previous recommendation:** A `test_case_steps` table linked to `test_cases` with at minimum: `step_number`, `action`, `expected_result`, `execution_type`.
+
+**Decision Notes**
+- Decision is that if someone wants to add steps to a test case, they should use Markdown checkboxes and UI to recommend that. But we will not add a specific field for the test steps.
+- execution_type -> we may not be able to support this as a field per se - but we have a field to store automation script (.e.g playwright or something else)
+- Expected result field to be added to the test_cases table, and can also use markdown and checkboxes...
+
+**Import Notes**: the fields from test_link would be imported into the description field, we are okay with that.
 
 ---
 
@@ -38,7 +45,17 @@ Views: `latest_tcase_version_number`, `latest_tcase_version_id`
 
 **Qatarina gap:** `test_cases` has no versioning. `updated_at` is the only change signal. Importing from TestLink means choosing one version (typically the latest active), discarding all history. There is no way to preserve "which version was used when" for historical executions.
 
-**What needs to be added:** Either a `test_case_versions` table, or at minimum an `external_version` field on `test_cases` to record which TestLink version was imported.
+**Previous recommendation:** Either a `test_case_versions` table, or at minimum an `external_version` field on `test_cases` to record which TestLink version was imported.
+
+**Import Notes**: store the version information in the description field.
+
+**Design Notes**:
+- We will consider adding the test_case_versions (fields to be included to be discussed)
+- test_runs can included optional (nullable) `test_case_version_id`
+- Inbox for tester should fetch the latest test case version
+- Older / historical test_runs should show the version of the test cases they were run with with the given version if the version id is specified in the test case
+- UI -> we can have the option to create a new version, 
+- Versioning should be an opt-in feature (consider a feature flag)
 
 ---
 
@@ -54,14 +71,17 @@ Table: `testsuites` (id FK→nodes_hierarchy, details); hierarchy via `nodes_hie
 
 ---
 
-## 4. Preconditions — Lossy
+## 4. Preconditions — Lossy 
 
 TestLink stores `preconditions` as a distinct HTML field on `tcversions`, separate from `summary`.
 
 **Qatarina gap:** Only `description` exists on `test_cases`. Preconditions would have to be concatenated into `description`, losing their semantic distinction.
 
-**What needs to be added:** A `preconditions` text/HTML field on `test_cases`.
+**Previous recommendation:** A `preconditions` text/HTML field on `test_cases`.
 
+**Design Notes**:
+- Needs to be added to test_cases as a text field that accepts markdown.
+  
 ---
 
 ## 5. Importance / Priority — Blocking
@@ -70,7 +90,10 @@ TestLink has an `importance` field (smallint, default 2 = MEDIUM; values: 1=LOW,
 
 **Qatarina gap:** No priority or importance field exists on `test_cases` or `test_plans`/`test_plan_cases`. There is no equivalent to urgency on plan-case assignments.
 
-**What needs to be added:** An `importance` or `priority` enum/int on `test_cases`, and an `urgency` field on the `test_plan_cases` junction table.
+**Previous recommendation:** An `importance` or `priority` enum/int on `test_cases`, and an `urgency` field on the `test_plan_cases` junction table.
+**Design Notes:** 
+- A a `priority` field enum on `test_cases`
+- Urgency on test_runs to be reviewed and look at linking to the time-aspect of e.g. a test plans
 
 ---
 
