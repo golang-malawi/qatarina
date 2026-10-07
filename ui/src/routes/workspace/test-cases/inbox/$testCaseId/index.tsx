@@ -35,6 +35,7 @@ import {
   applyChecklistState,
   useChecklistState,
 } from "@/lib/markdown-checklist";
+import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -65,6 +66,10 @@ function TestCaseInboxItem() {
   const checklist = useChecklistState(
     `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
     tc.description ?? "",
+  );
+  const preconditionsChecklist = useChecklistState(
+    preconditionsChecklistKey(currentUser?.user_id, testCaseId),
+    tc.preconditions ?? "",
   );
 
   const { data: { environments = [] } = {} } = $api.useQuery(
@@ -249,8 +254,14 @@ function TestCaseInboxItem() {
             <Heading size="sm" mb={2} color="fg.heading">
               Preconditions
             </Heading>
-            {/* Read-only: checklist state is keyed to description lines */}
-            <MarkdownChecklist markdown={tc.preconditions} />
+            {/* Ticks are kept in the browser only, separate from the description steps */}
+            <MarkdownChecklist
+              markdown={tc.preconditions}
+              checked={preconditionsChecklist.checked}
+              onToggle={isDraft ? undefined : preconditionsChecklist.toggle}
+              onReset={preconditionsChecklist.reset}
+              itemLabel="preconditions"
+            />
           </Box>
         )}
         <Box mt={2}>
