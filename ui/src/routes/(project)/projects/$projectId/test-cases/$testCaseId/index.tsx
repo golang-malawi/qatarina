@@ -16,7 +16,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 
 import { AppDialog } from "@/components/ui/app-dialog";
 import { useTestCaseQuery, branchTestCase } from "@/services/TestCaseService";
@@ -31,49 +31,6 @@ import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import { useChecklistState } from "@/lib/markdown-checklist";
 import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";
-
-// Shared by the preconditions and description sections
-const markdownComponents: Components = {
-  h1: (props) => <Heading size="lg" mb={2} {...props} />,
-  h2: (props) => <Heading size="md" mb={2} {...props} />,
-  h3: (props) => <Heading size="sm" mb={2} {...props} />,
-  p: (props) => <Text mb={2} {...props} />,
-  code: (props) => <Code colorPalette="yellow" {...props} />,
-  ul: (props) => (
-    <ul style={{ paddingLeft: "1.25rem", listStyleType: "disc" }} {...props} />
-  ),
-  ol: (props) => (
-    <ol
-      style={{
-        paddingLeft: "1.25rem",
-        listStyleType: "decimal",
-      }}
-      {...props}
-    />
-  ),
-  li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-  blockquote: (props) => (
-    <blockquote
-      style={{
-        paddingLeft: "1rem",
-        borderLeft: "4px solid var(--chakra-colors-border-emphasized)",
-        color: "var(--chakra-colors-fg-muted)",
-        fontStyle: "italic",
-        margin: "0.5rem 0",
-      }}
-      {...props}
-    />
-  ),
-  a: (props) => (
-    <a
-      style={{
-        color: "var(--chakra-colors-brand-solid)",
-        textDecoration: "underline",
-      }}
-      {...props}
-    />
-  ),
-};
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -246,46 +203,67 @@ function ViewTestCase() {
               </Box>
             )}
 
-            {testCase.preconditions && (
-              <Box>
-                <Heading size="sm" mb={2} color="fg.heading">
-                  Preconditions
-                </Heading>
-                <Box
-                  p={4}
-                  bg="bg.subtle"
-                  rounded="lg"
-                  border="1px solid"
-                  borderColor="border.subtle"
+            <Box
+              p={4}
+              bg="bg.subtle"
+              rounded="lg"
+              border="1px solid"
+              borderColor="border.subtle"
+            >
+              {testCase.description ? (
+                <ReactMarkdown
+                  components={{
+                    h1: (props) => <Heading size="lg" mb={2} {...props} />,
+                    h2: (props) => <Heading size="md" mb={2} {...props} />,
+                    h3: (props) => <Heading size="sm" mb={2} {...props} />,
+                    p: (props) => <Text mb={2} {...props} />,
+                    code: (props) => <Code colorPalette="yellow" {...props} />,
+                    ul: (props) => (
+                      <ul
+                        style={{ paddingLeft: "1.25rem", listStyleType: "disc" }}
+                        {...props}
+                      />
+                    ),
+                    ol: (props) => (
+                      <ol
+                        style={{
+                          paddingLeft: "1.25rem",
+                          listStyleType: "decimal",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    li: (props) => (
+                      <li style={{ marginBottom: "0.25rem" }} {...props} />
+                    ),
+                    blockquote: (props) => (
+                      <blockquote
+                        style={{
+                          paddingLeft: "1rem",
+                          borderLeft: "4px solid var(--chakra-colors-border-emphasized)",
+                          color: "var(--chakra-colors-fg-muted)",
+                          fontStyle: "italic",
+                          margin: "0.5rem 0",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    a: (props) => (
+                      <a
+                        style={{
+                          color: "var(--chakra-colors-brand-solid)",
+                          textDecoration: "underline",
+                        }}
+                        {...props}
+                      />
+                    ),
+                  }}
                 >
-                  <ReactMarkdown components={markdownComponents}>
-                    {testCase.preconditions}
-                  </ReactMarkdown>
-                </Box>
-              </Box>
-            )}
-
-            <Box>
-              {testCase.preconditions && (
-                <Heading size="sm" mb={2} color="fg.heading">
-                  Description
-                </Heading>
+                  {testCase.description}
+                </ReactMarkdown>
+              ) : (
+                <Text color="fg.subtle">No description provided.</Text>
               )}
-              <Box
-                p={4}
-                bg="bg.subtle"
-                rounded="lg"
-                border="1px solid"
-                borderColor="border.subtle"
-              >
-                {testCase.description ? (
-                  <ReactMarkdown components={markdownComponents}>
-                    {testCase.description}
-                  </ReactMarkdown>
-                ) : (
-                  <Text color="fg.subtle">No description provided.</Text>
-                )}
-              </Box>
             </Box>
 
             {/* Tags */}
@@ -369,7 +347,7 @@ function ViewTestCase() {
           </Stack>
         </Tabs.Content>
 
-        {/* USAGE & ASSIGNMENT TAB */}
+       {/* USAGE & ASSIGNMENT TAB */}
         <Tabs.Content value="usage">
           <Stack mt={4} gap={4}>
             <Heading size="sm" color="fg.heading">
