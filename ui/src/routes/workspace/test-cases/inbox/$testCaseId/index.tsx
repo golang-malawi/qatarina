@@ -30,7 +30,11 @@ import {
 import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
-import ReactMarkdown from "react-markdown";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import {
+  applyChecklistState,
+  useChecklistState,
+} from "@/lib/markdown-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -57,6 +61,11 @@ function TestCaseInboxItem() {
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
+
+  const checklist = useChecklistState(
+    `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
+    tc.description ?? "",
+  );
 
   const { data: { environments = [] } = {} } = $api.useQuery(
     "get",
@@ -108,7 +117,10 @@ function TestCaseInboxItem() {
         result_state: status,
         actual_result: resultText,
         notes: notesText,
-        expected_result: tc.description,
+        // snapshot of the description with the steps the tester ticked
+        expected_result: tc.description
+          ? applyChecklistState(tc.description, checklist.checked)
+          : tc.description,
         environment_id: tc.environment_id,
         tested_on: new Date().toISOString(),
         is_closed: false,
@@ -122,6 +134,7 @@ function TestCaseInboxItem() {
       });
       setResultText("");
       setNotesText("");
+      checklist.reset();
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -178,7 +191,11 @@ function TestCaseInboxItem() {
         <Badge colorScheme="gray" ml={2}>
           Closed
         </Badge>
-        <Text mt={2}>{tc.description}</Text>
+        {tc.description && (
+          <Box mt={2}>
+            <MarkdownChecklist markdown={tc.description} />
+          </Box>
+        )}
         <Text mt={4} color="fg.subtle">
           This test case is closed. Results can no longer be recorded.
         </Text>
@@ -224,7 +241,12 @@ function TestCaseInboxItem() {
             Description
           </Heading>
           {tc.description ? (
-            <ReactMarkdown>{tc.description}</ReactMarkdown>
+            <MarkdownChecklist
+              markdown={tc.description}
+              checked={checklist.checked}
+              onToggle={isDraft ? undefined : checklist.toggle}
+              onReset={checklist.reset}
+            />
           ) : (
             <Text color="fg.subtle">No description provided.</Text>
           )}
