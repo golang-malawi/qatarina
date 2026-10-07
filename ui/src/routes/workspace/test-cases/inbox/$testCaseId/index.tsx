@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -23,13 +23,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  markInboxTestCaseViewed,
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
 import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
-import ReactMarkdown from "react-markdown";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import {
+  applyChecklistState,
+  useChecklistState,
+} from "@/lib/markdown-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -57,6 +62,11 @@ function TestCaseInboxItem() {
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
 
+  const checklist = useChecklistState(
+    `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
+    tc.description ?? "",
+  );
+
   const { data: { environments = [] } = {} } = $api.useQuery(
     "get",
     "/v1/projects/{projectID}/environments",
@@ -64,6 +74,21 @@ function TestCaseInboxItem() {
   );
 
   const env = environments.find((e: any) => e.id === tc.environment_id);
+
+  const markViewedMutation = useMutation({
+    mutationFn: () => markInboxTestCaseViewed(testCaseId),
+    onSuccess: () => {
+      // Refreshes the inbox list, this item and the unseen count
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
+    },
+  });
+
+  useEffect(() => {
+    if (!tc.is_viewed) {
+      markViewedMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testCaseId, tc.is_viewed]);
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
@@ -92,7 +117,10 @@ function TestCaseInboxItem() {
         result_state: status,
         actual_result: resultText,
         notes: notesText,
-        expected_result: tc.description,
+        // snapshot of the description with the steps the tester ticked
+        expected_result: tc.description
+          ? applyChecklistState(tc.description, checklist.checked)
+          : tc.description,
         environment_id: tc.environment_id,
         tested_on: new Date().toISOString(),
         is_closed: false,
@@ -106,6 +134,7 @@ function TestCaseInboxItem() {
       });
       setResultText("");
       setNotesText("");
+      checklist.reset();
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -162,7 +191,11 @@ function TestCaseInboxItem() {
         <Badge colorScheme="gray" ml={2}>
           Closed
         </Badge>
-        <Text mt={2}>{tc.description}</Text>
+        {tc.description && (
+          <Box mt={2}>
+            <MarkdownChecklist markdown={tc.description} />
+          </Box>
+        )}
         <Text mt={4} color="fg.subtle">
           This test case is closed. Results can no longer be recorded.
         </Text>
@@ -208,7 +241,12 @@ function TestCaseInboxItem() {
             Description
           </Heading>
           {tc.description ? (
-            <ReactMarkdown>{tc.description}</ReactMarkdown>
+            <MarkdownChecklist
+              markdown={tc.description}
+              checked={checklist.checked}
+              onToggle={isDraft ? undefined : checklist.toggle}
+              onReset={checklist.reset}
+            />
           ) : (
             <Text color="fg.subtle">No description provided.</Text>
           )}

@@ -331,6 +331,7 @@ type TestPlanCase struct {
 	TestPlanID   int64
 	TestCaseID   uuid.UUID
 	AssignedToID int64
+	ViewedAt     sql.NullTime
 }
 
 type TestPlanComment struct {

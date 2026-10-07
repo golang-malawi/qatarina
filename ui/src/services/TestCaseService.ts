@@ -42,6 +42,16 @@ export async function getInboxTestCases(params?: {
   });
 }
 
+export async function getInboxUnseenCount() {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
+}
+
+export async function markInboxTestCaseViewed(testCaseID: string) {
+  return apiClient.request("post", "/v1/me/test-cases/inbox/{testCaseID}/view", {
+    params: { path: { testCaseID } },
+  });
+}
+
 export async function getTestCasesByTestPlanID(testPlanID: number) {
   return apiClient.request("get", "/v1/test-plans/{testPlanID}/test-cases", {
     params: { path: { testPlanID: testPlanID } },

@@ -409,6 +409,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/inbox/{testCaseID}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a Test Case in the current user's inbox as viewed
+         * @description Mark a Test Case in the current user's inbox as viewed
+         */
+        post: operations["MarkInboxTestCaseViewed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/test-cases/inbox/unseen-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count unseen Test Cases in the current user's inbox
+         * @description Count open Test Cases assigned to the current user that they have not viewed yet
+         */
+        get: operations["GetInboxUnseenCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/summary": {
         parameters: {
             query?: never;
@@ -2139,6 +2179,7 @@ export interface components {
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
+            is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             project_id?: number;
             tags?: string[];
@@ -2334,6 +2375,9 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxUnseenCountResponse": {
+            unseen_count?: number;
+        };
         "schema.LoginRequest": {
             email: string;
             password: string;
@@ -2899,6 +2943,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    MarkInboxTestCaseViewed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxUnseenCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxUnseenCountResponse"];
                 };
             };
             /** @description Internal Server Error */
