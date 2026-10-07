@@ -32,6 +32,14 @@ export const createTestCaseFields = (): FieldConfig[] => [
     required: true,
   },
   {
+    name: "preconditions",
+    label: "Preconditions",
+    type: "markdown-textarea",
+    placeholder: "What must be true before running this test (Markdown supported)",
+    helperText: "Optional. E.g. the user is logged in, test data exists, a feature flag is on.",
+    required: false,
+  },
+  {
     name: "description",
     label: "Description",
     type: "markdown-textarea",

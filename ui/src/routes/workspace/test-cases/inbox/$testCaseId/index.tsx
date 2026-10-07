@@ -191,6 +191,14 @@ function TestCaseInboxItem() {
         <Badge colorScheme="gray" ml={2}>
           Closed
         </Badge>
+        {tc.preconditions && (
+          <Box mt={2}>
+            <Heading size="sm" mb={2} color="fg.heading">
+              Preconditions
+            </Heading>
+            <MarkdownChecklist markdown={tc.preconditions} />
+          </Box>
+        )}
         {tc.description && (
           <Box mt={2}>
             <MarkdownChecklist markdown={tc.description} />
@@ -236,6 +244,15 @@ function TestCaseInboxItem() {
         <Text color="fg.muted">
           <strong>Code:</strong> {tc.code}
         </Text>
+        {tc.preconditions && (
+          <Box mt={2}>
+            <Heading size="sm" mb={2} color="fg.heading">
+              Preconditions
+            </Heading>
+            {/* Read-only: checklist state is keyed to description lines */}
+            <MarkdownChecklist markdown={tc.preconditions} />
+          </Box>
+        )}
         <Box mt={2}>
           <Heading size="sm" mb={2} color="fg.heading">
             Description
