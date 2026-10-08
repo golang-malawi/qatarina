@@ -891,3 +891,38 @@ FROM test_plan_comments c
 JOIN test_plans tp ON tp.id = c.test_plan_id
 WHERE c.id = $1
 RETURNING id;
+
+-- name: CreateTestCaseRelation :one
+INSERT INTO test_case_relations (
+    id, test_case_id, related_test_case_id, relation_kind, created_by_id, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+RETURNING id;
+
+-- name: ListTestCaseRelations :many
+-- Relations in both directions; "other" is the test case on the opposite side to test_case_id
+SELECT
+  r.id,
+  r.test_case_id,
+  r.related_test_case_id,
+  r.relation_kind,
+  r.created_by_id,
+  r.created_at,
+  r.updated_at,
+  (r.test_case_id = sqlc.arg(test_case_id))::boolean AS is_outgoing,
+  o.id AS other_id,
+  o.code AS other_code,
+  o.title AS other_title,
+  o.project_id AS other_project_id
+FROM test_case_relations r
+INNER JOIN test_cases o ON o.id = CASE
+  WHEN r.test_case_id = sqlc.arg(test_case_id) THEN r.related_test_case_id
+  ELSE r.test_case_id
+END
+WHERE r.test_case_id = sqlc.arg(test_case_id) OR r.related_test_case_id = sqlc.arg(test_case_id)
+ORDER BY r.created_at, r.id;
+
+-- name: DeleteTestCaseRelation :execrows
+DELETE FROM test_case_relations
+WHERE id = sqlc.arg(id)
+  AND (test_case_id = sqlc.arg(test_case_id) OR related_test_case_id = sqlc.arg(test_case_id));
