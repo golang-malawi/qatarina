@@ -3852,10 +3852,16 @@ SELECT COUNT(*)
 FROM test_cases
 WHERE project_id = $1
   AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%' || $2::text || '%' OR code ILIKE '%' || $2::text || '%')
 `
 
-func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, projectID sql.NullInt32) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByProjectPaged, projectID)
+type TestCaseCountByProjectPagedParams struct {
+	ProjectID sql.NullInt32
+	Search    string
+}
+
+func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, arg TestCaseCountByProjectPagedParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, testCaseCountByProjectPaged, arg.ProjectID, arg.Search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -3993,18 +3999,25 @@ SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, cr
 FROM test_cases
 WHERE project_id = $1
   AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%' || $2::text || '%' OR code ILIKE '%' || $2::text || '%')
 ORDER BY created_at DESC
-LIMIT $3::int OFFSET $2::int
+LIMIT $4::int OFFSET $3::int
 `
 
 type TestCaseListByProjectPagedParams struct {
 	ProjectID sql.NullInt32
+	Search    string
 	RowOffset int32
 	RowLimit  int32
 }
 
 func (q *Queries) TestCaseListByProjectPaged(ctx context.Context, arg TestCaseListByProjectPagedParams) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, testCaseListByProjectPaged, arg.ProjectID, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.QueryContext(ctx, testCaseListByProjectPaged,
+		arg.ProjectID,
+		arg.Search,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -302,7 +302,8 @@ WHERE tc.project_id = sqlc.arg(project_id)
 SELECT COUNT(*)
 FROM test_cases
 WHERE project_id = sqlc.arg(project_id)
-  AND (suggested IS NULL OR suggested = false);
+  AND (suggested IS NULL OR suggested = false)
+  AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%');
 
 -- name: TestCaseListByAssignedUser :many
 SELECT
@@ -371,6 +372,7 @@ SELECT *
 FROM test_cases
 WHERE project_id = sqlc.arg(project_id)
   AND (suggested IS NULL OR suggested = false)
+  AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%')
 ORDER BY created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
