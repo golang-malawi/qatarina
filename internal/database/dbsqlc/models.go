@@ -290,7 +290,7 @@ type TestCaseRelation struct {
 	ID                uuid.UUID
 	TestCaseID        uuid.UUID
 	RelatedTestCaseID uuid.UUID
-	// One of depends_on, related_to, duplicates, branched_from
+	// One of depends_on, related_to, duplicates, branched_from, blocks
 	RelationKind string
 	// User who created the relation
 	CreatedByID int32

@@ -8,6 +8,7 @@ const (
 	RelationKindRelatedTo    = "related_to"
 	RelationKindDuplicates   = "duplicates"
 	RelationKindBranchedFrom = "branched_from"
+	RelationKindBlocks       = "blocks"
 )
 
 // RelationDirection says which side of a relation the requested test case is on
@@ -20,7 +21,7 @@ const (
 
 type CreateTestCaseRelationRequest struct {
 	RelatedTestCaseID string `json:"related_test_case_id" validate:"required,uuid"`
-	RelationKind      string `json:"relation_kind" validate:"required,oneof=depends_on related_to duplicates branched_from" enums:"depends_on,related_to,duplicates,branched_from"`
+	RelationKind      string `json:"relation_kind" validate:"required,oneof=depends_on related_to duplicates branched_from blocks" enums:"depends_on,related_to,duplicates,branched_from,blocks"`
 }
 
 type RelatedTestCaseSummary struct {
@@ -35,7 +36,7 @@ type TestCaseRelationResponse struct {
 	// Stored as: test_case_id <relation_kind> related_test_case_id
 	TestCaseID        string `json:"test_case_id"`
 	RelatedTestCaseID string `json:"related_test_case_id"`
-	RelationKind      string `json:"relation_kind" enums:"depends_on,related_to,duplicates,branched_from"`
+	RelationKind      string `json:"relation_kind" enums:"depends_on,related_to,duplicates,branched_from,blocks"`
 	// Direction relative to the test case in the request path
 	Direction     string                 `json:"direction" enums:"outgoing,incoming"`
 	OtherTestCase RelatedTestCaseSummary `json:"other_test_case"`

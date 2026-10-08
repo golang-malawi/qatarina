@@ -123,6 +123,12 @@ func TestTestCaseRelations_DuplicateInEitherDirectionIsRejected(t *testing.T) {
 	}); err != nil {
 		t.Errorf("different kind: unexpected error %v", err)
 	}
+	if _, err := f.svc.Create(ctx, f.b, f.userID, &schema.CreateTestCaseRelationRequest{
+		RelatedTestCaseID: f.a,
+		RelationKind:      schema.RelationKindBlocks,
+	}); err != nil {
+		t.Errorf("blocks: unexpected error %v", err)
+	}
 }
 
 func TestTestCaseRelations_InvalidInput(t *testing.T) {
@@ -149,7 +155,7 @@ func TestTestCaseRelations_InvalidInput(t *testing.T) {
 	// The database CHECK constraint is the last line of defence if validation is bypassed
 	_, err = f.svc.Create(ctx, f.a, f.userID, &schema.CreateTestCaseRelationRequest{
 		RelatedTestCaseID: f.b,
-		RelationKind:      "blocks",
+		RelationKind:      "supersedes",
 	})
 	if !errors.Is(err, services.ErrInvalidRelation) {
 		t.Errorf("unknown kind: err = %v, want ErrInvalidRelation", err)

@@ -344,6 +344,7 @@ components:
           - related_to
           - duplicates
           - branched_from
+          - blocks
           type: string
       required:
       - related_test_case_id
@@ -910,6 +911,7 @@ components:
           - related_to
           - duplicates
           - branched_from
+          - blocks
           type: string
         test_case_id:
           description: 'Stored as: test_case_id <relation_kind> related_test_case_id'
