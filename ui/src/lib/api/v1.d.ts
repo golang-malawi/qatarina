@@ -2326,7 +2326,7 @@ export interface components {
         "schema.CreateTestCaseRelationRequest": {
             related_test_case_id: string;
             /** @enum {string} */
-            relation_kind: "depends_on" | "related_to" | "duplicates" | "branched_from";
+            relation_kind: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
         };
         "schema.CreateTestCaseRequest": {
             /** @description optional; auto-generated if blank */
@@ -2581,7 +2581,7 @@ export interface components {
             other_test_case?: components["schemas"]["schema.RelatedTestCaseSummary"];
             related_test_case_id?: string;
             /** @enum {string} */
-            relation_kind?: "depends_on" | "related_to" | "duplicates" | "branched_from";
+            relation_kind?: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
             /** @description Stored as: test_case_id <relation_kind> related_test_case_id */
             test_case_id?: string;
             updated_at?: string;

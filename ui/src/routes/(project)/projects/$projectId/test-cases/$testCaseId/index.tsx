@@ -162,7 +162,7 @@ function ViewTestCase() {
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
-          <Tabs.Trigger value="relations">Relations</Tabs.Trigger>
+          <Tabs.Trigger value="relations">{t("test_cases.relations.tab")}</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION TAB */}

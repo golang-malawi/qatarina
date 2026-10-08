@@ -16,6 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { FiTrash2 } from "react-icons/fi";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -33,34 +34,42 @@ type RelationKind = NonNullable<
   components["schemas"]["schema.CreateTestCaseRelationRequest"]["relation_kind"]
 >;
 
-// How a relation reads from this test case's side, e.g. "Depends on" vs "Required by"
+// Translation keys for how a relation reads from this test case's side,
+// e.g. "Depends on" vs "Required by"
 const RELATION_LABELS: Record<RelationKind, { outgoing: string; incoming: string }> = {
-  depends_on: { outgoing: "Depends on", incoming: "Required by" },
-  related_to: { outgoing: "Related to", incoming: "Related to" },
-  duplicates: { outgoing: "Duplicates", incoming: "Duplicated by" },
-  branched_from: { outgoing: "Branched from", incoming: "Branched into" },
+  depends_on: {
+    outgoing: "test_cases.relations.label.depends_on",
+    incoming: "test_cases.relations.label.required_by",
+  },
+  blocks: {
+    outgoing: "test_cases.relations.label.blocks",
+    incoming: "test_cases.relations.label.blocked_by",
+  },
+  related_to: {
+    outgoing: "test_cases.relations.label.related_to",
+    incoming: "test_cases.relations.label.related_to",
+  },
+  duplicates: {
+    outgoing: "test_cases.relations.label.duplicates",
+    incoming: "test_cases.relations.label.duplicated_by",
+  },
+  branched_from: {
+    outgoing: "test_cases.relations.label.branched_from",
+    incoming: "test_cases.relations.label.branched_into",
+  },
 };
 
+// Groups are shown in this order, keyed by their label's translation key
 const GROUP_ORDER = [
-  "Depends on",
-  "Required by",
-  "Related to",
-  "Duplicates",
-  "Duplicated by",
-  "Branched from",
-  "Branched into",
+  ...new Set(
+    Object.values(RELATION_LABELS).flatMap(({ outgoing, incoming }) => [outgoing, incoming]),
+  ),
 ];
 
-const relationKindOptions = createListCollection({
-  items: (Object.keys(RELATION_LABELS) as RelationKind[]).map((kind) => ({
-    value: kind,
-    label: RELATION_LABELS[kind].outgoing,
-  })),
-});
-
-function relationLabel(relation: Relation) {
+// Translation key for a relation's label, or undefined for a kind the UI does not know
+function relationLabelKey(relation: Relation) {
   const labels = RELATION_LABELS[relation.relation_kind as RelationKind];
-  if (!labels) return relation.relation_kind ?? "";
+  if (!labels) return undefined;
   return relation.direction === "incoming" ? labels.incoming : labels.outgoing;
 }
 
@@ -74,6 +83,7 @@ type TestCaseRelationsProps = {
 };
 
 export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useTestCaseRelationsQuery(testCaseId);
   const deleteMutation = useDeleteTestCaseRelationMutation();
@@ -85,14 +95,15 @@ export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsPr
     });
 
   const groups = useMemo(() => {
-    const byLabel = new Map<string, Relation[]>();
+    const byLabelKey = new Map<string, Relation[]>();
     for (const relation of data?.relations ?? []) {
-      const label = relationLabel(relation);
-      byLabel.set(label, [...(byLabel.get(label) ?? []), relation]);
+      const labelKey = relationLabelKey(relation);
+      if (!labelKey) continue;
+      byLabelKey.set(labelKey, [...(byLabelKey.get(labelKey) ?? []), relation]);
     }
-    return GROUP_ORDER.filter((label) => byLabel.has(label)).map((label) => ({
-      label,
-      relations: byLabel.get(label)!,
+    return GROUP_ORDER.filter((labelKey) => byLabelKey.has(labelKey)).map((labelKey) => ({
+      labelKey,
+      relations: byLabelKey.get(labelKey)!,
     }));
   }, [data]);
 
@@ -102,11 +113,11 @@ export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsPr
         params: { path: { testCaseID: testCaseId, relationID: relation.id ?? "" } },
       });
       await invalidateRelations();
-      toaster.success({ title: "Relation removed" });
+      toaster.success({ title: t("test_cases.relations.remove.success") });
     } catch (err) {
       toaster.error({
-        title: "Failed to remove relation",
-        description: errorDetail(err, "Could not remove the relation."),
+        title: t("test_cases.relations.remove.error"),
+        description: errorDetail(err, t("test_cases.relations.remove.error_description")),
       });
       throw err;
     }
@@ -116,7 +127,7 @@ export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsPr
     <Stack gap={4} mt={4}>
       <Flex justify="space-between" align="center" gap={4} wrap="wrap">
         <Heading size="sm" color="fg.heading">
-          Related test cases
+          {t("test_cases.relations.title")}
         </Heading>
         <AddRelationDialog
           projectId={projectId}
@@ -128,16 +139,16 @@ export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsPr
       {isLoading ? (
         <Spinner size="md" color="brand.solid" />
       ) : error ? (
-        <Text color="fg.error">Error loading relations</Text>
+        <Text color="fg.error">{t("test_cases.relations.error_loading")}</Text>
       ) : groups.length === 0 ? (
         <Text fontSize="sm" color="fg.subtle">
-          No related test cases yet.
+          {t("test_cases.relations.empty")}
         </Text>
       ) : (
         groups.map((group) => (
-          <Box key={group.label}>
+          <Box key={group.labelKey}>
             <Text fontWeight="semibold" fontSize="sm" color="fg.muted" mb={2}>
-              {group.label}
+              {t(group.labelKey)}
             </Text>
             <Stack gap={2}>
               {group.relations.map((relation) => {
@@ -167,13 +178,18 @@ export function TestCaseRelations({ projectId, testCaseId }: TestCaseRelationsPr
                       </Text>
                     </Link>
                     <ConfirmDialog
-                      title="Remove relation"
-                      description={`Remove "${group.label.toLowerCase()} ${other?.code ?? ""}" from this test case?`}
-                      confirmLabel="Remove"
+                      title={t("test_cases.relations.remove.title")}
+                      description={t("test_cases.relations.remove.description", {
+                        relation: t(group.labelKey),
+                        code: other?.code ?? "",
+                      })}
+                      confirmLabel={t("test_cases.relations.remove.confirm")}
                       onConfirm={() => handleDelete(relation)}
                       trigger={
                         <IconButton
-                          aria-label={`Remove relation to ${other?.code ?? "test case"}`}
+                          aria-label={t("test_cases.relations.remove.aria_label", {
+                            code: other?.code ?? "",
+                          })}
                           size="xs"
                           variant="ghost"
                           colorPalette="red"
@@ -200,6 +216,7 @@ type AddRelationDialogProps = {
 };
 
 function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDialogProps) {
+  const { t } = useTranslation();
   const createMutation = useCreateTestCaseRelationMutation();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<RelationKind>("depends_on");
@@ -221,6 +238,17 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
     enabled: open,
   });
 
+  const relationKindOptions = useMemo(
+    () =>
+      createListCollection({
+        items: (Object.keys(RELATION_LABELS) as RelationKind[]).map((kind) => ({
+          value: kind,
+          label: t(RELATION_LABELS[kind].outgoing),
+        })),
+      }),
+    [t],
+  );
+
   const candidates = useMemo(
     () => (candidatesData?.test_cases ?? []).filter((tc) => tc.id && tc.id !== testCaseId),
     [candidatesData, testCaseId],
@@ -239,13 +267,13 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
         body: { related_test_case_id: relatedId, relation_kind: kind },
       });
       await onCreated();
-      toaster.success({ title: "Relation added" });
+      toaster.success({ title: t("test_cases.relations.add.success") });
       setOpen(false);
       reset();
     } catch (err) {
       toaster.error({
-        title: "Failed to add relation",
-        description: errorDetail(err, "Could not add the relation."),
+        title: t("test_cases.relations.add.error"),
+        description: errorDetail(err, t("test_cases.relations.add.error_description")),
       });
     }
   };
@@ -257,16 +285,16 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
         setOpen(details.open);
         if (!details.open) reset();
       }}
-      title="Add related test case"
+      title={t("test_cases.relations.add.title")}
       trigger={
         <Button size="sm" colorPalette="brand">
-          Add relation
+          {t("test_cases.relations.add.button")}
         </Button>
       }
       footer={
         <>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             colorPalette="brand"
@@ -274,14 +302,14 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
             disabled={!relatedId}
             onClick={handleCreate}
           >
-            Add relation
+            {t("test_cases.relations.add.button")}
           </Button>
         </>
       }
     >
       <Stack gap={4}>
         <Field.Root>
-          <Field.Label>This test case…</Field.Label>
+          <Field.Label>{t("test_cases.relations.add.kind_label")}</Field.Label>
           {/* No Portal: inside a modal dialog a portalled menu sits outside the
               dialog's focus trap and cannot be clicked */}
           <Select.Root
@@ -293,7 +321,7 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
             <Select.HiddenSelect />
             <Select.Control>
               <Select.Trigger>
-                <Select.ValueText placeholder="Select relation" />
+                <Select.ValueText placeholder={t("test_cases.relations.add.kind_placeholder")} />
               </Select.Trigger>
               <Select.IndicatorGroup>
                 <Select.Indicator />
@@ -314,9 +342,9 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
         </Field.Root>
 
         <Field.Root>
-          <Field.Label>Test case</Field.Label>
+          <Field.Label>{t("test_cases.relations.add.test_case_label")}</Field.Label>
           <Input
-            placeholder="Search test cases"
+            placeholder={t("test_cases.relations.add.search_placeholder")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -332,7 +360,7 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
             borderColor="border.subtle"
             rounded="md"
             role="listbox"
-            aria-label="Matching test cases"
+            aria-label={t("test_cases.relations.add.matching_test_cases")}
           >
             {isFetching && candidates.length === 0 ? (
               <Flex p={3} justify="center">
@@ -340,7 +368,7 @@ function AddRelationDialog({ projectId, testCaseId, onCreated }: AddRelationDial
               </Flex>
             ) : candidates.length === 0 ? (
               <Text p={3} fontSize="sm" color="fg.subtle">
-                No matching test cases
+                {t("test_cases.relations.add.no_matches")}
               </Text>
             ) : (
               candidates.map((tc) => {
