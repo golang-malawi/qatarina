@@ -285,6 +285,19 @@ type TestCase struct {
 	ParentTestCaseID uuid.NullUUID
 }
 
+// Typed relationships between two test cases, read as: test_case_id <relation_kind> related_test_case_id
+type TestCaseRelation struct {
+	ID                uuid.UUID
+	TestCaseID        uuid.UUID
+	RelatedTestCaseID uuid.UUID
+	// One of depends_on, related_to, duplicates, branched_from
+	RelationKind string
+	// User who created the relation
+	CreatedByID int32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type TestCaseSequence struct {
 	ProjectID       int32
 	Prefix          string
