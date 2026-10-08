@@ -1390,6 +1390,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List relations of a Test Case
+         * @description List relations where the Test Case is on either side. direction is "outgoing" when the Test Case is the subject (e.g. it depends_on other_test_case) and "incoming" otherwise
+         */
+        get: operations["ListTestCaseRelations"];
+        put?: never;
+        /**
+         * Relate a Test Case to another Test Case
+         * @description Create a relation read as "<testCaseID> <relation_kind> <related_test_case_id>". Only one relation of each kind is allowed per pair of Test Cases, in either direction
+         */
+        post: operations["CreateTestCaseRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/{testCaseID}/relations/{relationID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a relation from a Test Case
+         * @description Remove a relation the Test Case is on either side of
+         */
+        delete: operations["DeleteTestCaseRelation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/transfer": {
         parameters: {
             query?: never;
@@ -2279,6 +2323,11 @@ export interface components {
             tags?: string[];
             title: string;
         };
+        "schema.CreateTestCaseRelationRequest": {
+            related_test_case_id: string;
+            /** @enum {string} */
+            relation_kind: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
+        };
         "schema.CreateTestCaseRequest": {
             /** @description optional; auto-generated if blank */
             code?: string;
@@ -2464,6 +2513,12 @@ export interface components {
         };
         "schema.RefreshTokenRequest": Record<string, never>;
         "schema.RefreshTokenResponse": Record<string, never>;
+        "schema.RelatedTestCaseSummary": {
+            code?: string;
+            id?: string;
+            project_id?: number;
+            title?: string;
+        };
         "schema.ReportListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
             reports?: components["schemas"]["schema.ReportResponse"][];
@@ -2510,6 +2565,26 @@ export interface components {
         "schema.TestCaseListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.TestCaseResponse"][];
+        };
+        "schema.TestCaseRelationListResponse": {
+            relations?: components["schemas"]["schema.TestCaseRelationResponse"][];
+        };
+        "schema.TestCaseRelationResponse": {
+            created_at?: string;
+            created_by_id?: number;
+            /**
+             * @description Direction relative to the test case in the request path
+             * @enum {string}
+             */
+            direction?: "outgoing" | "incoming";
+            id?: string;
+            other_test_case?: components["schemas"]["schema.RelatedTestCaseSummary"];
+            related_test_case_id?: string;
+            /** @enum {string} */
+            relation_kind?: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
+            /** @description Stored as: test_case_id <relation_kind> related_test_case_id */
+            test_case_id?: string;
+            updated_at?: string;
         };
         "schema.TestCaseResponse": {
             code?: string;
@@ -5524,6 +5599,160 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListTestCaseRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseRelationListResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateTestCaseRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Relation data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateTestCaseRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseRelationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteTestCaseRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+                /** @description Relation ID */
+                relationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

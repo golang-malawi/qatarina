@@ -466,8 +466,10 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		pageSize = 100
 	}
 
+	search := strings.TrimSpace(params.Search)
 	rows, err := t.queries.TestCaseListByProjectPaged(ctx, dbsqlc.TestCaseListByProjectPagedParams{
 		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
+		Search:    search,
 		RowLimit:  int32(pageSize),
 		RowOffset: int32((page - 1) * pageSize),
 	})
@@ -475,7 +477,10 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		return nil, 0, err
 	}
 
-	total, err := t.queries.TestCaseCountByProjectPaged(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
+	total, err := t.queries.TestCaseCountByProjectPaged(ctx, dbsqlc.TestCaseCountByProjectPagedParams{
+		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
+		Search:    search,
+	})
 	if err != nil {
 		return nil, 0, err
 	}

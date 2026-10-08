@@ -725,6 +725,35 @@ func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) 
 	return id, err
 }
 
+const createTestCaseRelation = `-- name: CreateTestCaseRelation :one
+INSERT INTO test_case_relations (
+    id, test_case_id, related_test_case_id, relation_kind, created_by_id, created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+RETURNING id
+`
+
+type CreateTestCaseRelationParams struct {
+	ID                uuid.UUID
+	TestCaseID        uuid.UUID
+	RelatedTestCaseID uuid.UUID
+	RelationKind      string
+	CreatedByID       int32
+}
+
+func (q *Queries) CreateTestCaseRelation(ctx context.Context, arg CreateTestCaseRelationParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, createTestCaseRelation,
+		arg.ID,
+		arg.TestCaseID,
+		arg.RelatedTestCaseID,
+		arg.RelationKind,
+		arg.CreatedByID,
+	)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createTestPlan = `-- name: CreateTestPlan :one
 INSERT INTO test_plans (
     project_id, assigned_to_id, created_by_id, updated_by_id,
@@ -974,6 +1003,25 @@ DELETE FROM test_cases WHERE id = $1
 
 func (q *Queries) DeleteTestCase(ctx context.Context, id uuid.UUID) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteTestCase, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteTestCaseRelation = `-- name: DeleteTestCaseRelation :execrows
+DELETE FROM test_case_relations
+WHERE id = $1
+  AND (test_case_id = $2 OR related_test_case_id = $2)
+`
+
+type DeleteTestCaseRelationParams struct {
+	ID         uuid.UUID
+	TestCaseID uuid.UUID
+}
+
+func (q *Queries) DeleteTestCaseRelation(ctx context.Context, arg DeleteTestCaseRelationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCaseRelation, arg.ID, arg.TestCaseID)
 	if err != nil {
 		return 0, err
 	}
@@ -2765,6 +2813,81 @@ func (q *Queries) ListScriptTestCasesByPlan(ctx context.Context, testPlanID int6
 	return items, nil
 }
 
+const listTestCaseRelations = `-- name: ListTestCaseRelations :many
+SELECT
+  r.id,
+  r.test_case_id,
+  r.related_test_case_id,
+  r.relation_kind,
+  r.created_by_id,
+  r.created_at,
+  r.updated_at,
+  (r.test_case_id = $1)::boolean AS is_outgoing,
+  o.id AS other_id,
+  o.code AS other_code,
+  o.title AS other_title,
+  o.project_id AS other_project_id
+FROM test_case_relations r
+INNER JOIN test_cases o ON o.id = CASE
+  WHEN r.test_case_id = $1 THEN r.related_test_case_id
+  ELSE r.test_case_id
+END
+WHERE r.test_case_id = $1 OR r.related_test_case_id = $1
+ORDER BY r.created_at, r.id
+`
+
+type ListTestCaseRelationsRow struct {
+	ID                uuid.UUID
+	TestCaseID        uuid.UUID
+	RelatedTestCaseID uuid.UUID
+	RelationKind      string
+	CreatedByID       int32
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	IsOutgoing        bool
+	OtherID           uuid.UUID
+	OtherCode         string
+	OtherTitle        string
+	OtherProjectID    sql.NullInt32
+}
+
+// Relations in both directions; "other" is the test case on the opposite side to test_case_id
+func (q *Queries) ListTestCaseRelations(ctx context.Context, testCaseID uuid.UUID) ([]ListTestCaseRelationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCaseRelations, testCaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTestCaseRelationsRow
+	for rows.Next() {
+		var i ListTestCaseRelationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TestCaseID,
+			&i.RelatedTestCaseID,
+			&i.RelationKind,
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.IsOutgoing,
+			&i.OtherID,
+			&i.OtherCode,
+			&i.OtherTitle,
+			&i.OtherProjectID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestCases = `-- name: ListTestCases :many
 SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id FROM test_cases ORDER BY created_at DESC
 `
@@ -3729,10 +3852,16 @@ SELECT COUNT(*)
 FROM test_cases
 WHERE project_id = $1
   AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%' || $2::text || '%' OR code ILIKE '%' || $2::text || '%')
 `
 
-func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, projectID sql.NullInt32) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByProjectPaged, projectID)
+type TestCaseCountByProjectPagedParams struct {
+	ProjectID sql.NullInt32
+	Search    string
+}
+
+func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, arg TestCaseCountByProjectPagedParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, testCaseCountByProjectPaged, arg.ProjectID, arg.Search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -3870,18 +3999,25 @@ SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, cr
 FROM test_cases
 WHERE project_id = $1
   AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%' || $2::text || '%' OR code ILIKE '%' || $2::text || '%')
 ORDER BY created_at DESC
-LIMIT $3::int OFFSET $2::int
+LIMIT $4::int OFFSET $3::int
 `
 
 type TestCaseListByProjectPagedParams struct {
 	ProjectID sql.NullInt32
+	Search    string
 	RowOffset int32
 	RowLimit  int32
 }
 
 func (q *Queries) TestCaseListByProjectPaged(ctx context.Context, arg TestCaseListByProjectPagedParams) ([]TestCase, error) {
-	rows, err := q.db.QueryContext(ctx, testCaseListByProjectPaged, arg.ProjectID, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.QueryContext(ctx, testCaseListByProjectPaged,
+		arg.ProjectID,
+		arg.Search,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

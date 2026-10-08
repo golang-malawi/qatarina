@@ -334,6 +334,22 @@ components:
       - project_id
       - title
       type: object
+    schema.CreateTestCaseRelationRequest:
+      properties:
+        related_test_case_id:
+          type: string
+        relation_kind:
+          enum:
+          - depends_on
+          - related_to
+          - duplicates
+          - branched_from
+          - blocks
+          type: string
+      required:
+      - related_test_case_id
+      - relation_kind
+      type: object
     schema.CreateTestCaseRequest:
       properties:
         code:
@@ -747,6 +763,17 @@ components:
       type: object
     schema.RefreshTokenResponse:
       type: object
+    schema.RelatedTestCaseSummary:
+      properties:
+        code:
+          type: string
+        id:
+          type: string
+        project_id:
+          type: integer
+        title:
+          type: string
+      type: object
     schema.ReportListResponse:
       properties:
         pagination:
@@ -851,6 +878,46 @@ components:
             $ref: '#/components/schemas/schema.TestCaseResponse'
           type: array
           uniqueItems: false
+      type: object
+    schema.TestCaseRelationListResponse:
+      properties:
+        relations:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseRelationResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestCaseRelationResponse:
+      properties:
+        created_at:
+          type: string
+        created_by_id:
+          type: integer
+        direction:
+          description: Direction relative to the test case in the request path
+          enum:
+          - outgoing
+          - incoming
+          type: string
+        id:
+          type: string
+        other_test_case:
+          $ref: '#/components/schemas/schema.RelatedTestCaseSummary'
+        related_test_case_id:
+          type: string
+        relation_kind:
+          enum:
+          - depends_on
+          - related_to
+          - duplicates
+          - branched_from
+          - blocks
+          type: string
+        test_case_id:
+          description: 'Stored as: test_case_id <relation_kind> related_test_case_id'
+          type: string
+        updated_at:
+          type: string
       type: object
     schema.TestCaseResponse:
       properties:
@@ -3918,6 +3985,139 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Reject a suggested Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/relations:
+    get:
+      description: List relations where the Test Case is on either side. direction
+        is "outgoing" when the Test Case is the subject (e.g. it depends_on other_test_case)
+        and "incoming" otherwise
+      operationId: ListTestCaseRelations
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseRelationListResponse'
+          description: OK
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List relations of a Test Case
+      tags:
+      - test-cases
+    post:
+      description: Create a relation read as "<testCaseID> <relation_kind> <related_test_case_id>".
+        Only one relation of each kind is allowed per pair of Test Cases, in either
+        direction
+      operationId: CreateTestCaseRelation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateTestCaseRelationRequest'
+        description: Relation data
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseRelationResponse'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Conflict
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Relate a Test Case to another Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/relations/{relationID}:
+    delete:
+      description: Remove a relation the Test Case is on either side of
+      operationId: DeleteTestCaseRelation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      - description: Relation ID
+        in: path
+        name: relationID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "204":
+          description: No Content
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Remove a relation from a Test Case
       tags:
       - test-cases
   /v1/test-cases/{testCaseID}/transfer:
