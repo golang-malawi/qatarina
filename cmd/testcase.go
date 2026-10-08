@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -50,6 +51,7 @@ var testCaseImporterCmd = &cobra.Command{
 				CreatedByID:     2,
 				CreatedAt:       sql.NullTime{Time: time.Now(), Valid: true},
 				UpdatedAt:       sql.NullTime{Time: time.Now(), Valid: true},
+				Priority:        dbsqlc.PriorityLevelMedium,
 			})
 		}
 		return nil
@@ -68,6 +70,7 @@ var createTestCaseCmd = &cobra.Command{
 		module, _ := cmd.Flags().GetString("module")
 		isDraft, _ := cmd.Flags().GetBool("draft")
 		tags, _ := cmd.Flags().GetStringSlice("tags")
+		priority, _ := cmd.Flags().GetString("priority")
 
 		if title == "" || kind == "" || projectID == 0 {
 			return fmt.Errorf("title, kind, and project ID are required")
@@ -89,6 +92,7 @@ var createTestCaseCmd = &cobra.Command{
 			CreatedByID:     1,
 			CreatedAt:       common.NullTime(time.Now()),
 			UpdatedAt:       common.NewNullTime(time.Now()),
+			Priority:        schema.ParsePriorityLevel(priority),
 		}
 
 		_, err := queries.CreateTestCase(context.Background(), params)

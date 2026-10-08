@@ -42,11 +42,12 @@ import (
 //	@Produce		json
 //	@Param			page		query		int		false	"Page number (1-based)"
 //	@Param			pageSize	query		int		false	"Page size"
-//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft)"
+//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft, priority)"
 //	@Param			sortOrder	query		string	false	"Sort order (asc, desc)"
 //	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
 //	@Param			kind		query		string	false	"Filter by kind"
 //	@Param			isDraft		query		bool	false	"Filter by draft state"
+//	@Param			priority	query		string	false	"Filter by priority (low, medium, high)"
 //	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
@@ -65,6 +66,10 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 		sortOrder := c.Query("sortOrder", "desc")
 		search := strings.TrimSpace(c.Query("search", ""))
 		kind := strings.TrimSpace(c.Query("kind", ""))
+		priority := strings.ToLower(strings.TrimSpace(c.Query("priority", "")))
+		if priority != "" && priority != string(schema.ParsePriorityLevel(priority)) {
+			return problemdetail.BadRequest(c, "invalid priority parameter, expected one of low, medium, high")
+		}
 		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
 		var isDraft *bool
 		if isDraftParam != "" {
@@ -84,6 +89,7 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 			Kind:      kind,
 			IsDraft:   isDraft,
 			Suggested: &suggested,
+			Priority:  priority,
 		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test cases", "error", err)

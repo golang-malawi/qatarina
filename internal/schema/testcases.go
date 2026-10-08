@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -19,6 +20,7 @@ type CreateTestCaseRequest struct {
 	Runner           string   `json:"runner"`
 	ScriptPath       string   `json:"script_path,omitempty"`
 	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
+	Priority         string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
 }
 
 type UpdateTestCaseRequest struct {
@@ -34,6 +36,7 @@ type UpdateTestCaseRequest struct {
 	CreatedByID     string   `json:"-" validate:"-"`
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path"`
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
 }
 
 type BulkCreateTestCases struct {
@@ -76,6 +79,7 @@ type TestCaseResponse struct {
 	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
 	ParentCode       string   `json:"parent_code,omitempty"`
 	ParentTitle      string   `json:"parent_title,omitempty"`
+	Priority         string   `json:"priority"`
 }
 
 // For detail view (with parent join)
@@ -98,6 +102,7 @@ func NewTestCaseResponse(e *dbsqlc.GetTestCaseWithParentRow) TestCaseResponse {
 		ParentTestCaseID: e.ParentTestCaseID.UUID.String(),
 		ParentCode:       e.ParentCode.String,
 		ParentTitle:      e.ParentTitle.String,
+		Priority:         string(e.Priority),
 	}
 }
 
@@ -118,6 +123,7 @@ func NewTestCaseResponseFromRow(e *dbsqlc.TestCase) TestCaseResponse {
 		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
 		Runner:          e.Runner.String,
 		ScriptPath:      e.ScriptPath.String,
+		Priority:        string(e.Priority),
 	}
 }
 
@@ -164,6 +170,8 @@ type AssignedTestCase struct {
 	EnvironmentID   int32           `json:"environment_id"`
 	IsClosed        bool            `json:"is_closed"`
 	IsViewed        bool            `json:"is_viewed"`
+	Priority        string          `json:"priority"`
+	Urgency         string          `json:"urgency"`
 }
 
 type TestCaseExecutionSummary struct {
@@ -193,6 +201,7 @@ type CreateSuggestedTestCaseRequest struct {
 	CreatedByID     int64    `json:"-"` // internal only
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path,omitempty"`
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
 }
 
 type SugestedTestCaseResponse struct {
@@ -203,4 +212,16 @@ type SugestedTestCaseResponse struct {
 type TransferTestCaseRequest struct {
 	TargetProjectID int64  `json:"target_project_id" validate:"required"`
 	FeatureOrModule string `json:"feature_or_module" validate:"required"`
+}
+
+// ParsePriorityLevel converts a priority/urgency value from a request into its
+// database representation, falling back to medium (TestLink's default) when
+// the value is blank or unknown
+func ParsePriorityLevel(value string) dbsqlc.PriorityLevel {
+	switch level := dbsqlc.PriorityLevel(strings.ToLower(strings.TrimSpace(value))); level {
+	case dbsqlc.PriorityLevelLow, dbsqlc.PriorityLevelMedium, dbsqlc.PriorityLevelHigh:
+		return level
+	default:
+		return dbsqlc.PriorityLevelMedium
+	}
 }

@@ -1,4 +1,5 @@
 import { FieldConfig } from "@/components/form/DynamicForm";
+import { DEFAULT_PRIORITY, PRIORITY_OPTIONS } from "@/common/constants/priority";
 
 export const createTestCaseFields = (): FieldConfig[] => [
   {
@@ -30,6 +31,14 @@ export const createTestCaseFields = (): FieldConfig[] => [
     type: "test-kind",
     helperText: "Test Kind.",
     required: true,
+  },
+  {
+    name: "priority",
+    label: "Priority",
+    type: "select",
+    options: PRIORITY_OPTIONS,
+    defaultValue: DEFAULT_PRIORITY,
+    helperText: "How important this test case is (Low, Medium, High).",
   },
   {
     name: "description",

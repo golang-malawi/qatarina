@@ -47,6 +47,7 @@ func ExportFileFromTestCases(logger logging.Logger) fiber.Handler {
 				FeatureOrModule: tc.FeatureOrModule,
 				Tags:            tc.Tags,
 				IsDraft:         tc.IsDraft,
+				Priority:        tc.Priority,
 			})
 		}
 

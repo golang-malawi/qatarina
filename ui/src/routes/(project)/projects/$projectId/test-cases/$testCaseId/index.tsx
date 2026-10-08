@@ -1,3 +1,4 @@
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
@@ -269,6 +270,10 @@ function ViewTestCase() {
                   <Badge colorPalette={testCase.is_draft ? "yellow" : "green"}>
                     {testCase.is_draft ? "Draft" : "Published"}
                   </Badge>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Priority:</Text>
+                  <PriorityBadge value={testCase.priority} />
                 </Flex>
                 <Flex justify="space-between">
                   <Text fontWeight="semibold">Created At:</Text>

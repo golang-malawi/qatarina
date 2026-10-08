@@ -20,18 +20,21 @@ type CreateTestPlan struct {
 	CreatedByID    int64                `json:"created_by_id" validate:"-"`
 	UpdatedByID    int64                `json:"updated_by_id" validate:"-"`
 	EnvironmentID  int64                `json:"environment_id" validate:"-"`
-	PlannedTests   []TestCaseAssignment `json:"planned_tests"`
+	PlannedTests   []TestCaseAssignment `json:"planned_tests" validate:"omitempty,dive"`
 }
 
 type TestCaseAssignment struct {
 	TestCaseID string  `json:"test_case_id"`
 	UserIDs    []int64 `json:"user_ids"`
+	// Urgency of the test case within the plan (low, medium, high). When blank
+	// an existing urgency is kept, otherwise it defaults to medium
+	Urgency string `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high"`
 }
 
 type AssignTestsToPlanRequest struct {
 	ProjectID    int64                `json:"project_id" validate:"required"`
 	PlanID       int64                `json:"test_plan_id" validate:"required"`
-	PlannedTests []TestCaseAssignment `json:"planned_tests" validate:"required,min=1,max=100"`
+	PlannedTests []TestCaseAssignment `json:"planned_tests" validate:"required,min=1,max=100,dive"`
 }
 
 type BatchAssignTestCasesToPlanRequest struct {
@@ -39,6 +42,11 @@ type BatchAssignTestCasesToPlanRequest struct {
 	PlanID      int64    `json:"test_plan_id" validate:"required"`
 	TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
 	UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
+	Urgency     string   `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high"`
+}
+
+type UpdateTestPlanCaseUrgencyRequest struct {
+	Urgency string `json:"urgency" validate:"required,oneof=low medium high"`
 }
 
 type TestPlanResponseItem struct {
@@ -117,7 +125,10 @@ type UpdateTestPlan struct {
 
 type TestCaseResponseItem struct {
 	ID                   string           `json:"id"`
+	Code                 string           `json:"code"`
 	Title                string           `json:"title"`
+	Priority             string           `json:"priority"`
+	Urgency              string           `json:"urgency"`
 	IsAssignedToTestPlan bool             `json:"is_assigned_to_test_plan"`
 	TestPlan             *TestPlanSummary `json:"test_plan,omitempty"`
 	AssignedTesterIDs    []int64          `json:"assigned_tester_ids"`

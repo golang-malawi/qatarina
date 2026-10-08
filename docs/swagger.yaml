@@ -84,6 +84,8 @@ components:
           type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
+        priority:
+          type: string
         project_id:
           type: integer
         tags:
@@ -96,6 +98,8 @@ components:
         title:
           type: string
         updated_at:
+          type: string
+        urgency:
           type: string
       type: object
     schema.AssignedTestCaseListResponse:
@@ -314,6 +318,13 @@ components:
           type: string
         kind:
           type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          type: string
         project_id:
           type: integer
         runner:
@@ -348,6 +359,13 @@ components:
         kind:
           type: string
         parent_test_case_id:
+          type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
           type: string
         project_id:
           type: integer
@@ -518,6 +536,8 @@ components:
         isDraft:
           type: boolean
         kind:
+          type: string
+        priority:
           type: string
         tags:
           items:
@@ -825,6 +845,15 @@ components:
       properties:
         test_case_id:
           type: string
+        urgency:
+          description: |-
+            Urgency of the test case within the plan (low, medium, high). When blank
+            an existing urgency is kept, otherwise it defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          type: string
         user_ids:
           items:
             type: integer
@@ -880,6 +909,8 @@ components:
           type: string
         parent_title:
           type: string
+        priority:
+          type: string
         project_id:
           type: integer
         result:
@@ -909,13 +940,19 @@ components:
             type: integer
           type: array
           uniqueItems: false
+        code:
+          type: string
         id:
           type: string
         is_assigned_to_test_plan:
           type: boolean
+        priority:
+          type: string
         test_plan:
           $ref: '#/components/schemas/schema.TestPlanSummary'
         title:
+          type: string
+        urgency:
           type: string
       type: object
     schema.TestPlanListResponse:
@@ -1224,6 +1261,13 @@ components:
           type: boolean
         kind:
           type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          type: string
         project_id:
           type: integer
         runner:
@@ -1243,6 +1287,17 @@ components:
       - kind
       - project_id
       - title
+      type: object
+    schema.UpdateTestPlanCaseUrgencyRequest:
+      properties:
+        urgency:
+          enum:
+          - low
+          - medium
+          - high
+          type: string
+      required:
+      - urgency
       type: object
     schema.UpdateTesterRoleRequest:
       properties:
@@ -3507,7 +3562,8 @@ paths:
         name: pageSize
         schema:
           type: integer
-      - description: Sort field (created_at, updated_at, code, title, kind, is_draft)
+      - description: Sort field (created_at, updated_at, code, title, kind, is_draft,
+          priority)
         in: query
         name: sortBy
         schema:
@@ -3532,6 +3588,11 @@ paths:
         name: isDraft
         schema:
           type: boolean
+      - description: Filter by priority (low, medium, high)
+        in: query
+        name: priority
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -4757,6 +4818,59 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Assign a test to a plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency:
+    post:
+      description: Set the urgency (low, medium, high) of a Test Case within a Test
+        Plan
+      operationId: UpdateTestPlanCaseUrgency
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: string
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateTestPlanCaseUrgencyRequest'
+        description: Urgency payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Set the urgency of a Test Case within a Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/test-runs:

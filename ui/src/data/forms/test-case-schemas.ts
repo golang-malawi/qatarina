@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_PRIORITY, PRIORITY_LEVELS } from "@/common/constants/priority";
 
 export const testCaseCreationSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -10,6 +11,7 @@ export const testCaseCreationSchema = z.object({
   is_draft: z.boolean().optional().default(false),
   script_file: z.any().optional(),
   runner: z.string().optional().default(""),
+  priority: z.enum(PRIORITY_LEVELS).optional().default(DEFAULT_PRIORITY),
 });
 
 export type TestCaseCreationFormData = z.infer<typeof testCaseCreationSchema>;

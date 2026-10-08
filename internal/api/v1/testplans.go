@@ -409,6 +409,52 @@ func ChangeEnvironment(testPlanService services.TestPlanService, logger logging.
 	}
 }
 
+// UpdateTestPlanCaseUrgency godoc
+//
+//	@ID				UpdateTestPlanCaseUrgency
+//	@Summary		Set the urgency of a Test Case within a Test Plan
+//	@Description	Set the urgency (low, medium, high) of a Test Case within a Test Plan
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		string									true	"Test Plan ID"
+//	@Param			testCaseID	path		string									true	"Test Case ID"
+//	@Param			request		body		schema.UpdateTestPlanCaseUrgencyRequest	true	"Urgency payload"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency [post]
+func UpdateTestPlanCaseUrgency(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.UpdateTestPlanCaseUrgencyRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
+		err = testPlanService.UpdateTestCaseUrgency(c.Context(), int64(testPlanID), c.Params("testCaseID"), request.Urgency)
+		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "test case is not part of this test plan")
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to update urgency", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update urgency")
+		}
+
+		return c.JSON(fiber.Map{
+			"message": "Urgency updated successfully",
+		})
+	}
+}
+
 // ListTestPlanComments godoc
 //
 // @ID      ListTestPlanComments

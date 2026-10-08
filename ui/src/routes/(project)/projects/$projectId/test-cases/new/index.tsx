@@ -14,6 +14,7 @@ import {
   TestCaseCreationFormData,
 } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
+import { DEFAULT_PRIORITY } from "@/common/constants/priority";
 
 type NewTestCaseSearch = {
   title?: string;
@@ -271,6 +272,7 @@ const search = Route.useSearch();
       formData.append("title", values.title);
       formData.append("description", values.description);
       formData.append("is_draft", (values.is_draft ?? false).toString());
+      formData.append("priority", values.priority ?? DEFAULT_PRIORITY);
       tags.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file);
       formData.append("runner", values.runner);
@@ -284,6 +286,7 @@ const search = Route.useSearch();
         title: values.title,
         description: values.description,
         is_draft: values.is_draft ?? false,
+        priority: values.priority ?? DEFAULT_PRIORITY,
         tags,
         runner: values.runner,
       };
@@ -344,6 +347,7 @@ const search = Route.useSearch();
           code: "",
           feature_or_module: "",
           kind: "",
+          priority: DEFAULT_PRIORITY,
           description: templateData?.test_case_template ?? "",
           runner: "basi",
           tags: [],

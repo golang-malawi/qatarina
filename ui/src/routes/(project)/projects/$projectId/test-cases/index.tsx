@@ -1,3 +1,4 @@
+import { PRIORITY_COLORS } from "@/common/constants/priority";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
@@ -132,6 +133,20 @@ export default function ListProjectTestCases() {
     { key: "code", header: t("test_cases.column.code"), sortKey: "code" },
     { key: "title", header: t("test_cases.column.title"), sortKey: "title" },
     { key: "kind", header: t("test_cases.column.kind"), sortKey: "kind" },
+    {
+      key: "priority",
+      header: "Priority",
+      type: "enum",
+      enumOptions: {
+        map: {
+          high: { label: "High", colorPalette: PRIORITY_COLORS.high },
+          medium: { label: "Medium", colorPalette: PRIORITY_COLORS.medium },
+          low: { label: "Low", colorPalette: PRIORITY_COLORS.low },
+        },
+      },
+      align: "center",
+      width: "110px",
+    },
     {
       key: "is_draft",
       header: t("test_cases.column.draft"),
@@ -275,6 +290,7 @@ export default function ListProjectTestCases() {
           ? ((row as any).tags as string[])
           : [],
         isDraft: Boolean((row as any).is_draft ?? (row as any).isDraft),
+        priority: row.priority ?? "",
       }));
 
       await exportTestCasesToFile({
