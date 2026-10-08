@@ -27,6 +27,7 @@ import {
 import { useTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
+import { TestCaseRelations } from "@/components/TestCaseRelations";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -161,6 +162,7 @@ function ViewTestCase() {
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
+          <Tabs.Trigger value="relations">Relations</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION TAB */}
@@ -308,6 +310,11 @@ function ViewTestCase() {
               </Stack>
             </Box>
           </Stack>
+        </Tabs.Content>
+
+        {/* RELATIONS TAB */}
+        <Tabs.Content value="relations">
+          <TestCaseRelations projectId={projectId} testCaseId={testCaseId} />
         </Tabs.Content>
 
        {/* USAGE & ASSIGNMENT TAB */}
