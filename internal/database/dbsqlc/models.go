@@ -327,6 +327,8 @@ type TestCase struct {
 	Runner           sql.NullString
 	ScriptPath       sql.NullString
 	ParentTestCaseID uuid.NullUUID
+	// Conditions that must hold before the test case can be executed (Markdown)
+	Preconditions sql.NullString
 	// Importance of the test case: low, medium, high or urgent
 	Priority PriorityLevel
 }

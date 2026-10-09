@@ -142,6 +142,7 @@ SELECT
   tc.feature_or_module,
   tc.title,
   tc.description,
+  tc.preconditions,
   tc.is_draft,
   tc.tags,
   tc.created_at,
@@ -270,12 +271,12 @@ WHERE p.project_id IS NULL;
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
     is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
-    priority
+    priority, preconditions
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $13, $14, $15, $16,
-    $17
+    $17, $18
 )
 RETURNING id;
 
@@ -319,6 +320,7 @@ SELECT
   tc.feature_or_module,
   tc.title,
   tc.description,
+  tc.preconditions,
   tc.is_draft,
   tc.tags,
   tc.created_by_id,
@@ -414,7 +416,8 @@ tags = $8,
 updated_at = $9,
 runner = $10,
 script_path = $11,
-priority = $12
+priority = $12,
+preconditions = $13
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
@@ -431,6 +434,7 @@ SELECT * FROM test_cases WHERE project_id = $1 AND suggested = $2;
 
 -- name: UpdateSuggestedFlag :exec
 UPDATE test_cases SET suggested = $2 WHERE id = $1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
@@ -478,8 +482,6 @@ updated_at = $2
 WHERE id = $1;
 
 -- name: AddTestCaseToPlan :exec
--- Urgency is shared by all assignees of a test case in a plan, so a new
--- assignee inherits the existing urgency unless one is given explicitly
 INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
 VALUES (
     sqlc.arg(test_plan_id), sqlc.arg(test_case_id), sqlc.arg(assigned_to_id),
@@ -608,6 +610,7 @@ INSERT INTO project_testers (
 ) VALUES (
     $1, $2, $3, $4, now(), now()
 );
+
 -- name: SearchProjectTesters :many
 SELECT
 project_testers.*,
@@ -683,6 +686,7 @@ DELETE FROM modules WHERE id = $1;
 -- name: GetProjectModules :many
 SELECT * FROM modules
 WHERE project_id = $1;
+
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;

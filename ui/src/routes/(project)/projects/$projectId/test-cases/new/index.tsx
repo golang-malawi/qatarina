@@ -34,7 +34,7 @@ export const Route = createFileRoute(
 function NewTestCases() {
   const { t } = useTranslation();
   const params = Route.useParams();
-const search = Route.useSearch();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const project_id = params.projectId;
 
@@ -271,6 +271,7 @@ const search = Route.useSearch();
       formData.append("feature_or_module", values.feature_or_module);
       formData.append("title", values.title);
       formData.append("description", values.description);
+      formData.append("preconditions", values.preconditions ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
       formData.append("priority", values.priority ?? DEFAULT_PRIORITY);
       tags.forEach((tag) => formData.append("tags", tag));
@@ -285,6 +286,7 @@ const search = Route.useSearch();
         feature_or_module: values.feature_or_module,
         title: values.title,
         description: values.description,
+        preconditions: values.preconditions ?? "",
         is_draft: values.is_draft ?? false,
         priority: values.priority ?? DEFAULT_PRIORITY,
         tags,
@@ -348,6 +350,7 @@ const search = Route.useSearch();
           feature_or_module: "",
           kind: "",
           priority: DEFAULT_PRIORITY,
+          preconditions: "",
           description: templateData?.test_case_template ?? "",
           runner: "basi",
           tags: [],

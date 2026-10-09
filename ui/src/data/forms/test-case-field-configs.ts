@@ -41,6 +41,14 @@ export const createTestCaseFields = (): FieldConfig[] => [
     helperText: "How important this test case is (Low, Medium, High, Urgent).",
   },
   {
+    name: "preconditions",
+    label: "Preconditions",
+    type: "markdown-textarea",
+    placeholder: "What must be true before running this test (Markdown supported)",
+    helperText: "Optional. Use \"- [ ]\" items so testers can tick each precondition.",
+    required: false,
+  },
+  {
     name: "description",
     label: "Description",
     type: "markdown-textarea",
@@ -50,9 +58,9 @@ export const createTestCaseFields = (): FieldConfig[] => [
   },
   {
     name: "runner",
-      label: "Runner",
-      type: "runner",
-      defaultValue: "basi",
+    label: "Runner",
+    type: "runner",
+    defaultValue: "basi",
   },
   {
     name: "script_file",
