@@ -68,6 +68,8 @@ type MarkdownChecklistProps = {
   checked?: ChecklistState;
   onToggle?: (line: number, value: boolean) => void;
   onReset?: () => void;
+  /** Noun used in the progress counter, e.g. "3 of 5 steps checked" */
+  itemLabel?: string;
 };
 
 /**
@@ -79,6 +81,7 @@ export function MarkdownChecklist({
   checked = {},
   onToggle,
   onReset,
+  itemLabel = "steps",
 }: MarkdownChecklistProps) {
   const { resolvedTheme } = useTheme();
   const ctx = useMemo(() => ({ checked, toggle: onToggle }), [checked, onToggle]);
@@ -102,7 +105,7 @@ export function MarkdownChecklist({
       {onToggle && total > 0 && (
         <Flex align="center" gap={3} mb={2}>
           <Text fontSize="sm" color="fg.muted">
-            {done} of {total} steps checked
+            {done} of {total} {itemLabel} checked
           </Text>
           {onReset && Object.keys(checked).length > 0 && (
             <Button size="xs" variant="ghost" onClick={onReset}>

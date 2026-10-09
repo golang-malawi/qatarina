@@ -2181,6 +2181,7 @@ export interface components {
             is_draft?: boolean;
             is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
+            preconditions?: string;
             project_id?: number;
             tags?: string[];
             test_plan_id?: number;
@@ -2273,6 +2274,8 @@ export interface components {
             description: string;
             feature_or_module: string;
             kind: string;
+            /** @description Markdown */
+            preconditions?: string;
             project_id: number;
             runner?: string;
             script_path?: string;
@@ -2287,6 +2290,8 @@ export interface components {
             is_draft?: boolean;
             kind: string;
             parent_test_case_id?: string;
+            /** @description Markdown */
+            preconditions?: string;
             project_id?: number;
             runner?: string;
             script_path?: string;
@@ -2525,6 +2530,7 @@ export interface components {
             parent_code?: string;
             parent_test_case_id?: string;
             parent_title?: string;
+            preconditions?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -2677,6 +2683,8 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            /** @description Markdown */
+            preconditions?: string;
             project_id: number;
             runner?: string;
             script_path?: string;

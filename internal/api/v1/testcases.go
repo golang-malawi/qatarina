@@ -1016,6 +1016,7 @@ func BranchTestCase(testCaseService services.TestCaseService, logger logging.Log
 			FeatureOrModule:  parent.FeatureOrModule.String,
 			Title:            parent.Title + " (branch)",
 			Description:      parent.Description,
+			Preconditions:    parent.Preconditions.String,
 			Tags:             parent.Tags,
 			IsDraft:          true,
 			Runner:           parent.Runner.String,

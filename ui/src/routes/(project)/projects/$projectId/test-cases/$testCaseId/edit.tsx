@@ -345,6 +345,7 @@ function EditTestCase() {
       formData.append("feature_or_module", featureOrModule);
       formData.append("title", values.title ?? "");
       formData.append("description", values.description ?? "");
+      formData.append("preconditions", values.preconditions ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
       tagsArray.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file as any);
@@ -359,6 +360,7 @@ function EditTestCase() {
         feature_or_module: featureOrModule,
         title: values.title,
         description: values.description,
+        preconditions: values.preconditions ?? "",
         is_draft: values.is_draft ?? false,
         ...(tagsArray.length ? { tags: tagsArray } : {}),
         runner: values.runner,
@@ -408,6 +410,7 @@ function EditTestCase() {
           title: data.title ?? "",
           code: data.code ?? "",
           description: data.description ?? "",
+          preconditions: data.preconditions ?? "",
           kind: data.kind ?? "",
           feature_or_module: data.feature_or_module ?? "",
           is_draft: data.is_draft ?? false,
