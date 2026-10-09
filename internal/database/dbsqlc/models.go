@@ -328,6 +328,8 @@ type TestCase struct {
 	ParentTestCaseID uuid.NullUUID
 	// Importance of the test case: low, medium or high
 	Priority PriorityLevel
+	// Conditions that must hold before the test case can be executed (Markdown)
+	Preconditions sql.NullString
 }
 
 type TestCaseSequence struct {

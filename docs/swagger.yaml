@@ -84,6 +84,8 @@ components:
           type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
+        preconditions:
+          type: string
         priority:
           type: string
         project_id:
@@ -324,6 +326,8 @@ components:
           - low
           - medium
           - high
+        preconditions:
+          description: Markdown
           type: string
         project_id:
           type: integer
@@ -366,6 +370,8 @@ components:
           - low
           - medium
           - high
+        preconditions:
+          description: Markdown
           type: string
         project_id:
           type: integer
@@ -910,6 +916,7 @@ components:
         parent_title:
           type: string
         priority:
+        preconditions:
           type: string
         project_id:
           type: integer
@@ -1267,6 +1274,8 @@ components:
           - low
           - medium
           - high
+        preconditions:
+          description: Markdown
           type: string
         project_id:
           type: integer

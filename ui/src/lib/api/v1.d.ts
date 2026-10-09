@@ -2202,6 +2202,7 @@ export interface components {
             is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             priority?: string;
+            preconditions?: string;
             project_id?: number;
             tags?: string[];
             test_plan_id?: number;
@@ -2300,6 +2301,8 @@ export interface components {
              * @enum {string}
              */
             priority?: "low" | "medium" | "high";
+            /** @description Markdown */
+            preconditions?: string;
             project_id: number;
             runner?: string;
             script_path?: string;
@@ -2319,6 +2322,8 @@ export interface components {
              * @enum {string}
              */
             priority?: "low" | "medium" | "high";
+            /** @description Markdown */
+            preconditions?: string;
             project_id?: number;
             runner?: string;
             script_path?: string;
@@ -2393,6 +2398,7 @@ export interface components {
             isDraft?: boolean;
             kind?: string;
             priority?: string;
+            preconditions?: string;
             tags?: string[];
             title?: string;
         };
@@ -2565,6 +2571,7 @@ export interface components {
             parent_test_case_id?: string;
             parent_title?: string;
             priority?: string;
+            preconditions?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -2581,6 +2588,7 @@ export interface components {
             id?: string;
             is_assigned_to_test_plan?: boolean;
             priority?: string;
+            preconditions?: string;
             test_plan?: components["schemas"]["schema.TestPlanSummary"];
             title?: string;
             urgency?: string;
@@ -2725,6 +2733,8 @@ export interface components {
              * @enum {string}
              */
             priority?: "low" | "medium" | "high";
+            /** @description Markdown */
+            preconditions?: string;
             project_id: number;
             runner?: string;
             script_path?: string;

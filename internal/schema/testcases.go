@@ -13,6 +13,7 @@ type CreateTestCaseRequest struct {
 	FeatureOrModule  string   `json:"feature_or_module" validate:"required"`
 	Title            string   `json:"title" validate:"required"`
 	Description      string   `json:"description" validate:"required"`
+	Preconditions    string   `json:"preconditions,omitempty"` // Markdown
 	IsDraft          bool     `json:"is_draft"`
 	Tags             []string `json:"tags"`
 	CreatedByID      string   `json:"-"` // internal only
@@ -31,6 +32,7 @@ type UpdateTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description,omitempty"`
+	Preconditions   string   `json:"preconditions,omitempty"` // Markdown
 	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
@@ -65,6 +67,7 @@ type TestCaseResponse struct {
 	FeatureOrModule  string   `json:"feature_or_module"`
 	Title            string   `json:"title"`
 	Description      string   `json:"description"`
+	Preconditions    string   `json:"preconditions"`
 	IsDraft          bool     `json:"is_draft"`
 	Tags             []string `json:"tags"`
 	CreatedAt        string   `json:"created_at"`
@@ -93,6 +96,7 @@ func NewTestCaseResponse(e *dbsqlc.GetTestCaseWithParentRow) TestCaseResponse {
 		FeatureOrModule:  e.FeatureOrModule.String,
 		Title:            e.Title,
 		Description:      e.Description,
+		Preconditions:    e.Preconditions.String,
 		IsDraft:          e.IsDraft.Bool,
 		Tags:             e.Tags,
 		CreatedAt:        formatSqlDateTime(e.CreatedAt),
@@ -117,6 +121,7 @@ func NewTestCaseResponseFromRow(e *dbsqlc.TestCase) TestCaseResponse {
 		FeatureOrModule: e.FeatureOrModule.String,
 		Title:           e.Title,
 		Description:     e.Description,
+		Preconditions:   e.Preconditions.String,
 		IsDraft:         e.IsDraft.Bool,
 		Tags:            e.Tags,
 		CreatedAt:       formatSqlDateTime(e.CreatedAt),
@@ -159,6 +164,7 @@ type AssignedTestCase struct {
 	FeatureOrModule string          `json:"feature_or_module"`
 	Title           string          `json:"title"`
 	Description     string          `json:"description"`
+	Preconditions   string          `json:"preconditions"`
 	IsDraft         bool            `json:"is_draft"`
 	Tags            []string        `json:"tags"`
 	CreatedByID     int32           `json:"created_by_id"`
@@ -197,6 +203,7 @@ type CreateSuggestedTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`
+	Preconditions   string   `json:"preconditions,omitempty"` // Markdown
 	Tags            []string `json:"tags"`
 	CreatedByID     int64    `json:"-"` // internal only
 	Runner          string   `json:"runner"`

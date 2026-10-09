@@ -28,6 +28,10 @@ import {
 import { useTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import { useChecklistState } from "@/lib/markdown-checklist";
+import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
+import { useAuth } from "@/hooks/isLoggedIn";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -47,6 +51,11 @@ function ViewTestCase() {
   const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useTestersQuery();
+  const { user } = useAuth();
+  const preconditionsChecklist = useChecklistState(
+    preconditionsChecklistKey(user?.user_id, testCaseId),
+    testCase?.preconditions ?? "",
+  );
 
   /** ---------- STATE ---------- */
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -167,6 +176,34 @@ function ViewTestCase() {
         {/* DESCRIPTION TAB */}
         <Tabs.Content value="description">
           <Stack gap={4} mt={4}>
+            {testCase.preconditions && (
+              <Box>
+                <Heading size="sm" mb={2} color="fg.heading">
+                  Preconditions
+                </Heading>
+                <Box
+                  p={4}
+                  bg="bg.subtle"
+                  rounded="lg"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                >
+                  <MarkdownChecklist
+                    markdown={testCase.preconditions}
+                    checked={preconditionsChecklist.checked}
+                    onToggle={preconditionsChecklist.toggle}
+                    onReset={preconditionsChecklist.reset}
+                    itemLabel="preconditions"
+                  />
+                </Box>
+                {testCase.description && (
+                  <Heading size="sm" mt={4} color="fg.heading">
+                    Description
+                  </Heading>
+                )}
+              </Box>
+            )}
+
             <Box
               p={4}
               bg="bg.subtle"
