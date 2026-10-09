@@ -1758,6 +1758,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the urgency of a Test Case within a Test Plan
+         * @description Set the urgency (low, medium, high, urgent) of a Test Case within a Test Plan
+         */
+        post: operations["UpdateTestPlanCaseUrgency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/test-runs": {
         parameters: {
             query?: never;
@@ -2182,11 +2202,13 @@ export interface components {
             is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             preconditions?: string;
+            priority?: string;
             project_id?: number;
             tags?: string[];
             test_plan_id?: number;
             title?: string;
             updated_at?: string;
+            urgency?: string;
         };
         "schema.AssignedTestCaseListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
@@ -2276,6 +2298,11 @@ export interface components {
             kind: string;
             /** @description Markdown */
             preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
@@ -2292,6 +2319,11 @@ export interface components {
             parent_test_case_id?: string;
             /** @description Markdown */
             preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id?: number;
             runner?: string;
             script_path?: string;
@@ -2365,6 +2397,7 @@ export interface components {
             featureOrModule?: string;
             isDraft?: boolean;
             kind?: string;
+            priority?: string;
             tags?: string[];
             title?: string;
         };
@@ -2504,6 +2537,12 @@ export interface components {
         };
         "schema.TestCaseAssignment": {
             test_case_id?: string;
+            /**
+             * @description Urgency of the test case within the plan (low, medium, high, urgent). When blank
+             *     an existing urgency is kept, otherwise it defaults to medium
+             * @enum {string}
+             */
+            urgency?: "low" | "medium" | "high" | "urgent";
             user_ids?: number[];
         };
         "schema.TestCaseExecutionSummary": {
@@ -2531,6 +2570,7 @@ export interface components {
             parent_test_case_id?: string;
             parent_title?: string;
             preconditions?: string;
+            priority?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -2543,10 +2583,13 @@ export interface components {
         };
         "schema.TestCaseResponseItem": {
             assigned_tester_ids?: number[];
+            code?: string;
             id?: string;
             is_assigned_to_test_plan?: boolean;
+            priority?: string;
             test_plan?: components["schemas"]["schema.TestPlanSummary"];
             title?: string;
+            urgency?: string;
         };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
@@ -2685,11 +2728,20 @@ export interface components {
             kind: string;
             /** @description Markdown */
             preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];
             title: string;
+        };
+        "schema.UpdateTestPlanCaseUrgencyRequest": {
+            /** @enum {string} */
+            urgency: "low" | "medium" | "high" | "urgent";
         };
         "schema.UpdateTesterRoleRequest": {
             role?: string;
@@ -5069,7 +5121,7 @@ export interface operations {
                 page?: number;
                 /** @description Page size */
                 pageSize?: number;
-                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft) */
+                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft, priority) */
                 sortBy?: string;
                 /** @description Sort order (asc, desc) */
                 sortOrder?: string;
@@ -5079,6 +5131,8 @@ export interface operations {
                 kind?: string;
                 /** @description Filter by draft state */
                 isDraft?: boolean;
+                /** @description Filter by priority (low, medium, high, urgent) */
+                priority?: string;
             };
             header?: never;
             path?: never;
@@ -6549,6 +6603,63 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateTestPlanCaseUrgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: string;
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Urgency payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateTestPlanCaseUrgencyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

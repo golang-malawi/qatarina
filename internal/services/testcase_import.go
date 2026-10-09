@@ -98,6 +98,12 @@ func (s *testCaseImportServiceImpl) FromFile(ctx context.Context, projectID int6
 			tags[i] = strings.TrimSpace(tags[i])
 		}
 
+		// Priority is an optional trailing column, older files without it default to medium
+		priority := ""
+		if len(row) > 7 {
+			priority = row[7]
+		}
+
 		testCases = append(testCases, schema.CreateTestCaseRequest{
 			ProjectID:       projectID,
 			Title:           row[0],
@@ -107,6 +113,7 @@ func (s *testCaseImportServiceImpl) FromFile(ctx context.Context, projectID int6
 			FeatureOrModule: row[4],
 			Tags:            tags,
 			IsDraft:         strings.ToLower(row[6]) == "true",
+			Priority:        string(schema.ParsePriorityLevel(priority)),
 		})
 	}
 

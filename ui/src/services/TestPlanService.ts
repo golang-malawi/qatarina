@@ -110,6 +110,13 @@ export async function closeTestPlan(testPlanID: number) {
   return response.data;
 }
 
+export function useUpdateTestPlanCaseUrgencyMutation() {
+  return $api.useMutation(
+    "post",
+    "/v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency"
+  );
+}
+
 export function useCloseTestPlanMutation() {
   return $api.useMutation("post", "/v1/test-plans/{testPlanID}/close");
 }

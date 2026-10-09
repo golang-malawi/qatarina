@@ -14,6 +14,50 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
+type PriorityLevel string
+
+const (
+	PriorityLevelLow    PriorityLevel = "low"
+	PriorityLevelMedium PriorityLevel = "medium"
+	PriorityLevelHigh   PriorityLevel = "high"
+	PriorityLevelUrgent PriorityLevel = "urgent"
+)
+
+func (e *PriorityLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PriorityLevel(s)
+	case string:
+		*e = PriorityLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PriorityLevel: %T", src)
+	}
+	return nil
+}
+
+type NullPriorityLevel struct {
+	PriorityLevel PriorityLevel
+	Valid         bool // Valid is true if PriorityLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPriorityLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.PriorityLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PriorityLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPriorityLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PriorityLevel), nil
+}
+
 type TestKind string
 
 const (
@@ -285,6 +329,8 @@ type TestCase struct {
 	ParentTestCaseID uuid.NullUUID
 	// Conditions that must hold before the test case can be executed (Markdown)
 	Preconditions sql.NullString
+	// Importance of the test case: low, medium, high or urgent
+	Priority PriorityLevel
 }
 
 type TestCaseSequence struct {
@@ -334,6 +380,8 @@ type TestPlanCase struct {
 	TestCaseID   uuid.UUID
 	AssignedToID int64
 	ViewedAt     sql.NullTime
+	// Urgency of the test case within the test plan: low, medium, high or urgent
+	Urgency PriorityLevel
 }
 
 type TestPlanComment struct {

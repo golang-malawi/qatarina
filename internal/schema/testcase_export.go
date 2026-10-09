@@ -14,4 +14,5 @@ type ExportedTestCase struct {
 	FeatureOrModule string   `json:"featureOrModule"`
 	Tags            []string `json:"tags"`
 	IsDraft         bool     `json:"isDraft"`
+	Priority        string   `json:"priority"`
 }
