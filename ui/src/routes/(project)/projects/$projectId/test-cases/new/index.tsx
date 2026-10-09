@@ -270,6 +270,7 @@ const search = Route.useSearch();
       formData.append("feature_or_module", values.feature_or_module);
       formData.append("title", values.title);
       formData.append("description", values.description);
+      formData.append("preconditions", values.preconditions ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
       tags.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file);
@@ -283,6 +284,7 @@ const search = Route.useSearch();
         feature_or_module: values.feature_or_module,
         title: values.title,
         description: values.description,
+        preconditions: values.preconditions ?? "",
         is_draft: values.is_draft ?? false,
         tags,
         runner: values.runner,
@@ -344,6 +346,7 @@ const search = Route.useSearch();
           code: "",
           feature_or_module: "",
           kind: "",
+          preconditions: "",
           description: templateData?.test_case_template ?? "",
           runner: "basi",
           tags: [],

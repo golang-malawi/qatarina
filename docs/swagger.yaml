@@ -84,6 +84,8 @@ components:
           type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
+        preconditions:
+          type: string
         project_id:
           type: integer
         tags:
@@ -314,6 +316,9 @@ components:
           type: string
         kind:
           type: string
+        preconditions:
+          description: Markdown
+          type: string
         project_id:
           type: integer
         runner:
@@ -348,6 +353,9 @@ components:
         kind:
           type: string
         parent_test_case_id:
+          type: string
+        preconditions:
+          description: Markdown
           type: string
         project_id:
           type: integer
@@ -880,6 +888,8 @@ components:
           type: string
         parent_title:
           type: string
+        preconditions:
+          type: string
         project_id:
           type: integer
         result:
@@ -1223,6 +1233,9 @@ components:
         is_draft:
           type: boolean
         kind:
+          type: string
+        preconditions:
+          description: Markdown
           type: string
         project_id:
           type: integer
