@@ -36,7 +36,7 @@ func init() {
 	createTestCaseCmd.Flags().String("module", "", "Feature or module name")
 	createTestCaseCmd.Flags().Bool("draft", false, "Is this a draft")
 	createTestCaseCmd.Flags().StringSlice("tags", []string{}, "Comma-separated tags")
-	createTestCaseCmd.Flags().String("priority", "medium", "Priority of the test case (low, medium, high)")
+	createTestCaseCmd.Flags().String("priority", "medium", "Priority of the test case (low, medium, high, urgent)")
 
 	testCaseImporterCmd.Flags().String("repo", "", "Repository directory path")
 	testCaseCmd.AddCommand(testCaseImporterCmd)

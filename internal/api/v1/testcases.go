@@ -47,7 +47,7 @@ import (
 //	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
 //	@Param			kind		query		string	false	"Filter by kind"
 //	@Param			isDraft		query		bool	false	"Filter by draft state"
-//	@Param			priority	query		string	false	"Filter by priority (low, medium, high)"
+//	@Param			priority	query		string	false	"Filter by priority (low, medium, high, urgent)"
 //	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
@@ -68,7 +68,7 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 		kind := strings.TrimSpace(c.Query("kind", ""))
 		priority := strings.ToLower(strings.TrimSpace(c.Query("priority", "")))
 		if priority != "" && priority != string(schema.ParsePriorityLevel(priority)) {
-			return problemdetail.BadRequest(c, "invalid priority parameter, expected one of low, medium, high")
+			return problemdetail.BadRequest(c, "invalid priority parameter, expected one of low, medium, high, urgent")
 		}
 		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
 		var isDraft *bool

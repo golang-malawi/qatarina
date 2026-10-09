@@ -1769,7 +1769,7 @@ export interface paths {
         put?: never;
         /**
          * Set the urgency of a Test Case within a Test Plan
-         * @description Set the urgency (low, medium, high) of a Test Case within a Test Plan
+         * @description Set the urgency (low, medium, high, urgent) of a Test Case within a Test Plan
          */
         post: operations["UpdateTestPlanCaseUrgency"];
         delete?: never;
@@ -2299,7 +2299,7 @@ export interface components {
              * @description defaults to medium
              * @enum {string}
              */
-            priority?: "low" | "medium" | "high";
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
@@ -2318,7 +2318,7 @@ export interface components {
              * @description defaults to medium
              * @enum {string}
              */
-            priority?: "low" | "medium" | "high";
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id?: number;
             runner?: string;
             script_path?: string;
@@ -2533,11 +2533,11 @@ export interface components {
         "schema.TestCaseAssignment": {
             test_case_id?: string;
             /**
-             * @description Urgency of the test case within the plan (low, medium, high). When blank
+             * @description Urgency of the test case within the plan (low, medium, high, urgent). When blank
              *     an existing urgency is kept, otherwise it defaults to medium
              * @enum {string}
              */
-            urgency?: "low" | "medium" | "high";
+            urgency?: "low" | "medium" | "high" | "urgent";
             user_ids?: number[];
         };
         "schema.TestCaseExecutionSummary": {
@@ -2724,7 +2724,7 @@ export interface components {
              * @description defaults to medium
              * @enum {string}
              */
-            priority?: "low" | "medium" | "high";
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
@@ -2733,7 +2733,7 @@ export interface components {
         };
         "schema.UpdateTestPlanCaseUrgencyRequest": {
             /** @enum {string} */
-            urgency: "low" | "medium" | "high";
+            urgency: "low" | "medium" | "high" | "urgent";
         };
         "schema.UpdateTesterRoleRequest": {
             role?: string;
@@ -5123,7 +5123,7 @@ export interface operations {
                 kind?: string;
                 /** @description Filter by draft state */
                 isDraft?: boolean;
-                /** @description Filter by priority (low, medium, high) */
+                /** @description Filter by priority (low, medium, high, urgent) */
                 priority?: string;
             };
             header?: never;

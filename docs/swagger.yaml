@@ -324,6 +324,7 @@ components:
           - low
           - medium
           - high
+          - urgent
           type: string
         project_id:
           type: integer
@@ -366,6 +367,7 @@ components:
           - low
           - medium
           - high
+          - urgent
           type: string
         project_id:
           type: integer
@@ -847,12 +849,13 @@ components:
           type: string
         urgency:
           description: |-
-            Urgency of the test case within the plan (low, medium, high). When blank
+            Urgency of the test case within the plan (low, medium, high, urgent). When blank
             an existing urgency is kept, otherwise it defaults to medium
           enum:
           - low
           - medium
           - high
+          - urgent
           type: string
         user_ids:
           items:
@@ -1267,6 +1270,7 @@ components:
           - low
           - medium
           - high
+          - urgent
           type: string
         project_id:
           type: integer
@@ -1295,6 +1299,7 @@ components:
           - low
           - medium
           - high
+          - urgent
           type: string
       required:
       - urgency
@@ -3588,7 +3593,7 @@ paths:
         name: isDraft
         schema:
           type: boolean
-      - description: Filter by priority (low, medium, high)
+      - description: Filter by priority (low, medium, high, urgent)
         in: query
         name: priority
         schema:
@@ -4822,8 +4827,8 @@ paths:
       - test-plans
   /v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency:
     post:
-      description: Set the urgency (low, medium, high) of a Test Case within a Test
-        Plan
+      description: Set the urgency (low, medium, high, urgent) of a Test Case within
+        a Test Plan
       operationId: UpdateTestPlanCaseUrgency
       parameters:
       - description: Test Plan ID

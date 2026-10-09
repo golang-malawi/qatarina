@@ -20,6 +20,7 @@ const (
 	PriorityLevelLow    PriorityLevel = "low"
 	PriorityLevelMedium PriorityLevel = "medium"
 	PriorityLevelHigh   PriorityLevel = "high"
+	PriorityLevelUrgent PriorityLevel = "urgent"
 )
 
 func (e *PriorityLevel) Scan(src interface{}) error {
@@ -326,7 +327,7 @@ type TestCase struct {
 	Runner           sql.NullString
 	ScriptPath       sql.NullString
 	ParentTestCaseID uuid.NullUUID
-	// Importance of the test case: low, medium or high
+	// Importance of the test case: low, medium, high or urgent
 	Priority PriorityLevel
 }
 
@@ -377,7 +378,7 @@ type TestPlanCase struct {
 	TestCaseID   uuid.UUID
 	AssignedToID int64
 	ViewedAt     sql.NullTime
-	// Urgency of the test case within the test plan: low, medium or high
+	// Urgency of the test case within the test plan: low, medium, high or urgent
 	Urgency PriorityLevel
 }
 

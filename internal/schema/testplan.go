@@ -26,9 +26,9 @@ type CreateTestPlan struct {
 type TestCaseAssignment struct {
 	TestCaseID string  `json:"test_case_id"`
 	UserIDs    []int64 `json:"user_ids"`
-	// Urgency of the test case within the plan (low, medium, high). When blank
+	// Urgency of the test case within the plan (low, medium, high, urgent). When blank
 	// an existing urgency is kept, otherwise it defaults to medium
-	Urgency string `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high"`
+	Urgency string `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high urgent"`
 }
 
 type AssignTestsToPlanRequest struct {
@@ -42,11 +42,11 @@ type BatchAssignTestCasesToPlanRequest struct {
 	PlanID      int64    `json:"test_plan_id" validate:"required"`
 	TestCaseIDs []string `json:"test_case_ids" validate:"required,min=1,max=100"`
 	UserIDs     []int64  `json:"user_ids" validate:"required,min=1,max=100"`
-	Urgency     string   `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high"`
+	Urgency     string   `json:"urgency,omitempty" validate:"omitempty,oneof=low medium high urgent"`
 }
 
 type UpdateTestPlanCaseUrgencyRequest struct {
-	Urgency string `json:"urgency" validate:"required,oneof=low medium high"`
+	Urgency string `json:"urgency" validate:"required,oneof=low medium high urgent"`
 }
 
 type TestPlanResponseItem struct {

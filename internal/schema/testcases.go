@@ -20,7 +20,7 @@ type CreateTestCaseRequest struct {
 	Runner           string   `json:"runner"`
 	ScriptPath       string   `json:"script_path,omitempty"`
 	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
-	Priority         string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
+	Priority         string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type UpdateTestCaseRequest struct {
@@ -36,7 +36,7 @@ type UpdateTestCaseRequest struct {
 	CreatedByID     string   `json:"-" validate:"-"`
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path"`
-	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type BulkCreateTestCases struct {
@@ -201,7 +201,7 @@ type CreateSuggestedTestCaseRequest struct {
 	CreatedByID     int64    `json:"-"` // internal only
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path,omitempty"`
-	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high"` // defaults to medium
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type SugestedTestCaseResponse struct {
@@ -215,11 +215,11 @@ type TransferTestCaseRequest struct {
 }
 
 // ParsePriorityLevel converts a priority/urgency value from a request into its
-// database representation, falling back to medium (TestLink's default) when
+// database representation, falling back to medium when
 // the value is blank or unknown
 func ParsePriorityLevel(value string) dbsqlc.PriorityLevel {
 	switch level := dbsqlc.PriorityLevel(strings.ToLower(strings.TrimSpace(value))); level {
-	case dbsqlc.PriorityLevelLow, dbsqlc.PriorityLevelMedium, dbsqlc.PriorityLevelHigh:
+	case dbsqlc.PriorityLevelLow, dbsqlc.PriorityLevelMedium, dbsqlc.PriorityLevelHigh, dbsqlc.PriorityLevelUrgent:
 		return level
 	default:
 		return dbsqlc.PriorityLevelMedium

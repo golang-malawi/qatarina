@@ -413,7 +413,7 @@ func ChangeEnvironment(testPlanService services.TestPlanService, logger logging.
 //
 //	@ID				UpdateTestPlanCaseUrgency
 //	@Summary		Set the urgency of a Test Case within a Test Plan
-//	@Description	Set the urgency (low, medium, high) of a Test Case within a Test Plan
+//	@Description	Set the urgency (low, medium, high, urgent) of a Test Case within a Test Plan
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json

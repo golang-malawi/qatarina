@@ -38,7 +38,7 @@ export const createTestCaseFields = (): FieldConfig[] => [
     type: "select",
     options: PRIORITY_OPTIONS,
     defaultValue: DEFAULT_PRIORITY,
-    helperText: "How important this test case is (Low, Medium, High).",
+    helperText: "How important this test case is (Low, Medium, High, Urgent).",
   },
   {
     name: "description",

@@ -1,4 +1,8 @@
-import { PRIORITY_COLORS } from "@/common/constants/priority";
+import {
+  PRIORITY_OPTIONS,
+  PRIORITY_STYLES,
+  type PriorityLevel,
+} from "@/common/constants/priority";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Button,
@@ -138,11 +142,12 @@ export default function ListProjectTestCases() {
       header: "Priority",
       type: "enum",
       enumOptions: {
-        map: {
-          high: { label: "High", colorPalette: PRIORITY_COLORS.high },
-          medium: { label: "Medium", colorPalette: PRIORITY_COLORS.medium },
-          low: { label: "Low", colorPalette: PRIORITY_COLORS.low },
-        },
+        map: Object.fromEntries(
+          PRIORITY_OPTIONS.map(({ value, label }) => [
+            value,
+            { label, ...PRIORITY_STYLES[value as PriorityLevel] },
+          ]),
+        ),
       },
       align: "center",
       width: "110px",

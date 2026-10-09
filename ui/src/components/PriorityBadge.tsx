@@ -1,5 +1,5 @@
 import { Badge } from "@chakra-ui/react";
-import { normalizePriority, PRIORITY_COLORS } from "@/common/constants/priority";
+import { normalizePriority, PRIORITY_STYLES } from "@/common/constants/priority";
 
 interface PriorityBadgeProps {
   value?: string | null;
@@ -10,7 +10,11 @@ interface PriorityBadgeProps {
 export function PriorityBadge({ value, label }: PriorityBadgeProps) {
   const level = normalizePriority(value);
   return (
-    <Badge colorPalette={PRIORITY_COLORS[level]} variant="subtle" textTransform="capitalize">
+    <Badge
+      colorPalette={PRIORITY_STYLES[level].colorPalette}
+      variant={PRIORITY_STYLES[level].variant}
+      textTransform="capitalize"
+    >
       {label ? `${label}: ${level}` : level}
     </Badge>
   );
