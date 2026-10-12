@@ -19,6 +19,7 @@ import { RunnerFieldSync } from "@/components/form/RunnerFieldSync";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import { testCaseCreationSchema } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
+import { DEFAULT_PRIORITY, normalizePriority } from "@/common/constants/priority";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { assignTestersToTestPlan, useProjectTestPlansQuery } from "@/services/TestPlanService";
 import { useProjectQuery } from "@/services/ProjectService";
@@ -347,6 +348,7 @@ function EditTestCase() {
       formData.append("description", values.description ?? "");
       formData.append("preconditions", values.preconditions ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
+      formData.append("priority", values.priority ?? DEFAULT_PRIORITY);
       tagsArray.forEach((tag) => formData.append("tags", tag));
       formData.append("script_file", values.script_file as any);
       formData.append("runner", values.runner ?? "");
@@ -362,6 +364,7 @@ function EditTestCase() {
         description: values.description,
         preconditions: values.preconditions ?? "",
         is_draft: values.is_draft ?? false,
+        priority: values.priority ?? DEFAULT_PRIORITY,
         ...(tagsArray.length ? { tags: tagsArray } : {}),
         runner: values.runner,
         script_path: data?.script_path ?? "",
@@ -414,6 +417,7 @@ function EditTestCase() {
           kind: data.kind ?? "",
           feature_or_module: data.feature_or_module ?? "",
           is_draft: data.is_draft ?? false,
+          priority: normalizePriority(data.priority),
           tags: data.tags ?? [],
           runner: data.runner ?? "basi",
           script_path: data.script_path ?? "",
