@@ -108,6 +108,7 @@ type TestCaseQueryParams struct {
 	IsDraft   *bool
 	Suggested *bool
 	Module    string
+	Priority  string
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -169,6 +170,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
+			Preconditions:    common.NullString(request.Preconditions),
 			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
@@ -177,6 +179,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			UpdatedAt:        common.NewNullTime(time.Now()),
 			Runner:           common.NullString(request.Runner),
 			ScriptPath:       common.NullString(request.ScriptPath),
+			Priority:         schema.ParsePriorityLevel(request.Priority),
 		}
 
 		if strings.TrimSpace(request.Code) != "" {
@@ -252,6 +255,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		FeatureOrModule:  common.NullString(request.FeatureOrModule),
 		Title:            request.Title,
 		Description:      request.Description,
+		Preconditions:    common.NullString(request.Preconditions),
 		ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
@@ -260,6 +264,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		UpdatedAt:        common.NewNullTime(time.Now()),
 		Runner:           common.NullString(request.Runner),
 		ScriptPath:       common.NullString(request.ScriptPath),
+		Priority:         schema.ParsePriorityLevel(request.Priority),
 	}
 
 	if strings.TrimSpace(request.Code) != "" {
@@ -343,6 +348,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 		"kind":       "kind",
 		"is_draft":   "is_draft",
 		"isdraft":    "is_draft",
+		"priority":   "priority",
 	}
 	sortColumn, ok := sortMap[sortKey]
 	if !ok || sortColumn == "" {
@@ -367,6 +373,12 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 	if params.Kind != "" {
 		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
 		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.Priority != "" {
+		conditions = append(conditions, fmt.Sprintf("priority = $%d", argPos))
+		args = append(args, params.Priority)
 		argPos++
 	}
 
@@ -399,7 +411,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 	limitPos := argPos
 	offsetPos := argPos + 1
 
-	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, priority
 FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
 
 	rows, err := t.db.QueryContext(ctx, query, args...)
@@ -425,6 +437,7 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&item.ProjectID,
+			&item.Priority,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -509,7 +522,10 @@ func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanI
 
 		cases = append(cases, schema.TestCaseResponseItem{
 			ID:                   r.ID.String(),
+			Code:                 r.Code,
 			Title:                r.Title,
+			Priority:             string(r.Priority),
+			Urgency:              string(r.Urgency),
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   int64(plan.ID),
@@ -539,12 +555,14 @@ func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTest
 		Kind:            dbsqlc.TestKind(req.Kind),
 		Code:            req.Code,
 		Description:     req.Description,
+		Preconditions:   common.NullString(req.Preconditions),
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		IsDraft:         common.NewNullBool(req.IsDraft),
 		Tags:            req.Tags,
 		UpdatedAt:       common.NullTime(time.Now()),
 		Runner:          common.NullString(req.Runner),
 		ScriptPath:      common.NullString(req.ScriptPath),
+		Priority:        schema.ParsePriorityLevel(req.Priority),
 	}
 
 	if err := t.queries.UpdateTestCase(ctx, params); err != nil {
@@ -614,6 +632,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 			FeatureOrModule: row.FeatureOrModule.String,
 			Title:           row.Title,
 			Description:     row.Description,
+			Preconditions:   row.Preconditions.String,
 			IsDraft:         row.IsDraft.Bool,
 			Tags:            row.Tags,
 			CreatedByID:     row.CreatedByID,
@@ -625,6 +644,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 			EnvironmentID:   row.EnvironmentID,
 			IsClosed:        row.IsClosed,
 			IsViewed:        row.IsViewed,
+			Priority:        string(row.Priority),
+			Urgency:         string(row.Urgency),
 		})
 	}
 
@@ -854,6 +875,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		Title:           req.Title,
 		Description:     req.Description,
+		Preconditions:   common.NullString(req.Preconditions),
 		IsDraft:         common.FalseNullBool(),
 		Tags:            req.Tags,
 		CreatedByID:     int32(req.CreatedByID),
@@ -862,6 +884,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		Suggested:       common.TrueNullBool(),
 		Runner:          common.NullString(req.Runner),
 		ScriptPath:      common.NullString(req.ScriptPath),
+		Priority:        schema.ParsePriorityLevel(req.Priority),
 	}
 
 	_, err = t.queries.CreateTestCase(ctx, params)

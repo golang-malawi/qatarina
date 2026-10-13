@@ -142,6 +142,7 @@ SELECT
   tc.feature_or_module,
   tc.title,
   tc.description,
+  tc.preconditions,
   tc.is_draft,
   tc.tags,
   tc.created_at,
@@ -149,6 +150,7 @@ SELECT
   tc.runner,
   tc.script_path,
   tc.parent_test_case_id,
+  tc.priority,
   parent.code AS parent_code,
   parent.title AS parent_title
 FROM test_cases tc
@@ -161,12 +163,16 @@ SELECT * FROM test_cases WHERE project_id = $1;
 -- name: ListTestCasesByPlan :many
 SELECT
   tc.id,
+  tc.code,
   tc.title,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency,
   array_agg(pc.assigned_to_id)::bigint[] AS assigned_tester_ids
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 WHERE pc.test_plan_id = $1
-GROUP BY tc.id, tc.title;
+GROUP BY tc.id, tc.code, tc.title, tc.priority
+ORDER BY MAX(pc.urgency) DESC, tc.priority DESC, tc.code ASC;
 
 -- name: ListScriptTestCasesByPlan :many
 SELECT tc.*
@@ -264,11 +270,13 @@ WHERE p.project_id IS NULL;
 -- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
-    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path
+    is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
+    priority, preconditions
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14, $15, $16
+    $8, $9, $10, $11, $12, $13, $14, $15, $16,
+    $17, $18
 )
 RETURNING id;
 
@@ -313,6 +321,7 @@ SELECT
   tc.feature_or_module,
   tc.title,
   tc.description,
+  tc.preconditions,
   tc.is_draft,
   tc.tags,
   tc.created_by_id,
@@ -323,7 +332,9 @@ SELECT
   MAX(pc.assigned_to_id)::int AS assigned_to_id,
   COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
   COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
-  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
@@ -406,7 +417,9 @@ is_draft = $7,
 tags = $8,
 updated_at = $9,
 runner = $10,
-script_path = $11
+script_path = $11,
+priority = $12,
+preconditions = $13
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
@@ -423,6 +436,7 @@ SELECT * FROM test_cases WHERE project_id = $1 AND suggested = $2;
 
 -- name: UpdateSuggestedFlag :exec
 UPDATE test_cases SET suggested = $2 WHERE id = $1;
+
 -- name: ListTestPlans :many
 SELECT * FROM test_plans ORDER BY created_at DESC;
 
@@ -470,9 +484,24 @@ updated_at = $2
 WHERE id = $1;
 
 -- name: AddTestCaseToPlan :exec
-INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id)
-VALUES ($1, $2, $3)
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
+VALUES (
+    sqlc.arg(test_plan_id), sqlc.arg(test_case_id), sqlc.arg(assigned_to_id),
+    COALESCE(
+        sqlc.narg(urgency)::priority_level,
+        (SELECT pc.urgency FROM test_plan_cases pc
+         WHERE pc.test_plan_id = sqlc.arg(test_plan_id) AND pc.test_case_id = sqlc.arg(test_case_id)
+         LIMIT 1),
+        'medium'
+    )
+)
 ON CONFLICT DO NOTHING;
+
+-- name: UpdateTestPlanCaseUrgency :execrows
+UPDATE test_plan_cases
+SET urgency = sqlc.arg(urgency)
+WHERE test_plan_id = sqlc.arg(test_plan_id)
+  AND test_case_id = sqlc.arg(test_case_id);
 
 -- name: ChangeEnvironment :exec
 UPDATE test_plans
@@ -583,6 +612,7 @@ INSERT INTO project_testers (
 ) VALUES (
     $1, $2, $3, $4, now(), now()
 );
+
 -- name: SearchProjectTesters :many
 SELECT
 project_testers.*,
@@ -658,6 +688,7 @@ DELETE FROM modules WHERE id = $1;
 -- name: GetProjectModules :many
 SELECT * FROM modules
 WHERE project_id = $1;
+
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;

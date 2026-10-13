@@ -84,6 +84,18 @@ func (s *projectServiceImpl) Create(ctx context.Context, request *schema.NewProj
 		return nil, err
 	}
 
+	// Add the project owner as the default tester for the new project
+	_, err = s.db.AssignTesterToProject(ctx, dbsqlc.AssignTesterToProjectParams{
+		ProjectID: projectID,
+		UserID:    int32(request.ProjectOwnerID),
+		Role:      "lead",
+		IsActive:  true,
+	})
+	if err != nil {
+		s.logger.Error(s.name, "failed to assign project owner as tester", "projectID", projectID, "userID", request.ProjectOwnerID, "error", err)
+		return nil, err
+	}
+
 	for _, envReq := range request.Environments {
 		sanitized := sanitizeEnvName(envReq.Name)
 		if sanitized == "" {
