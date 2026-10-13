@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -31,6 +32,8 @@ type TestPlanService interface {
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
 
 	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
+	// UpdateTestCaseUrgency sets the urgency of a test case within a test plan
+	UpdateTestCaseUrgency(ctx context.Context, testPlanID int64, testCaseID string, urgency string) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -81,6 +84,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				TestPlanID:   int64(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				AssignedToID: uid,
+				Urgency:      newNullUrgency(assignedTestCase.Urgency),
 			}); err != nil {
 				return nil, err
 			}
@@ -178,6 +182,16 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 type testCaseAssignment struct {
 	TestCaseID   uuid.UUID
 	AssignedToID int64
+	Urgency      string
+}
+
+// newNullUrgency returns a NULL urgency for blank values so that the
+// database keeps the existing urgency (or the medium default)
+func newNullUrgency(urgency string) dbsqlc.NullPriorityLevel {
+	if strings.TrimSpace(urgency) == "" {
+		return dbsqlc.NullPriorityLevel{}
+	}
+	return dbsqlc.NullPriorityLevel{PriorityLevel: schema.ParsePriorityLevel(urgency), Valid: true}
 }
 
 func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, assignments []testCaseAssignment) (*dbsqlc.GetTestPlanRow, error) {
@@ -187,12 +201,24 @@ func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, ass
 	}
 
 	for _, a := range assignments {
+		urgency := newNullUrgency(a.Urgency)
 		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
 			TestPlanID:   planID,
 			TestCaseID:   a.TestCaseID,
 			AssignedToID: a.AssignedToID,
+			Urgency:      urgency,
 		}); err != nil {
 			return nil, err
+		}
+		// Keep the urgency consistent across all assignees of the test case
+		if urgency.Valid {
+			if _, err := t.queries.UpdateTestPlanCaseUrgency(ctx, dbsqlc.UpdateTestPlanCaseUrgencyParams{
+				TestPlanID: planID,
+				TestCaseID: a.TestCaseID,
+				Urgency:    urgency.PriorityLevel,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -205,7 +231,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	for _, pt := range request.PlannedTests {
 		tcID := uuid.MustParse(pt.TestCaseID)
 		for _, uid := range pt.UserIDs {
-			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: pt.Urgency})
 		}
 	}
 	return t.assignTestCases(ctx, request.PlanID, assignments)
@@ -220,10 +246,31 @@ func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, reques
 			return nil, err
 		}
 		for _, uid := range request.UserIDs {
-			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: request.Urgency})
 		}
 	}
 	return t.assignTestCases(ctx, request.PlanID, assignments)
+}
+
+// UpdateTestCaseUrgency implements TestPlanService.
+func (t *testPlanService) UpdateTestCaseUrgency(ctx context.Context, testPlanID int64, testCaseID string, urgency string) error {
+	tcID, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	affected, err := t.queries.UpdateTestPlanCaseUrgency(ctx, dbsqlc.UpdateTestPlanCaseUrgencyParams{
+		TestPlanID: testPlanID,
+		TestCaseID: tcID,
+		Urgency:    schema.ParsePriorityLevel(urgency),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update urgency: %w", err)
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
@@ -282,7 +329,10 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
+			Code:                 tc.Code,
 			Title:                tc.Title,
+			Priority:             string(tc.Priority),
+			Urgency:              string(tc.Urgency),
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   plan.ID,

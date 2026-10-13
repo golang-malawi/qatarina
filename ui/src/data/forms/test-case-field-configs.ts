@@ -1,4 +1,5 @@
 import { FieldConfig } from "@/components/form/DynamicForm";
+import { DEFAULT_PRIORITY, PRIORITY_OPTIONS } from "@/common/constants/priority";
 
 export const createTestCaseFields = (): FieldConfig[] => [
   {
@@ -32,6 +33,14 @@ export const createTestCaseFields = (): FieldConfig[] => [
     required: true,
   },
   {
+    name: "priority",
+    label: "Priority",
+    type: "select",
+    options: PRIORITY_OPTIONS,
+    defaultValue: DEFAULT_PRIORITY,
+    helperText: "How important this test case is (Low, Medium, High, Urgent).",
+  },
+  {
     name: "preconditions",
     label: "Preconditions",
     type: "markdown-textarea",
@@ -49,9 +58,9 @@ export const createTestCaseFields = (): FieldConfig[] => [
   },
   {
     name: "runner",
-      label: "Runner",
-      type: "runner",
-      defaultValue: "basi",
+    label: "Runner",
+    type: "runner",
+    defaultValue: "basi",
   },
   {
     name: "script_file",

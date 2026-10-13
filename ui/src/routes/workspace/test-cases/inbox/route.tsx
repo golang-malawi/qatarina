@@ -1,3 +1,4 @@
+import { PriorityBadge } from "@/components/PriorityBadge";
 import {
   findInboxUnseenCountQueryOptions,
   findTestCaseInboxQueryOptions,
@@ -369,7 +370,9 @@ function TestCasePageInbox() {
                                 {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
                               </Text>
                             </Flex>
-                            <Stack direction="row" mt={2} gap={2}>
+                            <Stack direction="row" mt={2} gap={2} flexWrap="wrap">
+                              <PriorityBadge value={tc.priority} label="Priority" />
+                              <PriorityBadge value={tc.urgency} label="Urgency" />
                               <Badge colorPalette="info" variant="subtle">
                                 {counts.usage_count} tests performed
                               </Badge>
@@ -431,7 +434,9 @@ function TestCasePageInbox() {
                             {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
                           </Text>
                         </Flex>
-                        <Stack direction="row" mt={2} gap={2}>
+                        <Stack direction="row" mt={2} gap={2} flexWrap="wrap">
+                          <PriorityBadge value={tc.priority} label="Priority" />
+                          <PriorityBadge value={tc.urgency} label="Urgency" />
                           <Badge colorPalette="info" variant="subtle">
                             {counts.usage_count} tests performed
                           </Badge>

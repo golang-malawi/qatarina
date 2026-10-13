@@ -22,6 +22,7 @@ type TestCase struct {
 	FeatureOrModule string
 	Tags            []string
 	IsDraft         bool
+	Priority        string
 }
 
 func (e *ExportFileService) ToCSV() ([]byte, error) {
@@ -37,6 +38,7 @@ func (e *ExportFileService) ToCSV() ([]byte, error) {
 		"FeatureOrModule",
 		"Tags",
 		"IsDraft",
+		"Priority",
 	}
 
 	if err := writer.Write(csvHeader); err != nil {
@@ -52,6 +54,7 @@ func (e *ExportFileService) ToCSV() ([]byte, error) {
 			testCase.FeatureOrModule,
 			strings.Join(testCase.Tags, ","),
 			strconv.FormatBool(testCase.IsDraft),
+			testCase.Priority,
 		}
 
 		if err := writer.Write(record); err != nil {
@@ -81,6 +84,7 @@ func (e *ExportFileService) ToXLSX() ([]byte, error) {
 	file.SetCellValue(defaultSheet, "E1", "FeatureOrModule")
 	file.SetCellValue(defaultSheet, "F1", "Tags")
 	file.SetCellValue(defaultSheet, "G1", "IsDraft")
+	file.SetCellValue(defaultSheet, "H1", "Priority")
 
 	for index, testCase := range e.TestCases {
 		row := index + 2
@@ -92,6 +96,7 @@ func (e *ExportFileService) ToXLSX() ([]byte, error) {
 		file.SetCellValue(defaultSheet, fmt.Sprintf("E%d", row), testCase.FeatureOrModule)
 		file.SetCellValue(defaultSheet, fmt.Sprintf("F%d", row), strings.Join(testCase.Tags, ","))
 		file.SetCellValue(defaultSheet, fmt.Sprintf("G%d", row), testCase.IsDraft)
+		file.SetCellValue(defaultSheet, fmt.Sprintf("H%d", row), testCase.Priority)
 	}
 
 	var buffer bytes.Buffer
