@@ -32,6 +32,7 @@ import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import { useChecklistState } from "@/lib/markdown-checklist";
 import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";
+import { TestCaseRelations } from "@/components/TestCaseRelations";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -171,6 +172,7 @@ function ViewTestCase() {
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
+          <Tabs.Trigger value="relations">{t("test_cases.relations.tab")}</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION TAB */}
@@ -350,6 +352,11 @@ function ViewTestCase() {
               </Stack>
             </Box>
           </Stack>
+        </Tabs.Content>
+
+        {/* RELATIONS TAB */}
+        <Tabs.Content value="relations">
+          <TestCaseRelations projectId={projectId} testCaseId={testCaseId} />
         </Tabs.Content>
 
        {/* USAGE & ASSIGNMENT TAB */}

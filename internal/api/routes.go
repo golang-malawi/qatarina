@@ -124,6 +124,9 @@ func (api *API) routes() {
 		testCasesV1.Post("/:test_case_id/execute", apiv1.ExecuteTestCase(api.TestCasesService, api.TestRunsService, api.logger, api.Config))
 		testCasesV1.Post("/:testCaseID/branch", apiv1.BranchTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:testCaseID/transfer", apiv1.TransferTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Get("/:testCaseID/relations", apiv1.ListTestCaseRelations(api.TestCaseRelationService, api.logger))
+		testCasesV1.Post("/:testCaseID/relations", apiv1.CreateTestCaseRelation(api.TestCaseRelationService, api.logger))
+		testCasesV1.Delete("/:testCaseID/relations/:relationID", apiv1.DeleteTestCaseRelation(api.TestCaseRelationService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)

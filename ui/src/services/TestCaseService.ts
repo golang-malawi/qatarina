@@ -22,6 +22,23 @@ export function useProjectTestCasesQuery(projectID: string) {
   });
 }
 
+export function useTestCaseRelationsQuery(testCaseID: string) {
+  return $api.useQuery("get", "/v1/test-cases/{testCaseID}/relations", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export function useCreateTestCaseRelationMutation() {
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}/relations");
+}
+
+export function useDeleteTestCaseRelationMutation() {
+  return $api.useMutation(
+    "delete",
+    "/v1/test-cases/{testCaseID}/relations/{relationID}",
+  );
+}
+
 export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
