@@ -45,8 +45,10 @@ export const createTestCaseFields = (): FieldConfig[] => [
     label: "Preconditions",
     type: "markdown-textarea",
     placeholder: "What must be true before running this test (Markdown supported)",
-    helperText: "Optional. Use \"- [ ]\" items so testers can tick each precondition.",
+    helperText: "Use \"- [ ]\" items so testers can tick each precondition.",
     required: false,
+    addable: true,
+    minHeight: "80px",
   },
   {
     name: "description",

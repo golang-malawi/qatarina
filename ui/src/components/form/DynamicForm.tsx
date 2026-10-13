@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { ReactNode, ChangeEvent, lazy, Suspense, useRef } from "react";
+import { ReactNode, ChangeEvent, lazy, Suspense, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Button,
@@ -27,6 +28,8 @@ import {
   LuList,
   LuListOrdered,
   LuSquareCheck,
+  LuPlus,
+  LuX,
 } from "react-icons/lu";
 
 // Import CSS stylesheet for markdown preview styling
@@ -74,6 +77,10 @@ export interface FieldConfig {
   }) => ReactNode;
   fields?: FieldConfig[];
   accept?: string;
+  /** Hide the field behind an "Add" button until the user opts in or it has a value */
+  addable?: boolean;
+  /** Minimum height of a markdown-textarea's editor and preview */
+  minHeight?: string;
 }
 
 export interface FormConfig<T extends z.ZodTypeAny> {
@@ -112,11 +119,15 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     },
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { t } = useTranslation();
+  // One textarea per markdown field, so each toolbar formats its own field
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const [addedFields, setAddedFields] = useState<Record<string, boolean>>({});
   const isSubmitting = submitLoading ?? form.state.isSubmitting;
 
   // Multi-line aware Markdown formatting helper
   const applyMarkdown = (
+    fieldName: string,
     fieldChange: (val: string) => void,
     action:
       | "heading"
@@ -129,7 +140,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
       | "ordered-list"
       | "task"
   ) => {
-    const textarea = textareaRef.current;
+    const textarea = textareaRefs.current[fieldName];
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -224,7 +235,8 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   };
 
   const renderField = (fieldConfig: FieldConfig) => {
-    const { name, label, type, placeholder, helperText, options, customComponent } = fieldConfig;
+    const { name, label, type, placeholder, helperText, options, customComponent, addable, minHeight } =
+      fieldConfig;
 
     return (
       <form.Field key={name} name={name}>
@@ -234,11 +246,47 @@ export function DynamicForm<T extends z.ZodTypeAny>({
             field.state.meta.errors &&
             field.state.meta.errors.length > 0;
 
+          const hasValue =
+            typeof field.state.value === "string" ? field.state.value.trim() !== "" : !!field.state.value;
+
+          if (addable && !addedFields[name] && !hasValue) {
+            return (
+              <Box>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  colorPalette="brand"
+                  onClick={() => setAddedFields((prev) => ({ ...prev, [name]: true }))}
+                >
+                  <LuPlus />
+                  {t("form.optional_field.add", { label: label.toLocaleLowerCase() })}
+                </Button>
+              </Box>
+            );
+          }
+
           return (
             <Field.Root invalid={showErrors}>
-              <Field.Label fontSize="sm" fontWeight="medium">
-                {label}
-              </Field.Label>
+              <HStack w="100%" justify="space-between" align="center">
+                <Field.Label fontSize="sm" fontWeight="medium">
+                  {label}
+                </Field.Label>
+                {addable && (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => {
+                      field.handleChange("" as never);
+                      setAddedFields((prev) => ({ ...prev, [name]: false }));
+                    }}
+                  >
+                    <LuX />
+                    {t("form.optional_field.remove", { label: label.toLocaleLowerCase() })}
+                  </Button>
+                )}
+              </HStack>
 
               {type === "test-kind" && (
                 <SelectTestKind
@@ -304,7 +352,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Heading"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "heading")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "heading")}
                         >
                           <LuHeading />
                         </IconButton>
@@ -312,7 +360,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Bold"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "bold")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "bold")}
                         >
                           <LuBold />
                         </IconButton>
@@ -320,7 +368,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Italic"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "italic")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "italic")}
                         >
                           <LuItalic />
                         </IconButton>
@@ -328,7 +376,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Quote"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "quote")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "quote")}
                         >
                           <LuQuote />
                         </IconButton>
@@ -336,7 +384,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Code"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "code")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "code")}
                         >
                           <LuCode />
                         </IconButton>
@@ -344,7 +392,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Link"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "link")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "link")}
                         >
                           <LuLink />
                         </IconButton>
@@ -352,7 +400,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Unordered List"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "list")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "list")}
                         >
                           <LuList />
                         </IconButton>
@@ -360,7 +408,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Ordered List"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "ordered-list")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "ordered-list")}
                         >
                           <LuListOrdered />
                         </IconButton>
@@ -368,7 +416,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                           aria-label="Task List"
                           size="xs"
                           variant="ghost"
-                          onClick={() => applyMarkdown((v) => field.handleChange(v), "task")}
+                          onClick={() => applyMarkdown(name, (v) => field.handleChange(v), "task")}
                         >
                           <LuSquareCheck />
                         </IconButton>
@@ -377,19 +425,22 @@ export function DynamicForm<T extends z.ZodTypeAny>({
 
                     <Tabs.Content value="write" pt={1}>
                       <Textarea
-                        ref={textareaRef}
+                        ref={(el) => {
+                          textareaRefs.current[name] = el;
+                        }}
                         value={(field.state.value as string) || ""}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         placeholder={placeholder || "Write description using Markdown..."}
-                        minH="200px"
+                        minH={minHeight ?? "200px"}
+                        autoFocus={addable && addedFields[name]}
                       />
                     </Tabs.Content>
 
                     <Tabs.Content value="preview" pt={1}>
                       <Box
                         p={3}
-                        minH="200px"
+                        minH={minHeight ?? "200px"}
                         data-color-mode="auto"
                         css={{
                           "& .wmde-markdown": {
