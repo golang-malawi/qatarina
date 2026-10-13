@@ -24,6 +24,7 @@ import { Route as WorkspaceIntegrationsIndexRouteImport } from './routes/workspa
 import { Route as WorkspaceDashboardIndexRouteImport } from './routes/workspace/dashboard/index'
 import { Route as UiTableDemoIndexRouteImport } from './routes/ui/table-demo/index'
 import { Route as UiDynamicFormDemoIndexRouteImport } from './routes/ui/dynamic-form-demo/index'
+import { Route as authSignupIndexRouteImport } from './routes/(auth)/signup/index'
 import { Route as authLogoutIndexRouteImport } from './routes/(auth)/logout/index'
 import { Route as authLoginIndexRouteImport } from './routes/(auth)/login/index'
 import { Route as appTestPlansIndexRouteImport } from './routes/(app)/test-plans/index'
@@ -36,6 +37,7 @@ import { Route as WorkspaceTestCasesInboxIndexRouteImport } from './routes/works
 import { Route as WorkspaceProjectsNewIndexRouteImport } from './routes/workspace/projects/new/index'
 import { Route as WorkspaceOrganizationsNewIndexRouteImport } from './routes/workspace/organizations/new/index'
 import { Route as WorkspaceOrganizationsIdIndexRouteImport } from './routes/workspace/organizations/$id/index'
+import { Route as projectProjectsProjectIdIndexRouteImport } from './routes/(project)/projects/$projectId/index'
 import { Route as WorkspaceUsersViewUserIDRouteImport } from './routes/workspace/users/view/$userID'
 import { Route as WorkspaceUsersUserIDEditRouteImport } from './routes/workspace/users/$userID/edit'
 import { Route as WorkspaceTestCasesInboxSuggestRouteImport } from './routes/workspace/test-cases/inbox/suggest'
@@ -68,6 +70,7 @@ import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestersIndexRouteIm
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/index'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/index'
 import { Route as projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/execute/index'
+import { Route as projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/$testPlanID/comments/index'
 
 const WorkspaceRouteRoute = WorkspaceRouteRouteImport.update({
   id: '/workspace',
@@ -145,6 +148,11 @@ const UiDynamicFormDemoIndexRoute = UiDynamicFormDemoIndexRouteImport.update({
   path: '/ui/dynamic-form-demo/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const authSignupIndexRoute = authSignupIndexRouteImport.update({
+  id: '/(auth)/signup/',
+  path: '/signup/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authLogoutIndexRoute = authLogoutIndexRouteImport.update({
   id: '/(auth)/logout/',
   path: '/logout/',
@@ -211,6 +219,12 @@ const WorkspaceOrganizationsIdIndexRoute =
     id: '/organizations/$id/',
     path: '/organizations/$id/',
     getParentRoute: () => WorkspaceRouteRoute,
+  } as any)
+const projectProjectsProjectIdIndexRoute =
+  projectProjectsProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
 const WorkspaceUsersViewUserIDRoute =
   WorkspaceUsersViewUserIDRouteImport.update({
@@ -404,6 +418,12 @@ const projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute =
     path: '/execute/',
     getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
   } as any)
+const projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute =
+  projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRouteImport.update({
+    id: '/comments/',
+    path: '/comments/',
+    getParentRoute: () => projectProjectsProjectIdTestPlansTestPlanIDRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceRouteRouteWithChildren
@@ -414,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/test-plans/': typeof appTestPlansIndexRoute
   '/login/': typeof authLoginIndexRoute
   '/logout/': typeof authLogoutIndexRoute
+  '/signup/': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo/': typeof UiTableDemoIndexRoute
   '/workspace/dashboard/': typeof WorkspaceDashboardIndexRoute
@@ -429,6 +450,7 @@ export interface FileRoutesByFullPath {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
@@ -460,6 +482,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/comments/': typeof projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/execute/': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/test-cases/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/test-runs/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
@@ -468,11 +491,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRouteRouteWithChildren
   '/': typeof appIndexRoute
-  '/projects/$projectId': typeof projectProjectsProjectIdRouteRouteWithChildren
   '/workspace/testers/invite': typeof WorkspaceTestersInviteRoute
   '/test-plans': typeof appTestPlansIndexRoute
   '/login': typeof authLoginIndexRoute
   '/logout': typeof authLogoutIndexRoute
+  '/signup': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo': typeof UiTableDemoIndexRoute
   '/workspace/dashboard': typeof WorkspaceDashboardIndexRoute
@@ -488,6 +511,7 @@ export interface FileRoutesByTo {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/projects/$projectId': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new': typeof WorkspaceProjectsNewIndexRoute
@@ -519,6 +543,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/test-cases/$testCaseId': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/projects/$projectId/test-cases/new': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/projects/$projectId/test-plans/new': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/projects/$projectId/test-plans/$testPlanID/comments': typeof projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/execute': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/test-cases': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
   '/projects/$projectId/test-plans/$testPlanID/test-runs': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
@@ -535,6 +560,7 @@ export interface FileRoutesById {
   '/(app)/test-plans/': typeof appTestPlansIndexRoute
   '/(auth)/login/': typeof authLoginIndexRoute
   '/(auth)/logout/': typeof authLogoutIndexRoute
+  '/(auth)/signup/': typeof authSignupIndexRoute
   '/ui/dynamic-form-demo/': typeof UiDynamicFormDemoIndexRoute
   '/ui/table-demo/': typeof UiTableDemoIndexRoute
   '/workspace/dashboard/': typeof WorkspaceDashboardIndexRoute
@@ -550,6 +576,7 @@ export interface FileRoutesById {
   '/workspace/test-cases/inbox/suggest': typeof WorkspaceTestCasesInboxSuggestRoute
   '/workspace/users/$userID/edit': typeof WorkspaceUsersUserIDEditRoute
   '/workspace/users/view/$userID': typeof WorkspaceUsersViewUserIDRoute
+  '/(project)/projects/$projectId/': typeof projectProjectsProjectIdIndexRoute
   '/workspace/organizations/$id/': typeof WorkspaceOrganizationsIdIndexRoute
   '/workspace/organizations/new/': typeof WorkspaceOrganizationsNewIndexRoute
   '/workspace/projects/new/': typeof WorkspaceProjectsNewIndexRoute
@@ -581,6 +608,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/test-cases/$testCaseId/': typeof projectProjectsProjectIdTestCasesTestCaseIdIndexRoute
   '/(project)/projects/$projectId/test-cases/new/': typeof projectProjectsProjectIdTestCasesNewIndexRoute
   '/(project)/projects/$projectId/test-plans/new/': typeof projectProjectsProjectIdTestPlansNewIndexRoute
+  '/(project)/projects/$projectId/test-plans/$testPlanID/comments/': typeof projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute
   '/(project)/projects/$projectId/test-plans/$testPlanID/execute/': typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
   '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
   '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/': typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
@@ -597,6 +625,7 @@ export interface FileRouteTypes {
     | '/test-plans/'
     | '/login/'
     | '/logout/'
+    | '/signup/'
     | '/ui/dynamic-form-demo/'
     | '/ui/table-demo/'
     | '/workspace/dashboard/'
@@ -612,6 +641,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/projects/$projectId/'
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
@@ -643,6 +673,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-cases/$testCaseId/'
     | '/projects/$projectId/test-cases/new/'
     | '/projects/$projectId/test-plans/new/'
+    | '/projects/$projectId/test-plans/$testPlanID/comments/'
     | '/projects/$projectId/test-plans/$testPlanID/execute/'
     | '/projects/$projectId/test-plans/$testPlanID/test-cases/'
     | '/projects/$projectId/test-plans/$testPlanID/test-runs/'
@@ -651,11 +682,11 @@ export interface FileRouteTypes {
   to:
     | '/workspace'
     | '/'
-    | '/projects/$projectId'
     | '/workspace/testers/invite'
     | '/test-plans'
     | '/login'
     | '/logout'
+    | '/signup'
     | '/ui/dynamic-form-demo'
     | '/ui/table-demo'
     | '/workspace/dashboard'
@@ -671,6 +702,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/projects/$projectId'
     | '/workspace/organizations/$id'
     | '/workspace/organizations/new'
     | '/workspace/projects/new'
@@ -702,6 +734,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/test-cases/$testCaseId'
     | '/projects/$projectId/test-cases/new'
     | '/projects/$projectId/test-plans/new'
+    | '/projects/$projectId/test-plans/$testPlanID/comments'
     | '/projects/$projectId/test-plans/$testPlanID/execute'
     | '/projects/$projectId/test-plans/$testPlanID/test-cases'
     | '/projects/$projectId/test-plans/$testPlanID/test-runs'
@@ -717,6 +750,7 @@ export interface FileRouteTypes {
     | '/(app)/test-plans/'
     | '/(auth)/login/'
     | '/(auth)/logout/'
+    | '/(auth)/signup/'
     | '/ui/dynamic-form-demo/'
     | '/ui/table-demo/'
     | '/workspace/dashboard/'
@@ -732,6 +766,7 @@ export interface FileRouteTypes {
     | '/workspace/test-cases/inbox/suggest'
     | '/workspace/users/$userID/edit'
     | '/workspace/users/view/$userID'
+    | '/(project)/projects/$projectId/'
     | '/workspace/organizations/$id/'
     | '/workspace/organizations/new/'
     | '/workspace/projects/new/'
@@ -763,6 +798,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/test-cases/$testCaseId/'
     | '/(project)/projects/$projectId/test-cases/new/'
     | '/(project)/projects/$projectId/test-plans/new/'
+    | '/(project)/projects/$projectId/test-plans/$testPlanID/comments/'
     | '/(project)/projects/$projectId/test-plans/$testPlanID/execute/'
     | '/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/'
     | '/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/'
@@ -775,6 +811,7 @@ export interface RootRouteChildren {
   projectProjectsProjectIdRouteRoute: typeof projectProjectsProjectIdRouteRouteWithChildren
   authLoginIndexRoute: typeof authLoginIndexRoute
   authLogoutIndexRoute: typeof authLogoutIndexRoute
+  authSignupIndexRoute: typeof authSignupIndexRoute
   UiDynamicFormDemoIndexRoute: typeof UiDynamicFormDemoIndexRoute
   UiTableDemoIndexRoute: typeof UiTableDemoIndexRoute
 }
@@ -886,6 +923,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UiDynamicFormDemoIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(auth)/signup/': {
+      id: '/(auth)/signup/'
+      path: '/signup'
+      fullPath: '/signup/'
+      preLoaderRoute: typeof authSignupIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(auth)/logout/': {
       id: '/(auth)/logout/'
       path: '/logout'
@@ -969,6 +1013,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspace/organizations/$id/'
       preLoaderRoute: typeof WorkspaceOrganizationsIdIndexRouteImport
       parentRoute: typeof WorkspaceRouteRoute
+    }
+    '/(project)/projects/$projectId/': {
+      id: '/(project)/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof projectProjectsProjectIdIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
     '/workspace/users/view/$userID': {
       id: '/workspace/users/view/$userID'
@@ -1194,6 +1245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
     }
+    '/(project)/projects/$projectId/test-plans/$testPlanID/comments/': {
+      id: '/(project)/projects/$projectId/test-plans/$testPlanID/comments/'
+      path: '/comments'
+      fullPath: '/projects/$projectId/test-plans/$testPlanID/comments/'
+      preLoaderRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDRoute
+    }
   }
 }
 
@@ -1289,6 +1347,7 @@ const WorkspaceRouteRouteWithChildren = WorkspaceRouteRoute._addFileChildren(
 )
 
 interface projectProjectsProjectIdTestPlansTestPlanIDRouteChildren {
+  projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute
   projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute
   projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute
   projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute: typeof projectProjectsProjectIdTestPlansTestPlanIDTestRunsIndexRoute
@@ -1297,6 +1356,8 @@ interface projectProjectsProjectIdTestPlansTestPlanIDRouteChildren {
 
 const projectProjectsProjectIdTestPlansTestPlanIDRouteChildren: projectProjectsProjectIdTestPlansTestPlanIDRouteChildren =
   {
+    projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute:
+      projectProjectsProjectIdTestPlansTestPlanIDCommentsIndexRoute,
     projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute:
       projectProjectsProjectIdTestPlansTestPlanIDExecuteIndexRoute,
     projectProjectsProjectIdTestPlansTestPlanIDTestCasesIndexRoute:
@@ -1313,6 +1374,7 @@ const projectProjectsProjectIdTestPlansTestPlanIDRouteWithChildren =
   )
 
 interface projectProjectsProjectIdRouteRouteChildren {
+  projectProjectsProjectIdIndexRoute: typeof projectProjectsProjectIdIndexRoute
   projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute
   projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute: typeof projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute
   projectProjectsProjectIdEnvironmentsEnvironmentIdRoute: typeof projectProjectsProjectIdEnvironmentsEnvironmentIdRoute
@@ -1338,6 +1400,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
 
 const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteRouteChildren =
   {
+    projectProjectsProjectIdIndexRoute: projectProjectsProjectIdIndexRoute,
     projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute:
       projectProjectsProjectIdFeaturesCreateFeatureModuleFormRoute,
     projectProjectsProjectIdFeaturesEditFeatureModuleFormRoute:
@@ -1394,6 +1457,7 @@ const rootRouteChildren: RootRouteChildren = {
     projectProjectsProjectIdRouteRouteWithChildren,
   authLoginIndexRoute: authLoginIndexRoute,
   authLogoutIndexRoute: authLogoutIndexRoute,
+  authSignupIndexRoute: authSignupIndexRoute,
   UiDynamicFormDemoIndexRoute: UiDynamicFormDemoIndexRoute,
   UiTableDemoIndexRoute: UiTableDemoIndexRoute,
 }

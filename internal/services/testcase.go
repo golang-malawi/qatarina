@@ -24,8 +24,8 @@ type TestCaseService interface {
 	// FindAllPaged retrieves test cases with pagination, sorting, and filtering
 	FindAllPaged(context.Context, TestCaseQueryParams) ([]dbsqlc.TestCase, int64, error)
 
-	// FindAllByID retrieves all test cases in the database by Project ID
-	FindByID(context.Context, string) (*dbsqlc.TestCase, error)
+	// FindAllByID retrieves all test cases in the database by test case ID
+	FindByID(context.Context, string) (*dbsqlc.GetTestCaseWithParentRow, error)
 
 	// FindAllByProjectID retrieves all test cases in the database by Project ID
 	FindAllByProjectID(context.Context, int64) ([]dbsqlc.TestCase, error)
@@ -62,7 +62,11 @@ type TestCaseService interface {
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
-	FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error)
+	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
+	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
+	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
+	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
+	MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -90,6 +94,8 @@ type TestCaseService interface {
 
 	// FindScriptCasesByPlanID is used to list all script test cases assigned to a test plan
 	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
+
+	Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -102,6 +108,7 @@ type TestCaseQueryParams struct {
 	IsDraft   *bool
 	Suggested *bool
 	Module    string
+	Priority  string
 }
 
 var _ TestCaseService = &testCaseServiceImpl{}
@@ -163,7 +170,8 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			FeatureOrModule:  common.NullString(request.FeatureOrModule),
 			Title:            request.Title,
 			Description:      request.Description,
-			ParentTestCaseID: sql.NullInt32{},
+			Preconditions:    common.NullString(request.Preconditions),
+			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
 			CreatedByID:      1,
@@ -171,6 +179,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			UpdatedAt:        common.NewNullTime(time.Now()),
 			Runner:           common.NullString(request.Runner),
 			ScriptPath:       common.NullString(request.ScriptPath),
+			Priority:         schema.ParsePriorityLevel(request.Priority),
 		}
 
 		if strings.TrimSpace(request.Code) != "" {
@@ -246,7 +255,8 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		FeatureOrModule:  common.NullString(request.FeatureOrModule),
 		Title:            request.Title,
 		Description:      request.Description,
-		ParentTestCaseID: sql.NullInt32{},
+		Preconditions:    common.NullString(request.Preconditions),
+		ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
 		CreatedByID:      int32(userID),
@@ -254,6 +264,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		UpdatedAt:        common.NewNullTime(time.Now()),
 		Runner:           common.NullString(request.Runner),
 		ScriptPath:       common.NullString(request.ScriptPath),
+		Priority:         schema.ParsePriorityLevel(request.Priority),
 	}
 
 	if strings.TrimSpace(request.Code) != "" {
@@ -337,6 +348,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 		"kind":       "kind",
 		"is_draft":   "is_draft",
 		"isdraft":    "is_draft",
+		"priority":   "priority",
 	}
 	sortColumn, ok := sortMap[sortKey]
 	if !ok || sortColumn == "" {
@@ -361,6 +373,12 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 	if params.Kind != "" {
 		conditions = append(conditions, fmt.Sprintf("kind = $%d", argPos))
 		args = append(args, params.Kind)
+		argPos++
+	}
+
+	if params.Priority != "" {
+		conditions = append(conditions, fmt.Sprintf("priority = $%d", argPos))
+		args = append(args, params.Priority)
 		argPos++
 	}
 
@@ -393,7 +411,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 	limitPos := argPos
 	offsetPos := argPos + 1
 
-	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, parent_test_case_id, is_draft, tags, created_by_id, created_at, updated_at, project_id, priority
 FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sortColumn, sortOrder, limitPos, offsetPos)
 
 	rows, err := t.db.QueryContext(ctx, query, args...)
@@ -419,6 +437,7 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&item.ProjectID,
+			&item.Priority,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -432,9 +451,13 @@ FROM test_cases WHERE %s ORDER BY %s %s LIMIT $%d OFFSET $%d`, whereClause, sort
 }
 
 // FindAllByID implements TestCaseService.
-func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.TestCase, error) {
-	tc, err := t.queries.GetTestCase(ctx, uuid.MustParse(id))
-	return &tc, err
+func (t *testCaseServiceImpl) FindByID(ctx context.Context, id string) (*dbsqlc.GetTestCaseWithParentRow, error) {
+	uuidID := uuid.MustParse(id)
+	tc, err := t.queries.GetTestCaseWithParent(ctx, uuidID)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }
 
 // FindAllByProjectID implements TestCaseService.
@@ -456,8 +479,10 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		pageSize = 100
 	}
 
+	search := strings.TrimSpace(params.Search)
 	rows, err := t.queries.TestCaseListByProjectPaged(ctx, dbsqlc.TestCaseListByProjectPagedParams{
 		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
+		Search:    search,
 		RowLimit:  int32(pageSize),
 		RowOffset: int32((page - 1) * pageSize),
 	})
@@ -465,7 +490,10 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 		return nil, 0, err
 	}
 
-	total, err := t.queries.TestCaseCountByProjectPaged(ctx, sql.NullInt32{Int32: int32(projectID), Valid: true})
+	total, err := t.queries.TestCaseCountByProjectPaged(ctx, dbsqlc.TestCaseCountByProjectPagedParams{
+		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
+		Search:    search,
+	})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -494,7 +522,10 @@ func (t *testCaseServiceImpl) FindAllByTestPlanID(ctx context.Context, testPlanI
 
 		cases = append(cases, schema.TestCaseResponseItem{
 			ID:                   r.ID.String(),
+			Code:                 r.Code,
 			Title:                r.Title,
+			Priority:             string(r.Priority),
+			Urgency:              string(r.Urgency),
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   int64(plan.ID),
@@ -524,12 +555,14 @@ func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTest
 		Kind:            dbsqlc.TestKind(req.Kind),
 		Code:            req.Code,
 		Description:     req.Description,
+		Preconditions:   common.NullString(req.Preconditions),
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		IsDraft:         common.NewNullBool(req.IsDraft),
 		Tags:            req.Tags,
 		UpdatedAt:       common.NullTime(time.Now()),
 		Runner:          common.NullString(req.Runner),
 		ScriptPath:      common.NullString(req.ScriptPath),
+		Priority:        schema.ParsePriorityLevel(req.Priority),
 	}
 
 	if err := t.queries.UpdateTestCase(ctx, params); err != nil {
@@ -575,12 +608,13 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 	return fmt.Sprintf("%s%03d", displayPrefix, seq), nil
 }
 
-func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID int64, limit, offset int32, includeClosed bool) ([]schema.AssignedTestCase, int64, error) {
+func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error) {
 	rows, err := t.queries.TestCaseListByAssignedUser(ctx, dbsqlc.TestCaseListByAssignedUserParams{
-		UserID:        userID,
-		RowLimit:      limit,
-		RowOffset:     offset,
-		IncludeClosed: includeClosed,
+		UserID:        params.UserID,
+		RowLimit:      int32(params.PageSize),
+		RowOffset:     int32(params.Page),
+		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -598,6 +632,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			FeatureOrModule: row.FeatureOrModule.String,
 			Title:           row.Title,
 			Description:     row.Description,
+			Preconditions:   row.Preconditions.String,
 			IsDraft:         row.IsDraft.Bool,
 			Tags:            row.Tags,
 			CreatedByID:     row.CreatedByID,
@@ -608,19 +643,46 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, userID 
 			AssignedToID:    int32(row.AssignedToID),
 			EnvironmentID:   row.EnvironmentID,
 			IsClosed:        row.IsClosed,
+			IsViewed:        row.IsViewed,
+			Priority:        string(row.Priority),
+			Urgency:         string(row.Urgency),
 		})
 	}
 
 	// Count query
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
-		UserID:        userID,
-		IncludeClosed: includeClosed,
+		UserID:        params.UserID,
+		IncludeClosed: params.IncludeClosed,
 	})
 	if err != nil {
 		return res, 0, err
 	}
 
 	return res, total, nil
+}
+
+func (t *testCaseServiceImpl) CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error) {
+	count, err := t.queries.TestCaseCountUnseenByAssignedUser(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count unseen assigned test cases: %w", err)
+	}
+	return count, nil
+}
+
+func (t *testCaseServiceImpl) MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	err = t.queries.MarkAssignedTestCaseViewed(ctx, dbsqlc.MarkAssignedTestCaseViewedParams{
+		TestCaseID: id,
+		UserID:     userID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to mark test case as viewed: %w", err)
+	}
+	return nil
 }
 
 func (t *testCaseServiceImpl) MarkAsDraft(ctx context.Context, testCaseID string) error {
@@ -813,6 +875,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		Title:           req.Title,
 		Description:     req.Description,
+		Preconditions:   common.NullString(req.Preconditions),
 		IsDraft:         common.FalseNullBool(),
 		Tags:            req.Tags,
 		CreatedByID:     int32(req.CreatedByID),
@@ -821,6 +884,7 @@ func (t *testCaseServiceImpl) Suggest(ctx context.Context, req *schema.CreateSug
 		Suggested:       common.TrueNullBool(),
 		Runner:          common.NullString(req.Runner),
 		ScriptPath:      common.NullString(req.ScriptPath),
+		Priority:        schema.ParsePriorityLevel(req.Priority),
 	}
 
 	_, err = t.queries.CreateTestCase(ctx, params)
@@ -857,4 +921,57 @@ func (t *testCaseServiceImpl) RejectSuggested(ctx context.Context, testCaseID st
 
 func (t *testCaseServiceImpl) FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error) {
 	return t.queries.ListScriptTestCasesByPlan(ctx, int64(testPlanID))
+}
+
+func (t *testCaseServiceImpl) Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error) {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid UUID: %w", err)
+	}
+
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer sqlTx.Rollback()
+	tx := dbsqlc.New(sqlTx)
+
+	// Fetch target project to generate proper code prefix
+	targetProject, err := t.queries.GetProject(ctx, int32(req.TargetProjectID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target project: %w", err)
+	}
+
+	prefixKey := strings.ToLower(targetProject.Code)
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.TargetProjectID),
+		Prefix:    prefixKey,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	newCode, err := GenerateNextCode(ctx, tx, req.TargetProjectID, &targetProject, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the test case with the new project ID, new code, and target feature/module
+	if err := tx.TransferTestCase(ctx, dbsqlc.TransferTestCaseParams{
+		ID:              id,
+		ProjectID:       common.NewNullInt32(int32(req.TargetProjectID)),
+		Code:            newCode,
+		FeatureOrModule: common.NullString(req.FeatureOrModule),
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return nil, err
+	}
+
+	tc, err := t.queries.GetTestCase(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &tc, nil
 }

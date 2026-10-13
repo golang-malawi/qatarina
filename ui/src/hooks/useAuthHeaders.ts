@@ -1,6 +1,6 @@
 export default function createAuthHeaders() {
   // Try both keys for safety
-  const rawUser = localStorage.getItem("auth.user");
+  const rawUser = localStorage.getItem("qatarina.auth.user");
   const token = localStorage.getItem("access_token");
 
   if (token) {

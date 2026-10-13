@@ -1,7 +1,7 @@
 {
   "name": "ui",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -47,6 +47,7 @@
     "react-i18next": "^16.5.6",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

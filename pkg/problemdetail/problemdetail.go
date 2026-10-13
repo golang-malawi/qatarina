@@ -61,6 +61,15 @@ func NotFound(ctx *fiber.Ctx, message string) error {
 	})
 }
 
+func Conflict(ctx *fiber.Ctx, message string) error {
+	return ctx.Status(http.StatusConflict).JSON(ProblemDetail{
+		Type:    "problemdetail.example.com/http/types/Conflict",
+		Title:   "Conflict",
+		Detail:  message,
+		Context: nil,
+	})
+}
+
 func NotImplemented(ctx *fiber.Ctx, message string) error {
 	return ctx.Status(http.StatusNotImplemented).JSON(ProblemDetail{
 		Type:    "problemdetail.example.com/http/types/NotImplemented",

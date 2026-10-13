@@ -13,6 +13,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/golang-malawi/qatarina/pkg/mask"
 )
 
 var ErrUserAlreadyExists = errors.New("user with given email already exists")
@@ -20,7 +21,7 @@ var ErrUserAlreadyExists = errors.New("user with given email already exists")
 type AuthService interface {
 	SignIn(*schema.LoginRequest) (*schema.LoginResponse, error)
 	SignUp(*schema.SignUpRequest) (*schema.LoginResponse, error)
-	ResetPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error
 	ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error
 }
 
@@ -53,16 +54,17 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 	user, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			a.logger.Debug("auth-service", "failed to find user from login request", "email", request.Email)
+			a.logger.Debug("auth-service", "failed to find user from login request", "email", mask.Email(request.Email).String())
 			return nil, ErrInvalidCredentials
 		}
 		a.logger.Error("auth-service", "failed to process login request", "error", err)
 		return nil, err
 	}
-	a.logger.Info("auth-service", "handling request data", "user", user, "request", request)
+
+	a.logger.Info("auth-service", "handling request data", "email", mask.Email(user.Email).String())
 
 	if !common.CheckPasswordHash(request.Password, user.Password) {
-		a.logger.Debug("auth-service", "invalid password provided", "email", request.Email, "error", err)
+		a.logger.Debug("auth-service", "invalid password provided", "email", mask.Email(request.Email).String(), "error", err)
 		return nil, ErrInvalidCredentials
 	}
 
@@ -86,11 +88,18 @@ func (a *authServiceImpl) SignIn(request *schema.LoginRequest) (*schema.LoginRes
 
 func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginResponse, error) {
 	_, err := a.queries.FindUserLoginByEmail(context.Background(), request.Email)
-	// TODO: make this error handling better - this is clunky
-	if !errors.Is(err, sql.ErrNoRows) {
-		a.logger.Error("auth-service", "user with given email already exists", "email", request.Email, "error", err)
+	switch {
+	case err == nil:
+		// A row came back, so the email is already registered.
+		a.logger.Debug("auth-service", "user with given email already exists", "email", mask.Email(request.Email).String())
 		return nil, ErrUserAlreadyExists
+	case !errors.Is(err, sql.ErrNoRows):
+		// Anything other than "no rows" is a real failure (e.g. the database
+		// is down); it must not be reported as a duplicate email.
+		a.logger.Error("auth-service", "failed to check for existing user", "email", mask.Email(request.Email).String(), "error", err)
+		return nil, fmt.Errorf("failed to check for existing user: %w", err)
 	}
+	// sql.ErrNoRows: the email is free, continue with registration.
 
 	// TODO: create organization for the user
 
@@ -131,8 +140,30 @@ func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginRe
 	return res, nil
 }
 
-func (a *authServiceImpl) ResetPassword(ctx context.Context, email string) error {
-	panic("not implemented")
+func (a *authServiceImpl) ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error {
+	// Confirm the target user exists
+	if _, err := a.queries.GetUser(ctx, int32(request.UserID)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrInvalidCredentials // or add: var ErrUserNotFound = errors.New("user not found")
+		}
+		return fmt.Errorf("failed to fetch target user: %d: %w", request.UserID, err)
+	}
+
+	if request.NewPassword != request.ConfirmPassword {
+		return errors.New("new password and confirmation do not match")
+	}
+
+	err := a.queries.ChangeUserPassword(ctx, dbsqlc.ChangeUserPasswordParams{
+		ID:        int32(request.UserID),
+		Password:  common.MustHashPassword(request.NewPassword),
+		UpdatedAt: common.NewNullTime(time.Now()),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reset password: %w", err)
+	}
+
+	a.logger.Info("auth-service", "password reset", "target_user_id", request.UserID)
+	return nil
 }
 
 func (a *authServiceImpl) ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error {

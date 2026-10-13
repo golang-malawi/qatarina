@@ -1,76 +1,27 @@
 package schema
 
 import (
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 )
 
 type CreateTestCaseRequest struct {
-	Kind            string   `json:"kind" validate:"required"`
-	Code            string   `json:"code,omitempty"` // optional; auto-generated if blank
-	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
-	Title           string   `json:"title" validate:"required"`
-	Description     string   `json:"description" validate:"required"`
-	IsDraft         bool     `json:"is_draft" validate:"-"`
-	Tags            []string `json:"tags" validate:"required"`
-	CreatedByID     string   `json:"-" validate:"-"`
-	ProjectID       int64    `json:"project_id" validate:"-"`
-	Runner          string   `json:"runner"`                // "basi", "playwright", "cypress", "browseruse"
-	ScriptPath      string   `json:"script_path,omitempty"` // optional; used for "playwright" and "cypress" runner types
-}
-
-type ExecuteTestCaseRequest struct {
-	TestPlanID int32  `json:"test_plan_id" validate:"-"`
-	Runner     string `json:"runner" validate:"-"` // optional, falls back to test case runner type
-}
-
-type TestCaseResponse struct {
-	ID              string   `json:"id"`
-	ProjectID       int64    `json:"project_id"`
-	CreatedByID     int64    `json:"created_by"`
-	Kind            string   `json:"kind"`
-	Code            string   `json:"code"`
-	FeatureOrModule string   `json:"feature_or_module"`
-	Title           string   `json:"title"`
-	Description     string   `json:"description"`
-	IsDraft         bool     `json:"is_draft"`
-	Tags            []string `json:"tags"`
-	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"updated_at"`
-	Status          string   `json:"status"`
-	Result          string   `json:"result"`
-	ExecutedBy      int64    `json:"executed_by"`
-	Notes           string   `json:"notes"`
-	Suggested       bool     `json:"suggested"`
-	Runner          string   `json:"runner"`
-	ScriptPath      string   `json:"script_path,omitempty"`
-}
-
-func NewTestCaseResponse(e *dbsqlc.TestCase) TestCaseResponse {
-	return TestCaseResponse{
-		ID:              e.ID.String(),
-		ProjectID:       int64(e.ProjectID.Int32),
-		CreatedByID:     int64(e.CreatedByID),
-		Kind:            string(e.Kind),
-		Code:            e.Code,
-		FeatureOrModule: e.FeatureOrModule.String,
-		Title:           e.Title,
-		Description:     e.Description,
-		IsDraft:         e.IsDraft.Bool,
-		Tags:            e.Tags,
-		CreatedAt:       formatSqlDateTime(e.CreatedAt),
-		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
-		Suggested:       e.Suggested.Valid && e.Suggested.Bool,
-	}
-}
-
-func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
-	res := make([]TestCaseResponse, 0)
-	for _, item := range items {
-		res = append(res, NewTestCaseResponse(&item))
-	}
-	return res
+	Kind             string   `json:"kind" validate:"required"`
+	Code             string   `json:"code,omitempty"` // optional; auto-generated if blank
+	FeatureOrModule  string   `json:"feature_or_module" validate:"required"`
+	Title            string   `json:"title" validate:"required"`
+	Description      string   `json:"description" validate:"required"`
+	Preconditions    string   `json:"preconditions,omitempty"` // Markdown
+	IsDraft          bool     `json:"is_draft"`
+	Tags             []string `json:"tags"`
+	CreatedByID      string   `json:"-"` // internal only
+	ProjectID        int64    `json:"project_id"`
+	Runner           string   `json:"runner"`
+	ScriptPath       string   `json:"script_path,omitempty"`
+	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
+	Priority         string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type UpdateTestCaseRequest struct {
@@ -81,11 +32,13 @@ type UpdateTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description,omitempty"`
+	Preconditions   string   `json:"preconditions,omitempty"` // Markdown
 	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path"`
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type BulkCreateTestCases struct {
@@ -93,11 +46,99 @@ type BulkCreateTestCases struct {
 	TestCases []CreateTestCaseRequest `json:"test_cases" validate:"required,min=1,max=100"`
 }
 
+type ExecuteTestCaseRequest struct {
+	TestPlanID int32  `json:"test_plan_id"`
+	Runner     string `json:"runner"` // optional, falls back to test case runner type
+}
+
 type ImportFromGithubRequest struct {
 	Owner       string `json:"owner"`
 	Repository  string `json:"repository"`
 	GitHubToken string `json:"github_token"`
 	ProjectID   int64  `json:"project_id"`
+}
+
+type TestCaseResponse struct {
+	ID               string   `json:"id"`
+	ProjectID        int64    `json:"project_id"`
+	CreatedByID      int64    `json:"created_by"`
+	Kind             string   `json:"kind"`
+	Code             string   `json:"code"`
+	FeatureOrModule  string   `json:"feature_or_module"`
+	Title            string   `json:"title"`
+	Description      string   `json:"description"`
+	Preconditions    string   `json:"preconditions"`
+	IsDraft          bool     `json:"is_draft"`
+	Tags             []string `json:"tags"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at"`
+	Status           string   `json:"status,omitempty"`
+	Result           string   `json:"result,omitempty"`
+	ExecutedBy       int64    `json:"executed_by,omitempty"`
+	Notes            string   `json:"notes,omitempty"`
+	Suggested        bool     `json:"suggested"`
+	Runner           string   `json:"runner"`
+	ScriptPath       string   `json:"script_path,omitempty"`
+	ParentTestCaseID string   `json:"parent_test_case_id,omitempty"`
+	ParentCode       string   `json:"parent_code,omitempty"`
+	ParentTitle      string   `json:"parent_title,omitempty"`
+	Priority         string   `json:"priority"`
+}
+
+// For detail view (with parent join)
+func NewTestCaseResponse(e *dbsqlc.GetTestCaseWithParentRow) TestCaseResponse {
+	return TestCaseResponse{
+		ID:               e.ID.String(),
+		ProjectID:        int64(e.ProjectID.Int32),
+		CreatedByID:      int64(e.CreatedByID),
+		Kind:             string(e.Kind),
+		Code:             e.Code,
+		FeatureOrModule:  e.FeatureOrModule.String,
+		Title:            e.Title,
+		Description:      e.Description,
+		Preconditions:    e.Preconditions.String,
+		IsDraft:          e.IsDraft.Bool,
+		Tags:             e.Tags,
+		CreatedAt:        formatSqlDateTime(e.CreatedAt),
+		UpdatedAt:        formatSqlDateTime(e.UpdatedAt),
+		Runner:           e.Runner.String,
+		ScriptPath:       e.ScriptPath.String,
+		ParentTestCaseID: e.ParentTestCaseID.UUID.String(),
+		ParentCode:       e.ParentCode.String,
+		ParentTitle:      e.ParentTitle.String,
+		Priority:         string(e.Priority),
+	}
+}
+
+// For list queries (plain test_cases rows, no parent join)
+func NewTestCaseResponseFromRow(e *dbsqlc.TestCase) TestCaseResponse {
+	return TestCaseResponse{
+		ID:              e.ID.String(),
+		ProjectID:       int64(e.ProjectID.Int32),
+		CreatedByID:     int64(e.CreatedByID),
+		Kind:            string(e.Kind),
+		Code:            e.Code,
+		FeatureOrModule: e.FeatureOrModule.String,
+		Title:           e.Title,
+		Description:     e.Description,
+		Preconditions:   e.Preconditions.String,
+		IsDraft:         e.IsDraft.Bool,
+		Tags:            e.Tags,
+		CreatedAt:       formatSqlDateTime(e.CreatedAt),
+		UpdatedAt:       formatSqlDateTime(e.UpdatedAt),
+		Runner:          e.Runner.String,
+		ScriptPath:      e.ScriptPath.String,
+		Priority:        string(e.Priority),
+	}
+}
+
+// For lists
+func NewTestCaseResponseList(items []dbsqlc.TestCase) []TestCaseResponse {
+	res := make([]TestCaseResponse, 0, len(items))
+	for _, item := range items {
+		res = append(res, NewTestCaseResponseFromRow(&item))
+	}
+	return res
 }
 
 type TestCaseListResponse struct {
@@ -123,6 +164,7 @@ type AssignedTestCase struct {
 	FeatureOrModule string          `json:"feature_or_module"`
 	Title           string          `json:"title"`
 	Description     string          `json:"description"`
+	Preconditions   string          `json:"preconditions"`
 	IsDraft         bool            `json:"is_draft"`
 	Tags            []string        `json:"tags"`
 	CreatedByID     int32           `json:"created_by_id"`
@@ -133,6 +175,9 @@ type AssignedTestCase struct {
 	AssignedToID    int32           `json:"assigned_to_id"`
 	EnvironmentID   int32           `json:"environment_id"`
 	IsClosed        bool            `json:"is_closed"`
+	IsViewed        bool            `json:"is_viewed"`
+	Priority        string          `json:"priority"`
+	Urgency         string          `json:"urgency"`
 }
 
 type TestCaseExecutionSummary struct {
@@ -158,13 +203,32 @@ type CreateSuggestedTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description" validate:"required"`
+	Preconditions   string   `json:"preconditions,omitempty"` // Markdown
 	Tags            []string `json:"tags"`
-	CreatedByID     int64    `json:"-" validate:"-"`
+	CreatedByID     int64    `json:"-"` // internal only
 	Runner          string   `json:"runner"`
 	ScriptPath      string   `json:"script_path,omitempty"`
+	Priority        string   `json:"priority,omitempty" validate:"omitempty,oneof=low medium high urgent"` // defaults to medium
 }
 
 type SugestedTestCaseResponse struct {
 	TestCaseResponse
 	Suggested bool `json:"suggested"`
+}
+
+type TransferTestCaseRequest struct {
+	TargetProjectID int64  `json:"target_project_id" validate:"required"`
+	FeatureOrModule string `json:"feature_or_module" validate:"required"`
+}
+
+// ParsePriorityLevel converts a priority/urgency value from a request into its
+// database representation, falling back to medium when
+// the value is blank or unknown
+func ParsePriorityLevel(value string) dbsqlc.PriorityLevel {
+	switch level := dbsqlc.PriorityLevel(strings.ToLower(strings.TrimSpace(value))); level {
+	case dbsqlc.PriorityLevelLow, dbsqlc.PriorityLevelMedium, dbsqlc.PriorityLevelHigh, dbsqlc.PriorityLevelUrgent:
+		return level
+	default:
+		return dbsqlc.PriorityLevelMedium
+	}
 }

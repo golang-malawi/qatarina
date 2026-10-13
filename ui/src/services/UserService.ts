@@ -38,3 +38,22 @@ export function useInviteUserMutation(email: string) {
 export function deleteUserByID(userID: string) {
   return apiClient.request("delete", `/v1/users/{userID}`,  { params: { path: { userID } } });
 }
+
+export type ResetPasswordRequest =
+  components["schemas"]["schema.ResetPasswordRequest"];
+
+export async function resetUserPassword(data: ResetPasswordRequest) {
+  const res = await apiClient.request("post", "/v1/auth/reset-password", {
+    body: data,
+  });
+
+  if (res.error) {
+    const detail =
+      typeof res.error === "object" && (res.error as any)?.detail
+        ? (res.error as any).detail
+        : "Failed to reset password";
+    throw new Error(detail);
+  }
+
+  return res.data as { message: string };
+}

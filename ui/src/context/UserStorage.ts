@@ -1,7 +1,7 @@
 import type { components } from "@/lib/api/v1";
 
 type LoginResponse = components["schemas"]["schema.LoginResponse"];
-const key = "auth.user";
+const key = "qatarina.auth.user";
 
 export function getStoredUser(): LoginResponse | null {
   const raw = localStorage.getItem(key);

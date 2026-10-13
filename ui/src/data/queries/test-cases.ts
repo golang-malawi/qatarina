@@ -1,5 +1,9 @@
 import $api from "@/lib/api/query";
-import { getTestCaseById, getInboxTestCases } from "@/services/TestCaseService";
+import {
+  getTestCaseById,
+  getInboxTestCases,
+  getInboxUnseenCount,
+} from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
 
@@ -36,7 +40,17 @@ export const findTestCaseInboxQueryOptions = (
     },
   });
 
-export const findTestCaseInboxByIdQueryOptions = (id: string) =>
+// Shares the ["testCases", "inbox"] prefix so invalidating the inbox also refreshes the count
+export const findInboxUnseenCountQueryOptions = queryOptions({
+  queryKey: ["testCases", "inbox", "unseen-count"],
+  queryFn: async (): Promise<number> => {
+    const res = await getInboxUnseenCount();
+    return res?.data?.unseen_count ?? 0;
+  },
+  refetchInterval: 60_000,
+});
+
+export const findTestCaseInboxByIdQueryOptions =(id: string) =>
   queryOptions({
     queryKey: ["testCases", "inbox", id],
     queryFn: async (): Promise<AssignedTestCase> => {

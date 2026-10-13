@@ -19,3 +19,8 @@ func formatSqlDateTime(t sql.NullTime) string {
 	}
 	return t.Time.Format(time.RFC3339)
 }
+
+type MessageResponse struct {
+	Message          string `json:"message"`
+	DeveloperMessage string `json:"developer_message,omitempty"`
+}
