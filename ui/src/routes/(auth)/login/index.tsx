@@ -95,7 +95,7 @@ function LoginPage() {
       });
     },
     onSuccess: (data) => {
-      console.log("Login successful", data);
+      console.log("Login successful");
     },
     onError: (error: unknown) => {
       console.error("Login failed", error);
