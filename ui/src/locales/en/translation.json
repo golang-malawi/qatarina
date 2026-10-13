@@ -630,6 +630,8 @@
   "test_cases.kind.scenario": "Scenario",
   "test_cases.select_kind_placeholder": "Select Test Kind",
   "common.cancel": "Cancel",
+  "form.optional_field.add": "Add {{label}}",
+  "form.optional_field.remove": "Remove {{label}}",
   "test_cases.relations.tab": "Relations",
   "test_cases.relations.title": "Related test cases",
   "test_cases.relations.empty": "No related test cases yet.",
