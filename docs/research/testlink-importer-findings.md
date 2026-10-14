@@ -266,7 +266,7 @@ TestLink marks each test case version with `execution_type` (1=manual, 2=automat
 
 **Qatarina gap:** Qatarina has `runner` and `script_path` on `test_cases` for automation, but no explicit `execution_type` enum. Manual vs automated distinction from TestLink data is not cleanly representable.
 
-**Way Forward: ** 
+**Way Forward: ** Do not add the execution type field. 
 
 ---
 
