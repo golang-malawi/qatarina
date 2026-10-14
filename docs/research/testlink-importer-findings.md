@@ -241,6 +241,8 @@ Source: `internal/services/testcase_import.go`, `internal/api/v1/testcase_import
 
 **What needs to be added:** An XML import handler that parses TestLink's testspec XML format, including nested testsuites, test cases, steps, keywords, and custom fields.
 
+**Way Forward:** We do need to add the support for JSON. XML will not be supported.
+
 ---
 
 ## 19. External ID Preservation — Lossy
@@ -254,6 +256,8 @@ TestLink uses `tc_external_id` (e.g. `PRJ-42`) and `internalid` as stable identi
 
 **What needs to be added:** An `external_id` (or `testlink_id`) field on `test_cases` to preserve the source system's identifier and support idempotent re-imports.
 
+**Way Forward:** Add external id on test_cases, it has to be optional. It has to be a TEXT. 
+
 ---
 
 ## 20. Test Case Execution Type — Lossy
@@ -261,6 +265,8 @@ TestLink uses `tc_external_id` (e.g. `PRJ-42`) and `internalid` as stable identi
 TestLink marks each test case version with `execution_type` (1=manual, 2=automated) at the `tcversions` level, and per step at `tcsteps` level.
 
 **Qatarina gap:** Qatarina has `runner` and `script_path` on `test_cases` for automation, but no explicit `execution_type` enum. Manual vs automated distinction from TestLink data is not cleanly representable.
+
+**Way Forward: ** 
 
 ---
 
