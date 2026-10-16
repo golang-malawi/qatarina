@@ -32,6 +32,7 @@ func (api *API) routes() {
 	authV1 := router.Group("/v1/auth", authenticationMiddleware)
 	{
 		authV1.Post("/change-password", apiv1.ChangePassword(api.AuthService, api.logger))
+		authV1.Post("/reset-password", apiv1.ResetPassword(api.AuthService, api.logger))
 	}
 
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
@@ -97,6 +98,8 @@ func (api *API) routes() {
 	meV1 := router.Group("/v1/me", authenticationMiddleware)
 	{
 		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
+		meV1.Get("/test-cases/inbox/unseen-count", apiv1.GetInboxUnseenCount(api.TestCasesService, api.logger))
+		meV1.Post("/test-cases/inbox/:testCaseID/view", apiv1.MarkInboxTestCaseViewed(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/summary", apiv1.GetExecutionSummary(api.TestCasesService, api.logger))
 	}
 
@@ -106,6 +109,7 @@ func (api *API) routes() {
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
 		testCasesV1.Post("/validate-script", apiv1.ValidateTestCaseScript(api.logger, api.Config))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
+		testCasesV1.Post("/export-file", apiv1.ExportFileFromTestCases(api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
@@ -119,6 +123,10 @@ func (api *API) routes() {
 		testCasesV1.Delete("/:testCaseID/reject", apiv1.RejectSuggestedTestCase(api.TestCasesService, api.logger))
 		testCasesV1.Post("/:test_case_id/execute", apiv1.ExecuteTestCase(api.TestCasesService, api.TestRunsService, api.logger, api.Config))
 		testCasesV1.Post("/:testCaseID/branch", apiv1.BranchTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Post("/:testCaseID/transfer", apiv1.TransferTestCase(api.TestCasesService, api.logger))
+		testCasesV1.Get("/:testCaseID/relations", apiv1.ListTestCaseRelations(api.TestCaseRelationService, api.logger))
+		testCasesV1.Post("/:testCaseID/relations", apiv1.CreateTestCaseRelation(api.TestCaseRelationService, api.logger))
+		testCasesV1.Delete("/:testCaseID/relations/:relationID", apiv1.DeleteTestCaseRelation(api.TestCaseRelationService, api.logger))
 	}
 
 	testPlansV1 := router.Group("/v1/test-plans", authenticationMiddleware)
@@ -137,6 +145,7 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 
 		testPlansV1.Post("/:testPlanID/test-cases/batch", apiv1.BatchAssignTestCasesToPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/test-cases/:testCaseID/urgency", apiv1.UpdateTestPlanCaseUrgency(api.TestPlansService, api.logger))
 
 		commentsV1 := testPlansV1.Group("/:testPlanID/comments")
 		{
@@ -161,6 +170,8 @@ func (api *API) routes() {
 		testRunsV1.Get("/:testRunID/stream", apiv1.StreamTestRunLogs(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:resultID/attachments", apiv1.UploadAttachment(api.TestRunsService, api.logger))
+		testRunsV1.Get("/:resultID/attachments", apiv1.ListAttachments(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
@@ -218,6 +229,8 @@ func (api *API) routes() {
 		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger, api.Config))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
+	// Serve uploaded attachment files from the configured local storage path.
+	router.Static("/uploads", api.Config.Storage.LocalPath)
 
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{

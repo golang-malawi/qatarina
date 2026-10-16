@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Box,
   Button,
   Badge,
   Container,
   Heading,
+  Input,
   Menu,
   Flex,
   Text,
@@ -23,13 +24,23 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  markInboxTestCaseViewed,
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
+import {
+  createTestRun,
+  executeTestRun,
+  uploadTestRunAttachment,
+} from "@/services/TestRunService";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
-import ReactMarkdown from "react-markdown";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import {
+  applyChecklistState,
+  useChecklistState,
+} from "@/lib/markdown-checklist";
+import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -56,6 +67,17 @@ function TestCaseInboxItem() {
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+
+  const checklist = useChecklistState(
+    `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
+    tc.description ?? "",
+  );
+  const preconditionsChecklist = useChecklistState(
+    preconditionsChecklistKey(currentUser?.user_id, testCaseId),
+    tc.preconditions ?? "",
+  );
 
   const { data: { environments = [] } = {} } = $api.useQuery(
     "get",
@@ -64,6 +86,21 @@ function TestCaseInboxItem() {
   );
 
   const env = environments.find((e: any) => e.id === tc.environment_id);
+
+  const markViewedMutation = useMutation({
+    mutationFn: () => markInboxTestCaseViewed(testCaseId),
+    onSuccess: () => {
+      // Refreshes the inbox list, this item and the unseen count
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
+    },
+  });
+
+  useEffect(() => {
+    if (!tc.is_viewed) {
+      markViewedMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testCaseId, tc.is_viewed]);
 
   const executeMutation = useMutation({
     mutationFn: async ({ status }: { status: "passed" | "failed" }) => {
@@ -87,16 +124,30 @@ function TestCaseInboxItem() {
       if (!run?.id) throw new Error("Run ID is missing.");
 
       // Step 2: record the result immediately
-      return executeTestRun(run.id, {
+      const response = await executeTestRun(run.id, {
         test_run_id: run.id,
         result_state: status,
         actual_result: resultText,
         notes: notesText,
-        expected_result: tc.description,
+        // snapshot of the description with the steps the tester ticked
+        expected_result: tc.description
+          ? applyChecklistState(tc.description, checklist.checked)
+          : tc.description,
         environment_id: tc.environment_id,
         tested_on: new Date().toISOString(),
         is_closed: false,
       });
+
+      const resultId = response.data?.result_id;
+
+      if (attachmentFiles.length > 0) {
+        if (!resultId) {
+          throw new Error("Attachment upload failed because execution response did not return a result_id.");
+        }
+        for (const file of attachmentFiles) {
+          await uploadTestRunAttachment(resultId, file);
+  }
+      }
     },
     onSuccess: () => {
       toaster.create({
@@ -106,6 +157,11 @@ function TestCaseInboxItem() {
       });
       setResultText("");
       setNotesText("");
+      checklist.reset();
+      setAttachmentFiles([]);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -162,7 +218,19 @@ function TestCaseInboxItem() {
         <Badge colorScheme="gray" ml={2}>
           Closed
         </Badge>
-        <Text mt={2}>{tc.description}</Text>
+        {tc.preconditions && (
+          <Box mt={2}>
+            <Heading size="sm" mb={2} color="fg.heading">
+              Preconditions
+            </Heading>
+            <MarkdownChecklist markdown={tc.preconditions} />
+          </Box>
+        )}
+        {tc.description && (
+          <Box mt={2}>
+            <MarkdownChecklist markdown={tc.description} />
+          </Box>
+        )}
         <Text mt={4} color="fg.subtle">
           This test case is closed. Results can no longer be recorded.
         </Text>
@@ -203,12 +271,32 @@ function TestCaseInboxItem() {
         <Text color="fg.muted">
           <strong>Code:</strong> {tc.code}
         </Text>
+        {tc.preconditions && (
+          <Box mt={2}>
+            <Heading size="sm" mb={2} color="fg.heading">
+              Preconditions
+            </Heading>
+            {/* Ticks are kept in the browser only, separate from the description steps */}
+            <MarkdownChecklist
+              markdown={tc.preconditions}
+              checked={preconditionsChecklist.checked}
+              onToggle={isDraft ? undefined : preconditionsChecklist.toggle}
+              onReset={preconditionsChecklist.reset}
+              itemLabel="preconditions"
+            />
+          </Box>
+        )}
         <Box mt={2}>
           <Heading size="sm" mb={2} color="fg.heading">
             Description
           </Heading>
           {tc.description ? (
-            <ReactMarkdown>{tc.description}</ReactMarkdown>
+            <MarkdownChecklist
+              markdown={tc.description}
+              checked={checklist.checked}
+              onToggle={isDraft ? undefined : checklist.toggle}
+              onReset={checklist.reset}
+            />
           ) : (
             <Text color="fg.subtle">No description provided.</Text>
           )}
@@ -242,6 +330,25 @@ function TestCaseInboxItem() {
           onChange={(e) => setNotesText(e.target.value)}
           mb="4"
         />
+        <Box mb="4">
+          <Text mb="2" fontSize="sm" fontWeight="semibold">
+            Attach files (optional)
+          </Text>
+          <Input
+            id="attachmentFile"
+            type="file"
+            multiple
+            accept=".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg"
+            ref={attachmentInputRef}
+            onChange={(e) => setAttachmentFiles(Array.from(e.currentTarget.files || []))}
+          />
+          {attachmentFiles.length > 0 && (
+            <Text mt="2" fontSize="sm" color="fg.muted">
+              Selected files: {attachmentFiles.map(f => f.name).join(", ")}
+            </Text>
+          )}
+        </Box>
+
         <Button
           type="button"
           variant="outline"

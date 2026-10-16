@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
@@ -129,5 +131,44 @@ func ChangePassword(authService services.AuthService, logger logging.Logger) fib
 		logger.Info(loggedmodule.ApiAuth, "user changed password successfully", "user_id", authUserID)
 
 		return ctx.JSON(fiber.Map{"message": "Password changed successfully"})
+	}
+}
+
+// Reset password godoc
+//
+//	@ID				ResetPassword
+//	@Summary		Resets a user's password
+//	@Description	Resets a user's password without requiring the old one
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.ResetPasswordRequest	true	"Password reset request"
+//	@Success		200		{object}	map[string]string
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/auth/reset-password [post]
+func ResetPassword(authService services.AuthService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		var req schema.ResetPasswordRequest
+		if validationErrors, err := common.ParseBodyThenValidate(ctx, &req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(ctx, "invalid request body", err)
+			}
+			return problemdetail.BadRequest(ctx, "failed to parse request body")
+		}
+
+		err := authService.ResetPassword(ctx.Context(), &req)
+		if err != nil {
+			if strings.Contains(err.Error(), "do not match") {
+				return problemdetail.BadRequest(ctx, "new password and confirmation do not match")
+			}
+			if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows") {
+				return problemdetail.BadRequest(ctx, "user not found")
+			}
+			logger.Error(loggedmodule.ApiAuth, "failed to reset password", "target_user_id", req.UserID, "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to reset password")
+		}
+
+		return ctx.JSON(fiber.Map{"message": "Password reset successfully"})
 	}
 }

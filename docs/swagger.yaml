@@ -80,8 +80,14 @@ components:
           type: boolean
         is_draft:
           type: boolean
+        is_viewed:
+          type: boolean
         kind:
           $ref: '#/components/schemas/dbsqlc.TestKind'
+        preconditions:
+          type: string
+        priority:
+          type: string
         project_id:
           type: integer
         tags:
@@ -95,6 +101,8 @@ components:
           type: string
         updated_at:
           type: string
+        urgency:
+          type: string
       type: object
     schema.AssignedTestCaseListResponse:
       properties:
@@ -105,6 +113,19 @@ components:
             $ref: '#/components/schemas/schema.AssignedTestCase'
           type: array
           uniqueItems: false
+      type: object
+    schema.AttachmentResponse:
+      properties:
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        file_type:
+          type: string
+        id:
+          type: string
+        storage_url:
+          type: string
       type: object
     schema.BulkAssignTesters:
       properties:
@@ -175,6 +196,13 @@ components:
           type: string
         id:
           type: string
+        parent_comment_id:
+          type: string
+        replies:
+          items:
+            $ref: '#/components/schemas/schema.CommentResponseItem'
+          type: array
+          uniqueItems: false
         test_plan_id:
           type: integer
         updated_at:
@@ -182,6 +210,45 @@ components:
         user_id:
           type: integer
         user_name:
+          type: string
+      type: object
+    schema.CommitTestRunResponse:
+      properties:
+        actual_result:
+          type: string
+        attachment_count:
+          type: integer
+        code:
+          type: string
+        environment_id:
+          type: integer
+        executed_by:
+          type: string
+        expected_result:
+          type: string
+        id:
+          type: string
+        is_closed:
+          type: boolean
+        latest_result_id:
+          type: string
+        notes:
+          type: string
+        project_id:
+          type: integer
+        result_id:
+          type: string
+        result_state:
+          type: string
+        test_case_id:
+          type: string
+        test_case_title:
+          type: string
+        test_plan_id:
+          type: integer
+        tested_by_id:
+          type: integer
+        tested_on:
           type: string
       type: object
     schema.CommitTestRunResult:
@@ -227,6 +294,8 @@ components:
     schema.CreateComment:
       properties:
         content:
+          type: string
+        parent_comment_id:
           type: string
         test_plan_id:
           type: integer
@@ -303,6 +372,17 @@ components:
           type: string
         kind:
           type: string
+        preconditions:
+          description: Markdown
+          type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
+          type: string
         project_id:
           type: integer
         runner:
@@ -323,6 +403,22 @@ components:
       - project_id
       - title
       type: object
+    schema.CreateTestCaseRelationRequest:
+      properties:
+        related_test_case_id:
+          type: string
+        relation_kind:
+          enum:
+          - depends_on
+          - related_to
+          - duplicates
+          - branched_from
+          - blocks
+          type: string
+      required:
+      - related_test_case_id
+      - relation_kind
+      type: object
     schema.CreateTestCaseRequest:
       properties:
         code:
@@ -337,6 +433,17 @@ components:
         kind:
           type: string
         parent_test_case_id:
+          type: string
+        preconditions:
+          description: Markdown
+          type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
           type: string
         project_id:
           type: integer
@@ -481,6 +588,43 @@ components:
       - result
       - status
       type: object
+    schema.ExportTestCasesRequest:
+      properties:
+        fileformat:
+          type: string
+        filename:
+          type: string
+        testcases:
+          items:
+            $ref: '#/components/schemas/schema.ExportedTestCase'
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - testcases
+      type: object
+    schema.ExportedTestCase:
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        featureOrModule:
+          type: string
+        isDraft:
+          type: boolean
+        kind:
+          type: string
+        priority:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        title:
+          type: string
+      type: object
     schema.HealthStatus:
       properties:
         message:
@@ -502,6 +646,11 @@ components:
           type: string
       type: object
     schema.ImportProjectRequest:
+      type: object
+    schema.InboxUnseenCountResponse:
+      properties:
+        unseen_count:
+          type: integer
       type: object
     schema.LoginRequest:
       properties:
@@ -696,6 +845,17 @@ components:
       type: object
     schema.RefreshTokenResponse:
       type: object
+    schema.RelatedTestCaseSummary:
+      properties:
+        code:
+          type: string
+        id:
+          type: string
+        project_id:
+          type: integer
+        title:
+          type: string
+      type: object
     schema.ReportListResponse:
       properties:
         pagination:
@@ -722,6 +882,19 @@ components:
           type: string
         type:
           type: string
+      type: object
+    schema.ResetPasswordRequest:
+      properties:
+        confirm_password:
+          type: string
+        new_password:
+          type: string
+        user_id:
+          type: integer
+      required:
+      - confirm_password
+      - new_password
+      - user_id
       type: object
     schema.SignUpRequest:
       properties:
@@ -761,6 +934,16 @@ components:
       properties:
         test_case_id:
           type: string
+        urgency:
+          description: |-
+            Urgency of the test case within the plan (low, medium, high, urgent). When blank
+            an existing urgency is kept, otherwise it defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
+          type: string
         user_ids:
           items:
             type: integer
@@ -787,6 +970,46 @@ components:
             $ref: '#/components/schemas/schema.TestCaseResponse'
           type: array
           uniqueItems: false
+      type: object
+    schema.TestCaseRelationListResponse:
+      properties:
+        relations:
+          items:
+            $ref: '#/components/schemas/schema.TestCaseRelationResponse'
+          type: array
+          uniqueItems: false
+      type: object
+    schema.TestCaseRelationResponse:
+      properties:
+        created_at:
+          type: string
+        created_by_id:
+          type: integer
+        direction:
+          description: Direction relative to the test case in the request path
+          enum:
+          - outgoing
+          - incoming
+          type: string
+        id:
+          type: string
+        other_test_case:
+          $ref: '#/components/schemas/schema.RelatedTestCaseSummary'
+        related_test_case_id:
+          type: string
+        relation_kind:
+          enum:
+          - depends_on
+          - related_to
+          - duplicates
+          - branched_from
+          - blocks
+          type: string
+        test_case_id:
+          description: 'Stored as: test_case_id <relation_kind> related_test_case_id'
+          type: string
+        updated_at:
+          type: string
       type: object
     schema.TestCaseResponse:
       properties:
@@ -815,6 +1038,10 @@ components:
         parent_test_case_id:
           type: string
         parent_title:
+          type: string
+        preconditions:
+          type: string
+        priority:
           type: string
         project_id:
           type: integer
@@ -845,13 +1072,19 @@ components:
             type: integer
           type: array
           uniqueItems: false
+        code:
+          type: string
         id:
           type: string
         is_assigned_to_test_plan:
           type: boolean
+        priority:
+          type: string
         test_plan:
           $ref: '#/components/schemas/schema.TestPlanSummary'
         title:
+          type: string
+        urgency:
           type: string
       type: object
     schema.TestPlanListResponse:
@@ -980,6 +1213,8 @@ components:
       properties:
         actual_result:
           type: string
+        attachment_count:
+          type: integer
         code:
           type: string
         environment_id:
@@ -992,6 +1227,8 @@ components:
           type: string
         is_closed:
           type: boolean
+        latest_result_id:
+          type: string
         notes:
           type: string
         project_id:
@@ -1037,6 +1274,16 @@ components:
             $ref: '#/components/schemas/schema.Tester'
           type: array
           uniqueItems: false
+      type: object
+    schema.TransferTestCaseRequest:
+      properties:
+        feature_or_module:
+          type: string
+        target_project_id:
+          type: integer
+      required:
+      - feature_or_module
+      - target_project_id
       type: object
     schema.UpdateAutomatedTestingRequest:
       properties:
@@ -1150,6 +1397,17 @@ components:
           type: boolean
         kind:
           type: string
+        preconditions:
+          description: Markdown
+          type: string
+        priority:
+          description: defaults to medium
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
+          type: string
         project_id:
           type: integer
         runner:
@@ -1169,6 +1427,18 @@ components:
       - kind
       - project_id
       - title
+      type: object
+    schema.UpdateTestPlanCaseUrgencyRequest:
+      properties:
+        urgency:
+          enum:
+          - low
+          - medium
+          - high
+          - urgent
+          type: string
+      required:
+      - urgency
       type: object
     schema.UpdateTesterRoleRequest:
       properties:
@@ -1395,6 +1665,41 @@ paths:
       summary: Refresh access token
       tags:
       - auth
+  /v1/auth/reset-password:
+    post:
+      description: Resets a user's password without requiring the old one
+      operationId: ResetPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ResetPasswordRequest'
+        description: Password reset request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Resets a user's password
+      tags:
+      - auth
   /v1/auth/signup:
     post:
       description: Registers a new user account
@@ -1542,6 +1847,66 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: List Test Cases assigned to the current user
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}/view:
+    post:
+      description: Mark a Test Case in the current user's inbox as viewed
+      operationId: MarkInboxTestCaseViewed
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Mark a Test Case in the current user's inbox as viewed
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/unseen-count:
+    get:
+      description: Count open Test Cases assigned to the current user that they have
+        not viewed yet
+      operationId: GetInboxUnseenCount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxUnseenCountResponse'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Count unseen Test Cases in the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/summary:
@@ -3457,7 +3822,8 @@ paths:
         name: pageSize
         schema:
           type: integer
-      - description: Sort field (created_at, updated_at, code, title, kind, is_draft)
+      - description: Sort field (created_at, updated_at, code, title, kind, is_draft,
+          priority)
         in: query
         name: sortBy
         schema:
@@ -3482,6 +3848,11 @@ paths:
         name: isDraft
         schema:
           type: boolean
+      - description: Filter by priority (low, medium, high, urgent)
+        in: query
+        name: priority
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -3870,6 +4241,179 @@ paths:
       summary: Reject a suggested Test Case
       tags:
       - test-cases
+  /v1/test-cases/{testCaseID}/relations:
+    get:
+      description: List relations where the Test Case is on either side. direction
+        is "outgoing" when the Test Case is the subject (e.g. it depends_on other_test_case)
+        and "incoming" otherwise
+      operationId: ListTestCaseRelations
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseRelationListResponse'
+          description: OK
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List relations of a Test Case
+      tags:
+      - test-cases
+    post:
+      description: Create a relation read as "<testCaseID> <relation_kind> <related_test_case_id>".
+        Only one relation of each kind is allowed per pair of Test Cases, in either
+        direction
+      operationId: CreateTestCaseRelation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.CreateTestCaseRelationRequest'
+        description: Relation data
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseRelationResponse'
+          description: Created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Conflict
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Relate a Test Case to another Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/relations/{relationID}:
+    delete:
+      description: Remove a relation the Test Case is on either side of
+      operationId: DeleteTestCaseRelation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      - description: Relation ID
+        in: path
+        name: relationID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "204":
+          description: No Content
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Remove a relation from a Test Case
+      tags:
+      - test-cases
+  /v1/test-cases/{testCaseID}/transfer:
+    post:
+      description: Transfer an existing test case to a different project ID and feature/module
+      operationId: TransferTestCase
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.TransferTestCaseRequest'
+        description: Transfer request data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TestCaseResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Transfer a Test Case to another project
+      tags:
+      - test-cases
   /v1/test-cases/{testCaseID}/unmark-draft:
     post:
       description: Mark a test case as draft
@@ -3939,6 +4483,43 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create multiple Test Cases at once
+      tags:
+      - test-cases
+  /v1/test-cases/export-file:
+    post:
+      description: Export test cases to a CSV or XLSX file
+      operationId: ExportFileFromTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.ExportTestCasesRequest'
+        description: Export request data
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            application/octet-stream:
+              schema:
+                format: binary
+                type: string
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Export test cases to a CSV or XLSX file
       tags:
       - test-cases
   /v1/test-cases/import-file:
@@ -4632,6 +5213,59 @@ paths:
       summary: Assign a test to a plan
       tags:
       - test-plans
+  /v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency:
+    post:
+      description: Set the urgency (low, medium, high, urgent) of a Test Case within
+        a Test Plan
+      operationId: UpdateTestPlanCaseUrgency
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: string
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateTestPlanCaseUrgencyRequest'
+        description: Urgency payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Set the urgency of a Test Case within a Test Plan
+      tags:
+      - test-plans
   /v1/test-plans/{testPlanID}/test-runs:
     get:
       description: List all test runs of a test plan
@@ -4771,6 +5405,85 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create a new Test Run
+      tags:
+      - test-runs
+  /v1/test-runs/{resultID}/attachments:
+    get:
+      description: List all file attachments linked to a Test Run Result
+      operationId: ListAttachments
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/schema.AttachmentResponse'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List attachments for a Test Run Result
+      tags:
+      - test-runs
+    post:
+      description: Upload a file attachment linked to a Test Run Result
+      operationId: UploadAttachment
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Attachment files(multiple allowed)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AttachmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload an attachment for a Test Run Result
       tags:
       - test-runs
   /v1/test-runs/{testRunID}:
@@ -4948,7 +5661,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CommitTestRunResponse'
           description: OK
         "400":
           content:

@@ -8,13 +8,6 @@ export const Route = createFileRoute("/(project)/projects/$projectId/overview/")
   component: ViewProject,
 });
 
-// Redirect route: when someone visits /projects/:projectId, send them to /overview
-export const RedirectRoute = createFileRoute("/(project)/projects/$projectId")({
-  beforeLoad: ({ params }) => {
-    return { redirect: Route.to, params };
-  },
-});
-
 function ViewProject() {
   const { t } = useTranslation();
   const { projectId } = Route.useParams();

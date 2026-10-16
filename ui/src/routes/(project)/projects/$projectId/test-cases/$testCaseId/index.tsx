@@ -1,3 +1,4 @@
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
@@ -27,6 +28,11 @@ import {
 import { useTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import { useChecklistState } from "@/lib/markdown-checklist";
+import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
+import { useAuth } from "@/hooks/isLoggedIn";
+import { TestCaseRelations } from "@/components/TestCaseRelations";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -46,6 +52,11 @@ function ViewTestCase() {
   const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useTestersQuery();
+  const { user } = useAuth();
+  const preconditionsChecklist = useChecklistState(
+    preconditionsChecklistKey(user?.user_id, testCaseId),
+    testCase?.preconditions ?? "",
+  );
 
   /** ---------- STATE ---------- */
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -161,11 +172,40 @@ function ViewTestCase() {
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
+          <Tabs.Trigger value="relations">{t("test_cases.relations.tab")}</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION TAB */}
         <Tabs.Content value="description">
           <Stack gap={4} mt={4}>
+            {testCase.preconditions && (
+              <Box>
+                <Heading size="sm" mb={2} color="fg.heading">
+                  Preconditions
+                </Heading>
+                <Box
+                  p={4}
+                  bg="bg.subtle"
+                  rounded="lg"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                >
+                  <MarkdownChecklist
+                    markdown={testCase.preconditions}
+                    checked={preconditionsChecklist.checked}
+                    onToggle={preconditionsChecklist.toggle}
+                    onReset={preconditionsChecklist.reset}
+                    itemLabel="preconditions"
+                  />
+                </Box>
+                {testCase.description && (
+                  <Heading size="sm" mt={4} color="fg.heading">
+                    Description
+                  </Heading>
+                )}
+              </Box>
+            )}
+
             <Box
               p={4}
               bg="bg.subtle"
@@ -271,6 +311,10 @@ function ViewTestCase() {
                   </Badge>
                 </Flex>
                 <Flex justify="space-between">
+                  <Text fontWeight="semibold">Priority:</Text>
+                  <PriorityBadge value={testCase.priority} />
+                </Flex>
+                <Flex justify="space-between">
                   <Text fontWeight="semibold">Created At:</Text>
                   <Text>
                     {testCase.created_at
@@ -308,6 +352,11 @@ function ViewTestCase() {
               </Stack>
             </Box>
           </Stack>
+        </Tabs.Content>
+
+        {/* RELATIONS TAB */}
+        <Tabs.Content value="relations">
+          <TestCaseRelations projectId={projectId} testCaseId={testCaseId} />
         </Tabs.Content>
 
        {/* USAGE & ASSIGNMENT TAB */}
