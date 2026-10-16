@@ -331,6 +331,8 @@ type TestCase struct {
 	Preconditions sql.NullString
 	// Importance of the test case: low, medium, high or urgent
 	Priority PriorityLevel
+	// Identifier of the test case in the source system it was imported from (e.g. TestLink tc_external_id)
+	ExternalID sql.NullString
 }
 
 // Typed relationships between two test cases, read as: test_case_id <relation_kind> related_test_case_id
