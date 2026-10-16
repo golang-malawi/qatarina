@@ -836,6 +836,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get summary of test cases for a project
+         * @description Get summary of test cases for a project
+         */
+        get: operations["GetProjectTestCaseSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/test-case-template": {
         parameters: {
             query?: never;
@@ -2545,6 +2565,15 @@ export interface components {
             updated_at?: string;
             version?: string;
             website_url?: string;
+        };
+        "schema.ProjectTestCaseSummaryResponse": {
+            blocked?: number;
+            completed?: number;
+            failed?: number;
+            incomplete?: number;
+            passed?: number;
+            pending?: number;
+            total?: number;
         };
         "schema.ProjectTestCaseTemplateResponse": {
             test_case_template?: string;
@@ -4494,6 +4523,51 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                     "application/pdf": string;
+                };
+            };
+        };
+    };
+    GetProjectTestCaseSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.ProjectTestCaseSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
                 };
             };
         };

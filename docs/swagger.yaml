@@ -784,6 +784,23 @@ components:
         website_url:
           type: string
       type: object
+    schema.ProjectTestCaseSummaryResponse:
+      properties:
+        blocked:
+          type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+        incomplete:
+          type: integer
+        passed:
+          type: integer
+        pending:
+          type: integer
+        total:
+          type: integer
+      type: object
     schema.ProjectTestCaseTemplateResponse:
       properties:
         test_case_template:
@@ -2961,6 +2978,44 @@ paths:
       summary: View a Report file inline in the browser
       tags:
       - reports
+  /v1/projects/{projectID}/summary:
+    get:
+      description: Get summary of test cases for a project
+      operationId: GetProjectTestCaseSummary
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectTestCaseSummaryResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get summary of test cases for a project
+      tags:
+      - test-cases
   /v1/projects/{projectID}/test-case-template:
     get:
       description: Get the test case template for a project. This template can be
