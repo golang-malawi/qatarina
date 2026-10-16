@@ -4312,7 +4312,7 @@ paths:
       - test-cases
   /v1/test-cases/export-file:
     post:
-      description: Export test cases to a CSV or XLSX file
+      description: Export test cases to a CSV, XLSX or JSON file
       operationId: ExportFileFromTestCases
       requestBody:
         content:
@@ -4344,7 +4344,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: Export test cases to a CSV or XLSX file
+      summary: Export test cases to a CSV, XLSX or JSON file
       tags:
       - test-cases
   /v1/test-cases/import-file:
