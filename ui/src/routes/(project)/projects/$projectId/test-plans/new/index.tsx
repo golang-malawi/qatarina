@@ -78,6 +78,21 @@ function CreateNewTestPlan() {
     return <Text color="fg.error">{t("test_plans.error_cases")}</Text>;
   }
 
+  const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
+  const allSelected =
+    testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
+
+  function handleSelectAll(checked: boolean) {
+    if (checked) {
+      setSelectedTestCases((prev) => {
+        const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
+        return testCaseIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
+      });
+    } else {
+      setSelectedTestCases([]);
+    }
+  }
+
   async function handleSubmit(data: CreateTestPlanForm) {
     const { isValid, unassigned } = validateTestCaseAssignments(selectedTestCases);
     if (!isValid) {
@@ -99,15 +114,17 @@ function CreateNewTestPlan() {
       return;
     }
 
+    const toISODate = (dateStr: string) => new Date(dateStr + "T00:00:00").toISOString();
+
     const res = await createTestPlanMutation.mutateAsync({
       body: {
         project_id: parseInt(projectId!),
         environment_id: Number(data.environment_id),
         kind: data.kind,
         description: data.description,
-        start_at: new Date(data.start_at).toISOString(),
-        scheduled_end_at: new Date(data.scheduled_end_at).toISOString(),
-        closed_at: data.closed_at ? new Date(data.closed_at).toISOString() : undefined,
+        start_at: data.start_at ? toISODate(data.start_at) : new Date().toISOString(),
+        scheduled_end_at: toISODate(data.scheduled_end_at),
+        closed_at: data.closed_at ? toISODate(data.closed_at) : undefined,
         planned_tests: selectedTestCases.map((tc) => ({
           test_case_id: tc.test_case_id,
           user_ids: tc.user_ids.map(Number),
@@ -220,6 +237,24 @@ function CreateNewTestPlan() {
           </Button>
         </Flex>
 
+        <Box
+          mb={4}
+          p={4}
+          border="sm"
+          borderColor="border.subtle"
+          borderRadius="lg"
+          bg="bg.surface"
+        >
+          <Checkbox.Root
+            checked={allSelected}
+            onCheckedChange={(e) => handleSelectAll(e.checked === true)}
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label>{t("test_plans.select_all_cases")}</Checkbox.Label>
+          </Checkbox.Root>
+        </Box>
+
         {testCases.test_cases?.map((testCase) => (
           <Box
             key={testCase.id}
@@ -260,7 +295,7 @@ function CreateNewTestPlan() {
                 colorPalette="brand"
                 variant="outline"
                 onClick={() => openAssignModal(testCase.id!.toString())}
-                            >
+              >
                 {t("test_plans.assign_tester")}
               </Button>
             </Flex>
@@ -457,4 +492,3 @@ function CreateNewTestPlan() {
     </div>
   );
 }
-

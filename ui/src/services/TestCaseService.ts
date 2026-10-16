@@ -28,6 +28,23 @@ export function useProjectTestCasesQuery(projectID: string) {
   });
 }
 
+export function useTestCaseRelationsQuery(testCaseID: string) {
+  return $api.useQuery("get", "/v1/test-cases/{testCaseID}/relations", {
+    params: { path: { testCaseID } },
+  });
+}
+
+export function useCreateTestCaseRelationMutation() {
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}/relations");
+}
+
+export function useDeleteTestCaseRelationMutation() {
+  return $api.useMutation(
+    "delete",
+    "/v1/test-cases/{testCaseID}/relations/{relationID}",
+  );
+}
+
 export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
@@ -45,6 +62,16 @@ export async function getInboxTestCases(params?: {
         pageSize: params?.pageSize ?? 10,
       },
     },
+  });
+}
+
+export async function getInboxUnseenCount() {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
+}
+
+export async function markInboxTestCaseViewed(testCaseID: string) {
+  return apiClient.request("post", "/v1/me/test-cases/inbox/{testCaseID}/view", {
+    params: { path: { testCaseID } },
   });
 }
 
@@ -192,4 +219,79 @@ export async function branchTestCase(testCaseID: string) {
   return apiClient.request("post", "/v1/test-cases/{testCaseID}/branch", {
     params: { path: { testCaseID } },
   });
+}
+
+export function useTransferTestCaseMutation() {
+  return $api.useMutation("post", "/v1/test-cases/{testCaseID}/transfer");
+}
+
+export async function transferTestCase(
+  testCaseID: string,
+  data: components["schemas"]["schema.TransferTestCaseRequest"], // adjust schema name if needed based on generated types
+) {
+  return apiClient.request("post", "/v1/test-cases/{testCaseID}/transfer", {
+    params: { path: { testCaseID } },
+    body: data as any,
+  });
+}
+
+export interface ExportedTestCasePayload {
+  title: string;
+  description: string;
+  kind: string;
+  code: string;
+  featureOrModule: string;
+  tags: string[];
+  isDraft: boolean;
+}
+
+export interface ExportTestCasesPayload {
+  filename: string;
+  fileformat: "CSV" | "XLSX";
+  testcases: ExportedTestCasePayload[];
+}
+
+/**
+ * Export test cases to a CSV/XLSX file and trigger a browser download.
+ * The endpoint responds with a binary file (octet-stream) and a
+ * Content-Disposition header containing the file name.
+ */
+export async function exportTestCasesToFile(payload: ExportTestCasesPayload) {
+  const res = await apiClient.request(
+    "post",
+    "/v1/test-cases/export-file" as any,
+    {
+      body: payload as any,
+      parseAs: "blob",
+    },
+  );
+
+  if (res.error) {
+    const detail =
+      typeof res.error === "object" && (res.error as any)?.detail
+        ? (res.error as any).detail
+        : "Failed to export test cases";
+    throw new Error(detail);
+  }
+
+  // Build the file name from what the user typed. We intentionally do
+  // NOT rely on the Content-Disposition header because browsers refuse to
+  // expose it cross-origin unless the server sets
+  // Access-Control-Expose-Headers: Content-Disposition.
+  const extension =
+    payload.fileformat.toUpperCase() === "CSV" ? ".csv" : ".xlsx";
+  const baseName = payload.filename.trim() || "qatarina-testcases";
+  const fileName = baseName.endsWith(extension)
+    ? baseName
+    : `${baseName}${extension}`;
+
+  const blob = res.data as unknown as Blob;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

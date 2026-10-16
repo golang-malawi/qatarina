@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -31,6 +32,8 @@ type TestPlanService interface {
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
 
 	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
+	// UpdateTestCaseUrgency sets the urgency of a test case within a test plan
+	UpdateTestCaseUrgency(ctx context.Context, testPlanID int64, testCaseID string, urgency string) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -81,6 +84,7 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 				TestPlanID:   int64(testPlanID),
 				TestCaseID:   uuid.MustParse(assignedTestCase.TestCaseID),
 				AssignedToID: uid,
+				Urgency:      newNullUrgency(assignedTestCase.Urgency),
 			}); err != nil {
 				return nil, err
 			}
@@ -105,9 +109,18 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
 			ID:              plan.ID,
-			Description:     plan.Description.String,
+			ProjectID:       plan.ProjectID,
+			EnvironmentID:   plan.EnvironmentID.Int32,
+			AssignedToID:    plan.AssignedToID,
+			CreatedByID:     plan.CreatedByID,
+			UpdatedByID:     plan.UpdatedByID,
 			Kind:            string(plan.Kind),
+			Description:     plan.Description.String,
+			StartAt:         common.FormatNullDateTime(plan.StartAt),
+			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
+			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
 			NumTestCases:    int32(len(cases)),
+			NumFailures:     plan.NumFailures,
 			PassedCount:     runStats.PassedCount,
 			FailedCount:     runStats.FailedCount,
 			PendingCount:    runStats.PendingCount,
@@ -115,9 +128,6 @@ func (t *testPlanService) FindAll(ctx context.Context) ([]schema.TestPlanRespons
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
-			StartAt:         common.FormatNullDateTime(plan.StartAt),
-			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
-			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
 			CreatedAt:       common.FormatNullDateTime(plan.CreatedAt),
 			UpdatedAt:       common.FormatNullDateTime(plan.UpdatedAt),
 		})
@@ -138,9 +148,18 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 
 		enriched = append(enriched, schema.TestPlanResponseItem{
 			ID:              plan.ID,
-			Description:     plan.Description.String,
+			ProjectID:       plan.ProjectID,
+			EnvironmentID:   plan.EnvironmentID.Int32,
+			AssignedToID:    plan.AssignedToID,
+			CreatedByID:     plan.CreatedByID,
+			UpdatedByID:     plan.UpdatedByID,
 			Kind:            string(plan.Kind),
+			Description:     plan.Description.String,
+			StartAt:         common.FormatNullDateTime(plan.StartAt),
+			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
+			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
 			NumTestCases:    int32(len(cases)),
+			NumFailures:     plan.NumFailures,
 			PassedCount:     runStats.PassedCount,
 			FailedCount:     runStats.FailedCount,
 			PendingCount:    runStats.PendingCount,
@@ -148,9 +167,6 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 			IsComplete:      plan.IsComplete.Bool,
 			IsLocked:        plan.IsLocked.Bool,
 			HasReport:       plan.HasReport.Bool,
-			StartAt:         common.FormatNullDateTime(plan.StartAt),
-			ScheduledEndAt:  common.FormatNullDateTime(plan.ScheduledEndAt),
-			ClosedAt:        common.FormatNullDateTime(plan.ClosedAt),
 			CreatedAt:       common.FormatNullDateTime(plan.CreatedAt),
 			UpdatedAt:       common.FormatNullDateTime(plan.UpdatedAt),
 		})
@@ -166,6 +182,16 @@ func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID in
 type testCaseAssignment struct {
 	TestCaseID   uuid.UUID
 	AssignedToID int64
+	Urgency      string
+}
+
+// newNullUrgency returns a NULL urgency for blank values so that the
+// database keeps the existing urgency (or the medium default)
+func newNullUrgency(urgency string) dbsqlc.NullPriorityLevel {
+	if strings.TrimSpace(urgency) == "" {
+		return dbsqlc.NullPriorityLevel{}
+	}
+	return dbsqlc.NullPriorityLevel{PriorityLevel: schema.ParsePriorityLevel(urgency), Valid: true}
 }
 
 func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, assignments []testCaseAssignment) (*dbsqlc.GetTestPlanRow, error) {
@@ -175,12 +201,24 @@ func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, ass
 	}
 
 	for _, a := range assignments {
+		urgency := newNullUrgency(a.Urgency)
 		if err := t.queries.AddTestCaseToPlan(ctx, dbsqlc.AddTestCaseToPlanParams{
 			TestPlanID:   planID,
 			TestCaseID:   a.TestCaseID,
 			AssignedToID: a.AssignedToID,
+			Urgency:      urgency,
 		}); err != nil {
 			return nil, err
+		}
+		// Keep the urgency consistent across all assignees of the test case
+		if urgency.Valid {
+			if _, err := t.queries.UpdateTestPlanCaseUrgency(ctx, dbsqlc.UpdateTestPlanCaseUrgencyParams{
+				TestPlanID: planID,
+				TestCaseID: a.TestCaseID,
+				Urgency:    urgency.PriorityLevel,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -193,7 +231,7 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 	for _, pt := range request.PlannedTests {
 		tcID := uuid.MustParse(pt.TestCaseID)
 		for _, uid := range pt.UserIDs {
-			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: pt.Urgency})
 		}
 	}
 	return t.assignTestCases(ctx, request.PlanID, assignments)
@@ -208,10 +246,31 @@ func (t *testPlanService) BatchAssignTestCasesToPlan(ctx context.Context, reques
 			return nil, err
 		}
 		for _, uid := range request.UserIDs {
-			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid})
+			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: request.Urgency})
 		}
 	}
 	return t.assignTestCases(ctx, request.PlanID, assignments)
+}
+
+// UpdateTestCaseUrgency implements TestPlanService.
+func (t *testPlanService) UpdateTestCaseUrgency(ctx context.Context, testPlanID int64, testCaseID string, urgency string) error {
+	tcID, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	affected, err := t.queries.UpdateTestPlanCaseUrgency(ctx, dbsqlc.UpdateTestPlanCaseUrgencyParams{
+		TestPlanID: testPlanID,
+		TestCaseID: tcID,
+		Urgency:    schema.ParsePriorityLevel(urgency),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update urgency: %w", err)
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (t *testPlanService) DeleteByID(ctx context.Context, id int64) error {
@@ -270,7 +329,10 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
+			Code:                 tc.Code,
 			Title:                tc.Title,
+			Priority:             string(tc.Priority),
+			Urgency:              string(tc.Urgency),
 			IsAssignedToTestPlan: true,
 			TestPlan: &schema.TestPlanSummary{
 				ID:   plan.ID,
@@ -341,9 +403,12 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([
 	if err != nil {
 		return nil, err
 	}
-	comments := make([]schema.CommentResponseItem, 0, len(rows))
+
+	commentMap := make(map[string]*schema.CommentResponseItem)
+	var rootComments []schema.CommentResponseItem
+
 	for _, r := range rows {
-		comments = append(comments, schema.CommentResponseItem{
+		item := schema.CommentResponseItem{
 			ID:         r.ID.String(),
 			TestPlanID: r.TestPlanID,
 			UserID:     r.UserID,
@@ -351,29 +416,64 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([
 			Content:    r.Content,
 			CreatedAt:  r.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:  r.UpdatedAt.Time.Format(time.RFC3339),
-		})
+		}
+		if r.ParentCommentID.Valid {
+			parentStr := r.ParentCommentID.UUID.String()
+			item.ParentCommentID = &parentStr
+		}
+		commentMap[item.ID] = &item
 	}
-	return comments, nil
+
+	for _, item := range commentMap {
+		if item.ParentCommentID != nil {
+			if parent, exists := commentMap[*item.ParentCommentID]; exists {
+				parent.Replies = append(parent.Replies, *item)
+			}
+		} else {
+			rootComments = append(rootComments, *item)
+		}
+	}
+
+	return rootComments, nil
 }
 
 func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error) {
 	id := uuid.New()
+
+	var parentUUID uuid.NullUUID
+	if req.ParentCommentID != nil && *req.ParentCommentID != "" {
+		parsedUUID, err := uuid.Parse(*req.ParentCommentID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parent comment ID: %w", err)
+		}
+		parentUUID = uuid.NullUUID{UUID: parsedUUID, Valid: true}
+	}
+
 	row, err := t.queries.CreateComment(ctx, dbsqlc.CreateCommentParams{
-		ID:         id,
-		TestPlanID: req.TestPlanID,
-		UserID:     req.UserID,
-		Content:    req.Content,
+		ID:              id,
+		TestPlanID:      req.TestPlanID,
+		ParentCommentID: parentUUID,
+		UserID:          req.UserID,
+		Content:         req.Content,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	var parentStr *string
+	if row.ParentCommentID.Valid {
+		s := row.ParentCommentID.UUID.String()
+		parentStr = &s
+	}
+
 	return &schema.CommentResponseItem{
-		ID:         row.ID.String(),
-		TestPlanID: row.TestPlanID,
-		UserID:     row.UserID,
-		Content:    row.Content,
-		CreatedAt:  row.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:  row.UpdatedAt.Time.Format(time.RFC3339),
+		ID:              row.ID.String(),
+		TestPlanID:      row.TestPlanID,
+		ParentCommentID: parentStr,
+		UserID:          row.UserID,
+		Content:         row.Content,
+		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
 	}, nil
 }
 

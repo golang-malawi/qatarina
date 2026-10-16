@@ -42,11 +42,12 @@ import (
 //	@Produce		json
 //	@Param			page		query		int		false	"Page number (1-based)"
 //	@Param			pageSize	query		int		false	"Page size"
-//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft)"
+//	@Param			sortBy		query		string	false	"Sort field (created_at, updated_at, code, title, kind, is_draft, priority)"
 //	@Param			sortOrder	query		string	false	"Sort order (asc, desc)"
 //	@Param			search		query		string	false	"Search query (matches code, title, description, feature_or_module)"
 //	@Param			kind		query		string	false	"Filter by kind"
 //	@Param			isDraft		query		bool	false	"Filter by draft state"
+//	@Param			priority	query		string	false	"Filter by priority (low, medium, high, urgent)"
 //	@Success		200	{object}	schema.TestCaseListResponse
 //	@Failure		400	{object}	problemdetail.ProblemDetail
 //	@Failure		500	{object}	problemdetail.ProblemDetail
@@ -65,6 +66,10 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 		sortOrder := c.Query("sortOrder", "desc")
 		search := strings.TrimSpace(c.Query("search", ""))
 		kind := strings.TrimSpace(c.Query("kind", ""))
+		priority := strings.ToLower(strings.TrimSpace(c.Query("priority", "")))
+		if priority != "" && priority != string(schema.ParsePriorityLevel(priority)) {
+			return problemdetail.BadRequest(c, "invalid priority parameter, expected one of low, medium, high, urgent")
+		}
 		isDraftParam := strings.TrimSpace(c.Query("isDraft", ""))
 		var isDraft *bool
 		if isDraftParam != "" {
@@ -84,6 +89,7 @@ func ListTestCases(testCasesService services.TestCaseService, logger logging.Log
 			Kind:      kind,
 			IsDraft:   isDraft,
 			Suggested: &suggested,
+			Priority:  priority,
 		})
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch test cases", "error", err)
@@ -582,47 +588,6 @@ func DeleteTestCase(testCaseService services.TestCaseService, logger logging.Log
 	}
 }
 
-// ListAssignedTestCases godoc
-//
-//	@ID             ListAssignedTestCases
-//	@Summary        List Test Cases assigned to the current user
-//	@Description    List Test Cases assigned to the current user
-//	@Tags           test-cases
-//	@Accept         json
-//	@Produce        json
-//	@Param          page        query       int     false   "Page number (1-based)"
-//	@Param          pageSize    query       int     false   "Page size"
-//	@Param          includeClosed   query   bool    false   "Include closed test cases"
-//	@Success        200         {object}    schema.AssignedTestCaseListResponse
-//	@Failure        400         {object}    problemdetail.ProblemDetail
-//	@Failure        500         {object}    problemdetail.ProblemDetail
-//	@Router         /v1/me/test-cases/inbox [get]
-func ListAssignedTestCases(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
-		userID := authutil.GetAuthUserID(ctx)
-		page := ctx.QueryInt("page", 1)
-		pageSize := ctx.QueryInt("pageSize", 20)
-		offset := (page - 1) * pageSize
-		includeClosed := ctx.QueryBool("includeClosed", false)
-
-		testCases, totalCount, err := testCasesService.FindAllAssignedToUser(ctx.Context(), userID, int32(pageSize), int32(offset), includeClosed)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestCases, "failed to fetch assigned test cases", "error", err)
-			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test cases")
-		}
-
-		return ctx.JSON(schema.AssignedTestCaseListResponse{
-			TestCases: testCases,
-			Pagination: &schema.Pagination{
-				Page:     page,
-				PageSize: pageSize,
-				Total:    totalCount,
-			},
-		})
-
-	}
-}
-
 // MarkTestCaseAsDraft godoc
 //
 //	@ID				MarkTestCaseAsDraft
@@ -1057,6 +1022,7 @@ func BranchTestCase(testCaseService services.TestCaseService, logger logging.Log
 			FeatureOrModule:  parent.FeatureOrModule.String,
 			Title:            parent.Title + " (branch)",
 			Description:      parent.Description,
+			Preconditions:    parent.Preconditions.String,
 			Tags:             parent.Tags,
 			IsDraft:          true,
 			Runner:           parent.Runner.String,
@@ -1071,5 +1037,45 @@ func BranchTestCase(testCaseService services.TestCaseService, logger logging.Log
 		}
 
 		return c.JSON(schema.NewTestCaseResponseFromRow(branched))
+	}
+}
+
+// TransferTestCase godoc
+//
+//	@ID             TransferTestCase
+//	@Summary        Transfer a Test Case to another project
+//	@Description    Transfer an existing test case to a different project ID and feature/module
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string                      true    "Test Case ID"
+//	@Param          request     body        schema.TransferTestCaseRequest true    "Transfer request data"
+//	@Success        200         {object}    schema.TestCaseResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/test-cases/{testCaseID}/transfer [post]
+func TransferTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testCaseID := c.Params("testCaseID")
+		if testCaseID == "" {
+			return problemdetail.BadRequest(c, "missing testCaseID")
+		}
+
+		request := new(schema.TransferTestCaseRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+
+		// Pass the whole request struct so it includes FeatureOrModule
+		updated, err := testCaseService.Transfer(c.Context(), testCaseID, *request)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to transfer test case", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to transfer test case")
+		}
+
+		return c.JSON(schema.NewTestCaseResponseFromRow(updated))
 	}
 }

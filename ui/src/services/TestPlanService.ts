@@ -110,6 +110,13 @@ export async function closeTestPlan(testPlanID: number) {
   return response.data;
 }
 
+export function useUpdateTestPlanCaseUrgencyMutation() {
+  return $api.useMutation(
+    "post",
+    "/v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency"
+  );
+}
+
 export function useCloseTestPlanMutation() {
   return $api.useMutation("post", "/v1/test-plans/{testPlanID}/close");
 }
@@ -152,7 +159,7 @@ export async function getTestPlanTestCases(testPlanID: number) {
   return res.data as components["schemas"]["schema.TestCaseListResponse"];
 }
 
-export function useTestPlanCommentsQuery(testPlanID: string) {
+export function useTestPlanCommentsQuery(testPlanID: number) {
   return $api.useQuery("get", "/v1/test-plans/{testPlanID}/comments", {
     params: { path: { testPlanID } },
   });
@@ -180,7 +187,9 @@ export async function getTestPlanComments(testPlanID: number): Promise<CommentLi
 export async function createComment(testPlanID: number, body: { user_id: number; content: string }) {
   return apiClient.request("post", "/v1/test-plans/{testPlanID}/comments", {
     params: { path: { testPlanID } },
-    body,
+    body: {
+      ...body, test_plan_id: testPlanID,
+    },
   });
 }
 

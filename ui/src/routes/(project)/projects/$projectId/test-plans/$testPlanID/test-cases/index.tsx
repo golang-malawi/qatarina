@@ -3,6 +3,7 @@ import { useProjectTestersQuery } from "@/services/TesterService";
 import {
   assignTestersToTestPlan,
   useTestPlanQuery,
+  useUpdateTestPlanCaseUrgencyMutation,
 } from "@/services/TestPlanService";
 
 import {
@@ -19,6 +20,7 @@ import {
   Icon,
   Input,
   InputGroup,
+  NativeSelect,
   Separator,
   Stack,
   Text,
@@ -37,10 +39,17 @@ import {
 } from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
 import type { components } from "@/lib/api/v1";
+import { PriorityBadge } from "@/components/PriorityBadge";
+import {
+  normalizePriority,
+  PRIORITY_OPTIONS,
+  type PriorityLevel,
+} from "@/common/constants/priority";
 import { useTranslation } from "react-i18next";
 
 type TestCaseItem = components["schemas"]["schema.TestCaseResponse"] & {
   assigned_tester_ids?: number[];
+  urgency?: string;
 };
 
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
@@ -59,6 +68,9 @@ function TestPlanTestCasesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const testersQuery = useProjectTestersQuery(Number(projectId));   
+  const updateUrgencyMutation = useUpdateTestPlanCaseUrgencyMutation();
+  const [updatingUrgencyFor, setUpdatingUrgencyFor] = useState<string | null>(null);
+
   const testPlanQuery = useTestPlanQuery(testPlanID) as {
     data: TestPlanItem | undefined;
     isLoading: boolean;
@@ -147,6 +159,23 @@ function TestPlanTestCasesPage() {
     } catch (assignError) {
       console.error("Failed to assign testers", assignError);
       toaster.error({ title: t("test_plans.assign_error") });
+    }
+  };
+
+  const handleUrgencyChange = async (testCaseID: string, urgency: PriorityLevel) => {
+    try {
+      setUpdatingUrgencyFor(testCaseID);
+      await updateUrgencyMutation.mutateAsync({
+        params: { path: { testPlanID, testCaseID } },
+        body: { urgency },
+      });
+      toaster.success({ title: "Urgency updated" });
+      await refetch();
+    } catch (urgencyError) {
+      console.error("Failed to update urgency", urgencyError);
+      toaster.error({ title: "Failed to update urgency" });
+    } finally {
+      setUpdatingUrgencyFor(null);
     }
   };
 
@@ -257,12 +286,14 @@ function TestPlanTestCasesPage() {
                           {title}
                         </Heading>
                         <HStack gap={2} flexWrap="wrap">
+                          <PriorityBadge value={testCase.priority} label="Priority" />
+                          <PriorityBadge value={testCase.urgency} label="Urgency" />
                           {testCase.code && (
                             <Badge colorPalette="blue" variant="outline">
                               Code: {testCase.code}
                             </Badge>
                           )}
-                                                    {testCase.feature_or_module && (
+                          {testCase.feature_or_module && (
                             <Badge colorPalette="purple" variant="outline">
                               Module: {testCase.feature_or_module}
                             </Badge>
@@ -275,15 +306,42 @@ function TestPlanTestCasesPage() {
                         </HStack>
                       </Stack>
 
-                      <AssignTesterDialog
-                        users={testers}
-                        buttonText={t("test_plans.assign_tester")}
-                        buttonVariant="outline"
-                        buttonIcon={IconUserPlus}
-                        onAssign={(ids) => performAssignment(ids, [testCase])}
-                        projectId={projectId}   
-                        navigate={navigate}
-                      />
+                      <HStack gap={2}>
+                        {testCase.id && (
+                          <NativeSelect.Root
+                            size="sm"
+                            width="36"
+                            disabled={updatingUrgencyFor === testCase.id}
+                          >
+                            <NativeSelect.Field
+                              aria-label="Urgency"
+                              value={normalizePriority(testCase.urgency)}
+                              onChange={(event) =>
+                                handleUrgencyChange(
+                                  testCase.id!,
+                                  event.target.value as PriorityLevel
+                                )
+                              }
+                            >
+                              {PRIORITY_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  Urgency: {option.label}
+                                </option>
+                              ))}
+                            </NativeSelect.Field>
+                            <NativeSelect.Indicator />
+                          </NativeSelect.Root>
+                        )}
+                        <AssignTesterDialog
+                          users={testers}
+                          buttonText={t("test_plans.assign_tester")}
+                          buttonVariant="outline"
+                          buttonIcon={IconUserPlus}
+                          onAssign={(ids) => performAssignment(ids, [testCase])}
+                          projectId={projectId}
+                          navigate={navigate}
+                        />
+                      </HStack>
                     </Flex>
 
                     <Separator />
@@ -425,7 +483,7 @@ function AssignTesterDialog({
             colorPalette="brand"
             onClick={() =>
               navigate({
-                to: "/projects/$projectId/testers/new",
+                to: "/projects/$projectId/testers",
                 params: { projectId },
               })
             }

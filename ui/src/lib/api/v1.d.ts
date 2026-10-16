@@ -265,6 +265,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resets a user's password
+         * @description Resets a user's password without requiring the old one
+         */
+        post: operations["ResetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/signup": {
         parameters: {
             query?: never;
@@ -381,6 +401,46 @@ export interface paths {
          * @description List Test Cases assigned to the current user
          */
         get: operations["ListAssignedTestCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/test-cases/inbox/{testCaseID}/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a Test Case in the current user's inbox as viewed
+         * @description Mark a Test Case in the current user's inbox as viewed
+         */
+        post: operations["MarkInboxTestCaseViewed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/test-cases/inbox/unseen-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count unseen Test Cases in the current user's inbox
+         * @description Count open Test Cases assigned to the current user that they have not viewed yet
+         */
+        get: operations["GetInboxUnseenCount"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1330,6 +1390,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/{testCaseID}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List relations of a Test Case
+         * @description List relations where the Test Case is on either side. direction is "outgoing" when the Test Case is the subject (e.g. it depends_on other_test_case) and "incoming" otherwise
+         */
+        get: operations["ListTestCaseRelations"];
+        put?: never;
+        /**
+         * Relate a Test Case to another Test Case
+         * @description Create a relation read as "<testCaseID> <relation_kind> <related_test_case_id>". Only one relation of each kind is allowed per pair of Test Cases, in either direction
+         */
+        post: operations["CreateTestCaseRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/{testCaseID}/relations/{relationID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a relation from a Test Case
+         * @description Remove a relation the Test Case is on either side of
+         */
+        delete: operations["DeleteTestCaseRelation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/{testCaseID}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer a Test Case to another project
+         * @description Transfer an existing test case to a different project ID and feature/module
+         */
+        post: operations["TransferTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/{testCaseID}/unmark-draft": {
         parameters: {
             query?: never;
@@ -1364,6 +1488,26 @@ export interface paths {
          * @description Create multiple Test Cases at once
          */
         post: operations["BulkCreateTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/export-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export test cases to a CSV or XLSX file
+         * @description Export test cases to a CSV or XLSX file
+         */
+        post: operations["ExportFileFromTestCases"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1652,6 +1796,26 @@ export interface paths {
          * @description Assign a test to a plan
          */
         post: operations["AssignTestsToPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/test-cases/{testCaseID}/urgency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the urgency of a Test Case within a Test Plan
+         * @description Set the urgency (low, medium, high, urgent) of a Test Case within a Test Plan
+         */
+        post: operations["UpdateTestPlanCaseUrgency"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2079,12 +2243,16 @@ export interface components {
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
+            is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
+            preconditions?: string;
+            priority?: string;
             project_id?: number;
             tags?: string[];
             test_plan_id?: number;
             title?: string;
             updated_at?: string;
+            urgency?: string;
         };
         "schema.AssignedTestCaseListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
@@ -2117,6 +2285,8 @@ export interface components {
             content?: string;
             created_at?: string;
             id?: string;
+            parent_comment_id?: string;
+            replies?: components["schemas"]["schema.CommentResponseItem"][];
             test_plan_id?: number;
             updated_at?: string;
             user_id?: number;
@@ -2139,6 +2309,7 @@ export interface components {
         };
         "schema.CreateComment": {
             content: string;
+            parent_comment_id?: string;
             test_plan_id: number;
             user_id: number;
         };
@@ -2169,11 +2340,23 @@ export interface components {
             description: string;
             feature_or_module: string;
             kind: string;
+            /** @description Markdown */
+            preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];
             title: string;
+        };
+        "schema.CreateTestCaseRelationRequest": {
+            related_test_case_id: string;
+            /** @enum {string} */
+            relation_kind: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
         };
         "schema.CreateTestCaseRequest": {
             /** @description optional; auto-generated if blank */
@@ -2183,6 +2366,13 @@ export interface components {
             is_draft?: boolean;
             kind: string;
             parent_test_case_id?: string;
+            /** @description Markdown */
+            preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id?: number;
             runner?: string;
             script_path?: string;
@@ -2245,6 +2435,21 @@ export interface components {
             result: string;
             status: string;
         };
+        "schema.ExportTestCasesRequest": {
+            fileformat?: string;
+            filename?: string;
+            testcases: components["schemas"]["schema.ExportedTestCase"][];
+        };
+        "schema.ExportedTestCase": {
+            code?: string;
+            description?: string;
+            featureOrModule?: string;
+            isDraft?: boolean;
+            kind?: string;
+            priority?: string;
+            tags?: string[];
+            title?: string;
+        };
         "schema.HealthStatus": {
             message?: string;
             status?: string;
@@ -2257,6 +2462,9 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxUnseenCountResponse": {
+            unseen_count?: number;
+        };
         "schema.LoginRequest": {
             email: string;
             password: string;
@@ -2343,6 +2551,12 @@ export interface components {
         };
         "schema.RefreshTokenRequest": Record<string, never>;
         "schema.RefreshTokenResponse": Record<string, never>;
+        "schema.RelatedTestCaseSummary": {
+            code?: string;
+            id?: string;
+            project_id?: number;
+            title?: string;
+        };
         "schema.ReportListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
             reports?: components["schemas"]["schema.ReportResponse"][];
@@ -2355,6 +2569,11 @@ export interface components {
             project_id?: number;
             status?: string;
             type?: string;
+        };
+        "schema.ResetPasswordRequest": {
+            confirm_password: string;
+            new_password: string;
+            user_id: number;
         };
         "schema.SignUpRequest": {
             display_name: string;
@@ -2373,6 +2592,12 @@ export interface components {
         };
         "schema.TestCaseAssignment": {
             test_case_id?: string;
+            /**
+             * @description Urgency of the test case within the plan (low, medium, high, urgent). When blank
+             *     an existing urgency is kept, otherwise it defaults to medium
+             * @enum {string}
+             */
+            urgency?: "low" | "medium" | "high" | "urgent";
             user_ids?: number[];
         };
         "schema.TestCaseExecutionSummary": {
@@ -2384,6 +2609,26 @@ export interface components {
         "schema.TestCaseListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.TestCaseResponse"][];
+        };
+        "schema.TestCaseRelationListResponse": {
+            relations?: components["schemas"]["schema.TestCaseRelationResponse"][];
+        };
+        "schema.TestCaseRelationResponse": {
+            created_at?: string;
+            created_by_id?: number;
+            /**
+             * @description Direction relative to the test case in the request path
+             * @enum {string}
+             */
+            direction?: "outgoing" | "incoming";
+            id?: string;
+            other_test_case?: components["schemas"]["schema.RelatedTestCaseSummary"];
+            related_test_case_id?: string;
+            /** @enum {string} */
+            relation_kind?: "depends_on" | "related_to" | "duplicates" | "branched_from" | "blocks";
+            /** @description Stored as: test_case_id <relation_kind> related_test_case_id */
+            test_case_id?: string;
+            updated_at?: string;
         };
         "schema.TestCaseResponse": {
             code?: string;
@@ -2399,6 +2644,8 @@ export interface components {
             parent_code?: string;
             parent_test_case_id?: string;
             parent_title?: string;
+            preconditions?: string;
+            priority?: string;
             project_id?: number;
             result?: string;
             runner?: string;
@@ -2411,10 +2658,13 @@ export interface components {
         };
         "schema.TestCaseResponseItem": {
             assigned_tester_ids?: number[];
+            code?: string;
             id?: string;
             is_assigned_to_test_plan?: boolean;
+            priority?: string;
             test_plan?: components["schemas"]["schema.TestPlanSummary"];
             title?: string;
+            urgency?: string;
         };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
@@ -2504,6 +2754,10 @@ export interface components {
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
         };
+        "schema.TransferTestCaseRequest": {
+            feature_or_module: string;
+            target_project_id: number;
+        };
         "schema.UpdateAutomatedTestingRequest": {
             automated_testing_enabled?: boolean;
             project_id: number;
@@ -2547,11 +2801,22 @@ export interface components {
             id: string;
             is_draft?: boolean;
             kind: string;
+            /** @description Markdown */
+            preconditions?: string;
+            /**
+             * @description defaults to medium
+             * @enum {string}
+             */
+            priority?: "low" | "medium" | "high" | "urgent";
             project_id: number;
             runner?: string;
             script_path?: string;
             tags?: string[];
             title: string;
+        };
+        "schema.UpdateTestPlanCaseUrgencyRequest": {
+            /** @enum {string} */
+            urgency: "low" | "medium" | "high" | "urgent";
         };
         "schema.UpdateTesterRoleRequest": {
             role?: string;
@@ -2615,6 +2880,51 @@ export interface operations {
         };
         responses: {
             /** @description Password changed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ResetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Password reset request */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2768,6 +3078,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    MarkInboxTestCaseViewed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxUnseenCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxUnseenCountResponse"];
                 };
             };
             /** @description Internal Server Error */
@@ -4810,7 +5196,7 @@ export interface operations {
                 page?: number;
                 /** @description Page size */
                 pageSize?: number;
-                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft) */
+                /** @description Sort field (created_at, updated_at, code, title, kind, is_draft, priority) */
                 sortBy?: string;
                 /** @description Sort order (asc, desc) */
                 sortOrder?: string;
@@ -4820,6 +5206,8 @@ export interface operations {
                 kind?: string;
                 /** @description Filter by draft state */
                 isDraft?: boolean;
+                /** @description Filter by priority (low, medium, high, urgent) */
+                priority?: string;
             };
             header?: never;
             path?: never;
@@ -5291,6 +5679,206 @@ export interface operations {
             };
         };
     };
+    ListTestCaseRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseRelationListResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    CreateTestCaseRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Relation data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.CreateTestCaseRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseRelationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteTestCaseRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+                /** @description Relation ID */
+                relationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    TransferTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Transfer request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.TransferTestCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TestCaseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     UnMarkTestCaseAsDraft: {
         parameters: {
             query?: never;
@@ -5357,6 +5945,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ExportFileFromTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Export request data */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.ExportTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/octet-stream": string;
                 };
             };
             /** @description Bad Request */
@@ -6200,6 +6832,63 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateTestPlanCaseUrgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: string;
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Urgency payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateTestPlanCaseUrgencyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

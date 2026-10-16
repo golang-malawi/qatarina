@@ -1,3 +1,4 @@
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import {
   Tabs,
@@ -17,21 +18,21 @@ import {
 } from "@chakra-ui/react";
 
 import { AppDialog } from "@/components/ui/app-dialog";
-import { useTestCaseQuery } from "@/services/TestCaseService";
-import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
-import { useProjectTestersQuery } from "@/services/TesterService";    
-import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-
-import { AppDialog } from "@/components/ui/app-dialog";
 import { useTestCaseQuery, branchTestCase } from "@/services/TestCaseService";
 import {
   useProjectTestPlansQuery,
   assignTestersToTestPlan,
 } from "@/services/TestPlanService";
-import { useTestersQuery } from "@/services/TesterService";
+import { useProjectTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import { useChecklistState } from "@/lib/markdown-checklist";
+import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
+import { useAuth } from "@/hooks/isLoggedIn";
+import { TestCaseRelations } from "@/components/TestCaseRelations";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -43,13 +44,19 @@ export const Route = createFileRoute(
 function ViewTestCase() {
   const { projectId, testCaseId } = Route.useParams();
   const search = Route.useSearch();
-const navigate = useNavigate();
-const { t } = useTranslation();
-const activeTab = search.tab ?? "description";
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const activeTab = search.tab ?? "description";
 
   const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
-  const testersQuery = useProjectTestersQuery(Number(projectId)); 
+  const testersQuery = useProjectTestersQuery(Number(projectId));
+  const { user } = useAuth();
+  
+  const preconditionsChecklist = useChecklistState(
+    preconditionsChecklistKey(user?.user_id, testCaseId),
+    testCase?.preconditions ?? "",
+  );
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
@@ -163,52 +170,193 @@ const activeTab = search.tab ?? "description";
         <Tabs.List>
           <Tabs.Trigger value="description">Description</Tabs.Trigger>
           <Tabs.Trigger value="usage">Usage & Assignment</Tabs.Trigger>
+          <Tabs.Trigger value="relations">{t("test_cases.relations.tab")}</Tabs.Trigger>
         </Tabs.List>
 
         {/* DESCRIPTION TAB */}
         <Tabs.Content value="description">
-          <Box p={4} bg="bg.subtle" rounded="lg" border="sm" borderColor="border.subtle">
-            {testCase.description ? (
-              <ReactMarkdown
-                components={{
-                  h1: (props) => <Heading size="lg" mb={2} {...props} />,
-                  h2: (props) => <Heading size="md" mb={2} {...props} />,
-                  h3: (props) => <Heading size="sm" mb={2} {...props} />,
-                  p: (props) => <Text mb={2} {...props} />,
-                  code: (props) => <Code colorScheme="yellow" {...props} />,
-                  ul: (props) => (
-                    <ul style={{ paddingLeft: "1rem", listStyleType: "disc" }} {...props} />
-                  ),
-                  ol: (props) => (
-                    <ol style={{ paddingLeft: "1rem", listStyleType: "decimal" }} {...props} />
-                  ),
-                  li: (props) => <li style={{ marginBottom: "0.25rem" }} {...props} />,
-                  blockquote: (props) => (
-                    <blockquote
-                      style={{
-                        paddingLeft: "1rem",
-                        borderLeft: "4px solid #CBD5E0",
-                        color: "#4A5568",
-                        fontStyle: "italic",
-                        margin: "0.5rem 0",
-                      }}
-                      {...props}
-                    />
-                  ),
-                  a: (props) => (
-                    <a style={{ color: "#3182CE", textDecoration: "underline" }} {...props} />
-                  ),
-                }}
-              >
-                {testCase.description}
-              </ReactMarkdown>
-            ) : (
-              <Text color="fg.subtle">No description provided.</Text>
+          <Stack gap={4} mt={4}>
+            {testCase.preconditions && (
+              <Box>
+                <Heading size="sm" mb={2} color="fg.heading">
+                  Preconditions
+                </Heading>
+                <Box
+                  p={4}
+                  bg="bg.subtle"
+                  rounded="lg"
+                  border="1px solid"
+                  borderColor="border.subtle"
+                >
+                  <MarkdownChecklist
+                    markdown={testCase.preconditions}
+                    checked={preconditionsChecklist.checked}
+                    onToggle={preconditionsChecklist.toggle}
+                    onReset={preconditionsChecklist.reset}
+                    itemLabel="preconditions"
+                  />
+                </Box>
+                {testCase.description && (
+                  <Heading size="sm" mt={4} color="fg.heading">
+                    Description
+                  </Heading>
+                )}
+              </Box>
             )}
-          </Box>
+
+            <Box
+              p={4}
+              bg="bg.subtle"
+              rounded="lg"
+              border="1px solid"
+              borderColor="border.subtle"
+            >
+              {testCase.description ? (
+                <ReactMarkdown
+                  components={{
+                    h1: (props) => <Heading size="lg" mb={2} {...props} />,
+                    h2: (props) => <Heading size="md" mb={2} {...props} />,
+                    h3: (props) => <Heading size="sm" mb={2} {...props} />,
+                    p: (props) => <Text mb={2} {...props} />,
+                    code: (props) => <Code colorPalette="yellow" {...props} />,
+                    ul: (props) => (
+                      <ul
+                        style={{ paddingLeft: "1.25rem", listStyleType: "disc" }}
+                        {...props}
+                      />
+                    ),
+                    ol: (props) => (
+                      <ol
+                        style={{
+                          paddingLeft: "1.25rem",
+                          listStyleType: "decimal",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    li: (props) => (
+                      <li style={{ marginBottom: "0.25rem" }} {...props} />
+                    ),
+                    blockquote: (props) => (
+                      <blockquote
+                        style={{
+                          paddingLeft: "1rem",
+                          borderLeft: "4px solid var(--chakra-colors-border-emphasized)",
+                          color: "var(--chakra-colors-fg-muted)",
+                          fontStyle: "italic",
+                          margin: "0.5rem 0",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    a: (props) => (
+                      <a
+                        style={{
+                          color: "var(--chakra-colors-brand-solid)",
+                          textDecoration: "underline",
+                        }}
+                        {...props}
+                      />
+                    ),
+                  }}
+                >
+                  {testCase.description}
+                </ReactMarkdown>
+              ) : (
+                <Text color="fg.subtle">No description provided.</Text>
+              )}
+            </Box>
+
+            {/* Tags */}
+            <Box>
+              {testCase.tags?.length ? (
+                <Flex gap={2} wrap="wrap">
+                  {testCase.tags.map((tag: string) => (
+                    <Badge key={tag} colorPalette="brand" variant="subtle">
+                      {tag}
+                    </Badge>
+                  ))}
+                </Flex>
+              ) : (
+                <Text fontSize="sm" color="fg.subtle">
+                  No tags attached.
+                </Text>
+              )}
+            </Box>
+
+            {/* Metadata */}
+            <Box
+              p={4}
+              bg="bg.surface"
+              rounded="md"
+              border="1px solid"
+              borderColor="border.subtle"
+              shadow="sm"
+            >
+              <Stack gap={2.5} fontSize="sm" color="fg.muted">
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Type:</Text>
+                  <Text>{testCase.kind ?? "Manual"}</Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created By:</Text>
+                  <Text>User ID {testCase.created_by ?? "N/A"}</Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Status:</Text>
+                  <Badge colorPalette={testCase.is_draft ? "yellow" : "green"}>
+                    {testCase.is_draft ? "Draft" : "Published"}
+                  </Badge>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Priority:</Text>
+                  <PriorityBadge value={testCase.priority} />
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Created At:</Text>
+                  <Text>
+                    {testCase.created_at
+                      ? new Date(testCase.created_at).toLocaleString()
+                      : "N/A"}
+                  </Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text fontWeight="semibold">Updated At:</Text>
+                  <Text>
+                    {testCase.updated_at
+                      ? new Date(testCase.updated_at).toLocaleString()
+                      : "N/A"}
+                  </Text>
+                </Flex>
+                {testCase.parent_test_case_id && (
+                  <Flex justify="space-between">
+                    <Text fontWeight="semibold">Branched From:</Text>
+                    <Link
+                      to="/projects/$projectId/test-cases/$testCaseId"
+                      params={{
+                        projectId,
+                        testCaseId: testCase.parent_test_case_id,
+                      }}
+                      style={{
+                        color: "var(--chakra-colors-brand-solid)",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {testCase.parent_test_case_id}
+                    </Link>
+                  </Flex>
+                )}
+              </Stack>
+            </Box>
+          </Stack>
         </Tabs.Content>
 
-        {/* ===================== USAGE & ASSIGNMENT ===================== */}
+        {/* RELATIONS TAB */}
+        <Tabs.Content value="relations">
+          <TestCaseRelations projectId={projectId} testCaseId={testCaseId} />
+        </Tabs.Content>
+
+        {/* USAGE & ASSIGNMENT TAB */}
         <Tabs.Content value="usage">
           <Stack mt={4} gap={4}>
             <Heading size="sm" color="fg.heading">
@@ -298,7 +446,9 @@ const activeTab = search.tab ?? "description";
                   })}
                 </Flex>
               ) : (
-                <Text fontSize="sm" color="fg.subtle">{t("test_cases.no_testers_assigned")}</Text>
+                <Text fontSize="sm" color="fg.subtle">
+                  {t("test_cases.no_testers_assigned")}
+                </Text>
               )}
             </Box>
           </Stack>
@@ -364,10 +514,15 @@ const activeTab = search.tab ?? "description";
                 onValueChange={setSelectedTesters}
               >
                 <Fieldset.Root>
-                  <Fieldset.Legend fontSize="sm">Select at least one tester</Fieldset.Legend>
+                  <Fieldset.Legend fontSize="sm">
+                    Select at least one tester
+                  </Fieldset.Legend>
                   <Fieldset.Content>
                     {testersQuery.data.testers.map((tester: any) => (
-                      <Checkbox.Root key={tester.user_id} value={tester.user_id?.toString()}>
+                      <Checkbox.Root
+                        key={tester.user_id}
+                        value={tester.user_id?.toString()}
+                      >
                         <Checkbox.HiddenInput />
                         <Checkbox.Control />
                         <Checkbox.Label>{tester.name}</Checkbox.Label>
@@ -383,14 +538,16 @@ const activeTab = search.tab ?? "description";
                   size="sm"
                   colorPalette="brand"
                   onClick={() =>
-                    navigate({ to: "/projects/$projectId/testers", params: { projectId } })
+                    navigate({
+                      to: "/projects/$projectId/testers",
+                      params: { projectId },
+                    })
                   }
                 >
                   Add Testers
                 </Button>
               </Stack>
             )}
-
           </AppDialog>
         </Tabs.Content>
       </Tabs.Root>
