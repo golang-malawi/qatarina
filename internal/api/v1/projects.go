@@ -285,7 +285,7 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 				PlannedTests:   []schema.TestCaseAssignment{},
 			}
 
-			_, err := testPlanService.Create(context.Background(), newDefaultTestPlan)
+			_, err = testPlanService.Create(context.Background(), newDefaultTestPlan)
 			if err != nil {
 				logger.Error(loggedmodule.ApiProjects, "failed to create a default test plan for project", "projectID", project.ID, "error", err)
 			}
