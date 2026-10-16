@@ -1504,8 +1504,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Export test cases to a CSV or XLSX file
-         * @description Export test cases to a CSV or XLSX file
+         * Export test cases to a CSV, XLSX or JSON file
+         * @description Export test cases to a CSV, XLSX or JSON file
          */
         post: operations["ExportFileFromTestCases"];
         delete?: never;
