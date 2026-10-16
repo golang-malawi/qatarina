@@ -277,6 +277,18 @@ type Project struct {
 	SupportedRunners        []string
 }
 
+type ProjectDocument struct {
+	ID         uuid.UUID
+	ProjectID  int64
+	UploaderID int64
+	Name       string
+	FilePath   string
+	FileSize   sql.NullInt64
+	MimeType   sql.NullString
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+}
+
 type ProjectTester struct {
 	ID int32
 	// The project associated with this tester

@@ -951,6 +951,26 @@ JOIN test_plans tp ON tp.id = c.test_plan_id
 WHERE c.id = $1
 RETURNING id;
 
+-- name: ListDocumentsByProject :many
+SELECT * FROM project_documents 
+WHERE project_id = $1 
+ORDER BY created_at DESC;
+
+-- name: GetProjectDocument :one
+SELECT * FROM project_documents 
+WHERE id = $1;
+
+-- name: CreateProjectDocument :one
+INSERT INTO project_documents (
+    id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW()
+)
+RETURNING *;
+
+-- name: DeleteProjectDocument :execrows
+DELETE FROM project_documents WHERE id = $1;
+
 -- name: CreateTestCaseRelation :one
 INSERT INTO test_case_relations (
     id, test_case_id, related_test_case_id, relation_kind, created_by_id, created_at, updated_at
