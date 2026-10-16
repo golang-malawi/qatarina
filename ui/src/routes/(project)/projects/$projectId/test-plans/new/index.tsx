@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Box,
   Button,
@@ -10,15 +10,15 @@ import {
   Heading,
   Spinner,
   Text,
+  Stack,
 } from "@chakra-ui/react";
-import { Link, useNavigate } from "@tanstack/react-router";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
-import { useTestersQuery } from "@/services/TesterService";
+import { useProjectTestersQuery } from "@/services/TesterService"; 
 import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import {
@@ -42,9 +42,11 @@ type CreateTestPlanForm = TestPlanCreationFormValues;
 function CreateNewTestPlan() {
   const { t } = useTranslation();
   const createTestPlanMutation = useCreateTestPlanMutation();
-  const testersQuery = useTestersQuery();
   const redirect = useNavigate();
   const { projectId } = Route.useParams();
+
+  const testersQuery = useProjectTestersQuery(Number(projectId)); 
+  const testers = testersQuery.data?.testers ?? [];
 
   const { data: envData } = useSuspenseQuery(
     findEnvironmentsByProjectQueryOptions(projectId!)
@@ -76,7 +78,6 @@ function CreateNewTestPlan() {
     return <Text color="fg.error">{t("test_plans.error_cases")}</Text>;
   }
 
-  const testers = testersQuery.data?.testers ?? [];
   const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
   const allSelected =
     testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
@@ -115,8 +116,6 @@ function CreateNewTestPlan() {
 
     const toISODate = (dateStr: string) => new Date(dateStr + "T00:00:00").toISOString();
 
-
-
     const res = await createTestPlanMutation.mutateAsync({
       body: {
         project_id: parseInt(projectId!),
@@ -132,7 +131,6 @@ function CreateNewTestPlan() {
         })),
       },
     });
-
 
     if (res) {
       toaster.create({
@@ -162,6 +160,7 @@ function CreateNewTestPlan() {
       <Box p={6}>
         <Heading color="fg.heading">{t("test_plans.create_new")}</Heading>
 
+        {/* Environment warning */}
         {environments.length === 0 && (
           <Box
             mb={4}
@@ -189,6 +188,7 @@ function CreateNewTestPlan() {
           </Box>
         )}
 
+        {/* Form */}
         <DynamicForm
           schema={testPlanCreationSchema}
           fields={testPlanCreationFields.map((f) =>
@@ -208,6 +208,7 @@ function CreateNewTestPlan() {
           spacing={4}
         />
 
+        {/* Test case selection */}
         <Heading color="fg.heading">{t("test_plans.select_assign_cases")}</Heading>
 
         <Flex
@@ -224,11 +225,12 @@ function CreateNewTestPlan() {
             <strong>{selectedTestCases.length}</strong>{" "}
             {t("test_plans.selected_cases", { count: selectedTestCases.length })}
           </Box>
+
           <Button
             size="sm"
             variant="solid"
             colorPalette="brand"
-            disabled={selectedTestCases.length === 0}
+            disabled={selectedTestCases.length === 0} 
             onClick={() => setBulkAssignOpen(true)}
           >
             {t("test_plans.bulk_assign")}
@@ -269,16 +271,16 @@ function CreateNewTestPlan() {
                   (t) => t.test_case_id === testCase.id!.toString()
                 )}
                 onCheckedChange={(e) => {
-                  if (e.checked) {
-                    setSelectedTestCases((prev) => [
-                      ...prev,
-                      { test_case_id: testCase.id!.toString(), user_ids: [] },
-                    ]);
-                  } else {
-                    setSelectedTestCases((prev) =>
-                      prev.filter((t) => t.test_case_id !== testCase.id!.toString())
-                    );
-                  }
+                  setSelectedTestCases((prev) => {
+                    if (e.checked) {
+                      if (!prev.some((t) => t.test_case_id === testCase.id!.toString())) {
+                        return [...prev, { test_case_id: testCase.id!.toString(), user_ids: [] }];
+                      }
+                      return prev;
+                    } else {
+                      return prev.filter((t) => t.test_case_id !== testCase.id!.toString());
+                    }
+                  });
                 }}
               >
                 <Checkbox.HiddenInput />
@@ -298,7 +300,8 @@ function CreateNewTestPlan() {
               </Button>
             </Flex>
 
-                        {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
+            {/* Assigned testers preview */}
+            {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
               ?.user_ids.length ? (
               <Flex mt={2} gap={2} wrap="wrap">
                 {selectedTestCases
@@ -346,52 +349,70 @@ function CreateNewTestPlan() {
           </Button>
         }
       >
-        <CheckboxGroup
-          value={activeTestCase?.user_ids.map(String) ?? []}
-          onValueChange={(value) => {
-            setSelectedTestCases((prev) => {
-              const exists = prev.find((t) => t.test_case_id === activeTestCaseId);
-              if (exists) {
-                return prev.map((t) =>
-                  t.test_case_id === activeTestCaseId
-                    ? { ...t, user_ids: value.map(Number) }
-                    : t
-                );
+        {testers.length === 0 ? (
+          <Stack gap={2}>
+            <Text color="fg.error">{t("testers.none_assigned")}</Text>
+            <Button
+              size="sm"
+              colorPalette="brand"
+              onClick={() =>
+                redirect({
+                  to: "/projects/$projectId/testers/new",
+                  params: { projectId },
+                })
               }
-              return [
-                ...prev,
-                { test_case_id: activeTestCaseId!, user_ids: value.map(Number) },
-              ];
-            });
-          }}
-        >
-          <Fieldset.Root>
-            <Fieldset.Legend fontSize="sm">
-              {t("test_plans.select_testers")}
-            </Fieldset.Legend>
-            <Fieldset.Content>
-              <For each={testers}>
-                {(tester) => (
-                  <Checkbox.Root
-                    key={tester.user_id}
-                    value={tester.user_id!.toString()}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label>{tester.name}</Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              </For>
-            </Fieldset.Content>
-          </Fieldset.Root>
-        </CheckboxGroup>
+            >
+              {t("testers.add_button")}
+            </Button>
+          </Stack>
+        ) : (
+          <CheckboxGroup
+            value={activeTestCase?.user_ids.map(String) ?? []}
+            onValueChange={(value) => {
+              setSelectedTestCases((prev) => {
+                const exists = prev.find((t) => t.test_case_id === activeTestCaseId);
+                if (exists) {
+                  return prev.map((t) =>
+                    t.test_case_id === activeTestCaseId
+                      ? { ...t, user_ids: value.map(Number) }
+                      : t
+                  );
+                }
+                return [
+                  ...prev,
+                  { test_case_id: activeTestCaseId!, user_ids: value.map(Number) },
+                ];
+              });
+            }}
+          >
+            <Fieldset.Root>
+              <Fieldset.Legend fontSize="sm">
+                {t("test_plans.select_testers")}
+              </Fieldset.Legend>
+              <Fieldset.Content>
+                <For each={testers}>
+                  {(tester) => (
+                    <Checkbox.Root
+                      key={tester.user_id}
+                      value={tester.user_id!.toString()}
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                      <Checkbox.Label>{tester.name}</Checkbox.Label>
+                    </Checkbox.Root>
+                  )}
+                </For>
+              </Fieldset.Content>
+            </Fieldset.Root>
+          </CheckboxGroup>
+        )}
       </AppDialog>
 
       {/* Bulk assign modal */}
       <AppDialog
         open={bulkAssignOpen}
         onOpenChange={(event) => setBulkAssignOpen(event.open)}
-        title={t("test_plans.bulk_assign_title")}
+        title={t("test_plans.bulk_assign")}
         footer={
           <>
             <Button variant="outline" onClick={() => setBulkAssignOpen(false)}>
@@ -418,35 +439,55 @@ function CreateNewTestPlan() {
           </>
         }
       >
-        <Box fontSize="sm" mb={3} color="fg.muted">
-          {t("test_plans.bulk_assign_description", {
-            count: selectedTestCases.length,
-          })}
-        </Box>
-        <CheckboxGroup
-          value={bulkSelectedTesters}
-          onValueChange={setBulkSelectedTesters}
-        >
-          <Fieldset.Root>
-            <Fieldset.Legend fontSize="sm">
-              {t("test_plans.select_testers")}
-            </Fieldset.Legend>
-            <Fieldset.Content>
-              <For each={testers}>
-                {(tester) => (
-                  <Checkbox.Root
-                    key={tester.user_id}
-                    value={tester.user_id!.toString()}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label>{tester.name}</Checkbox.Label>
-                  </Checkbox.Root>
-                )}
-              </For>
-            </Fieldset.Content>
-          </Fieldset.Root>
-        </CheckboxGroup>
+        {testers.length === 0 ? (
+          <Stack gap={2}>
+            <Text color="fg.error">{t("testers.none_assigned")}</Text>
+            <Button
+              size="sm"
+              colorPalette="brand"
+              onClick={() =>
+                redirect({
+                  to: "/projects/$projectId/testers/new",
+                  params: { projectId },
+                })
+              }
+            >
+              {t("testers.add_button")}
+            </Button>
+          </Stack>
+        ) : (
+          <>
+            <Box fontSize="sm" mb={3} color="fg.muted">
+              {t("test_plans.bulk_assign_description", {
+                count: selectedTestCases.length,
+              })}
+            </Box>
+            <CheckboxGroup
+              value={bulkSelectedTesters}
+              onValueChange={setBulkSelectedTesters}
+            >
+              <Fieldset.Root>
+                <Fieldset.Legend fontSize="sm">
+                  {t("test_plans.select_testers")}
+                </Fieldset.Legend>
+                <Fieldset.Content>
+                  <For each={testers}>
+                    {(tester) => (
+                      <Checkbox.Root
+                        key={tester.user_id}
+                        value={tester.user_id!.toString()}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>{tester.name}</Checkbox.Label>
+                      </Checkbox.Root>
+                    )}
+                  </For>
+                </Fieldset.Content>
+              </Fieldset.Root>
+            </CheckboxGroup>
+          </>
+        )}
       </AppDialog>
     </div>
   );
