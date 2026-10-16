@@ -79,6 +79,8 @@ func FormatNullDateTime(t sql.NullTime) string {
 		return ""
 	}
 	return t.Time.Format(time.DateTime)
+}
+
 func NewNullUUID(value string) uuid.NullUUID {
 	if value == "" {
 		return uuid.NullUUID{Valid: false}
