@@ -72,6 +72,8 @@ components:
           type: string
         environment_id:
           type: integer
+        external_id:
+          type: string
         feature_or_module:
           type: string
         id:
@@ -373,6 +375,9 @@ components:
           description: optional; auto-generated if blank
           type: string
         description:
+          type: string
+        external_id:
+          description: identifier in the source system, e.g. TestLink
           type: string
         feature_or_module:
           type: string
@@ -971,6 +976,8 @@ components:
           type: string
         executed_by:
           type: integer
+        external_id:
+          type: string
         feature_or_module:
           type: string
         id:
@@ -1332,6 +1339,9 @@ components:
         code:
           type: string
         description:
+          type: string
+        external_id:
+          description: identifier in the source system, e.g. TestLink
           type: string
         feature_or_module:
           type: string
