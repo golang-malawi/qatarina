@@ -34,3 +34,17 @@ export async function createEnvironment(
   });
 
 }
+
+export function useUpdateEnvironmentMutation() {
+  return $api.useMutation(
+    "post",
+    "/v1/projects/{projectID}/environments/{environmentID}"
+  );
+}
+
+export function useDeleteEnvironmentMutation() {
+  return $api.useMutation(
+    "delete",
+    "/v1/projects/{projectID}/environments/{environmentID}"
+  );
+}

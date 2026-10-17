@@ -40,12 +40,13 @@ func (s *environmentServiceImpl) FindByProjectID(ctx context.Context, projectID 
 	response := make([]schema.EnvironmentResponse, 0, len(envs))
 	for _, env := range envs {
 		response = append(response, schema.EnvironmentResponse{
-			ID:        int64(env.ID),
-			ProjectID: int64(env.ProjectID.Int32),
-			Name:      env.Name,
-			BaseURL:   env.BaseUrl.String,
-			CreatedAt: env.CreatedAt.Format(time.RFC3339),
-			UpdatedAt: env.UpdatedAt.Format(time.RFC3339),
+			ID:          int64(env.ID),
+			ProjectID:   int64(env.ProjectID.Int32),
+			Name:        env.Name,
+			Description: env.Description.String,
+			BaseURL:     env.BaseUrl.String,
+			CreatedAt:   env.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:   env.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 
@@ -119,7 +120,7 @@ func (s *environmentServiceImpl) Update(ctx context.Context, req *schema.UpdateE
 		baseURL = policy.Sanitize(strings.TrimSpace(req.BaseURL))
 	}
 
-	err := s.queries.UpdateEnvironment(ctx, dbsqlc.UpdateEnvironmentParams{
+	rows, err := s.queries.UpdateEnvironment(ctx, dbsqlc.UpdateEnvironmentParams{
 		ID:          int32(req.ID),
 		ProjectID:   common.NewNullInt32(int32(req.ProjectID)),
 		Name:        name,
@@ -129,14 +130,23 @@ func (s *environmentServiceImpl) Update(ctx context.Context, req *schema.UpdateE
 	if err != nil {
 		return nil, err
 	}
+	if rows == 0 {
+		return nil, ErrNotFound
+	}
 
 	return s.FindByID(ctx, req.ID)
 }
 
 func (s *environmentServiceImpl) Delete(ctx context.Context, projectID, environmentID int64) error {
-	err := s.queries.DeleteEnvironment(ctx, dbsqlc.DeleteEnvironmentParams{
+	rows, err := s.queries.DeleteEnvironment(ctx, dbsqlc.DeleteEnvironmentParams{
 		ID:        int32(environmentID),
 		ProjectID: common.NewNullInt32(int32(projectID)),
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
