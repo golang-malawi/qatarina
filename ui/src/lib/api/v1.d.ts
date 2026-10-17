@@ -2775,7 +2775,6 @@ export interface components {
         "schema.UpdateProjectModuleRequest": {
             code: string;
             description?: string;
-            id: number;
             name: string;
             priority: number;
             type: string;
@@ -3374,6 +3373,15 @@ export interface operations {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
             /** @description Internal Server Error */
             500: {
                 headers: {
@@ -3412,6 +3420,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

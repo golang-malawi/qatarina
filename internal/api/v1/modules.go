@@ -126,6 +126,7 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 //	@Param			request	body		schema.UpdateProjectModuleRequest	true	"id"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/modules/{moduleID} [post]
 func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
@@ -136,7 +137,6 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 		}
 
 		request := new(schema.UpdateProjectModuleRequest)
-		request.ID = int32(moduleID)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in request", err)
@@ -145,8 +145,13 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
+		request.ID = int32(moduleID)
+
 		_, err = module.Update(context.Background(), *request)
 		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "module not found")
+			}
 			logger.Error("api-modules", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process equest")
 		}
@@ -168,6 +173,7 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 //	@Param			moduleID	path		string	true	"moduleID"
 //	@Success		200			{object}	interface{}
 //	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/modules/{moduleID} [delete]
 func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
@@ -181,7 +187,7 @@ func DeleteModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 		err = module.Delete(context.Background(), int32(moduleID))
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, services.ErrNotFound) {
 				return problemdetail.NotFound(c, "module not found")
 			}
 			logger.Error(loggedmodule.ApiModules, "failed delete module", "error", err)

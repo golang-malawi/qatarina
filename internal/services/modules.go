@@ -77,7 +77,7 @@ func (m *moduleServiceImpl) GetAll(ctx context.Context) ([]dbsqlc.Module, error)
 
 // Implement the Update to change field in table
 func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdateProjectModuleRequest) (bool, error) {
-	err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
+	rows, err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
 		ID:          request.ID,
 		Name:        request.Name,
 		Code:        request.Code,
@@ -89,16 +89,22 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 		return false, fmt.Errorf("failed to update module %v", err)
 
 	}
+	if rows == 0 {
+		return false, ErrNotFound
+	}
 
 	return true, nil
 }
 
 // Implement the Delete to remove a module in the table
 func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
-	_, err := m.db.DeleteProjectModule(ctx, id)
+	rows, err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
 		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
 	}
 
 	return nil

@@ -13,29 +13,34 @@ export type Module = {
   project_id: number;
 };
 
+// The API returns dbsqlc.Module as-is, so fields arrive in PascalCase
+function toModule(mod: any): Module {
+  return {
+    id: String(mod.ID),
+    project_id: mod.ProjectID,
+    name: mod.Name,
+    code: mod.Code,
+    type: mod.Type,
+    priority: mod.Priority,
+    description: mod.Description,
+    created_at: mod.CreatedAt?.Time || "",
+    updated_at: mod.UpdatedAt?.Time || "",
+  };
+}
+
 export default class ModuleService {
   async getAllModules(): Promise<Module[]> {
     const res = await apiClient.request("get", "/v1/modules");
     const apiModules =
       (res.data as unknown as { modules: any[] }).modules ?? [];
-    return apiModules.map((mod) => ({
-      id: String(mod.ID),
-      project_id: mod.ProjectID,
-      name: mod.Name,
-      code: mod.Code,
-      type: mod.Type,
-      priority: mod.Priority,
-      description: mod.Description,
-      created_at: mod.CreatedAt?.Time || "",
-      updated_at: mod.UpdatedAt?.Time || "",
-    }));
+    return apiModules.map(toModule);
   }
 
   async getModuleById(id: string): Promise<Module> {
     const res = await apiClient.request("get", "/v1/modules/{moduleID}", {
       params: { path: { moduleID: id } },
     });
-    return res.data as unknown as Module;
+    return toModule(res.data);
   }
 
   async createModule(
@@ -76,16 +81,6 @@ export default class ModuleService {
     if (!Array.isArray(apiModules)){
       return [];
     }
-    return apiModules.map((mod) => ({
-      id: String(mod.ID),
-      name: mod.Name,
-      code: mod.Code,
-      type: mod.Type,
-      priority: mod.Priority,
-      description: mod.Description,
-      project_id: mod.ProjectID,
-      created_at: mod.CreatedAt?.Time || "",
-      updated_at: mod.UpdatedAt?.Time || "",
-    }));
+    return apiModules.map(toModule);
   }
 }

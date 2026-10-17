@@ -4350,8 +4350,8 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (i
 	return result.RowsAffected()
 }
 
-const updateProjectModule = `-- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+const updateProjectModule = `-- name: UpdateProjectModule :execrows
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, updated_at = now()
 WHERE id = $1
 `
 
@@ -4364,8 +4364,8 @@ type UpdateProjectModuleParams struct {
 	Description string
 }
 
-func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateProjectModule,
+func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProjectModule,
 		arg.ID,
 		arg.Name,
 		arg.Code,
@@ -4373,7 +4373,10 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Type,
 		arg.Description,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateProjectTesterRole = `-- name: UpdateProjectTesterRole :execrows

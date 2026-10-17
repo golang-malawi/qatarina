@@ -678,8 +678,8 @@ WHERE id = $1;
 SELECT * FROM modules
 ORDER BY created_at DESC;
 
--- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+-- name: UpdateProjectModule :execrows
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, updated_at = now()
 WHERE id = $1;
 
 -- name: DeleteProjectModule :execrows
