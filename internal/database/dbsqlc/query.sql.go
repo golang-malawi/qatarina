@@ -935,7 +935,7 @@ func (q *Queries) DeleteComment(ctx context.Context, id uuid.UUID) (int64, error
 	return result.RowsAffected()
 }
 
-const deleteEnvironment = `-- name: DeleteEnvironment :exec
+const deleteEnvironment = `-- name: DeleteEnvironment :execrows
 DELETE FROM environments WHERE id = $1 AND project_id = $2
 `
 
@@ -944,9 +944,12 @@ type DeleteEnvironmentParams struct {
 	ProjectID sql.NullInt32
 }
 
-func (q *Queries) DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) error {
-	_, err := q.db.ExecContext(ctx, deleteEnvironment, arg.ID, arg.ProjectID)
-	return err
+func (q *Queries) DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteEnvironment, arg.ID, arg.ProjectID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteOrg = `-- name: DeleteOrg :exec
@@ -4205,8 +4208,8 @@ func (q *Queries) UpdateAutomatedTesting(ctx context.Context, arg UpdateAutomate
 	return err
 }
 
-const updateEnvironment = `-- name: UpdateEnvironment :exec
-UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5
+const updateEnvironment = `-- name: UpdateEnvironment :execrows
+UPDATE environments SET name = $1, base_url = $2, description = $3, updated_at = now() WHERE id = $4 AND project_id = $5
 `
 
 type UpdateEnvironmentParams struct {
@@ -4217,15 +4220,18 @@ type UpdateEnvironmentParams struct {
 	ProjectID   sql.NullInt32
 }
 
-func (q *Queries) UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) error {
-	_, err := q.db.ExecContext(ctx, updateEnvironment,
+func (q *Queries) UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateEnvironment,
 		arg.Name,
 		arg.BaseUrl,
 		arg.Description,
 		arg.ID,
 		arg.ProjectID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateOrg = `-- name: UpdateOrg :exec
