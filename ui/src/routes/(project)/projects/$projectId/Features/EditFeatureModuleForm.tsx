@@ -72,7 +72,6 @@ function EditFeatureModuleForm() {
 
   async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
-      id: parseInt(moduleId),
       name: values.name,
       type: values.type,
       description: values.description || "",

@@ -8,12 +8,22 @@ import {
   Spinner,
   Text,
   IconButton,
+  Menu,
+  Portal,
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import ModuleService, { Module } from "@/services/ModuleService";
-import { LuTrash } from "react-icons/lu";
+import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { AppDialog } from "@/components/ui/app-dialog";
+import { DynamicForm } from "@/components/form/DynamicForm";
+import { toaster } from "@/components/ui/toaster";
+import {
+  featureModuleEditSchema,
+  FeatureModuleEditFormData,
+} from "@/data/forms/feature-module-schemas";
+import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/"
@@ -27,6 +37,11 @@ function RouteComponent() {
   const [features, setFeatures] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [moduleToEdit, setModuleToEdit] = useState<Module | null>(null);
+  const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -50,15 +65,68 @@ function RouteComponent() {
     fetchModules();
   }, [projectId, t]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(t("features.index.delete_confirm"))) return;
+  const handleUpdate = async (values: FeatureModuleEditFormData) => {
+    if (!moduleToEdit) return;
+    const payload = {
+      name: values.name,
+      type: values.type,
+      description: values.description || "",
+      code: values.code,
+      priority: Number(values.priority),
+    };
+
     try {
+      setSaving(true);
       const service = new ModuleService();
-      await service.deleteModule(id);
-      setFeatures((prev) => prev.filter((f) => f.id !== id));
+      await service.updateModule(moduleToEdit.id, payload);
+      setFeatures((prev) =>
+        prev.map((f) => (f.id === moduleToEdit.id ? { ...f, ...payload } : f))
+      );
+      toaster.create({
+        title: t("features.edit.success"),
+        description: t("features.edit.success_description", {
+          type: values.type,
+          name: values.name,
+        }),
+        type: "success",
+        duration: 3000,
+      });
+      setModuleToEdit(null);
     } catch (err) {
       console.error(err);
-      alert(t("features.index.delete_error"));
+      toaster.create({
+        title: t("features.edit.error"),
+        description: t("features.edit.error_description"),
+        type: "error",
+        duration: 3000,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!moduleToDelete) return;
+    try {
+      setDeleting(true);
+      const service = new ModuleService();
+      await service.deleteModule(moduleToDelete.id);
+      setFeatures((prev) => prev.filter((f) => f.id !== moduleToDelete.id));
+      toaster.create({
+        title: t("features.delete.success"),
+        type: "success",
+        duration: 3000,
+      });
+      setModuleToDelete(null);
+    } catch (err) {
+      console.error(err);
+      toaster.create({
+        title: t("features.index.delete_error"),
+        type: "error",
+        duration: 3000,
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -92,7 +160,9 @@ function RouteComponent() {
                 <Table.ColumnHeader>{t("features.index.table.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.type")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.description")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("features.index.table.actions")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="end">
+                  {t("features.index.table.actions")}
+                </Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -101,17 +171,45 @@ function RouteComponent() {
                   <Table.Cell>{item.name}</Table.Cell>
                   <Table.Cell>{item.type}</Table.Cell>
                   <Table.Cell>{item.description}</Table.Cell>
-                  <Table.Cell>
-                    <Flex gap={2}>
-                      <IconButton
-                        aria-label={t("features.index.delete_button")}
-                        onClick={() => handleDelete(item.id)}
-                        colorPalette="danger"
-                        size="sm"
-                      >
-                        <LuTrash />
-                      </IconButton>
-                    </Flex>
+                  <Table.Cell textAlign="end">
+                    <Menu.Root>
+                      <Menu.Trigger asChild>
+                        <IconButton
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t("features.index.actions")}
+                        >
+                          <IconDotsVertical />
+                        </IconButton>
+                      </Menu.Trigger>
+                      <Portal>
+                        <Menu.Positioner>
+                          <Menu.Content
+                            bg="bg.surface"
+                            border="1px solid"
+                            borderColor="border.subtle"
+                            shadow="md"
+                          >
+                            <Menu.Item
+                              value="edit"
+                              onClick={() => setModuleToEdit(item)}
+                            >
+                              <IconPencil size={16} />
+                              {t("features.index.edit_button")}
+                            </Menu.Item>
+                            <Menu.Item
+                              value="delete"
+                              color="fg.error"
+                              _hover={{ bg: "bg.error", color: "fg.error" }}
+                              onClick={() => setModuleToDelete(item)}
+                            >
+                              <IconTrash size={16} />
+                              {t("features.index.delete_button")}
+                            </Menu.Item>
+                          </Menu.Content>
+                        </Menu.Positioner>
+                      </Portal>
+                    </Menu.Root>
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -121,6 +219,62 @@ function RouteComponent() {
       ) : (
         <Text color="fg.error">{t("features.index.error")}</Text>
       )}
+
+      <AppDialog
+        open={moduleToEdit !== null}
+        onOpenChange={(details) => {
+          if (!details.open && !saving) setModuleToEdit(null);
+        }}
+        title={t("features.edit.title")}
+        showCloseTrigger
+        closeButtonLabel={t("features.dialog.cancel")}
+      >
+        {moduleToEdit ? (
+          <DynamicForm
+            key={moduleToEdit.id}
+            schema={featureModuleEditSchema}
+            fields={featureModuleEditFields}
+            defaultValues={{
+              name: moduleToEdit.name || "",
+              type: moduleToEdit.type || "feature",
+              description: moduleToEdit.description || "",
+              code: moduleToEdit.code || "",
+              priority: moduleToEdit.priority || 1,
+            }}
+            onSubmit={handleUpdate}
+            submitText={t("features.edit.submit")}
+            submitLoading={saving}
+            layout="vertical"
+            spacing={4}
+          />
+        ) : null}
+      </AppDialog>
+
+      <AppDialog
+        open={moduleToDelete !== null}
+        onOpenChange={(details) => {
+          if (!details.open && !deleting) setModuleToDelete(null);
+        }}
+        title={t("features.delete.title")}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setModuleToDelete(null)}
+              disabled={deleting}
+            >
+              {t("features.dialog.cancel")}
+            </Button>
+            <Button colorPalette="red" onClick={handleDelete} loading={deleting}>
+              {t("features.delete.confirm")}
+            </Button>
+          </>
+        }
+      >
+        <Text color="fg.subtle">
+          {t("features.delete.description", { name: moduleToDelete?.name ?? "" })}
+        </Text>
+      </AppDialog>
     </Box>
   );
 }
