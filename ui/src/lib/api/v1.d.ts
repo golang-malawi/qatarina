@@ -484,7 +484,7 @@ export interface paths {
         put?: never;
         /**
          * Create a Module
-         * @description Create a Module
+         * @description Create a Module, optionally under a parent module. The hierarchy depth is limited by the platform max_module_depth setting (default 4, at most 8)
          */
         post: operations["CreateModule"];
         delete?: never;
@@ -508,7 +508,7 @@ export interface paths {
         put?: never;
         /**
          * Update a Module
-         * @description Update a Module
+         * @description Update a Module, including moving it under another parent module or to the top level
          */
         post: operations["UpdateModule"];
         /**
@@ -2324,6 +2324,8 @@ export interface components {
             code: string;
             description: string;
             name: string;
+            /** @description ParentModuleID is the module this module sits under, omit for a top-level module */
+            parent_module_id?: number;
             priority: number;
             project_id: number;
             type: string;
@@ -2777,6 +2779,8 @@ export interface components {
             description?: string;
             id: number;
             name: string;
+            /** @description ParentModuleID is the module this module sits under, omit or null to make it a top-level module */
+            parent_module_id?: number;
             priority: number;
             type: string;
         };

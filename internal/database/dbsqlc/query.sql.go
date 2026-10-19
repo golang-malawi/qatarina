@@ -608,19 +608,20 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 
 const createProjectModules = `-- name: CreateProjectModules :one
 INSERT INTO modules(
-    project_id, name, code, priority, type, description, created_at, updated_at
-)VALUES($1, $2, $3, $4, $5, $6, now(), now()
+    project_id, name, code, priority, type, description, parent_module_id, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, $7, now(), now()
 )
-RETURNING id, project_id, name, code, priority, type, description, created_at, updated_at
+RETURNING id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id
 `
 
 type CreateProjectModulesParams struct {
-	ProjectID   int32
-	Name        string
-	Code        string
-	Priority    int32
-	Type        string
-	Description string
+	ProjectID      int32
+	Name           string
+	Code           string
+	Priority       int32
+	Type           string
+	Description    string
+	ParentModuleID sql.NullInt32
 }
 
 func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectModulesParams) (Module, error) {
@@ -631,6 +632,7 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 		arg.Priority,
 		arg.Type,
 		arg.Description,
+		arg.ParentModuleID,
 	)
 	var i Module
 	err := row.Scan(
@@ -643,6 +645,7 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ParentModuleID,
 	)
 	return i, err
 }
@@ -1292,7 +1295,7 @@ func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindU
 }
 
 const getAllModules = `-- name: GetAllModules :many
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
 ORDER BY created_at DESC
 `
 
@@ -1315,6 +1318,7 @@ func (q *Queries) GetAllModules(ctx context.Context) ([]Module, error) {
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ParentModuleID,
 		); err != nil {
 			return nil, err
 		}
@@ -1515,6 +1519,71 @@ func (q *Queries) GetLatestCodeByPrefix(ctx context.Context, dollar_1 sql.NullSt
 	return code, err
 }
 
+const getModuleDepth = `-- name: GetModuleDepth :one
+WITH RECURSIVE ancestors AS (
+    SELECT m.id, m.parent_module_id, 1 AS level
+    FROM modules m
+    WHERE m.id = $1
+    UNION ALL
+    SELECT p.id, p.parent_module_id, a.level + 1
+    FROM modules p
+    INNER JOIN ancestors a ON p.id = a.parent_module_id
+    WHERE a.level < 100
+)
+SELECT MAX(level)::integer AS depth FROM ancestors
+`
+
+// Returns the level of a module in its hierarchy, where top-level modules are at level 1
+func (q *Queries) GetModuleDepth(ctx context.Context, id int32) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getModuleDepth, id)
+	var depth int32
+	err := row.Scan(&depth)
+	return depth, err
+}
+
+const getModuleDescendants = `-- name: GetModuleDescendants :many
+WITH RECURSIVE descendants AS (
+    SELECT m.id, 1 AS level
+    FROM modules m
+    WHERE m.parent_module_id = $1
+    UNION ALL
+    SELECT c.id, d.level + 1
+    FROM modules c
+    INNER JOIN descendants d ON c.parent_module_id = d.id
+    WHERE d.level < 100
+)
+SELECT id::integer AS id, level::integer AS level FROM descendants
+`
+
+type GetModuleDescendantsRow struct {
+	ID    int32
+	Level int32
+}
+
+// Returns all modules below the given module, with their level relative to it (children are at level 1)
+func (q *Queries) GetModuleDescendants(ctx context.Context, parentModuleID sql.NullInt32) ([]GetModuleDescendantsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getModuleDescendants, parentModuleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetModuleDescendantsRow
+	for rows.Next() {
+		var i GetModuleDescendantsRow
+		if err := rows.Scan(&i.ID, &i.Level); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getNextTestCaseSequence = `-- name: GetNextTestCaseSequence :one
 UPDATE test_case_sequences
 SET current_val = current_val +1,
@@ -1536,7 +1605,7 @@ func (q *Queries) GetNextTestCaseSequence(ctx context.Context, arg GetNextTestCa
 }
 
 const getOneModule = `-- name: GetOneModule :one
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
 WHERE id = $1
 `
 
@@ -1553,6 +1622,7 @@ func (q *Queries) GetOneModule(ctx context.Context, id int32) (Module, error) {
 		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ParentModuleID,
 	)
 	return i, err
 }
@@ -1655,7 +1725,7 @@ func (q *Queries) GetProjectCount(ctx context.Context) (int64, error) {
 }
 
 const getProjectModules = `-- name: GetProjectModules :many
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
 WHERE project_id = $1
 `
 
@@ -1678,6 +1748,7 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 			&i.Description,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ParentModuleID,
 		); err != nil {
 			return nil, err
 		}
@@ -4351,17 +4422,18 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (i
 }
 
 const updateProjectModule = `-- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, parent_module_id = $7, updated_at = now()
 WHERE id = $1
 `
 
 type UpdateProjectModuleParams struct {
-	ID          int32
-	Name        string
-	Code        string
-	Priority    int32
-	Type        string
-	Description string
+	ID             int32
+	Name           string
+	Code           string
+	Priority       int32
+	Type           string
+	Description    string
+	ParentModuleID sql.NullInt32
 }
 
 func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModuleParams) error {
@@ -4372,6 +4444,7 @@ func (q *Queries) UpdateProjectModule(ctx context.Context, arg UpdateProjectModu
 		arg.Priority,
 		arg.Type,
 		arg.Description,
+		arg.ParentModuleID,
 	)
 	return err
 }

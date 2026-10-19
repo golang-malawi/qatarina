@@ -10,9 +10,13 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import ModuleService, { Module } from "@/services/ModuleService";
-import { LuTrash } from "react-icons/lu";
+import { useEffect, useMemo, useState } from "react";
+import ModuleService, {
+  Module,
+  buildModuleTree,
+  flattenModuleTree,
+} from "@/services/ModuleService";
+import { LuCornerDownRight, LuPencil, LuTrash } from "react-icons/lu";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
@@ -27,6 +31,11 @@ function RouteComponent() {
   const [features, setFeatures] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const rows = useMemo(() => flattenModuleTree(buildModuleTree(features)), [features]);
+  const namesById = useMemo(
+    () => new Map(features.map((f) => [f.id, f.name])),
+    [features],
+  );
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -55,7 +64,12 @@ function RouteComponent() {
     try {
       const service = new ModuleService();
       await service.deleteModule(id);
-      setFeatures((prev) => prev.filter((f) => f.id !== id));
+      // children of a deleted module move to the top level
+      setFeatures((prev) =>
+        prev
+          .filter((f) => f.id !== id)
+          .map((f) => (f.parent_module_id === id ? { ...f, parent_module_id: null } : f)),
+      );
     } catch (err) {
       console.error(err);
       alert(t("features.index.delete_error"));
@@ -91,18 +105,43 @@ function RouteComponent() {
               <Table.Row>
                 <Table.ColumnHeader>{t("features.index.table.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.type")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("features.index.table.parent")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.description")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.actions")}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {features.map((item) => (
+              {rows.map((item) => (
                 <Table.Row key={item.id}>
-                  <Table.Cell>{item.name}</Table.Cell>
+                  <Table.Cell>
+                    <Flex align="center" gap={2} pl={(item.depth - 1) * 6}>
+                      {item.depth > 1 && <LuCornerDownRight />}
+                      <Text fontWeight={item.depth === 1 ? "semibold" : "normal"}>
+                        {item.name}
+                      </Text>
+                    </Flex>
+                  </Table.Cell>
                   <Table.Cell>{item.type}</Table.Cell>
+                  <Table.Cell>
+                    {item.parent_module_id ? namesById.get(item.parent_module_id) : "-"}
+                  </Table.Cell>
                   <Table.Cell>{item.description}</Table.Cell>
                   <Table.Cell>
                     <Flex gap={2}>
+                      <Link
+                        to="/projects/$projectId/Features/EditFeatureModuleForm"
+                        params={{ projectId }}
+                        search={{ moduleId: item.id }}
+                      >
+                        <IconButton
+                          aria-label={t("features.index.edit_button")}
+                          colorPalette="brand"
+                          variant="outline"
+                          size="sm"
+                        >
+                          <LuPencil />
+                        </IconButton>
+                      </Link>
                       <IconButton
                         aria-label={t("features.index.delete_button")}
                         onClick={() => handleDelete(item.id)}
