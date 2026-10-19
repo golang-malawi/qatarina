@@ -277,6 +277,10 @@ components:
           type: string
         name:
           type: string
+        parent_module_id:
+          description: ParentModuleID is the module this module sits under, omit for
+            a top-level module
+          type: integer
         priority:
           type: integer
         project_id:
@@ -1290,6 +1294,10 @@ components:
           type: integer
         name:
           type: string
+        parent_module_id:
+          description: ParentModuleID is the module this module sits under, omit or
+            null to make it a top-level module
+          type: integer
         priority:
           type: integer
         type:
@@ -1935,7 +1943,9 @@ paths:
       tags:
       - modules
     post:
-      description: Create a Module
+      description: Create a Module, optionally under a parent module. The hierarchy
+        depth is limited by the platform max_module_depth setting (default 4, at most
+        8)
       operationId: CreateModule
       requestBody:
         content:
@@ -2042,7 +2052,8 @@ paths:
       tags:
       - modules
     post:
-      description: Update a Module
+      description: Update a Module, including moving it under another parent module
+        or to the top level
       operationId: UpdateModule
       parameters:
       - description: moduleID

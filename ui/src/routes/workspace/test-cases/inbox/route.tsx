@@ -49,7 +49,8 @@ function TestCasePageInbox() {
 
   const testCases = testCasesResponse?.test_cases ?? [];
   const { data: unseenCount = 0 } = useQuery(findInboxUnseenCountQueryOptions);
-  const pagination = (testCasesResponse as any)?.pagination;
+  const pagination = testCasesResponse?.pagination;
+  const totalCount = pagination?.total ?? testCases.length;
 
   const { data: projects } = useSuspenseQuery(findProjectsQueryOptions);
   const projectMap: Record<number, string> = {};
@@ -223,6 +224,14 @@ function TestCasePageInbox() {
               <Heading size="md" color="fg.heading">
                 Test Case Inbox
               </Heading>
+              <Badge
+                colorPalette="brand"
+                variant="subtle"
+                rounded="full"
+                title={includeClosed ? "All test cases in your inbox" : "Open test cases in your inbox"}
+              >
+                {totalCount} {totalCount === 1 ? "test case" : "test cases"}
+              </Badge>
               {unseenCount > 0 && (
                 <Badge colorPalette="danger" variant="solid" rounded="full">
                   {unseenCount} unseen
@@ -312,6 +321,12 @@ function TestCasePageInbox() {
                 </Button>
               </Box>
             </Flex>
+
+            {isFiltered && (
+              <Text mt={2} fontSize="xs" color="fg.subtle">
+                Showing {filteredTestCases.length} of {testCases.length} test cases on this page
+              </Text>
+            )}
           </Box>
 
           <Box flex="1" overflowY="auto">

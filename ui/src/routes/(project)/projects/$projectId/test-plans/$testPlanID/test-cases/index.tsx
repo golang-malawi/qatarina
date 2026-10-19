@@ -1,10 +1,11 @@
 import { getTestCasesByTestPlanID } from "@/services/TestCaseService";
-import { useUsersQuery } from "@/services/UserService";
+import { useProjectTestersQuery } from "@/services/TesterService";  
 import {
   assignTestersToTestPlan,
   useTestPlanQuery,
   useUpdateTestPlanCaseUrgencyMutation,
 } from "@/services/TestPlanService";
+
 import {
   Badge,
   Box,
@@ -24,10 +25,12 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
+
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { IconSearch, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import { type ElementType, useMemo, useState } from "react";
+
 import { AppDialog } from "@/components/ui/app-dialog";
 import {
   EmptyState,
@@ -51,17 +54,6 @@ type TestCaseItem = components["schemas"]["schema.TestCaseResponse"] & {
 
 type TestPlanItem = components["schemas"]["schema.TestPlanResponseItem"];
 
-type UserRecord = {
-  ID?: number;
-  id?: number;
-  FirstName?: string;
-  LastName?: string;
-  displayName?: string;
-  username?: string;
-  Email?: string;
-  email?: string;
-};
-
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/test-cases/"
 )({
@@ -70,12 +62,15 @@ export const Route = createFileRoute(
 
 function TestPlanTestCasesPage() {
   const { t } = useTranslation();
-  const { testPlanID } = Route.useParams();
+  const { projectId, testPlanID } = Route.useParams();
+  const navigate = useNavigate();
+
   const [searchTerm, setSearchTerm] = useState("");
 
-  const usersQuery = useUsersQuery();
+  const testersQuery = useProjectTestersQuery(Number(projectId));   
   const updateUrgencyMutation = useUpdateTestPlanCaseUrgencyMutation();
   const [updatingUrgencyFor, setUpdatingUrgencyFor] = useState<string | null>(null);
+
   const testPlanQuery = useTestPlanQuery(testPlanID) as {
     data: TestPlanItem | undefined;
     isLoading: boolean;
@@ -92,9 +87,9 @@ function TestPlanTestCasesPage() {
     queryFn: () => getTestCasesByTestPlanID(Number(testPlanID)),
   });
 
-  const users = useMemo(
-    () => (usersQuery.data?.users ?? []) as UserRecord[],
-    [usersQuery.data?.users]
+  const testers = useMemo(
+    () => testersQuery.data?.testers ?? [],
+    [testersQuery.data?.testers]
   );
 
   const allCases = useMemo(() => normalizeTestCases(testCasesResult), [testCasesResult]);
@@ -118,13 +113,13 @@ function TestPlanTestCasesPage() {
 
   const userMap = useMemo(() => {
     const mapped = new Map<number, string>();
-    users.forEach((user) => {
-      const id = Number(user.ID ?? user.id);
+    testers.forEach((tester: any) => {
+      const id = Number(tester.user_id);
       if (Number.isNaN(id)) return;
-      mapped.set(id, getUserLabel(user, id));
+      mapped.set(id, tester.name ?? `User ${id}`);
     });
     return mapped;
-  }, [users]);
+  }, [testers]);
 
   const assignedCases = allCases.filter(
     (testCase) => (testCase.assigned_tester_ids?.length ?? 0) > 0
@@ -135,8 +130,8 @@ function TestPlanTestCasesPage() {
     selectedUserIds: string[],
     targetTestCases: TestCaseItem[]
   ) => {
-    const projectId = testPlanQuery.data?.project_id;
-    if (!projectId) {
+    const projectIdNum = testPlanQuery.data?.project_id;
+    if (!projectIdNum) {
       toaster.error({ title: t("test_plans.error_cases") });
       return;
     }
@@ -155,7 +150,7 @@ function TestPlanTestCasesPage() {
 
     try {
       await assignTestersToTestPlan(testPlanID, {
-        project_id: projectId,
+        project_id: projectIdNum,
         test_plan_id: Number(testPlanID),
         planned_tests: plannedTests,
       });
@@ -184,7 +179,7 @@ function TestPlanTestCasesPage() {
     }
   };
 
-  if (isLoadingCases || usersQuery.isLoading || testPlanQuery.isLoading) {
+  if (isLoadingCases || testersQuery.isLoading || testPlanQuery.isLoading) {
     return <LoadingState label={t("test_plans.loading_cases")} />;
   }
 
@@ -224,16 +219,19 @@ function TestPlanTestCasesPage() {
             </Stack>
 
             <AssignTesterDialog
-              users={users}
+              users={testers}
               buttonText={t("test_plans.assign_visible")}
               buttonIcon={IconUserPlus}
               onAssign={(ids) => performAssignment(ids, filteredCases)}
               disabled={filteredCases.length === 0}
+              projectId={projectId}   
+              navigate={navigate}
             />
           </Flex>
         </Card.Body>
       </Card.Root>
 
+      {/* Search bar */}
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={4}>
           <InputGroup startElement={<IconSearch size={16} />}>
@@ -246,6 +244,7 @@ function TestPlanTestCasesPage() {
         </Card.Body>
       </Card.Root>
 
+      {/* Cases list */}
       {allCases.length === 0 ? (
         <EmptyState
           title={t("test_plans.empty_cases")}
@@ -294,7 +293,7 @@ function TestPlanTestCasesPage() {
                               Code: {testCase.code}
                             </Badge>
                           )}
-                                                    {testCase.feature_or_module && (
+                          {testCase.feature_or_module && (
                             <Badge colorPalette="purple" variant="outline">
                               Module: {testCase.feature_or_module}
                             </Badge>
@@ -334,11 +333,13 @@ function TestPlanTestCasesPage() {
                           </NativeSelect.Root>
                         )}
                         <AssignTesterDialog
-                          users={users}
+                          users={testers}
                           buttonText={t("test_plans.assign_tester")}
                           buttonVariant="outline"
                           buttonIcon={IconUserPlus}
                           onAssign={(ids) => performAssignment(ids, [testCase])}
+                          projectId={projectId}
+                          navigate={navigate}
                         />
                       </HStack>
                     </Flex>
@@ -407,8 +408,10 @@ function AssignTesterDialog({
   buttonVariant = "solid",
   buttonIcon,
   disabled = false,
+  projectId,
+  navigate,
 }: {
-  users: UserRecord[];
+  users: any[];
   onAssign: (selectedIds: string[]) => Promise<void>;
   buttonText: string;
   buttonVariant?:
@@ -420,6 +423,8 @@ function AssignTesterDialog({
     | "plain";
   buttonIcon?: ElementType;
   disabled?: boolean;
+  projectId: string;
+  navigate: ReturnType<typeof useNavigate>;
 }) {
   const { t } = useTranslation();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -471,14 +476,26 @@ function AssignTesterDialog({
       }
     >
       {users.length === 0 ? (
-        <Text color="fg.subtle" fontSize="sm">
-          {t("test_plans.no_users")}
-        </Text>
+        <Stack gap={2}>
+          <Text color="fg.error">{t("testers.none_assigned")}</Text>
+          <Button
+            size="sm"
+            colorPalette="brand"
+            onClick={() =>
+              navigate({
+                to: "/projects/$projectId/testers",
+                params: { projectId },
+              })
+            }
+          >
+            {t("testers.add_button")}
+          </Button>
+        </Stack>
       ) : (
         <CheckboxGroup value={selectedUsers} onValueChange={setSelectedUsers}>
           <Stack gap={3} maxH="72" overflowY="auto">
-            {users.map((user) => {
-              const userId = String(user.ID ?? user.id ?? "");
+            {users.map((tester: any) => {
+              const userId = String(tester.user_id);
               if (!userId) return null;
               return (
                 <Checkbox.Root key={userId} value={userId}>
@@ -486,11 +503,9 @@ function AssignTesterDialog({
                   <Checkbox.Control />
                   <Checkbox.Label>
                     <Box ml={2}>
-                      <Text fontWeight="medium">
-                        {getUserLabel(user, Number(userId))}
-                      </Text>
+                      <Text fontWeight="medium">{tester.name}</Text>
                       <Text fontSize="xs" color="fg.subtle">
-                        {user.Email ?? user.email ?? t("test_plans.no_users")}
+                        {tester.email ?? ""}
                       </Text>
                     </Box>
                   </Checkbox.Label>
@@ -524,16 +539,4 @@ function normalizeTestCases(payload: unknown): TestCaseItem[] {
     }
   }
   return [];
-}
-
-function getUserLabel(user: UserRecord, fallbackId: number) {
-  const fullName = `${user.FirstName ?? ""} ${user.LastName ?? ""}`.trim();
-  return (
-    user.displayName ||
-    fullName ||
-    user.username ||
-    user.Email ||
-    user.email ||
-    `User ${fallbackId}`
-  );
 }
