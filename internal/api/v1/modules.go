@@ -19,7 +19,7 @@ import (
 //
 //		@ID	CreateModule
 //		@Summary	Create a Module
-//		@Description	Create a Module
+//		@Description	Create a Module, optionally under a parent module. The hierarchy depth is limited by the platform max_module_depth setting (default 4, at most 8)
 //		@Tags	modules
 //		@Accept			json
 //		@Produce		json
@@ -41,6 +41,9 @@ func CreateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 		_, err := module.Create(request)
 		if err != nil {
+			if services.IsModuleHierarchyError(err) {
+				return problemdetail.BadRequest(c, err.Error())
+			}
 			logger.Error("api-modules", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process equest")
 		}
@@ -118,7 +121,7 @@ func GetAllModules(moduleService services.ModuleService, logger logging.Logger) 
 //
 //	@ID				UpdateModule
 //	@Summary		Update a Module
-//	@Description	Update a Module
+//	@Description	Update a Module, including moving it under another parent module or to the top level
 //	@Tags			modules
 //	@Accept			json
 //	@Produce		json
@@ -147,6 +150,9 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 		_, err = module.Update(context.Background(), *request)
 		if err != nil {
+			if services.IsModuleHierarchyError(err) {
+				return problemdetail.BadRequest(c, err.Error())
+			}
 			logger.Error("api-modules", "failed to process request", "error", err)
 			return problemdetail.BadRequest(c, "failed to process equest")
 		}

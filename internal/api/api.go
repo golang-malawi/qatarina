@@ -38,7 +38,7 @@ func NewAPI(config *config.Config) *API {
 	dbConn := dbsqlc.New(rawDB)
 	logger := logging.NewFromConfig(&config.Logging)
 
-	moduleService := services.NewModuleService(dbConn)
+	moduleService := services.NewModuleService(dbConn, config.Platform.GetMaxModuleDepth())
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
 	reportService := services.NewReportService(rawDB.DB, dbConn, logger)

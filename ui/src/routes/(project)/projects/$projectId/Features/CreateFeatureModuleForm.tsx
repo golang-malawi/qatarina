@@ -8,6 +8,7 @@ import {
   FeatureModuleCreationFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleCreationFields } from "@/data/forms/feature-module-field-configs";
+import SelectParentModule from "@/components/form/SelectParentModule";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
@@ -21,6 +22,22 @@ function RouteComponent() {
   const params = Route.useParams();
   const navigate = useNavigate();
   const moduleService = new ModuleService();
+  const fields = [
+    ...featureModuleCreationFields,
+    {
+      name: "parent_module_id",
+      label: t("features.form.parent"),
+      type: "custom" as const,
+      helperText: t("features.form.parent_helper"),
+      customComponent: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
+        <SelectParentModule
+          projectId={params.projectId}
+          value={(value as string) || ""}
+          onChange={onChange}
+        />
+      ),
+    },
+  ];
 
   async function handleSubmit(values: FeatureModuleCreationFormData) {
     const payload = {
@@ -30,16 +47,13 @@ function RouteComponent() {
       code: values.code,
       priority: Number(values.priority),
       project_id: parseInt(params.projectId),
+      parent_module_id: values.parent_module_id
+        ? Number(values.parent_module_id)
+        : undefined,
     };
 
     try {
-      const res = await moduleService.createModule(payload);
-      if (
-        !res ||
-        (res as any).type === "problemdetail.example.com/http/types/BadRequest"
-      ) {
-        throw new Error((res as any).detail || t("features.create.error"));
-      }
+      await moduleService.createModule(payload);
 
       toaster.create({
         title: t("features.create.success"),
@@ -59,7 +73,10 @@ function RouteComponent() {
       console.error(err);
       toaster.create({
         title: t("features.create.error"),
-        description: t("features.create.error_description"),
+        description:
+          err instanceof Error && err.message
+            ? err.message
+            : t("features.create.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -71,7 +88,7 @@ function RouteComponent() {
       <Heading color="fg.heading">{t("features.create.title")}</Heading>
       <DynamicForm
         schema={featureModuleCreationSchema}
-        fields={featureModuleCreationFields}
+        fields={fields}
         onSubmit={handleSubmit}
         submitText={t("features.create.submit")}
         layout="vertical"
