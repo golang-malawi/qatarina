@@ -12,9 +12,13 @@ import {
   Portal,
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import ModuleService, { Module } from "@/services/ModuleService";
-import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import ModuleService, {
+  Module,
+  buildModuleTree,
+  flattenModuleTree,
+} from "@/services/ModuleService";
+import { LuCornerDownRight, LuPencil, LuTrash } from "react-icons/lu";
 import { useTranslation } from "react-i18next";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { DynamicForm } from "@/components/form/DynamicForm";
@@ -24,6 +28,7 @@ import {
   FeatureModuleEditFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
+import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/"
@@ -37,6 +42,11 @@ function RouteComponent() {
   const [features, setFeatures] = useState<Module[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const rows = useMemo(() => flattenModuleTree(buildModuleTree(features)), [features]);
+  const namesById = useMemo(
+    () => new Map(features.map((f) => [f.id, f.name])),
+    [features],
+  );
 
   const [moduleToEdit, setModuleToEdit] = useState<Module | null>(null);
   const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null);
@@ -159,6 +169,7 @@ function RouteComponent() {
               <Table.Row>
                 <Table.ColumnHeader>{t("features.index.table.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.type")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("features.index.table.parent")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.description")}</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="end">
                   {t("features.index.table.actions")}
@@ -166,10 +177,20 @@ function RouteComponent() {
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {features.map((item) => (
+              {rows.map((item) => (
                 <Table.Row key={item.id}>
-                  <Table.Cell>{item.name}</Table.Cell>
+                  <Table.Cell>
+                    <Flex align="center" gap={2} pl={(item.depth - 1) * 6}>
+                      {item.depth > 1 && <LuCornerDownRight />}
+                      <Text fontWeight={item.depth === 1 ? "semibold" : "normal"}>
+                        {item.name}
+                      </Text>
+                    </Flex>
+                  </Table.Cell>
                   <Table.Cell>{item.type}</Table.Cell>
+                  <Table.Cell>
+                    {item.parent_module_id ? namesById.get(item.parent_module_id) : "-"}
+                  </Table.Cell>
                   <Table.Cell>{item.description}</Table.Cell>
                   <Table.Cell textAlign="end">
                     <Menu.Root>
