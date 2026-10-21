@@ -2806,7 +2806,6 @@ export interface components {
         "schema.UpdateProjectModuleRequest": {
             code: string;
             description?: string;
-            id: number;
             name: string;
             /** @description ParentModuleID is the module this module sits under, omit or null to make it a top-level module */
             parent_module_id?: number;
@@ -3407,6 +3406,15 @@ export interface operations {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
             /** @description Internal Server Error */
             500: {
                 headers: {
@@ -3445,6 +3453,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

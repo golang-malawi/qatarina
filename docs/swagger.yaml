@@ -1290,8 +1290,6 @@ components:
           type: string
         description:
           type: string
-        id:
-          type: integer
         name:
           type: string
         parent_module_id:
@@ -1304,7 +1302,6 @@ components:
           type: string
       required:
       - code
-      - id
       - name
       - priority
       - type
@@ -2005,6 +2002,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -2082,6 +2085,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:

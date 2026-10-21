@@ -176,7 +176,6 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to update module %v", err)
-
 	}
 
 	return true, nil
@@ -184,10 +183,13 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 
 // Implement the Delete to remove a module in the table
 func (m *moduleServiceImpl) Delete(ctx context.Context, id int32) error {
-	_, err := m.db.DeleteProjectModule(ctx, id)
+	rows, err := m.db.DeleteProjectModule(ctx, id)
 
 	if err != nil {
 		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
 	}
 
 	return nil

@@ -41,7 +41,7 @@ export default function SelectFeatureModuleType({
           </Select.IndicatorGroup>
         </Select.Control>
         <Portal>
-          <Select.Positioner>
+          <Select.Positioner zIndex="popover">
             <Select.Content>
               {typeOptions.items.map((item) => (
                 <Select.Item key={item.value} item={item}>
