@@ -17,7 +17,7 @@ function ViewProject() {
   if (error) return <Text color="fg.error">{t("projects.overview.error")}</Text>;
 
   const navItems = [
-    { label: t("projects.overview.nav.summary"), path: Route.to },
+    { label: t("projects.overview.nav.summary"), path: "/projects/$projectId/summary" },
     { label: t("projects.overview.nav.test_cases"), path: "/projects/$projectId/test-cases" },
     { label: t("projects.overview.nav.test_plans"), path: "/projects/$projectId/test-plans" },
     { label: t("projects.overview.nav.features"), path: "/projects/$projectId/features" },

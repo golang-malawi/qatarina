@@ -48,6 +48,7 @@ import { Route as WorkspaceOrganizationsIdEditIndexRouteImport } from './routes/
 import { Route as projectProjectsProjectIdTestersIndexRouteImport } from './routes/(project)/projects/$projectId/testers/index'
 import { Route as projectProjectsProjectIdTestPlansIndexRouteImport } from './routes/(project)/projects/$projectId/test-plans/index'
 import { Route as projectProjectsProjectIdTestCasesIndexRouteImport } from './routes/(project)/projects/$projectId/test-cases/index'
+import { Route as projectProjectsProjectIdSummaryIndexRouteImport } from './routes/(project)/projects/$projectId/summary/index'
 import { Route as projectProjectsProjectIdSettingsIndexRouteImport } from './routes/(project)/projects/$projectId/settings/index'
 import { Route as projectProjectsProjectIdReportsIndexRouteImport } from './routes/(project)/projects/$projectId/reports/index'
 import { Route as projectProjectsProjectIdOverviewIndexRouteImport } from './routes/(project)/projects/$projectId/overview/index'
@@ -286,6 +287,12 @@ const projectProjectsProjectIdTestCasesIndexRoute =
     path: '/test-cases/',
     getParentRoute: () => projectProjectsProjectIdRouteRoute,
   } as any)
+const projectProjectsProjectIdSummaryIndexRoute =
+  projectProjectsProjectIdSummaryIndexRouteImport.update({
+    id: '/summary/',
+    path: '/summary/',
+    getParentRoute: () => projectProjectsProjectIdRouteRoute,
+  } as any)
 const projectProjectsProjectIdSettingsIndexRoute =
   projectProjectsProjectIdSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -469,6 +476,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/overview/': typeof projectProjectsProjectIdOverviewIndexRoute
   '/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/projects/$projectId/summary/': typeof projectProjectsProjectIdSummaryIndexRoute
   '/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
@@ -530,6 +538,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/overview': typeof projectProjectsProjectIdOverviewIndexRoute
   '/projects/$projectId/reports': typeof projectProjectsProjectIdReportsIndexRoute
   '/projects/$projectId/settings': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/projects/$projectId/summary': typeof projectProjectsProjectIdSummaryIndexRoute
   '/projects/$projectId/test-cases': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/projects/$projectId/test-plans': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/projects/$projectId/testers': typeof projectProjectsProjectIdTestersIndexRoute
@@ -595,6 +604,7 @@ export interface FileRoutesById {
   '/(project)/projects/$projectId/overview/': typeof projectProjectsProjectIdOverviewIndexRoute
   '/(project)/projects/$projectId/reports/': typeof projectProjectsProjectIdReportsIndexRoute
   '/(project)/projects/$projectId/settings/': typeof projectProjectsProjectIdSettingsIndexRoute
+  '/(project)/projects/$projectId/summary/': typeof projectProjectsProjectIdSummaryIndexRoute
   '/(project)/projects/$projectId/test-cases/': typeof projectProjectsProjectIdTestCasesIndexRoute
   '/(project)/projects/$projectId/test-plans/': typeof projectProjectsProjectIdTestPlansIndexRoute
   '/(project)/projects/$projectId/testers/': typeof projectProjectsProjectIdTestersIndexRoute
@@ -660,6 +670,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/overview/'
     | '/projects/$projectId/reports/'
     | '/projects/$projectId/settings/'
+    | '/projects/$projectId/summary/'
     | '/projects/$projectId/test-cases/'
     | '/projects/$projectId/test-plans/'
     | '/projects/$projectId/testers/'
@@ -721,6 +732,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/overview'
     | '/projects/$projectId/reports'
     | '/projects/$projectId/settings'
+    | '/projects/$projectId/summary'
     | '/projects/$projectId/test-cases'
     | '/projects/$projectId/test-plans'
     | '/projects/$projectId/testers'
@@ -785,6 +797,7 @@ export interface FileRouteTypes {
     | '/(project)/projects/$projectId/overview/'
     | '/(project)/projects/$projectId/reports/'
     | '/(project)/projects/$projectId/settings/'
+    | '/(project)/projects/$projectId/summary/'
     | '/(project)/projects/$projectId/test-cases/'
     | '/(project)/projects/$projectId/test-plans/'
     | '/(project)/projects/$projectId/testers/'
@@ -1091,6 +1104,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof projectProjectsProjectIdTestCasesIndexRouteImport
       parentRoute: typeof projectProjectsProjectIdRouteRoute
     }
+    '/(project)/projects/$projectId/summary/': {
+      id: '/(project)/projects/$projectId/summary/'
+      path: '/summary'
+      fullPath: '/projects/$projectId/summary/'
+      preLoaderRoute: typeof projectProjectsProjectIdSummaryIndexRouteImport
+      parentRoute: typeof projectProjectsProjectIdRouteRoute
+    }
     '/(project)/projects/$projectId/settings/': {
       id: '/(project)/projects/$projectId/settings/'
       path: '/settings'
@@ -1387,6 +1407,7 @@ interface projectProjectsProjectIdRouteRouteChildren {
   projectProjectsProjectIdOverviewIndexRoute: typeof projectProjectsProjectIdOverviewIndexRoute
   projectProjectsProjectIdReportsIndexRoute: typeof projectProjectsProjectIdReportsIndexRoute
   projectProjectsProjectIdSettingsIndexRoute: typeof projectProjectsProjectIdSettingsIndexRoute
+  projectProjectsProjectIdSummaryIndexRoute: typeof projectProjectsProjectIdSummaryIndexRoute
   projectProjectsProjectIdTestCasesIndexRoute: typeof projectProjectsProjectIdTestCasesIndexRoute
   projectProjectsProjectIdTestPlansIndexRoute: typeof projectProjectsProjectIdTestPlansIndexRoute
   projectProjectsProjectIdTestersIndexRoute: typeof projectProjectsProjectIdTestersIndexRoute
@@ -1425,6 +1446,8 @@ const projectProjectsProjectIdRouteRouteChildren: projectProjectsProjectIdRouteR
       projectProjectsProjectIdReportsIndexRoute,
     projectProjectsProjectIdSettingsIndexRoute:
       projectProjectsProjectIdSettingsIndexRoute,
+    projectProjectsProjectIdSummaryIndexRoute:
+      projectProjectsProjectIdSummaryIndexRoute,
     projectProjectsProjectIdTestCasesIndexRoute:
       projectProjectsProjectIdTestCasesIndexRoute,
     projectProjectsProjectIdTestPlansIndexRoute:
