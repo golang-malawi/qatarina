@@ -30,19 +30,14 @@ function toModule(mod: any): Module {
     type: mod.Type,
     priority: mod.Priority,
     description: mod.Description,
-<<<<<<< HEAD
-=======
     parent_module_id: mod.ParentModuleID?.Valid
       ? String(mod.ParentModuleID.Int32)
       : null,
->>>>>>> main
     created_at: mod.CreatedAt?.Time || "",
     updated_at: mod.UpdatedAt?.Time || "",
   };
 }
 
-<<<<<<< HEAD
-=======
 /** Arranges modules into their hierarchy, modules whose parent is missing are treated as top level */
 export function buildModuleTree(modules: Module[]): ModuleNode[] {
   const nodes = new Map<string, ModuleNode>(
@@ -98,7 +93,6 @@ function errorMessage(res: { error?: unknown; data?: unknown }): string | undefi
   return undefined;
 }
 
->>>>>>> main
 export default class ModuleService {
   async getAllModules(): Promise<Module[]> {
     const res = await apiClient.request("get", "/v1/modules");
@@ -111,13 +105,12 @@ export default class ModuleService {
     const res = await apiClient.request("get", "/v1/modules/{moduleID}", {
       params: { path: { moduleID: id } },
     });
-<<<<<<< HEAD
-=======
+
     const message = errorMessage(res);
     if (message) {
       throw new Error(message);
     }
->>>>>>> main
+
     return toModule(res.data);
   }
 
