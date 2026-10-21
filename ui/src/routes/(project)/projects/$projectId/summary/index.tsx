@@ -23,12 +23,12 @@ function SummaryPage() {
     }
 
     const chartData = [
-  { name: "Completed", value: data.completed, color: "#4CAF50" },   
-  { name: "Incomplete", value: data.incomplete, color: "#2196F3" }, 
-  { name: "Passed", value: data.passed, color: "#2E7D32" },         
-  { name: "Failed", value: data.failed, color: "#F44336" },         
-  { name: "Pending", value: data.pending, color: "#FF9800" },       
-  { name: "Blocked", value: data.blocked, color: "#9E9E9E" },       
+  { name: "Completed", value: data.completed, color: "#4CAF50" },
+  { name: "Incomplete", value: data.incomplete, color: "#2196F3" },
+  { name: "Passed", value: data.passed, color: "#2E7D32" },
+  { name: "Failed", value: data.failed, color: "#F44336" },
+  { name: "Pending", value: data.pending, color: "#FF9800" },
+  { name: "Blocked", value: data.blocked, color: "#9E9E9E" },
 ];
 
     return (
@@ -43,7 +43,7 @@ function SummaryPage() {
             <Tooltip />
             <Bar
               dataKey="value"
-              shape={(props) => {
+              shape={(props: any) => {
                 const { x, y, width, height, payload } = props;
                 return (
                   <rect
