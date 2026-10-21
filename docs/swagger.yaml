@@ -627,6 +627,13 @@ components:
         user_id:
           type: integer
       type: object
+    schema.MessageResponse:
+      properties:
+        developer_message:
+          type: string
+        message:
+          type: string
+      type: object
     schema.Metrics:
       properties:
         errorsTotal:
@@ -1264,6 +1271,17 @@ components:
       required:
       - project_id
       type: object
+    schema.UpdateEnvironmentRequest:
+      properties:
+        base_url:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+      required:
+      - name
+      type: object
     schema.UpdateOrgRequest:
       properties:
         address:
@@ -1767,7 +1785,7 @@ paths:
           description: Internal Server Error
       summary: Get details of a single environment by ID
       tags:
-      - environements
+      - environments
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
@@ -2793,6 +2811,109 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Create a new environment
+      tags:
+      - environments
+  /v1/projects/{projectID}/environments/{environmentID}:
+    delete:
+      description: Delete an environment from a project. Test plans and runs using
+        it are detached from it.
+      operationId: DeleteEnvironment
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Environment ID
+        in: path
+        name: environmentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.MessageResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete an environment
+      tags:
+      - environments
+    post:
+      description: Update the name, description and base URL of an environment in
+        a project
+      operationId: UpdateEnvironment
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Environment ID
+        in: path
+        name: environmentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateEnvironmentRequest'
+        description: Environment details
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.EnvironmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update an environment
       tags:
       - environments
   /v1/projects/{projectID}/modules:

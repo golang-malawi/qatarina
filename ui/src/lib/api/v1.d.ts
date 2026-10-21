@@ -741,6 +741,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/environments/{environmentID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update an environment
+         * @description Update the name, description and base URL of an environment in a project
+         */
+        post: operations["UpdateEnvironment"];
+        /**
+         * Delete an environment
+         * @description Delete an environment from a project. Test plans and runs using it are detached from it.
+         */
+        delete: operations["DeleteEnvironment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/modules": {
         parameters: {
             query?: never;
@@ -2498,6 +2522,10 @@ export interface components {
             token?: string;
             user_id?: number;
         };
+        "schema.MessageResponse": {
+            developer_message?: string;
+            message?: string;
+        };
         "schema.Metrics": {
             errorsTotal?: number;
             requestsTotal?: number;
@@ -2793,6 +2821,11 @@ export interface components {
             automated_testing_enabled?: boolean;
             project_id: number;
             supported_runners?: string[];
+        };
+        "schema.UpdateEnvironmentRequest": {
+            base_url?: string;
+            description?: string;
+            name: string;
         };
         "schema.UpdateOrgRequest": {
             address?: string;
@@ -4315,6 +4348,119 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Environment ID */
+                environmentID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Environment details */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateEnvironmentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.EnvironmentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    DeleteEnvironment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID */
+                projectID: string;
+                /** @description Environment ID */
+                environmentID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.MessageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

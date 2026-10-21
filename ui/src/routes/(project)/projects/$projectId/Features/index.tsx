@@ -18,7 +18,7 @@ import ModuleService, {
   buildModuleTree,
   flattenModuleTree,
 } from "@/services/ModuleService";
-import { LuCornerDownRight, LuPencil, LuTrash } from "react-icons/lu";
+import { LuCornerDownRight } from "react-icons/lu";
 import { useTranslation } from "react-i18next";
 import { AppDialog } from "@/components/ui/app-dialog";
 import { DynamicForm } from "@/components/form/DynamicForm";

@@ -868,11 +868,11 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
 
--- name: DeleteEnvironment :exec
+-- name: DeleteEnvironment :execrows
 DELETE FROM environments WHERE id = $1 AND project_id = $2;
 
--- name: UpdateEnvironment :exec
-UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5;
+-- name: UpdateEnvironment :execrows
+UPDATE environments SET name = $1, base_url = $2, description = $3, updated_at = now() WHERE id = $4 AND project_id = $5;
 
 -- name: ListReportsByProject :many
 SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
