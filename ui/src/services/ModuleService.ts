@@ -105,10 +105,12 @@ export default class ModuleService {
     const res = await apiClient.request("get", "/v1/modules/{moduleID}", {
       params: { path: { moduleID: id } },
     });
+
     const message = errorMessage(res);
     if (message) {
       throw new Error(message);
     }
+
     return toModule(res.data);
   }
 
