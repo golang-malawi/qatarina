@@ -668,8 +668,8 @@ WHERE project_id = $1;
 
 -- name: CreateProjectModules :one
 INSERT INTO modules(
-    project_id, name, code, priority, type, description, created_at, updated_at
-)VALUES($1, $2, $3, $4, $5, $6, now(), now()
+    project_id, name, code, priority, type, description, parent_module_id, created_at, updated_at
+)VALUES($1, $2, $3, $4, $5, $6, $7, now(), now()
 )
 RETURNING *;
 
@@ -682,7 +682,7 @@ SELECT * FROM modules
 ORDER BY created_at DESC;
 
 -- name: UpdateProjectModule :exec
-UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6
+UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, parent_module_id = $7, updated_at = now()
 WHERE id = $1;
 
 -- name: DeleteProjectModule :execrows
@@ -691,6 +691,34 @@ DELETE FROM modules WHERE id = $1;
 -- name: GetProjectModules :many
 SELECT * FROM modules
 WHERE project_id = $1;
+
+-- name: GetModuleDepth :one
+-- Returns the level of a module in its hierarchy, where top-level modules are at level 1
+WITH RECURSIVE ancestors AS (
+    SELECT m.id, m.parent_module_id, 1 AS level
+    FROM modules m
+    WHERE m.id = $1
+    UNION ALL
+    SELECT p.id, p.parent_module_id, a.level + 1
+    FROM modules p
+    INNER JOIN ancestors a ON p.id = a.parent_module_id
+    WHERE a.level < 100
+)
+SELECT MAX(level)::integer AS depth FROM ancestors;
+
+-- name: GetModuleDescendants :many
+-- Returns all modules below the given module, with their level relative to it (children are at level 1)
+WITH RECURSIVE descendants AS (
+    SELECT m.id, 1 AS level
+    FROM modules m
+    WHERE m.parent_module_id = $1
+    UNION ALL
+    SELECT c.id, d.level + 1
+    FROM modules c
+    INNER JOIN descendants d ON c.parent_module_id = d.id
+    WHERE d.level < 100
+)
+SELECT id::integer AS id, level::integer AS level FROM descendants;
 
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
@@ -721,6 +749,20 @@ SELECT COUNT(DISTINCT user_id) FROM project_testers WHERE project_id = $1 AND is
 
 -- name: GetTestCaseCount :one
 SELECT COUNT(*) FROM test_cases;
+
+-- name: CountTestCasesByProject :one
+SELECT COUNT(*) FROM test_cases WHERE project_id = $1;
+
+-- name: CountCompletedTestCasesByProject :one
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+JOIN test_runs tr ON tr.test_case_id = tc.id
+WHERE tc.project_id = $1;
+
+-- name: CountTestRunsByResultState :one
+SELECT COUNT(*)
+FROM test_runs
+WHERE project_id = $1 AND result_state = $2;
 
 -- name: GetTestCasesWithTestersByPlan :many
 SELECT
@@ -829,11 +871,11 @@ SELECT * FROM environments WHERE project_id = $1 ORDER BY name;
 -- name: GetEnvironment :one
 SELECT * FROM environments WHERE id = $1;
 
--- name: DeleteEnvironment :exec
+-- name: DeleteEnvironment :execrows
 DELETE FROM environments WHERE id = $1 AND project_id = $2;
 
--- name: UpdateEnvironment :exec
-UPDATE environments SET name = $1, base_url = $2, description = $3 WHERE id = $4 AND project_id = $5;
+-- name: UpdateEnvironment :execrows
+UPDATE environments SET name = $1, base_url = $2, description = $3, updated_at = now() WHERE id = $4 AND project_id = $5;
 
 -- name: ListReportsByProject :many
 SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;

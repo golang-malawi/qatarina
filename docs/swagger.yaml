@@ -279,6 +279,10 @@ components:
           type: string
         name:
           type: string
+        parent_module_id:
+          description: ParentModuleID is the module this module sits under, omit for
+            a top-level module
+          type: integer
         priority:
           type: integer
         project_id:
@@ -378,6 +382,7 @@ components:
           type: string
         external_id:
           description: identifier in the source system, e.g. TestLink
+          form: external_id
           type: string
         feature_or_module:
           type: string
@@ -628,6 +633,13 @@ components:
         user_id:
           type: integer
       type: object
+    schema.MessageResponse:
+      properties:
+        developer_message:
+          type: string
+        message:
+          type: string
+      type: object
     schema.Metrics:
       properties:
         errorsTotal:
@@ -788,6 +800,23 @@ components:
           type: string
         website_url:
           type: string
+      type: object
+    schema.ProjectTestCaseSummaryResponse:
+      properties:
+        blocked:
+          type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+        incomplete:
+          type: integer
+        passed:
+          type: integer
+        pending:
+          type: integer
+        total:
+          type: integer
       type: object
     schema.ProjectTestCaseTemplateResponse:
       properties:
@@ -1250,6 +1279,17 @@ components:
       required:
       - project_id
       type: object
+    schema.UpdateEnvironmentRequest:
+      properties:
+        base_url:
+          type: string
+        description:
+          type: string
+        name:
+          type: string
+      required:
+      - name
+      type: object
     schema.UpdateOrgRequest:
       properties:
         address:
@@ -1276,17 +1316,18 @@ components:
           type: string
         description:
           type: string
-        id:
-          type: integer
         name:
           type: string
+        parent_module_id:
+          description: ParentModuleID is the module this module sits under, omit or
+            null to make it a top-level module
+          type: integer
         priority:
           type: integer
         type:
           type: string
       required:
       - code
-      - id
       - name
       - priority
       - type
@@ -1342,6 +1383,7 @@ components:
           type: string
         external_id:
           description: identifier in the source system, e.g. TestLink
+          form: external_id
           type: string
         feature_or_module:
           type: string
@@ -1755,7 +1797,7 @@ paths:
           description: Internal Server Error
       summary: Get details of a single environment by ID
       tags:
-      - environements
+      - environments
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
@@ -1928,7 +1970,9 @@ paths:
       tags:
       - modules
     post:
-      description: Create a Module
+      description: Create a Module, optionally under a parent module. The hierarchy
+        depth is limited by the platform max_module_depth setting (default 4, at most
+        8)
       operationId: CreateModule
       requestBody:
         content:
@@ -1988,6 +2032,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -2035,7 +2085,8 @@ paths:
       tags:
       - modules
     post:
-      description: Update a Module
+      description: Update a Module, including moving it under another parent module
+        or to the top level
       operationId: UpdateModule
       parameters:
       - description: moduleID
@@ -2064,6 +2115,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -2768,6 +2825,109 @@ paths:
       summary: Create a new environment
       tags:
       - environments
+  /v1/projects/{projectID}/environments/{environmentID}:
+    delete:
+      description: Delete an environment from a project. Test plans and runs using
+        it are detached from it.
+      operationId: DeleteEnvironment
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Environment ID
+        in: path
+        name: environmentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.MessageResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete an environment
+      tags:
+      - environments
+    post:
+      description: Update the name, description and base URL of an environment in
+        a project
+      operationId: UpdateEnvironment
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      - description: Environment ID
+        in: path
+        name: environmentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateEnvironmentRequest'
+        description: Environment details
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.EnvironmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Update an environment
+      tags:
+      - environments
   /v1/projects/{projectID}/modules:
     get:
       description: Get a Modules by project
@@ -2971,6 +3131,44 @@ paths:
       summary: View a Report file inline in the browser
       tags:
       - reports
+  /v1/projects/{projectID}/summary:
+    get:
+      description: Get summary of test cases for a project
+      operationId: GetProjectTestCaseSummary
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.ProjectTestCaseSummaryResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get summary of test cases for a project
+      tags:
+      - test-cases
   /v1/projects/{projectID}/test-case-template:
     get:
       description: Get the test case template for a project. This template can be

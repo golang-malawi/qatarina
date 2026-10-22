@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/logging"
@@ -45,7 +47,7 @@ func ListEnvironments(environmentService services.EnvironmentService, logger log
 //	@ID				GetEnvironment
 //	@Summary		Get details of a single environment by ID
 //	@Description	Get details of a single environment by ID
-//	@Tags			environements
+//	@Tags			environments
 //	@Accept			json
 //	@Produce		json
 //	@Param			envID	path		string	true	"Environment ID"
@@ -111,6 +113,22 @@ func CreateEnvironment(environmentService services.EnvironmentService, logger lo
 	}
 }
 
+// UpdateEnvironment godoc
+//
+//	@ID				UpdateEnvironment
+//	@Summary		Update an environment
+//	@Description	Update the name, description and base URL of an environment in a project
+//	@Tags			environments
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID		path		string							true	"Project ID"
+//	@Param			environmentID	path		string							true	"Environment ID"
+//	@Param			request			body		schema.UpdateEnvironmentRequest	true	"Environment details"
+//	@Success		200				{object}	schema.EnvironmentResponse
+//	@Failure		400				{object}	problemdetail.ProblemDetail
+//	@Failure		404				{object}	problemdetail.ProblemDetail
+//	@Failure		500				{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/environments/{environmentID} [post]
 func UpdateEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID")
@@ -137,6 +155,9 @@ func UpdateEnvironment(environmentService services.EnvironmentService, logger lo
 
 		env, err := environmentService.Update(c.Context(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "environment not found")
+			}
 			logger.Error(loggedmodule.ApiEnvironments, "failed to update environment", "error", err, "projectID", projectID)
 			return problemdetail.ServerErrorProblem(c, "failed to update environment")
 		}
@@ -145,6 +166,21 @@ func UpdateEnvironment(environmentService services.EnvironmentService, logger lo
 	}
 }
 
+// DeleteEnvironment godoc
+//
+//	@ID				DeleteEnvironment
+//	@Summary		Delete an environment
+//	@Description	Delete an environment from a project. Test plans and runs using it are detached from it.
+//	@Tags			environments
+//	@Accept			json
+//	@Produce		json
+//	@Param			projectID		path		string	true	"Project ID"
+//	@Param			environmentID	path		string	true	"Environment ID"
+//	@Success		200				{object}	schema.MessageResponse
+//	@Failure		400				{object}	problemdetail.ProblemDetail
+//	@Failure		404				{object}	problemdetail.ProblemDetail
+//	@Failure		500				{object}	problemdetail.ProblemDetail
+//	@Router			/v1/projects/{projectID}/environments/{environmentID} [delete]
 func DeleteEnvironment(environmentService services.EnvironmentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID")
@@ -157,6 +193,9 @@ func DeleteEnvironment(environmentService services.EnvironmentService, logger lo
 		}
 		err = environmentService.Delete(c.Context(), int64(projectID), int64(environmentID))
 		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "environment not found")
+			}
 			logger.Error(loggedmodule.ApiEnvironments, "failed to delete environment", "error", err, "projectID", projectID)
 			return problemdetail.ServerErrorProblem(c, "failed to delete environment")
 		}

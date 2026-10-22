@@ -7,11 +7,11 @@ type EnvironmentRequest struct {
 }
 
 type UpdateEnvironmentRequest struct {
-	ID          int64  `json:"id,omitempty"`
-	ProjectID   int64  `json:"project_id,omitempty"`
-	Name        string `json:"name"`
+	ID          int64  `json:"id,omitempty" swaggerignore:"true"`
+	ProjectID   int64  `json:"project_id,omitempty" swaggerignore:"true"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
-	BaseURL     string `json:"base_url"`
+	BaseURL     string `json:"base_url" validate:"omitempty,url"`
 }
 
 type EnvironmentResponse struct {

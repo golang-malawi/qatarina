@@ -9,6 +9,7 @@ import {
   FeatureModuleEditFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
+import SelectParentModule from "@/components/form/SelectParentModule";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute(
@@ -33,6 +34,23 @@ function EditFeatureModuleForm() {
   const [defaultValues, setDefaultValues] = useState<
     FeatureModuleEditFormData | undefined
   >();
+  const fields = [
+    ...featureModuleEditFields,
+    {
+      name: "parent_module_id",
+      label: t("features.form.parent"),
+      type: "custom" as const,
+      helperText: t("features.form.parent_helper"),
+      customComponent: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
+        <SelectParentModule
+          projectId={projectId}
+          moduleId={moduleId}
+          value={(value as string) || ""}
+          onChange={onChange}
+        />
+      ),
+    },
+  ];
 
   useEffect(() => {
     const fetchModule = async () => {
@@ -54,6 +72,7 @@ function EditFeatureModuleForm() {
           description: data.description || "",
           code: data.code || "",
           priority: data.priority || 1,
+          parent_module_id: data.parent_module_id ?? "",
         });
       } catch (err) {
         console.error(err);
@@ -72,12 +91,14 @@ function EditFeatureModuleForm() {
 
   async function handleSubmit(values: FeatureModuleEditFormData) {
     const payload = {
-      id: parseInt(moduleId),
       name: values.name,
       type: values.type,
       description: values.description || "",
       code: values.code,
       priority: Number(values.priority),
+      parent_module_id: values.parent_module_id
+        ? Number(values.parent_module_id)
+        : undefined,
     };
 
     const moduleService = new ModuleService();
@@ -101,7 +122,10 @@ function EditFeatureModuleForm() {
       console.error(err);
       toaster.create({
         title: t("features.edit.error"),
-        description: t("features.edit.error_description"),
+        description:
+          err instanceof Error && err.message
+            ? err.message
+            : t("features.edit.error_description"),
         type: "error",
         duration: 3000,
       });
@@ -121,7 +145,7 @@ function EditFeatureModuleForm() {
       <Heading color="fg.heading">{t("features.edit.title")}</Heading>
       <DynamicForm
         schema={featureModuleEditSchema}
-        fields={featureModuleEditFields}
+        fields={fields}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
         submitText={t("features.edit.submit")}

@@ -96,6 +96,9 @@ type TestCaseService interface {
 	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
 
 	Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error)
+
+	// GetSummary is used to get the summary of test cases in a project
+	GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error)
 }
 
 type TestCaseQueryParams struct {
@@ -978,4 +981,60 @@ func (t *testCaseServiceImpl) Transfer(ctx context.Context, testCaseID string, r
 		return nil, err
 	}
 	return &tc, nil
+}
+
+func (t *testCaseServiceImpl) GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error) {
+	total, err := t.queries.CountTestCasesByProject(ctx, common.NewNullInt32(int32(projectID)))
+	if err != nil {
+		return nil, err
+	}
+
+	completed, err := t.queries.CountCompletedTestCasesByProject(ctx, common.NewNullInt32(int32(projectID)))
+	if err != nil {
+		return nil, err
+	}
+
+	incomplete := int(total) - int(completed)
+
+	passed, err := t.queries.CountTestRunsByResultState(ctx, dbsqlc.CountTestRunsByResultStateParams{
+		ProjectID:   int32(projectID),
+		ResultState: dbsqlc.TestRunStatePassed,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	failed, err := t.queries.CountTestRunsByResultState(ctx, dbsqlc.CountTestRunsByResultStateParams{
+		ProjectID:   int32(projectID),
+		ResultState: dbsqlc.TestRunStateFailed,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	pending, err := t.queries.CountTestRunsByResultState(ctx, dbsqlc.CountTestRunsByResultStateParams{
+		ProjectID:   int32(projectID),
+		ResultState: dbsqlc.TestRunStatePending,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	blocked, err := t.queries.CountTestRunsByResultState(ctx, dbsqlc.CountTestRunsByResultStateParams{
+		ProjectID:   int32(projectID),
+		ResultState: dbsqlc.TestRunStateBlocked,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &schema.ProjectTestCaseSummaryResponse{
+		Total:      int(total),
+		Completed:  int(completed),
+		Incomplete: incomplete,
+		Passed:     int(passed),
+		Failed:     int(failed),
+		Pending:    int(pending),
+		Blocked:    int(blocked),
+	}, nil
 }

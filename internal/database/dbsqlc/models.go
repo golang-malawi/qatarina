@@ -179,6 +179,8 @@ type Module struct {
 	Description string
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
+	// Parent module in the module hierarchy, NULL for top-level modules
+	ParentModuleID sql.NullInt32
 }
 
 type Org struct {
