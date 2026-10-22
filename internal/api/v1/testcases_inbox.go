@@ -25,6 +25,8 @@ import (
 //	@Param          page        query       int     false   "Page number (1-based)"
 //	@Param          pageSize    query       int     false   "Page size"
 //	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Param          projects    query       string  false   "Comma-separated project IDs to filter by"
+//	@Param          search      query       string  false   "Search query (matches code, title, description, feature_or_module, tags)"
 //	@Success        200         {object}    schema.AssignedTestCaseListResponse
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        500         {object}    problemdetail.ProblemDetail
@@ -53,6 +55,7 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 			Page:          offset,
 			IncludeClosed: includeClosed,
 			Projects:      filteredProjects,
+			Search:        strings.TrimSpace(ctx.Query("search", "")),
 		}
 
 		testCases, totalCount, err := testCasesService.FindAllAssignedToUser(ctx.Context(), params)

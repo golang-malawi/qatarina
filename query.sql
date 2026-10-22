@@ -341,9 +341,17 @@ INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND (sqlc.arg(projects)::int[] IS NULL OR tr.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(search)::text = ''
+    OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.description ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR array_to_string(tc.tags, ' ') ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.id::text = ANY(sqlc.narg(search_ids)::text[]))
 GROUP BY tc.id
-ORDER BY tc.created_at DESC
+-- search engine hits (search_ids) come first, in relevance order
+ORDER BY COALESCE(array_position(sqlc.narg(search_ids)::text[], tc.id::text), 2147483647), tc.created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: TestCaseCountByAssignedUser :one
@@ -354,6 +362,14 @@ FROM (
   INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
   LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = sqlc.arg(user_id)
+    AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+    AND (sqlc.arg(search)::text = ''
+      OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+      OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+      OR tc.description ILIKE '%' || sqlc.arg(search)::text || '%'
+      OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+      OR array_to_string(tc.tags, ' ') ILIKE '%' || sqlc.arg(search)::text || '%'
+      OR tc.id::text = ANY(sqlc.narg(search_ids)::text[]))
   GROUP BY tc.id
   HAVING sqlc.arg(include_closed)::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
 ) sub;

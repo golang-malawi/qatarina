@@ -30,8 +30,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # Optional full-text search engine, only started with `docker compose --profile search up`.
+  # Set search.provider to "meilisearch" and search.meilisearch.url to "http://meilisearch:7700"
+  meilisearch:
+    image: getmeili/meilisearch:v1.15
+    container_name: "qatarina-meilisearch"
+    profiles: ["search"]
+    expose:
+    - 7700
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: ${MEILI_ENV:-development}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-change-me-to-a-16-byte-master-key}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - qatarina_network
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://localhost:7700/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data: 
+  meilisearch_data:
 
 networks:
   qatarina_network:

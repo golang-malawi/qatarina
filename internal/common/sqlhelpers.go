@@ -2,10 +2,18 @@ package common
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var likePatternEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// EscapeLikePattern escapes the LIKE/ILIKE wildcards in s so they match literally
+func EscapeLikePattern(s string) string {
+	return likePatternEscaper.Replace(s)
+}
 
 func NullString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}

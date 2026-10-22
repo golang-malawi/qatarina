@@ -618,6 +618,8 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 		RowOffset:     int32(params.Page),
 		IncludeClosed: params.IncludeClosed,
 		Projects:      params.Projects,
+		Search:        common.EscapeLikePattern(params.Search),
+		SearchIds:     params.SearchIDs,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -656,6 +658,9 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
 		UserID:        params.UserID,
 		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
+		Search:        common.EscapeLikePattern(params.Search),
+		SearchIds:     params.SearchIDs,
 	})
 	if err != nil {
 		return res, 0, err

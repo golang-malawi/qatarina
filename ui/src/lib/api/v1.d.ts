@@ -3116,6 +3116,10 @@ export interface operations {
                 pageSize?: number;
                 /** @description Include closed test cases */
                 includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Search query (matches code, title, description, feature_or_module, tags) */
+                search?: string;
             };
             header?: never;
             path?: never;

@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
-import React, { useState } from "react";
+import React, { startTransition, useEffect, useState } from "react";
 import { SheetView } from "./sheetView";
 import $api from "@/lib/api/query";
 
@@ -39,13 +39,29 @@ function TestCasePageInbox() {
   const [pageSize] = React.useState(10);
   const [isSheetView, setIsSheetView] = useState(false);
   const [isGrouped, setIsGrouped] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Search runs on the server across the whole inbox. The update is a transition so the
+  // suspense query keeps showing the current list (and the input keeps focus) while loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startTransition(() => {
+        setDebouncedSearch(search.trim());
+        setPage(1);
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Fetch inbox test cases with pagination parameters
   const {
     data: testCasesResponse,
     isPending: isPendingInbox,
     error: errorInbox,
-  } = useSuspenseQuery(findTestCaseInboxQueryOptions(includeClosed, page, pageSize));
+  } = useSuspenseQuery(
+    findTestCaseInboxQueryOptions(includeClosed, page, pageSize, debouncedSearch),
+  );
 
   const testCases = testCasesResponse?.test_cases ?? [];
   const { data: unseenCount = 0 } = useQuery(findInboxUnseenCountQueryOptions);
@@ -255,6 +271,8 @@ function TestCasePageInbox() {
 
             <Input
               placeholder="Search for Test Cases..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               mt={3}
               size="sm"
               variant="outline"
@@ -407,7 +425,9 @@ function TestCasePageInbox() {
                 ))
               ) : (
                 <Box p={6} textAlign="center" color="fg.subtle" fontSize="sm">
-                  No test cases found.
+                  {debouncedSearch
+                    ? `No test cases match "${debouncedSearch}".`
+                    : "No test cases found."}
                 </Box>
               )
             ) : (
@@ -470,7 +490,9 @@ function TestCasePageInbox() {
                 })
               ) : (
                 <Box p={6} textAlign="center" color="fg.subtle" fontSize="sm">
-                  No test cases found.
+                  {debouncedSearch
+                    ? `No test cases match "${debouncedSearch}".`
+                    : "No test cases found."}
                 </Box>
               )
             )}

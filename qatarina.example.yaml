@@ -34,3 +34,20 @@ platform:
   create_default_test_plan: true
   # maximum depth of the module hierarchy, defaults to 4 and cannot exceed 8
   max_module_depth: 4
+
+# Optional full-text search for test cases. When disabled ("none") search
+# falls back to database queries. To run Meilisearch locally use
+# `docker compose --profile search up`, then rebuild the index at any time
+# with `qatarina search reindex`.
+search:
+  # one of: none | meilisearch | opensearch (opensearch is not supported yet)
+  provider: none
+  meilisearch:
+    url: "http://localhost:7700"
+    api_key: "change-me-to-a-16-byte-master-key"
+    index: "test_cases"
+  opensearch:
+    url: "https://localhost:9200"
+    username: "admin"
+    password: ""
+    index: "test_cases"

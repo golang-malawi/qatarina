@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -19,6 +20,7 @@ type Config struct {
 	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
 	Runner     RunnerConfiguration     `mapstructure:"runner"`
 	Storage    StorageConfiguration    `mapstructure:"storage"`
+	Search     SearchConfiguration     `mapstructure:"search"`
 }
 
 type DatabaseConfiguration struct {
@@ -116,6 +118,45 @@ type StorageConfiguration struct {
 	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
 }
 
+const (
+	SearchProviderNone        = "none"
+	SearchProviderMeilisearch = "meilisearch"
+	SearchProviderOpenSearch  = "opensearch"
+)
+
+// SearchConfiguration configures the optional full-text search engine used for test cases.
+// Search is disabled (falls back to database queries) when provider is empty or "none"
+type SearchConfiguration struct {
+	Provider    string                   `mapstructure:"provider" envconfig:"QATARINA_SEARCH_PROVIDER"`
+	Meilisearch MeilisearchConfiguration `mapstructure:"meilisearch"`
+	OpenSearch  OpenSearchConfiguration  `mapstructure:"opensearch"`
+}
+
+type MeilisearchConfiguration struct {
+	URL    string `mapstructure:"url" envconfig:"QATARINA_SEARCH_MEILISEARCH_URL"`
+	APIKey string `mapstructure:"api_key" envconfig:"QATARINA_SEARCH_MEILISEARCH_API_KEY"`
+	Index  string `mapstructure:"index" envconfig:"QATARINA_SEARCH_MEILISEARCH_INDEX"`
+}
+
+type OpenSearchConfiguration struct {
+	URL      string `mapstructure:"url" envconfig:"QATARINA_SEARCH_OPENSEARCH_URL"`
+	Username string `mapstructure:"username" envconfig:"QATARINA_SEARCH_OPENSEARCH_USERNAME"`
+	Password string `mapstructure:"password" envconfig:"QATARINA_SEARCH_OPENSEARCH_PASSWORD"`
+	Index    string `mapstructure:"index" envconfig:"QATARINA_SEARCH_OPENSEARCH_INDEX"`
+}
+
+// GetProvider returns the normalized search provider name, defaulting to SearchProviderNone
+func (s *SearchConfiguration) GetProvider() string {
+	if s == nil {
+		return SearchProviderNone
+	}
+	provider := strings.ToLower(strings.TrimSpace(s.Provider))
+	if provider == "" {
+		return SearchProviderNone
+	}
+	return provider
+}
+
 func (c *Config) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s", c.Database.Username, c.Database.Password, c.Database.Host, c.Database.Port, c.Database.Database, c.Database.Options)
 }
@@ -186,5 +227,8 @@ var DefaultConfig = Config{
 		LocalPath: "./storage",
 		S3Bucket:  "",
 		S3Region:  "",
+	},
+	Search: SearchConfiguration{
+		Provider: SearchProviderNone,
 	},
 }
