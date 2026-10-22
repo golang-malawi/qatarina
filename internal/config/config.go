@@ -77,6 +77,25 @@ type AdminConfiguration struct {
 type PlatformConfiguration struct {
 	AnonymousTestCase     bool `mapstructure:"" envconfig:"QATARINA_ANONYMOUS_TEST_CASE"`
 	CreateDefaultTestPlan bool `mapstructure:"create_default_test_plan" envconfig:"QATARINA_ENABLE_DEFAULT_TEST_PLAN"`
+	// MaxModuleDepth is the maximum number of levels allowed in a module hierarchy
+	MaxModuleDepth int `mapstructure:"max_module_depth" envconfig:"QATARINA_MAX_MODULE_DEPTH"`
+}
+
+const (
+	DefaultMaxModuleDepth = 4
+	LimitMaxModuleDepth   = 8
+)
+
+// GetMaxModuleDepth returns the configured maximum module hierarchy depth,
+// falling back to DefaultMaxModuleDepth when unset and never exceeding LimitMaxModuleDepth
+func (p *PlatformConfiguration) GetMaxModuleDepth() int {
+	if p == nil || p.MaxModuleDepth <= 0 {
+		return DefaultMaxModuleDepth
+	}
+	if p.MaxModuleDepth > LimitMaxModuleDepth {
+		return LimitMaxModuleDepth
+	}
+	return p.MaxModuleDepth
 }
 
 type ImportFileConfiguration struct {
@@ -205,6 +224,7 @@ var DefaultConfig = Config{
 	Platform: PlatformConfiguration{
 		AnonymousTestCase:     false,
 		CreateDefaultTestPlan: true,
+		MaxModuleDepth:        DefaultMaxModuleDepth,
 	},
 	Runner: RunnerConfiguration{
 		BasiURL: "http://localhost:8080/run?runner=basi",

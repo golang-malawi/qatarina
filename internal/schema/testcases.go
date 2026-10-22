@@ -232,3 +232,13 @@ func ParsePriorityLevel(value string) dbsqlc.PriorityLevel {
 		return dbsqlc.PriorityLevelMedium
 	}
 }
+
+type ProjectTestCaseSummaryResponse struct {
+	Total      int `json:"total"`
+	Completed  int `json:"completed"`
+	Incomplete int `json:"incomplete"`
+	Passed     int `json:"passed"`
+	Failed     int `json:"failed"`
+	Pending    int `json:"pending"`
+	Blocked    int `json:"blocked"`
+}

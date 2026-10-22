@@ -6,6 +6,7 @@ export const featureModuleCreationSchema = z.object({
   description: z.string().optional(),
   code: z.string().min(1, "Code is required"),
   priority: z.coerce.number().min(1, "Priority must be at least 1"),
+  parent_module_id: z.string().optional(),
 });
 
 export const featureModuleEditSchema = z.object({
@@ -14,6 +15,7 @@ export const featureModuleEditSchema = z.object({
   description: z.string().optional(),
   code: z.string().min(1, "Code is required"),
   priority: z.coerce.number().min(1, "Priority must be at least 1"),
+  parent_module_id: z.string().optional(),
 });
 
 export type FeatureModuleCreationFormData = z.infer<typeof featureModuleCreationSchema>;
