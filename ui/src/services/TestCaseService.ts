@@ -53,6 +53,7 @@ export async function getInboxTestCases(params?: {
   includeClosed?: boolean;
   page?: number;
   pageSize?: number;
+  search?: string;
 }) {
   return apiClient.request("get", "/v1/me/test-cases/inbox", {
     params: {
@@ -60,6 +61,7 @@ export async function getInboxTestCases(params?: {
         includeClosed: params?.includeClosed ?? false,
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 10,
+        search: params?.search || undefined,
       },
     },
   });

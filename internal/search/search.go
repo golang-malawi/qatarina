@@ -62,7 +62,8 @@ type Query struct {
 	Text string
 	// ProjectID restricts results to a single project when non-zero
 	ProjectID int64
-	Limit     int
+	// Limit is the maximum number of IDs returned, defaults to 20 and is capped at 1000
+	Limit int
 }
 
 // Engine indexes and searches test cases

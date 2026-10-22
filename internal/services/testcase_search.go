@@ -84,6 +84,25 @@ func (s *searchableTestCaseService) Search(ctx context.Context, keyword string) 
 	return testCases, nil
 }
 
+// inboxSearchLimit bounds the search engine hits considered for a user's inbox,
+// the inbox query then keeps only the hits assigned to the user
+const inboxSearchLimit = 1000
+
+func (s *searchableTestCaseService) FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error) {
+	if params.Search != "" {
+		ids, err := s.engine.SearchTestCases(ctx, search.Query{Text: params.Search, Limit: inboxSearchLimit})
+		if err != nil {
+			// The database search still applies, only typo tolerance is lost
+			s.logger.Warn(loggedmodule.Search, "search engine query failed for inbox, using database search only", "error", err)
+		} else {
+			withIDs := *params
+			withIDs.SearchIDs = ids
+			params = &withIDs
+		}
+	}
+	return s.TestCaseService.FindAllAssignedToUser(ctx, params)
+}
+
 func (s *searchableTestCaseService) Create(ctx context.Context, request *schema.CreateTestCaseRequest) (*dbsqlc.TestCase, error) {
 	tc, err := s.TestCaseService.Create(ctx, request)
 	if err == nil {

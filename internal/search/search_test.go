@@ -51,12 +51,28 @@ func TestMeilisearchSearchTestCases(t *testing.T) {
 	engine, err := NewMeilisearch(config.MeilisearchConfiguration{URL: server.URL, APIKey: "secret"})
 	require.NoError(t, err)
 
-	ids, err := engine.SearchTestCases(context.Background(), Query{Text: "login", ProjectID: 7, Limit: 500})
+	ids, err := engine.SearchTestCases(context.Background(), Query{Text: "login", ProjectID: 7, Limit: 5000})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"b", "a"}, ids)
 	assert.Equal(t, "login", got["q"])
 	assert.Equal(t, "project_id = 7", got["filter"])
 	assert.EqualValues(t, maxSearchLimit, got["limit"])
+}
+
+func TestMeilisearchSkipsQueriesWithoutTerms(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+	}))
+	defer server.Close()
+
+	engine, err := NewMeilisearch(config.MeilisearchConfiguration{URL: server.URL})
+	require.NoError(t, err)
+
+	for _, q := range []string{"", "  ", "%", "_-*"} {
+		ids, err := engine.SearchTestCases(context.Background(), Query{Text: q})
+		require.NoError(t, err)
+		assert.Empty(t, ids, "query %q", q)
+	}
 }
 
 func TestMeilisearchErrorStatus(t *testing.T) {

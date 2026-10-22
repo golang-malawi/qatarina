@@ -1806,6 +1806,17 @@ paths:
         name: includeClosed
         schema:
           type: boolean
+      - description: Comma-separated project IDs to filter by
+        in: query
+        name: projects
+        schema:
+          type: string
+      - description: Search query (matches code, title, description, feature_or_module,
+          tags)
+        in: query
+        name: search
+        schema:
+          type: string
       requestBody:
         content:
           application/json:

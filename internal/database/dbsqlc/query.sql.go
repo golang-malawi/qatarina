@@ -4004,18 +4004,35 @@ FROM (
   INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
   LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = $1
+    AND ($2::int[] IS NULL OR tc.project_id = ANY($2::int[]))
+    AND ($3::text = ''
+      OR tc.title ILIKE '%' || $3::text || '%'
+      OR tc.code ILIKE '%' || $3::text || '%'
+      OR tc.description ILIKE '%' || $3::text || '%'
+      OR tc.feature_or_module ILIKE '%' || $3::text || '%'
+      OR array_to_string(tc.tags, ' ') ILIKE '%' || $3::text || '%'
+      OR tc.id::text = ANY($4::text[]))
   GROUP BY tc.id
-  HAVING $2::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
+  HAVING $5::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
 ) sub
 `
 
 type TestCaseCountByAssignedUserParams struct {
 	UserID        int64
+	Projects      []int32
+	Search        string
+	SearchIds     []string
 	IncludeClosed bool
 }
 
 func (q *Queries) TestCaseCountByAssignedUser(ctx context.Context, arg TestCaseCountByAssignedUserParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser, arg.UserID, arg.IncludeClosed)
+	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser,
+		arg.UserID,
+		pq.Array(arg.Projects),
+		arg.Search,
+		pq.Array(arg.SearchIds),
+		arg.IncludeClosed,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -4090,16 +4107,25 @@ INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
   AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
+  AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
+  AND ($4::text = ''
+    OR tc.title ILIKE '%' || $4::text || '%'
+    OR tc.code ILIKE '%' || $4::text || '%'
+    OR tc.description ILIKE '%' || $4::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $4::text || '%'
+    OR array_to_string(tc.tags, ' ') ILIKE '%' || $4::text || '%'
+    OR tc.id::text = ANY($5::text[]))
 GROUP BY tc.id
-ORDER BY tc.created_at DESC
-LIMIT $5::int OFFSET $4::int
+ORDER BY COALESCE(array_position($5::text[], tc.id::text), 2147483647), tc.created_at DESC
+LIMIT $7::int OFFSET $6::int
 `
 
 type TestCaseListByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
 	Projects      []int32
+	Search        string
+	SearchIds     []string
 	RowOffset     int32
 	RowLimit      int32
 }
@@ -4127,11 +4153,14 @@ type TestCaseListByAssignedUserRow struct {
 	Urgency         PriorityLevel
 }
 
+// search engine hits (search_ids) come first, in relevance order
 func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseListByAssignedUserParams) ([]TestCaseListByAssignedUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, testCaseListByAssignedUser,
 		arg.UserID,
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
+		arg.Search,
+		pq.Array(arg.SearchIds),
 		arg.RowOffset,
 		arg.RowLimit,
 	)

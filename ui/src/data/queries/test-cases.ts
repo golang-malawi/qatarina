@@ -31,11 +31,12 @@ export const findTestCaseInboxQueryOptions = (
   includeClosed: boolean,
   page: number = 1,
   pageSize: number = 25,
+  search: string = "",
 ) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", includeClosed, page, pageSize],
+    queryKey: ["testCases", "inbox", includeClosed, page, pageSize, search],
     queryFn: async (): Promise<AssignedTestCaseListResponse> => {
-      const res = await getInboxTestCases({ includeClosed, page, pageSize });
+      const res = await getInboxTestCases({ includeClosed, page, pageSize, search });
       return (res?.data ?? res) as AssignedTestCaseListResponse;
     },
   });

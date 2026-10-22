@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/golang-malawi/qatarina/internal/config"
 )
@@ -18,7 +19,7 @@ import (
 const (
 	defaultMeilisearchIndex = "test_cases"
 	defaultSearchLimit      = 20
-	maxSearchLimit          = 100
+	maxSearchLimit          = 1000 // Meilisearch's default maxTotalHits
 	reindexBatchSize        = 1000
 )
 
@@ -67,15 +68,16 @@ type meiliTaskStatus struct {
 }
 
 func (m *Meilisearch) Setup(ctx context.Context) error {
-	var task meiliTask
-	err := m.do(ctx, http.MethodPost, "/indexes", map[string]string{
-		"uid":        m.index,
+	return m.setupIndex(ctx, m.index)
+}
+
+// setupIndex creates the index if it does not exist and applies the search settings
+func (m *Meilisearch) setupIndex(ctx context.Context, uid string) error {
+	err := m.doTask(ctx, http.MethodPost, "/indexes", map[string]string{
+		"uid":        uid,
 		"primaryKey": "id",
-	}, &task)
-	if err != nil {
-		return err
-	}
-	if err := m.waitForTask(ctx, task.TaskUID); err != nil && !strings.Contains(err.Error(), "index_already_exists") {
+	})
+	if err != nil && !strings.Contains(err.Error(), "index_already_exists") {
 		return err
 	}
 
@@ -84,10 +86,7 @@ func (m *Meilisearch) Setup(ctx context.Context) error {
 		"filterableAttributes": []string{"project_id", "kind", "priority", "is_draft", "suggested", "tags"},
 		"sortableAttributes":   []string{"updated_at"},
 	}
-	if err := m.do(ctx, http.MethodPatch, m.indexPath("/settings"), settings, &task); err != nil {
-		return err
-	}
-	return m.waitForTask(ctx, task.TaskUID)
+	return m.doTask(ctx, http.MethodPatch, indexPath(uid, "/settings"), settings)
 }
 
 func (m *Meilisearch) IndexTestCases(ctx context.Context, docs ...TestCaseDocument) error {
@@ -104,22 +103,40 @@ func (m *Meilisearch) DeleteTestCases(ctx context.Context, ids ...string) error 
 	return m.do(ctx, http.MethodPost, m.indexPath("/documents/delete-batch"), ids, nil)
 }
 
+// Reindex builds a new index next to the live one and atomically swaps it in,
+// so searches never see a partially filled index. It returns once the swap is done
 func (m *Meilisearch) Reindex(ctx context.Context, docs []TestCaseDocument) error {
-	// Tasks on an index are processed in order, so documents added below
-	// are never removed by this delete
-	if err := m.do(ctx, http.MethodDelete, m.indexPath("/documents"), nil, nil); err != nil {
+	staging := m.index + "_reindex"
+
+	// Clear leftovers of an interrupted reindex
+	if err := m.doTask(ctx, http.MethodDelete, indexPath(staging, ""), nil); err != nil && !strings.Contains(err.Error(), "index_not_found") {
+		return err
+	}
+	if err := m.setupIndex(ctx, staging); err != nil {
 		return err
 	}
 	for start := 0; start < len(docs); start += reindexBatchSize {
 		end := min(start+reindexBatchSize, len(docs))
-		if err := m.IndexTestCases(ctx, docs[start:end]...); err != nil {
+		if err := m.doTask(ctx, http.MethodPost, indexPath(staging, "/documents?primaryKey=id"), docs[start:end]); err != nil {
 			return err
 		}
 	}
-	return nil
+
+	swap := []map[string][]string{{"indexes": {m.index, staging}}}
+	if err := m.doTask(ctx, http.MethodPost, "/swap-indexes", swap); err != nil {
+		return err
+	}
+	// After the swap the staging index holds the old documents
+	return m.doTask(ctx, http.MethodDelete, indexPath(staging, ""), nil)
 }
 
 func (m *Meilisearch) SearchTestCases(ctx context.Context, query Query) ([]string, error) {
+	// Meilisearch drops punctuation, so a query without letters or digits
+	// becomes a placeholder search that matches every document
+	if !strings.ContainsFunc(query.Text, func(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }) {
+		return []string{}, nil
+	}
+
 	limit := query.Limit
 	if limit <= 0 {
 		limit = defaultSearchLimit
@@ -178,7 +195,20 @@ func (m *Meilisearch) waitForTask(ctx context.Context, taskUID int64) error {
 }
 
 func (m *Meilisearch) indexPath(suffix string) string {
-	return "/indexes/" + url.PathEscape(m.index) + suffix
+	return indexPath(m.index, suffix)
+}
+
+func indexPath(uid, suffix string) string {
+	return "/indexes/" + url.PathEscape(uid) + suffix
+}
+
+// doTask performs a request that enqueues an asynchronous task and waits for it to finish
+func (m *Meilisearch) doTask(ctx context.Context, method, path string, body any) error {
+	var task meiliTask
+	if err := m.do(ctx, method, path, body, &task); err != nil {
+		return err
+	}
+	return m.waitForTask(ctx, task.TaskUID)
 }
 
 func (m *Meilisearch) do(ctx context.Context, method, path string, body any, out any) error {
