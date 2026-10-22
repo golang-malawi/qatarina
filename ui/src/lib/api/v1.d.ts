@@ -1548,8 +1548,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Export test cases to a CSV or XLSX file
-         * @description Export test cases to a CSV or XLSX file
+         * Export test cases to a CSV, XLSX or JSON file
+         * @description Export test cases to a CSV, XLSX or JSON file
          */
         post: operations["ExportFileFromTestCases"];
         delete?: never;
@@ -2283,6 +2283,7 @@ export interface components {
             created_by_id?: number;
             description?: string;
             environment_id?: number;
+            external_id?: string;
             feature_or_module?: string;
             id?: string;
             is_closed?: boolean;
@@ -2408,6 +2409,8 @@ export interface components {
             /** @description optional; auto-generated if blank */
             code?: string;
             description: string;
+            /** @description identifier in the source system, e.g. TestLink */
+            external_id?: string;
             feature_or_module: string;
             is_draft?: boolean;
             kind: string;
@@ -2695,6 +2698,7 @@ export interface components {
             created_by?: number;
             description?: string;
             executed_by?: number;
+            external_id?: string;
             feature_or_module?: string;
             id?: string;
             is_draft?: boolean;
@@ -2862,6 +2866,8 @@ export interface components {
         "schema.UpdateTestCaseRequest": {
             code?: string;
             description?: string;
+            /** @description identifier in the source system, e.g. TestLink */
+            external_id?: string;
             feature_or_module: string;
             id: string;
             is_draft?: boolean;
