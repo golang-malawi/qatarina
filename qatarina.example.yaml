@@ -2,6 +2,7 @@ server:
   fqdn: "qatarina.example.com"
   host: "localhost"
   port: 4597
+  base_url: "http://localhost:5173"
 
 auth:
   signup_enabled: true
@@ -32,3 +33,42 @@ logging:
 
 platform:
   create_default_test_plan: true
+
+smtp:
+  host: "localhost"
+  port: 1025
+  username: "<smtp-username>"
+  password: "<smtp-password>"
+  from: "no-reply@qatarina.local"
+  reply_to: "support@qatarina.local"
+  ssl: false
+
+ai:
+  gemini_api_key: "<your-gemini-api-key>"
+
+gotenberg:
+  libreoffice_url: "http://localhost:3000/forms/libreoffice/convert"
+
+import_file:
+  max_rows: 512
+
+github:
+  app_id: "<your-github-app-id>"
+  app_slug: "<your-github-app-slug>"
+  private_key_path: "./secrets/<your-github-app>.private-key.pem"
+  webhook_secret: "<your-webhook-secret>"
+
+storage:
+  driver: "local"
+  local_path: "./uploads"
+  s3_bucket: "qatarina-attachments"
+  s3_region: "af-south-1"
+
+s3:
+  bucket: "qatarina-attachments"
+  region: "af-south-1"
+
+attachments:
+  max_file_size: 10485760 # 10 MB
+
+
