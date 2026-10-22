@@ -359,7 +359,8 @@ function TestCasePageInbox() {
                           pl={5}
                           borderBottom="sm"
                           borderColor="border.subtle"
-                          _hover={{ bg: "bg.subtle", cursor: "pointer" }}
+                          bg={tc.is_viewed ? undefined : "bg.subtle"}
+                          _hover={{ bg: tc.is_viewed ? "bg.subtle" : "bg.muted", cursor: "pointer" }}
                           opacity={tc.is_closed ? 0.5 : 1}
                         >
                           <Link
@@ -423,7 +424,8 @@ function TestCasePageInbox() {
                       p={3}
                       borderBottom="sm"
                       borderColor="border.subtle"
-                      _hover={{ bg: "bg.subtle", cursor: "pointer" }}
+                      bg={tc.is_viewed ? undefined : "bg.subtle"}
+                      _hover={{ bg: tc.is_viewed ? "bg.subtle" : "bg.muted", cursor: "pointer" }}
                       opacity={tc.is_closed ? 0.5 : 1}
                     >
                       <Link
