@@ -47,6 +47,9 @@ func init() {
 	rootCmd.AddCommand(adminCmd)
 	rootCmd.AddCommand(userCmd)
 	rootCmd.AddCommand(testCaseCmd)
+
+	searchCmd.AddCommand(searchReindexCmd)
+	rootCmd.AddCommand(searchCmd)
 }
 
 var rootCmd = &cobra.Command{
