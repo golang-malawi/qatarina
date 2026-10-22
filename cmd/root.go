@@ -42,7 +42,11 @@ func init() {
 	testCaseCmd.AddCommand(testCaseImporterCmd)
 	testCaseCmd.AddCommand(createTestCaseCmd)
 
+	mcpCmd.Flags().String("transport", "", "MCP transport: http or stdio (default from config, otherwise http)")
+	mcpCmd.Flags().String("addr", "", "host:port for the http transport (default from config, otherwise :4598)")
+
 	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(mcpCmd)
 	rootCmd.AddCommand(migrateCmd)
 	rootCmd.AddCommand(adminCmd)
 	rootCmd.AddCommand(userCmd)

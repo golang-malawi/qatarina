@@ -34,3 +34,10 @@ platform:
   create_default_test_plan: true
   # maximum depth of the module hierarchy, defaults to 4 and cannot exceed 8
   max_module_depth: 4
+
+mcp:
+  # "http" (default) or "stdio"
+  transport: "http"
+  host: "localhost"
+  port: 4598
+  path: "/mcp"
