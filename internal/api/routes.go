@@ -74,6 +74,7 @@ func (api *API) routes() {
 		projectsV1.Get("/:projectID/test-case-template", apiv1.GetProjectTestCaseTemplate(api.ProjectsService, api.logger))
 		projectsV1.Post("/:projectID/test-case-template", apiv1.AddProjectTestCaseTemplate(api.ProjectsService, api.logger))
 		projectsV1.Post("/:projectID/automated-testing", apiv1.UpdateAutomatedTesting(api.ProjectsService, api.logger))
+		projectsV1.Get("/:projectID/summary", apiv1.GetProjectTestCasesSummary(api.TestCasesService, api.logger))
 	}
 
 	modulesV1 := router.Group("/v1/modules", authenticationMiddleware)
