@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { IconSearch, IconX, IconPaperclip} from "@tabler/icons-react";
+import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
 import {
   EmptyState,
   ErrorState,
@@ -359,6 +359,7 @@ function AttachmentSection({
   latestResultId?: string;
   attachmentCount?: number;
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const {
     data: attachments = [],
@@ -419,6 +420,15 @@ function AttachmentSection({
                   <Text fontSize="xs" color="fg.subtle">
                     {formatFileSize(attachment.file_size)}
                   </Text>
+                  <Button asChild size="xs" variant="ghost" colorPalette="brand">
+                    <a
+                      href={getAttachmentDownloadLink(attachment.storage_url, attachment.file_name)}
+                      download={attachment.file_name}
+                    >
+                      <IconDownload size={14} />
+                      {t("test_plans.runs.download_attachment")}
+                    </a>
+                  </Button>
                 </Flex>
               ))}
             </Stack>
@@ -443,14 +453,16 @@ function formatFileSize(bytes?: number) {
   return `${size.toFixed(1)} ${units[index]}`;
 }
 
-function getAttachmentDownloadLink(storageUrl?: string) {
+// Pass downloadName to have the server send the file as a download with that name
+function getAttachmentDownloadLink(storageUrl?: string, downloadName?: string) {
   if (!storageUrl) return "";
   if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
     return storageUrl;
   }
 
   const apiEndpoint = getApiEndpoint().replace(/\/$/, "");
-  return `${apiEndpoint}${storageUrl}`;
+  const url = `${apiEndpoint}${storageUrl}`;
+  return downloadName ? `${url}?download=${encodeURIComponent(downloadName)}` : url;
 }
 
 function getResultState(resultState?: string): ResultFilter {

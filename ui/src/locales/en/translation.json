@@ -277,6 +277,7 @@
   "test_plans.runs.failed": "failed",
   "test_plans.runs.open": "open",
   "test_plans.runs.closed": "closed",
+  "test_plans.runs.download_attachment": "Download",
   "test_plans.search_runs": "Search by title, code, notes, result, or executor",
   "test_plans.filter.all": "All",
   "test_plans.filter.passed": "Passed",

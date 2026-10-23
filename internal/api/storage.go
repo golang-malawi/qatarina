@@ -8,10 +8,12 @@ import (
 	"path"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-malawi/qatarina/internal/common"
 )
 
 // serveStoredFile streams a file from the configured storage backend, so
 // uploads are served the same way whether they live on disk or in S3.
+// Passing ?download=<file name> makes the browser save the file under that name.
 func (api *API) serveStoredFile(c *fiber.Ctx) error {
 	key, err := url.PathUnescape(c.Params("*"))
 	if err != nil || key == "" {
@@ -39,6 +41,9 @@ func (api *API) serveStoredFile(c *fiber.Ctx) error {
 
 	if contentType := mime.TypeByExtension(path.Ext(key)); contentType != "" {
 		c.Set(fiber.HeaderContentType, contentType)
+	}
+	if downloadName := c.Query("download"); downloadName != "" {
+		c.Attachment(common.SafeFileName(downloadName))
 	}
 	// SendStream closes f once the response has been written
 	return c.SendStream(f, int(info.Size()))
