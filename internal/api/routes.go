@@ -221,10 +221,17 @@ func (api *API) routes() {
 		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
 		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
 		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
-		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger))
 	}
-	// Serve uploaded attachment files from the configured local storage path.
-	router.Static("/uploads", api.Config.Storage.LocalPath)
+
+	documentsV1 := projectsV1.Group("/:projectID/documents")
+	{
+		documentsV1.Get("", apiv1.ListProjectDocuments(api.DocumentService, api.logger))
+		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
+		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
+	}
+	// Serve uploaded files from the configured storage (local or S3)
+	router.Get("/uploads/*", api.serveStoredFile)
 
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{

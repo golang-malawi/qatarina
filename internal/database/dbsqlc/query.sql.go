@@ -649,6 +649,50 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (i
 	return id, err
 }
 
+const createProjectDocument = `-- name: CreateProjectDocument :one
+INSERT INTO project_documents (
+    id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW()
+)
+RETURNING id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at
+`
+
+type CreateProjectDocumentParams struct {
+	ID         uuid.UUID
+	ProjectID  int64
+	UploaderID int64
+	Name       string
+	FilePath   string
+	FileSize   sql.NullInt64
+	MimeType   sql.NullString
+}
+
+func (q *Queries) CreateProjectDocument(ctx context.Context, arg CreateProjectDocumentParams) (ProjectDocument, error) {
+	row := q.db.QueryRowContext(ctx, createProjectDocument,
+		arg.ID,
+		arg.ProjectID,
+		arg.UploaderID,
+		arg.Name,
+		arg.FilePath,
+		arg.FileSize,
+		arg.MimeType,
+	)
+	var i ProjectDocument
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UploaderID,
+		&i.Name,
+		&i.FilePath,
+		&i.FileSize,
+		&i.MimeType,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createProjectModules = `-- name: CreateProjectModules :one
 INSERT INTO modules(
     project_id, name, code, priority, type, description, parent_module_id, created_at, updated_at
@@ -1025,6 +1069,18 @@ DELETE FROM projects WHERE id = $1
 
 func (q *Queries) DeleteProject(ctx context.Context, id int32) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteProject, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteProjectDocument = `-- name: DeleteProjectDocument :execrows
+DELETE FROM project_documents WHERE id = $1
+`
+
+func (q *Queries) DeleteProjectDocument(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProjectDocument, id)
 	if err != nil {
 		return 0, err
 	}
@@ -1768,6 +1824,28 @@ func (q *Queries) GetProjectCount(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getProjectDocument = `-- name: GetProjectDocument :one
+SELECT id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at FROM project_documents 
+WHERE id = $1
+`
+
+func (q *Queries) GetProjectDocument(ctx context.Context, id uuid.UUID) (ProjectDocument, error) {
+	row := q.db.QueryRowContext(ctx, getProjectDocument, id)
+	var i ProjectDocument
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UploaderID,
+		&i.Name,
+		&i.FilePath,
+		&i.FileSize,
+		&i.MimeType,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getProjectModules = `-- name: GetProjectModules :many
@@ -2591,37 +2669,48 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 	return err
 }
 
-const insertTestRunAttachment = `-- name: InsertTestRunAttachment :exec
+const insertTestRunAttachment = `-- name: InsertTestRunAttachment :execrows
 INSERT INTO test_run_attachments (
-    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
 )
+SELECT
+    $1::uuid, trr.id, tr.project_id, $2::int,
+    $3::text, $4::text, $5::bigint,
+    $6::text, $7::text, $8::timestamp
+FROM test_run_results trr
+JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.id = $9::uuid
 `
 
 type InsertTestRunAttachmentParams struct {
 	ID              uuid.UUID
-	TestRunResultID uuid.UUID
+	UploadedBy      int32
 	FileName        string
 	FileType        string
 	FileSize        int64
 	StorageKey      string
 	StorageUrl      string
-	CreatedAt       sql.NullTime
+	CreatedAt       time.Time
+	TestRunResultID uuid.UUID
 }
 
-func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) error {
-	_, err := q.db.ExecContext(ctx, insertTestRunAttachment,
+// project_id is taken from the result's test run; no row is inserted if the result does not exist
+func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, insertTestRunAttachment,
 		arg.ID,
-		arg.TestRunResultID,
+		arg.UploadedBy,
 		arg.FileName,
 		arg.FileType,
 		arg.FileSize,
 		arg.StorageKey,
 		arg.StorageUrl,
 		arg.CreatedAt,
+		arg.TestRunResultID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const insertTestRunResult = `-- name: InsertTestRunResult :one
@@ -2773,6 +2862,45 @@ func (q *Queries) ListCommentsByTestPlan(ctx context.Context, testPlanID int64) 
 			&i.UserID,
 			&i.DisplayName,
 			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDocumentsByProject = `-- name: ListDocumentsByProject :many
+SELECT id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at FROM project_documents 
+WHERE project_id = $1 
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListDocumentsByProject(ctx context.Context, projectID int64) ([]ProjectDocument, error) {
+	rows, err := q.db.QueryContext(ctx, listDocumentsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectDocument
+	for rows.Next() {
+		var i ProjectDocument
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.UploaderID,
+			&i.Name,
+			&i.FilePath,
+			&i.FileSize,
+			&i.MimeType,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

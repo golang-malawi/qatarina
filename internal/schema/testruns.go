@@ -180,6 +180,7 @@ type AttachmentRequest struct {
 	ContentType string    `json:"content_type"`
 	Size        int64     `json:"size"`
 	Content     io.Reader `json:"content"`
+	UploadedBy  int64     `json:"-"`
 }
 
 type AttachmentResponse struct {

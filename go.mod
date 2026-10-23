@@ -24,6 +24,7 @@ require (
 	github.com/pressly/goose/v3 v3.21.1
 	github.com/riverqueue/river v0.8.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.8.0
+	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
 	github.com/sqlc-dev/pqtype v0.3.0
@@ -95,7 +96,6 @@ require (
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
-	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

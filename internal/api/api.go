@@ -31,6 +31,7 @@ type API struct {
 	OrgService              services.OrgService
 	EnvironmentService      services.EnvironmentService
 	ReportService           services.ReportService
+	DocumentService         services.DocumentService
 	Storage                 afero.Fs
 }
 
@@ -54,7 +55,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 		TestCasesService:        services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestCaseRelationService: services.NewTestCaseRelationService(dbConn, logger),
 		TestPlansService:        services.NewTestPlanService(dbConn, logger),
-		TestRunsService:         services.NewTestRunService(rawDB.DB, dbConn, logger, fs, config.Attachments.MaxFileSize),
+		TestRunsService:         services.NewTestRunService(rawDB.DB, dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
 		UserService:             services.NewUserService(dbConn, logger, config.SMTP),
 		TesterService:           services.NewTesterService(dbConn, logger),
 		ModuleService:           moduleService,
@@ -63,6 +64,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 		OrgService:              services.NewOrgService(dbConn, logger),
 		EnvironmentService:      environmentService,
 		ReportService:           reportService,
+		DocumentService:         services.NewDocumentService(dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
 		Storage:                 fs,
 	}
 }

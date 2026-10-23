@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { IconSearch, IconX, IconPaperclip} from "@tabler/icons-react";
+import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
 import {
   EmptyState,
   ErrorState,
@@ -31,7 +31,7 @@ import {
   getTestRunAttachments,
   getTestRunsByPlan,
 } from "@/services/TestRunService";
-import { getApiEndpoint } from "@/common/request";
+import { formatFileSize, getStoredFileUrl } from "@/lib/files";
 import $api from "@/lib/api/query";
 import { useTranslation } from "react-i18next";
 
@@ -359,6 +359,7 @@ function AttachmentSection({
   latestResultId?: string;
   attachmentCount?: number;
 }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const {
     data: attachments = [],
@@ -409,7 +410,7 @@ function AttachmentSection({
                 <Flex key={attachment.id} align="center" gap={2}>
                   <IconPaperclip size={16} />
                   <Link
-                    href={getAttachmentDownloadLink(attachment.storage_url)}
+                    href={getStoredFileUrl(attachment.storage_url)}
                     target="_blank"
                     rel="noreferrer"
                     fontWeight="medium"
@@ -419,6 +420,15 @@ function AttachmentSection({
                   <Text fontSize="xs" color="fg.subtle">
                     {formatFileSize(attachment.file_size)}
                   </Text>
+                  <Button asChild size="xs" variant="ghost" colorPalette="brand">
+                    <a
+                      href={getStoredFileUrl(attachment.storage_url, attachment.file_name)}
+                      download={attachment.file_name}
+                    >
+                      <IconDownload size={14} />
+                      {t("test_plans.runs.download_attachment")}
+                    </a>
+                  </Button>
                 </Flex>
               ))}
             </Stack>
@@ -427,30 +437,6 @@ function AttachmentSection({
       )}
     </Box>
   );
-}
-
-function formatFileSize(bytes?: number) {
-  if (!bytes || bytes <= 0) return "0 bytes";
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let index = 0;
-
-  while (size >= 1024 && index < units.length - 1) {
-    size /= 1024;
-    index += 1;
-  }
-
-  return `${size.toFixed(1)} ${units[index]}`;
-}
-
-function getAttachmentDownloadLink(storageUrl?: string) {
-  if (!storageUrl) return "";
-  if (storageUrl.startsWith("http://") || storageUrl.startsWith("https://")) {
-    return storageUrl;
-  }
-
-  const apiEndpoint = getApiEndpoint().replace(/\/$/, "");
-  return `${apiEndpoint}${storageUrl}`;
 }
 
 function getResultState(resultState?: string): ResultFilter {
