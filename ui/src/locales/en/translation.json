@@ -710,6 +710,8 @@
   "documents.index.empty": "No documents found.",
   "documents.index.error": "Failed to load documents.",
   "documents.index.created_at": "Created at:",
+  "documents.view": "View",
+  "documents.download": "Download",
   "documents.delete": "Delete",
   "documents.delete.success": "Document deleted successfully",
   "documents.delete.error": "Failed to delete document",

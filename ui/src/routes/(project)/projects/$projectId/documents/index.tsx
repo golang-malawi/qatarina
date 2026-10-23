@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Box, Button, Heading, Spinner, Text, Flex } from "@chakra-ui/react";
+import { Box, Button, Heading, Spinner, Text, Flex, HStack, Link as ChakraLink } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProjectDocuments, deleteProjectDocument } from "@/services/DocumentService";
 import { List } from "@chakra-ui/react/list";
 import { useTranslation } from "react-i18next";
 import { toaster } from "@/components/ui/toaster";
+import { IconDownload, IconExternalLink } from "@tabler/icons-react";
+import { formatFileSize, getStoredFileUrl } from "@/lib/files";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/documents/"
@@ -12,9 +14,10 @@ export const Route = createFileRoute(
   component: DocumentsPage,
 });
 
-const getFileName = (path: string) => {
-  if (!path) return "";
-  return path.split("/").pop() || path;
+const getFileName = (doc: { file_name?: string; file_path?: string }) => {
+  if (doc.file_name) return doc.file_name;
+  if (!doc.file_path) return "";
+  return doc.file_path.split("/").pop() || doc.file_path;
 };
 
 function DocumentsPage() {
@@ -76,21 +79,45 @@ function DocumentsPage() {
               <Flex justify="space-between" align="center">
                 <Box>
                   <Text fontWeight="bold">{doc.name}</Text>
-                  <Text fontSize="sm" color="blue.500">
-                    {getFileName(doc.file_path)}
-                  </Text>
+                  <ChakraLink
+                    href={getStoredFileUrl(doc.file_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    fontSize="sm"
+                    color="blue.500"
+                  >
+                    {getFileName(doc)}
+                  </ChakraLink>
                   <Text fontSize="xs" color="gray.500">
+                    {doc.file_size ? `${formatFileSize(doc.file_size)} · ` : ""}
                     {t("documents.index.created_at")} {doc.created_at}
                   </Text>
                 </Box>
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  variant="outline"
-                  onClick={() => deleteMutation.mutate(doc.id)}
-                >
-                  {t("documents.delete")}
-                </Button>
+                <HStack gap={2}>
+                  <Button asChild size="sm" variant="outline" colorPalette="brand">
+                    <a href={getStoredFileUrl(doc.file_url)} target="_blank" rel="noreferrer">
+                      <IconExternalLink size={14} />
+                      {t("documents.view")}
+                    </a>
+                  </Button>
+                  <Button asChild size="sm" variant="outline" colorPalette="brand">
+                    <a
+                      href={getStoredFileUrl(doc.file_url, getFileName(doc))}
+                      download={getFileName(doc)}
+                    >
+                      <IconDownload size={14} />
+                      {t("documents.download")}
+                    </a>
+                  </Button>
+                  <Button
+                    size="sm"
+                    colorScheme="red"
+                    variant="outline"
+                    onClick={() => deleteMutation.mutate(doc.id)}
+                  >
+                    {t("documents.delete")}
+                  </Button>
+                </HStack>
               </Flex>
             </List.Item>
           ))

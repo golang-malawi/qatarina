@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -46,16 +48,9 @@ func (s *documentService) FindAllByProjectID(ctx context.Context, projectID int6
 		return nil, err
 	}
 
-	var documents []schema.ProjectDocumentResponseItem
+	documents := make([]schema.ProjectDocumentResponseItem, 0, len(rows))
 	for _, doc := range rows {
-		documents = append(documents, schema.ProjectDocumentResponseItem{
-			ID:        doc.ID.String(),
-			ProjectID: doc.ProjectID,
-			Name:      doc.Name,
-			FilePath:  doc.FilePath,
-			CreatedAt: doc.CreatedAt.Time.Format(time.RFC3339),
-			UpdatedAt: doc.UpdatedAt.Time.Format(time.RFC3339),
-		})
+		documents = append(documents, newDocumentResponse(doc))
 	}
 	return documents, nil
 }
@@ -86,14 +81,8 @@ func (s *documentService) Create(ctx context.Context, projectID int64, uploaderI
 		return nil, err
 	}
 
-	return &schema.ProjectDocumentResponseItem{
-		ID:        row.ID.String(),
-		ProjectID: row.ProjectID,
-		Name:      row.Name,
-		FilePath:  row.FilePath,
-		CreatedAt: row.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt: row.UpdatedAt.Time.Format(time.RFC3339),
-	}, nil
+	doc := newDocumentResponse(row)
+	return &doc, nil
 }
 
 func (s *documentService) Delete(ctx context.Context, projectID int64, documentID string) error {
@@ -123,4 +112,26 @@ func (s *documentService) Delete(ctx context.Context, projectID int64, documentI
 	}
 
 	return nil
+}
+
+func newDocumentResponse(doc dbsqlc.ProjectDocument) schema.ProjectDocumentResponseItem {
+	return schema.ProjectDocumentResponseItem{
+		ID:        doc.ID.String(),
+		ProjectID: doc.ProjectID,
+		Name:      doc.Name,
+		FilePath:  doc.FilePath,
+		FileName:  documentFileName(doc.FilePath, doc.ID),
+		FileURL:   common.StorageURL(doc.FilePath),
+		FileSize:  doc.FileSize.Int64,
+		MimeType:  doc.MimeType.String,
+		CreatedAt: doc.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt: doc.UpdatedAt.Time.Format(time.RFC3339),
+	}
+}
+
+// documentFileName recovers the uploaded file name from the storage key,
+// dropping the "<document id>-" prefix added to keep keys unique.
+func documentFileName(filePath string, docID uuid.UUID) string {
+	name := path.Base(filePath)
+	return strings.TrimPrefix(name, docID.String()+"-")
 }
