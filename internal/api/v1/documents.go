@@ -3,13 +3,10 @@ package v1
 import (
 	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
-	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -60,7 +57,7 @@ func ListProjectDocuments(docService services.DocumentService, logger logging.Lo
 //	@Failure		400			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID}/documents [post]
-func CreateProjectDocument(docService services.DocumentService, logger logging.Logger, cfg *config.Config) fiber.Handler {
+func CreateProjectDocument(docService services.DocumentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := common.ParseIDFromCtx(c, "projectID")
 		if err != nil {
@@ -83,34 +80,31 @@ func CreateProjectDocument(docService services.DocumentService, logger logging.L
 			name = fileHeader.Filename
 		}
 
-		fileSize := fileHeader.Size
 		mimeType := fileHeader.Header.Get("Content-Type")
 		if mimeType == "" {
 			mimeType = "application/octet-stream"
 		}
 
-		saveDir := filepath.Join(cfg.Storage.LocalPath, "documents")
-		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-			return problemdetail.ServerErrorProblem(c, "failed to create storage directory")
+		file, err := fileHeader.Open()
+		if err != nil {
+			logger.Error(loggedmodule.ApiProjects, "failed to open uploaded file", "error", err)
+			return problemdetail.BadRequest(c, "failed to read uploaded file")
 		}
-
-		savePath := filepath.Join(saveDir, fileHeader.Filename)
-		normalizedRelative := filepath.ToSlash(filepath.Join("documents", fileHeader.Filename))
-
-		if err := c.SaveFile(fileHeader, savePath); err != nil {
-			logger.Error(loggedmodule.ApiProjects, "failed to save uploaded file", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to save file")
-		}
+		defer file.Close()
 
 		request := &schema.CreateProjectDocumentRequest{
 			Name:     name,
-			FilePath: normalizedRelative,
-			FileSize: fileSize,
+			FileName: fileHeader.Filename,
+			FileSize: fileHeader.Size,
 			MimeType: mimeType,
+			Content:  file,
 		}
 
 		doc, err := docService.Create(c.Context(), projectID, int64(uploaderID), request)
 		if err != nil {
+			if errors.Is(err, services.ErrInvalidDocument) {
+				return problemdetail.BadRequest(c, err.Error())
+			}
 			logger.Error(loggedmodule.ApiProjects, "failed to create project document", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
@@ -135,12 +129,17 @@ func CreateProjectDocument(docService services.DocumentService, logger logging.L
 //	@Router /v1/projects/{projectID}/documents/{documentID} [delete]
 func DeleteProjectDocument(docService services.DocumentService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		projectID, err := common.ParseIDFromCtx(c, "projectID")
+		if err != nil {
+			return problemdetail.BadRequest(c, "invalid parameter for projectID")
+		}
+
 		documentID := c.Params("documentID")
 		if documentID == "" {
 			return problemdetail.BadRequest(c, "missing document ID")
 		}
 
-		err := docService.Delete(c.Context(), documentID)
+		err = docService.Delete(c.Context(), projectID, documentID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return problemdetail.BadRequest(c, "document not found")

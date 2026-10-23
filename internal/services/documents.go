@@ -3,30 +3,40 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
+	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
+	"github.com/spf13/afero"
 )
+
+var ErrInvalidDocument = errors.New("invalid document")
 
 type DocumentService interface {
 	FindAllByProjectID(ctx context.Context, projectID int64) ([]schema.ProjectDocumentResponseItem, error)
 	Create(ctx context.Context, projectID int64, uploaderID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error)
-	Delete(ctx context.Context, documentID string) error
+	Delete(ctx context.Context, projectID int64, documentID string) error
 }
 
 type documentService struct {
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	queries     *dbsqlc.Queries
+	logger      logging.Logger
+	storage     afero.Fs
+	maxFileSize int64
 }
 
-func NewDocumentService(conn *dbsqlc.Queries, logger logging.Logger) DocumentService {
+func NewDocumentService(conn *dbsqlc.Queries, logger logging.Logger, storage afero.Fs, maxFileSize int64) DocumentService {
 	return &documentService{
-		queries: conn,
-		logger:  logger,
+		queries:     conn,
+		logger:      logger,
+		storage:     storage,
+		maxFileSize: maxFileSize,
 	}
 }
 
@@ -51,18 +61,28 @@ func (s *documentService) FindAllByProjectID(ctx context.Context, projectID int6
 }
 
 func (s *documentService) Create(ctx context.Context, projectID int64, uploaderID int64, req *schema.CreateProjectDocumentRequest) (*schema.ProjectDocumentResponseItem, error) {
+	if req.FileSize > s.maxFileSize {
+		return nil, fmt.Errorf("%w: file size %d exceeds the maximum allowed size of %d bytes", ErrInvalidDocument, req.FileSize, s.maxFileSize)
+	}
+
 	docID := uuid.New()
+	storageKey := fmt.Sprintf("documents/%d/%s-%s", projectID, docID, common.SafeFileName(req.FileName))
+
+	if err := common.WriteToStorage(s.storage, storageKey, req.Content); err != nil {
+		return nil, err
+	}
 
 	row, err := s.queries.CreateProjectDocument(ctx, dbsqlc.CreateProjectDocumentParams{
 		ID:         docID,
 		ProjectID:  projectID,
 		UploaderID: uploaderID,
 		Name:       req.Name,
-		FilePath:   req.FilePath,
+		FilePath:   storageKey,
 		FileSize:   sql.NullInt64{Int64: req.FileSize, Valid: req.FileSize > 0},
 		MimeType:   sql.NullString{String: req.MimeType, Valid: req.MimeType != ""},
 	})
 	if err != nil {
+		_ = s.storage.Remove(storageKey)
 		return nil, err
 	}
 
@@ -76,10 +96,18 @@ func (s *documentService) Create(ctx context.Context, projectID int64, uploaderI
 	}, nil
 }
 
-func (s *documentService) Delete(ctx context.Context, documentID string) error {
+func (s *documentService) Delete(ctx context.Context, projectID int64, documentID string) error {
 	id, err := uuid.Parse(documentID)
 	if err != nil {
 		return fmt.Errorf("invalid document ID format: %w", err)
+	}
+
+	doc, err := s.queries.GetProjectDocument(ctx, id)
+	if err != nil {
+		return err
+	}
+	if doc.ProjectID != projectID {
+		return sql.ErrNoRows
 	}
 
 	rowsAffected, err := s.queries.DeleteProjectDocument(ctx, id)
@@ -88,6 +116,10 @@ func (s *documentService) Delete(ctx context.Context, documentID string) error {
 	}
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
+	}
+
+	if err := s.storage.Remove(doc.FilePath); err != nil {
+		s.logger.Error(loggedmodule.ApiProjects, "failed to remove document file from storage", "documentID", documentID, "path", doc.FilePath, "error", err)
 	}
 
 	return nil

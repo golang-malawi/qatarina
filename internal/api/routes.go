@@ -227,11 +227,11 @@ func (api *API) routes() {
 	documentsV1 := projectsV1.Group("/:projectID/documents")
 	{
 		documentsV1.Get("", apiv1.ListProjectDocuments(api.DocumentService, api.logger))
-		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger, api.Config))
+		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
-	// Serve uploaded attachment files from the configured local storage path.
-	router.Static("/uploads", api.Config.Storage.LocalPath)
+	// Serve uploaded files from the configured storage (local or S3)
+	router.Get("/uploads/*", api.serveStoredFile)
 
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{

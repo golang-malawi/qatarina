@@ -1,18 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 
-	awscfg "github.com/aws/aws-sdk-go-v2/config"
-	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
-
 	"github.com/golang-malawi/qatarina/internal/config"
-	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/golang-malawi/qatarina/internal/version"
 	"github.com/lucasepe/homedir"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,7 +16,6 @@ var (
 	qatarinaConfig = &config.Config{}
 	psqlPath       string
 	logFile        string
-	fs             afero.Fs
 )
 
 func init() {
@@ -96,30 +89,5 @@ func initConfig() {
 		os.Exit(1)
 	}
 
-	// Validate storage configuration before creating client
-	if err := qatarinaConfig.ValidateStorage(); err != nil {
-		fmt.Println("Storage configuration error:", err)
-		os.Exit(1)
-	}
-
-	// Choose storage driver based on configuration
-	switch qatarinaConfig.Storage.Driver {
-	case "s3":
-		ctx := context.Background()
-		awsCfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(qatarinaConfig.Storage.S3Region))
-		if err != nil {
-			fmt.Println("Unable to load AWS config:", err)
-			os.Exit(1)
-		}
-		awsS3Client := awss3.NewFromConfig(awsCfg)
-		fs = storage.NewS3Fs(qatarinaConfig.Storage.S3Bucket, awsS3Client)
-
-	case "local":
-		fs = afero.NewOsFs()
-
-	default:
-		fmt.Println("Invalid storage driver specified in config")
-		os.Exit(1)
-	}
 	// TODO: configure logging to file here..
 }

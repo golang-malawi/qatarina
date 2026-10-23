@@ -1,14 +1,10 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
@@ -22,7 +18,6 @@ type Config struct {
 	Platform    PlatformConfiguration   `mapstructure:"platform"`
 	ImportFile  ImportFileConfiguration `mapstructure:"import_file"`
 	Runner      RunnerConfiguration     `mapstructure:"runner"`
-	S3          S3Configuration         `mapstructure:"s3"`
 	Storage     StorageConfiguration    `mapstructure:"storage"`
 	Attachments AttachmentConfiguration `mapstructure:"attachments"`
 }
@@ -115,20 +110,30 @@ type RunnerConfiguration struct {
 	BrowserUseWSURL string `mapstructure:"browseruse_ws_url" envconfig:"QATARINA_RUNNER_BROWSERUSE_WS_URL"`
 }
 
+// StorageConfiguration selects where uploaded files are kept. S3 is used when
+// driver is "s3" and s3_bucket is set; otherwise files are stored under local_path.
 type StorageConfiguration struct {
 	Driver    string `mapstructure:"driver" envconfig:"QATARINA_STORAGE_DRIVER"`
 	LocalPath string `mapstructure:"local_path" envconfig:"QATARINA_STORAGE_LOCAL_PATH"`
 	S3Bucket  string `mapstructure:"s3_bucket" envconfig:"QATARINA_STORAGE_S3_BUCKET"`
 	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
+	// S3Endpoint is optional and only needed for S3-compatible services such as MinIO
+	S3Endpoint string `mapstructure:"s3_endpoint" envconfig:"QATARINA_STORAGE_S3_ENDPOINT"`
 }
 
-type S3Configuration struct {
-	Bucket string `mapstructure:"bucket" envconfig:"QATARINA_S3_BUCKET"`
-	Region string `mapstructure:"region" envconfig:"QATARINA_S3_REGION"`
-}
+const DefaultMaxFileSize int64 = 10 * 1024 * 1024 // 10 MB
 
 type AttachmentConfiguration struct {
 	MaxFileSize int64 `mapstructure:"max_file_size" envconfig:"QATARINA_ATTACHMENTS_MAX_FILE_SIZE"`
+}
+
+// GetMaxFileSize returns the configured maximum upload size, falling back to
+// DefaultMaxFileSize when unset
+func (a *AttachmentConfiguration) GetMaxFileSize() int64 {
+	if a == nil || a.MaxFileSize <= 0 {
+		return DefaultMaxFileSize
+	}
+	return a.MaxFileSize
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -150,39 +155,6 @@ func (c *Config) OpenDB() *sqlx.DB {
 	db.SetMaxIdleConns(10)
 
 	return db
-}
-
-// ValidateStorage checks that the configured storage driver is healthy.
-func (c *Config) ValidateStorage() error {
-	switch c.Storage.Driver {
-	case "local":
-		// Check if local path exists
-		if _, err := os.Stat(c.Storage.LocalPath); os.IsNotExist(err) {
-			if mkErr := os.MkdirAll(c.Storage.LocalPath, 0755); mkErr != nil {
-				return fmt.Errorf("failed to create local storage directory: %w", mkErr)
-			}
-		}
-		return nil
-
-	case "s3":
-		ctx := context.Background()
-		awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(c.S3.Region))
-		if err != nil {
-			return fmt.Errorf("failed to load AWS config: %w", err)
-		}
-		svc := s3.NewFromConfig(awsCfg)
-		_, err = svc.HeadBucket(ctx, &s3.HeadBucketInput{
-			Bucket: &c.S3.Bucket,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to access S3 bucket: %w", err)
-		}
-		return nil
-
-	default:
-		return fmt.Errorf("unsupported storage driver: %s", c.Storage.Driver)
-	}
-
 }
 
 var DefaultConfig = Config{
@@ -235,8 +207,7 @@ var DefaultConfig = Config{
 		S3Bucket:  "",
 		S3Region:  "us-east-1",
 	},
-	S3: S3Configuration{
-		Bucket: "",
-		Region: "us-east-1",
+	Attachments: AttachmentConfiguration{
+		MaxFileSize: DefaultMaxFileSize,
 	},
 }

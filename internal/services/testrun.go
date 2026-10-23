@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -373,19 +372,14 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		return nil, err
 	}
 
-	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
-
-	f, err := t.storage.Create(storageKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file in storage: %w", err)
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, file.Content); err != nil {
-		return nil, fmt.Errorf("failed to write file content: %w", err)
-	}
-
 	attachmentID := uuid.New()
+	storageKey := fmt.Sprintf("test-results/%s/%s-%s", resultID, attachmentID, common.SafeFileName(file.FileName))
+	storageUrl := common.StorageURL(storageKey)
+
+	if err := common.WriteToStorage(t.storage, storageKey, file.Content); err != nil {
+		return nil, err
+	}
+
 	err = t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
 		ID:              attachmentID,
 		TestRunResultID: uuid.MustParse(resultID),
@@ -393,10 +387,11 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileType:        file.ContentType,
 		FileSize:        file.Size,
 		StorageKey:      storageKey,
-		StorageUrl:      storageKey,
+		StorageUrl:      storageUrl,
 		CreatedAt:       common.NewNullTime(time.Now()),
 	})
 	if err != nil {
+		_ = t.storage.Remove(storageKey)
 		return nil, fmt.Errorf("failed to save attachment metadata: %w", err)
 	}
 
@@ -405,7 +400,7 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		FileName:   file.FileName,
 		FileType:   file.ContentType,
 		FileSize:   file.Size,
-		StorageUrl: storageKey,
+		StorageUrl: storageUrl,
 	}, nil
 }
 

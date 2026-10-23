@@ -1,10 +1,13 @@
 package schema
 
+import "io"
+
 type CreateProjectDocumentRequest struct {
 	Name     string `form:"name" validate:"required"`
-	FilePath string
+	FileName string
 	FileSize int64
 	MimeType string
+	Content  io.Reader
 }
 type ProjectDocumentResponseItem struct {
 	ID        string `json:"id"`
