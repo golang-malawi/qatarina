@@ -619,12 +619,18 @@ INSERT INTO test_run_results (
 )
 RETURNING id;
 
--- name: InsertTestRunAttachment :exec
+-- name: InsertTestRunAttachment :execrows
+-- project_id is taken from the result's test run; no row is inserted if the result does not exist
 INSERT INTO test_run_attachments (
-    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
-);
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
+)
+SELECT
+    sqlc.arg(id)::uuid, trr.id, tr.project_id, sqlc.arg(uploaded_by)::int,
+    sqlc.arg(file_name)::text, sqlc.arg(file_type)::text, sqlc.arg(file_size)::bigint,
+    sqlc.arg(storage_key)::text, sqlc.arg(storage_url)::text, sqlc.arg(created_at)::timestamp
+FROM test_run_results trr
+JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.id = sqlc.arg(test_run_result_id)::uuid;
 
 -- name: ListTestRunAttachments :many
 SELECT id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at

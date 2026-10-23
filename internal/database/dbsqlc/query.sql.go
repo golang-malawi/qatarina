@@ -2669,37 +2669,48 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 	return err
 }
 
-const insertTestRunAttachment = `-- name: InsertTestRunAttachment :exec
+const insertTestRunAttachment = `-- name: InsertTestRunAttachment :execrows
 INSERT INTO test_run_attachments (
-    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
 )
+SELECT
+    $1::uuid, trr.id, tr.project_id, $2::int,
+    $3::text, $4::text, $5::bigint,
+    $6::text, $7::text, $8::timestamp
+FROM test_run_results trr
+JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.id = $9::uuid
 `
 
 type InsertTestRunAttachmentParams struct {
 	ID              uuid.UUID
-	TestRunResultID uuid.UUID
+	UploadedBy      int32
 	FileName        string
 	FileType        string
 	FileSize        int64
 	StorageKey      string
 	StorageUrl      string
-	CreatedAt       sql.NullTime
+	CreatedAt       time.Time
+	TestRunResultID uuid.UUID
 }
 
-func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) error {
-	_, err := q.db.ExecContext(ctx, insertTestRunAttachment,
+// project_id is taken from the result's test run; no row is inserted if the result does not exist
+func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRunAttachmentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, insertTestRunAttachment,
 		arg.ID,
-		arg.TestRunResultID,
+		arg.UploadedBy,
 		arg.FileName,
 		arg.FileType,
 		arg.FileSize,
 		arg.StorageKey,
 		arg.StorageUrl,
 		arg.CreatedAt,
+		arg.TestRunResultID,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const insertTestRunResult = `-- name: InsertTestRunResult :one

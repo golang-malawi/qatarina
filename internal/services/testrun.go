@@ -367,7 +367,12 @@ func (t *testRunService) PublishLog(runID string, msg schema.RunnerMessage) erro
 }
 
 func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	_, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
+	resultUUID, err := uuid.Parse(resultID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid result ID", ErrNotFound)
+	}
+
+	contentType, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
 	if err != nil {
 		return nil, err
 	}
@@ -380,32 +385,41 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		return nil, err
 	}
 
-	err = t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
+	rows, err := t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
 		ID:              attachmentID,
-		TestRunResultID: uuid.MustParse(resultID),
+		TestRunResultID: resultUUID,
+		UploadedBy:      int32(file.UploadedBy),
 		FileName:        file.FileName,
-		FileType:        file.ContentType,
+		FileType:        contentType,
 		FileSize:        file.Size,
 		StorageKey:      storageKey,
 		StorageUrl:      storageUrl,
-		CreatedAt:       common.NewNullTime(time.Now()),
+		CreatedAt:       time.Now(),
 	})
-	if err != nil {
+	if err != nil || rows == 0 {
 		_ = t.storage.Remove(storageKey)
+		if err == nil {
+			return nil, fmt.Errorf("%w: test run result %s", ErrNotFound, resultID)
+		}
 		return nil, fmt.Errorf("failed to save attachment metadata: %w", err)
 	}
 
 	return &schema.AttachmentResponse{
 		ID:         attachmentID.String(),
 		FileName:   file.FileName,
-		FileType:   file.ContentType,
+		FileType:   contentType,
 		FileSize:   file.Size,
 		StorageUrl: storageUrl,
 	}, nil
 }
 
 func (t *testRunService) GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error) {
-	rows, err := t.queries.ListTestRunAttachments(ctx, uuid.MustParse(resultID))
+	resultUUID, err := uuid.Parse(resultID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid result ID", ErrNotFound)
+	}
+
+	rows, err := t.queries.ListTestRunAttachments(ctx, resultUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list attachments: %w", err)
 	}
