@@ -23,18 +23,24 @@ type Server struct {
 	logger logging.Logger
 	mcp    *server.MCPServer
 
-	authService services.AuthService
-	userService services.UserService
+	authService     services.AuthService
+	userService     services.UserService
+	projectService  services.ProjectService
+	testCaseService services.TestCaseService
 }
 
 func New(cfg *config.Config, logger logging.Logger) *Server {
-	dbConn := dbsqlc.New(cfg.OpenDB())
+	rawDB := cfg.OpenDB()
+	dbConn := dbsqlc.New(rawDB)
+	moduleService := services.NewModuleService(dbConn, cfg.Platform.GetMaxModuleDepth())
 
 	s := &Server{
-		config:      cfg,
-		logger:      logger,
-		authService: services.NewAuthService(&cfg.Auth, dbConn, logger),
-		userService: services.NewUserService(dbConn, logger, cfg.SMTP),
+		config:          cfg,
+		logger:          logger,
+		authService:     services.NewAuthService(&cfg.Auth, dbConn, logger),
+		userService:     services.NewUserService(dbConn, logger, cfg.SMTP),
+		projectService:  services.NewProjectService(dbConn, logger, moduleService),
+		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		mcp: server.NewMCPServer(
 			"qatarina",
 			version.Version,
@@ -86,6 +92,28 @@ func (s *Server) registerTools() {
 			mcp.WithDestructiveHintAnnotation(false),
 		),
 		s.listUsers,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool("list_projects",
+			mcp.WithDescription("List all projects on the QATARINA platform."),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjects,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool("list_project_test_cases",
+			mcp.WithDescription("List a project's test cases, newest first, one page at a time."),
+			mcp.WithNumber("project_id", mcp.Required(), mcp.Description("ID of the project, as returned by list_projects.")),
+			mcp.WithNumber("page", mcp.Description("Page number, starting at 1. Defaults to 1.")),
+			mcp.WithNumber("page_size", mcp.Description("Test cases per page, at most 100. Defaults to 10.")),
+			mcp.WithString("search", mcp.Description("Only return test cases whose code, title, description or module matches this text.")),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjectTestCases,
 	)
 }
 
