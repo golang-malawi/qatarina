@@ -131,6 +131,13 @@ export interface AppDataTableProps<TData, TResponse> {
     response: TResponse | undefined,
   ) => PaginationInfo | undefined;
   getRowId?: (row: TData, index: number, parent?: any) => string;
+  /**
+   * Loads every row matching the current filters. When provided together with
+   * getRowId, "Select all" selects across all pages instead of the current page.
+   */
+  fetchAllRows?: (
+    params: Omit<TableQueryParams, "page" | "pageSize">,
+  ) => Promise<TData[]>;
 }
 
 function titleize(value: string) {
@@ -193,6 +200,7 @@ export function AppDataTable<TData, TResponse>({
   dataAccessor,
   paginationAccessor,
   getRowId,
+  fetchAllRows,
 }: AppDataTableProps<TData, TResponse>) {
   const navigate = useNavigate();
   const [sorting, setSorting] = React.useState<SortingState>(() => {
@@ -497,16 +505,58 @@ export function AppDataTable<TData, TResponse>({
     getRowId,
   });
 
+  // Remembers rows seen on any page so selections survive pagination (requires getRowId)
+  const rowCacheRef = React.useRef(new Map<string, TData>());
+  if (getRowId) {
+    rawData.forEach((row, index) => {
+      rowCacheRef.current.set(getRowId(row, index), row);
+    });
+  }
+
   const selectedRows = React.useMemo(() => {
-    // Fallback direct extraction from rawData using rowSelection map keys if getRowId is provided
     if (getRowId) {
-      return rawData.filter((row, index) => {
-        const id = getRowId(row, index);
-        return !!rowSelection[id];
-      });
+      return Object.keys(rowSelection)
+        .filter((id) => rowSelection[id])
+        .map((id) => rowCacheRef.current.get(id))
+        .filter((row): row is TData => row !== undefined);
     }
     return table.getSelectedRowModel().rows.map((row) => row.original);
   }, [table, rowSelection, rawData, getRowId]);
+
+  const canSelectAcrossPages = !!(fetchAllRows && getRowId);
+  const [selectingAll, setSelectingAll] = React.useState(false);
+  const [selectAllError, setSelectAllError] = React.useState<string | null>(null);
+
+  const allRowsSelected = canSelectAcrossPages
+    ? totalRows > 0 && selectedRows.length >= totalRows
+    : table.getIsAllPageRowsSelected();
+
+  const handleSelectAll = async (checked: boolean) => {
+    if (!canSelectAcrossPages) {
+      table.toggleAllPageRowsSelected(checked);
+      return;
+    }
+    if (!checked) {
+      setRowSelection({});
+      return;
+    }
+    setSelectingAll(true);
+    setSelectAllError(null);
+    try {
+      const allRows = await fetchAllRows!({ sortBy, sortOrder, search: globalFilter });
+      const nextSelection: RowSelectionState = {};
+      allRows.forEach((row, index) => {
+        const id = getRowId!(row, index);
+        rowCacheRef.current.set(id, row);
+        nextSelection[id] = true;
+      });
+      setRowSelection(nextSelection);
+    } catch (err) {
+      setSelectAllError((err as Error)?.message ?? "Failed to select all rows");
+    } finally {
+      setSelectingAll(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!onRowSelectionChangeRows) return;
@@ -548,17 +598,19 @@ export function AppDataTable<TData, TResponse>({
       {enableRowSelection && (
         <Flex align="center" gap="3">
           <Checkbox.Root
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={({ checked }) =>
-              table.toggleAllPageRowsSelected(!!checked)
-            }
+            checked={allRowsSelected}
+            disabled={selectingAll}
+            onCheckedChange={({ checked }) => handleSelectAll(!!checked)}
           >
             <Checkbox.HiddenInput />
             <Checkbox.Control />
             <Checkbox.Label fontSize="sm" fontWeight="medium">
-              Select all test cases
+              {canSelectAcrossPages
+                ? `Select all ${totalRows} test cases`
+                : "Select all test cases"}
             </Checkbox.Label>
           </Checkbox.Root>
+          {selectingAll && <Spinner size="xs" color="brand.solid" />}
           <Text fontSize="sm" color="fg.subtle">
             | {selectedRows.length} selected
           </Text>
@@ -578,6 +630,8 @@ export function AppDataTable<TData, TResponse>({
             ))}
         </Flex>
       )}
+
+      {selectAllError && <ErrorAlert message={selectAllError} />}
 
       {queryResult.isError && (
         <ErrorAlert

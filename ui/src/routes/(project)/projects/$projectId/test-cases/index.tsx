@@ -110,6 +110,34 @@ export default function ListProjectTestCases() {
     [projectId, moduleFilter],
   );
 
+  // Backend caps pageSize at 100, so page through to collect every matching test case
+  const fetchAllTestCases = React.useCallback(
+    async ({
+      sortBy,
+      sortOrder,
+      search,
+    }: Pick<TestCaseListQueryParams, "sortBy" | "sortOrder" | "search">) => {
+      const all: TestCase[] = [];
+      const pageSize = 100;
+      for (let page = 1; ; page++) {
+        const res = await queryClient.fetchQuery(
+          testCasesByProjectIdQueryOptions(projectId, {
+            page,
+            pageSize,
+            sortBy,
+            sortOrder,
+            search: moduleFilter || search,
+          }),
+        );
+        const pageCases = (res?.test_cases ?? []) as TestCase[];
+        all.push(...pageCases);
+        const total = res?.pagination?.total ?? 0;
+        if (pageCases.length < pageSize || all.length >= total) return all;
+      }
+    },
+    [projectId, moduleFilter, queryClient],
+  );
+
   const { data: usersData } = useUsersQuery();
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
   const { data: projectsData } = useProjectsQuery();
@@ -402,6 +430,8 @@ export default function ListProjectTestCases() {
               showGlobalFilter
               filterPlaceholder={t("test_cases.search_placeholder")}
               enableRowSelection={true}
+              getRowId={(row) => String(row.id)}
+              fetchAllRows={fetchAllTestCases}
               rowSelection={rowSelection}
               onRowSelectionChange={(newSelection) => {
                 setRowSelection(newSelection);
