@@ -71,6 +71,17 @@ $ docker compose up
 $ docker exec -t qatarina-qatarina-1 /bin/qatarina  --config /opt/qatarina.yaml user new --name "Admin Admin" --email "admin@example.com" --password "changeme"
 ```
 
+## Using the MCP server
+
+QATARINA includes an MCP server so AI assistants (Claude Code, Claude Desktop, Cursor, etc.)
+can work with the platform. Start it with:
+
+```sh
+$ ./qatarina mcp
+```
+
+See [./docs/mcp/README.md](./docs/mcp/README.md) for configuration, authentication and client setup.
+
 ## Contributing
 
 Contributions are welcome! Here's how to get started:
