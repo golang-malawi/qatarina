@@ -478,6 +478,17 @@ export function AppDataTable<TData, TResponse>({
     renderRowActions,
   ]);
 
+  const [selectingAll, setSelectingAll] = React.useState(false);
+  const [selectAllError, setSelectAllError] = React.useState<string | null>(null);
+  // Ignores a select-all response if the user changed the selection while it was loading
+  const selectAllRequestRef = React.useRef(0);
+
+  const handleRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) => {
+    selectAllRequestRef.current++;
+    setSelectingAll(false);
+    setRowSelection(updater);
+  };
+
   const table = useReactTable({
     data: rawData,
     columns: builtColumns,
@@ -490,7 +501,7 @@ export function AppDataTable<TData, TResponse>({
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: isServerMode ? undefined : getFilteredRowModel(),
     getSortedRowModel: isServerMode ? undefined : getSortedRowModel(),
@@ -513,19 +524,19 @@ export function AppDataTable<TData, TResponse>({
     });
   }
 
+  const hasRowId = !!getRowId;
   const selectedRows = React.useMemo(() => {
-    if (getRowId) {
+    if (hasRowId) {
       return Object.keys(rowSelection)
         .filter((id) => rowSelection[id])
         .map((id) => rowCacheRef.current.get(id))
         .filter((row): row is TData => row !== undefined);
     }
     return table.getSelectedRowModel().rows.map((row) => row.original);
-  }, [table, rowSelection, rawData, getRowId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, rowSelection, rawData, hasRowId]);
 
   const canSelectAcrossPages = !!(fetchAllRows && getRowId);
-  const [selectingAll, setSelectingAll] = React.useState(false);
-  const [selectAllError, setSelectAllError] = React.useState<string | null>(null);
 
   const allRowsSelected = canSelectAcrossPages
     ? totalRows > 0 && selectedRows.length >= totalRows
@@ -536,7 +547,9 @@ export function AppDataTable<TData, TResponse>({
       table.toggleAllPageRowsSelected(checked);
       return;
     }
+    const requestId = ++selectAllRequestRef.current;
     if (!checked) {
+      setSelectingAll(false);
       setRowSelection({});
       return;
     }
@@ -544,6 +557,7 @@ export function AppDataTable<TData, TResponse>({
     setSelectAllError(null);
     try {
       const allRows = await fetchAllRows!({ sortBy, sortOrder, search: globalFilter });
+      if (requestId !== selectAllRequestRef.current) return;
       const nextSelection: RowSelectionState = {};
       allRows.forEach((row, index) => {
         const id = getRowId!(row, index);
@@ -552,9 +566,10 @@ export function AppDataTable<TData, TResponse>({
       });
       setRowSelection(nextSelection);
     } catch (err) {
+      if (requestId !== selectAllRequestRef.current) return;
       setSelectAllError((err as Error)?.message ?? "Failed to select all rows");
     } finally {
-      setSelectingAll(false);
+      if (requestId === selectAllRequestRef.current) setSelectingAll(false);
     }
   };
 
@@ -598,8 +613,7 @@ export function AppDataTable<TData, TResponse>({
       {enableRowSelection && (
         <Flex align="center" gap="3">
           <Checkbox.Root
-            checked={allRowsSelected}
-            disabled={selectingAll}
+            checked={selectingAll || allRowsSelected}
             onCheckedChange={({ checked }) => handleSelectAll(!!checked)}
           >
             <Checkbox.HiddenInput />
@@ -610,7 +624,6 @@ export function AppDataTable<TData, TResponse>({
                 : "Select all test cases"}
             </Checkbox.Label>
           </Checkbox.Root>
-          {selectingAll && <Spinner size="xs" color="brand.solid" />}
           <Text fontSize="sm" color="fg.subtle">
             | {selectedRows.length} selected
           </Text>

@@ -31,6 +31,7 @@ import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   TestCaseListQueryParams,
+  fetchAllProjectTestCases,
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
 import { LuEye, LuGitBranch, LuPencil, LuArrowRightLeft } from "react-icons/lu";
@@ -67,6 +68,9 @@ type TestCase = components["schemas"]["schema.TestCaseResponse"];
 type TestCaseListResponse =
   components["schemas"]["schema.TestCaseListResponse"];
 
+// Stable reference: an inline getRowId re-creates selection on every render
+const getTestCaseRowId = (row: TestCase) => String(row.id);
+
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const { t } = useTranslation();
@@ -85,6 +89,8 @@ export default function ListProjectTestCases() {
   const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
   const [testCaseToTransfer, setTestCaseToTransfer] = useState<TestCase | null>(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFileName, setExportFileName] = useState<string>("");
   const [exportFileFormat, setExportFileFormat] = useState<"CSV" | "XLSX">("XLSX");
@@ -110,31 +116,17 @@ export default function ListProjectTestCases() {
     [projectId, moduleFilter],
   );
 
-  // Backend caps pageSize at 100, so page through to collect every matching test case
   const fetchAllTestCases = React.useCallback(
-    async ({
+    ({
       sortBy,
       sortOrder,
       search,
-    }: Pick<TestCaseListQueryParams, "sortBy" | "sortOrder" | "search">) => {
-      const all: TestCase[] = [];
-      const pageSize = 100;
-      for (let page = 1; ; page++) {
-        const res = await queryClient.fetchQuery(
-          testCasesByProjectIdQueryOptions(projectId, {
-            page,
-            pageSize,
-            sortBy,
-            sortOrder,
-            search: moduleFilter || search,
-          }),
-        );
-        const pageCases = (res?.test_cases ?? []) as TestCase[];
-        all.push(...pageCases);
-        const total = res?.pagination?.total ?? 0;
-        if (pageCases.length < pageSize || all.length >= total) return all;
-      }
-    },
+    }: Pick<TestCaseListQueryParams, "sortBy" | "sortOrder" | "search">) =>
+      fetchAllProjectTestCases(queryClient, projectId, {
+        sortBy,
+        sortOrder,
+        search: moduleFilter || search,
+      }),
     [projectId, moduleFilter, queryClient],
   );
 
@@ -279,6 +271,7 @@ export default function ListProjectTestCases() {
 
   const handleBulkDelete = async () => {
     if (selectedRows.length === 0) return;
+    setBulkDeleting(true);
     try {
       await Promise.all(
         selectedRows.map((row) => {
@@ -292,11 +285,14 @@ export default function ListProjectTestCases() {
       });
       setSelectedRows([]);
       setRowSelection({});
+      setBulkDeleteOpen(false);
     } catch (err: any) {
       toaster.error({
         title: t("test_cases.delete.error"),
         description: err?.message,
       });
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -430,7 +426,7 @@ export default function ListProjectTestCases() {
               showGlobalFilter
               filterPlaceholder={t("test_cases.search_placeholder")}
               enableRowSelection={true}
-              getRowId={(row) => String(row.id)}
+              getRowId={getTestCaseRowId}
               fetchAllRows={fetchAllTestCases}
               rowSelection={rowSelection}
               onRowSelectionChange={(newSelection) => {
@@ -457,7 +453,7 @@ export default function ListProjectTestCases() {
                       <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
                         {t("test_cases.transfer")}
                       </Menu.Item>
-                      <Menu.Item value="delete" color="fg.error" onClick={handleBulkDelete}>
+                      <Menu.Item value="delete" color="fg.error" onClick={() => setBulkDeleteOpen(true)}>
                         {t("test_cases.delete")}
                       </Menu.Item>
                     </Menu.Content>
@@ -610,6 +606,31 @@ export default function ListProjectTestCases() {
           <SuggestedTestCasesTab projectID={projectId} />
         </Tabs.Content>
       </Tabs.Root>
+
+      {/* Bulk delete confirmation */}
+      <AppDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(event) => !bulkDeleting && setBulkDeleteOpen(event.open)}
+        title={t("test_cases.bulk_delete.title", { count: selectedRows.length })}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteOpen(false)}
+              disabled={bulkDeleting}
+            >
+              {t("test_plans.cancel")}
+            </Button>
+            <Button colorPalette="red" onClick={handleBulkDelete} loading={bulkDeleting}>
+              {t("test_cases.delete")}
+            </Button>
+          </>
+        }
+      >
+        <Text color="fg.subtle">
+          {t("test_cases.bulk_delete.description", { count: selectedRows.length })}
+        </Text>
+      </AppDialog>
 
       {/* Bulk assign modal - Step 1: Select Test Plans with Checkboxes */}
       {bulkAssignStep === "plan" && (

@@ -4,7 +4,7 @@ import {
   getInboxTestCases,
   getInboxUnseenCount,
 } from "@/services/TestCaseService";
-import { queryOptions } from "@tanstack/react-query";
+import { QueryClient, queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
 
 type AssignedTestCaseListResponse =
@@ -94,6 +94,36 @@ export const testCasesByProjectIdQueryOptions = (
       params?.isDraft,
     ],
   });
+
+// Backend caps pageSize at 100
+const FETCH_ALL_PAGE_SIZE = 100;
+
+type ProjectTestCase = components["schemas"]["schema.TestCaseResponse"];
+
+/** Fetches every test case in a project: the first page, then the rest in parallel. */
+export async function fetchAllProjectTestCases(
+  queryClient: QueryClient,
+  projectID: string,
+  params?: Omit<TestCaseListQueryParams, "page" | "pageSize">,
+): Promise<ProjectTestCase[]> {
+  const fetchPage = (page: number) =>
+    queryClient.fetchQuery({
+      ...testCasesByProjectIdQueryOptions(projectID, {
+        ...params,
+        page,
+        pageSize: FETCH_ALL_PAGE_SIZE,
+      }),
+      staleTime: 30_000,
+    });
+
+  const first = await fetchPage(1);
+  const total = first?.pagination?.total ?? 0;
+  const pageCount = Math.ceil(total / FETCH_ALL_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, i) => fetchPage(i + 2)),
+  );
+  return [first, ...rest].flatMap((res) => res?.test_cases ?? []);
+}
 
 export const findTestCaseSummaryQueryOptions = $api.queryOptions(
   "get",

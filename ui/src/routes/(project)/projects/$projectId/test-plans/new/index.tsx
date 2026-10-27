@@ -24,7 +24,10 @@ import { useState } from "react";
 import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
 import { useProjectTestersQuery } from "@/services/TesterService"; 
-import { testCasesByProjectIdQueryOptions } from "@/data/queries/test-cases";
+import {
+  fetchAllProjectTestCases,
+  testCasesByProjectIdQueryOptions,
+} from "@/data/queries/test-cases";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import {
   testPlanCreationSchema,
@@ -35,8 +38,6 @@ import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environmen
 import { useTranslation } from "react-i18next";
 
 const TEST_CASES_PAGE_SIZE = 10;
-// Backend caps pageSize at 100
-const SELECT_ALL_FETCH_PAGE_SIZE = 100;
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
@@ -109,24 +110,6 @@ function CreateNewTestPlan() {
   const allSelected =
     totalTestCases > 0 && selectedTestCases.length >= totalTestCases;
 
-  async function fetchAllTestCaseIds(): Promise<string[]> {
-    const ids: string[] = [];
-    for (let p = 1; ; p++) {
-      const res = await queryClient.fetchQuery(
-        testCasesByProjectIdQueryOptions(projectId, {
-          page: p,
-          pageSize: SELECT_ALL_FETCH_PAGE_SIZE,
-        })
-      );
-      const pageCases = res?.test_cases ?? [];
-      ids.push(...pageCases.map((tc) => tc.id!.toString()));
-      const total = res?.pagination?.total ?? 0;
-      if (pageCases.length < SELECT_ALL_FETCH_PAGE_SIZE || ids.length >= total) {
-        return ids;
-      }
-    }
-  }
-
   async function handleSelectAll(checked: boolean) {
     if (!checked) {
       setSelectedTestCases([]);
@@ -135,7 +118,9 @@ function CreateNewTestPlan() {
 
     setSelectingAll(true);
     try {
-      const allIds = await fetchAllTestCaseIds();
+      const allIds = (await fetchAllProjectTestCases(queryClient, projectId)).map((tc) =>
+        tc.id!.toString()
+      );
       setSelectedTestCases((prev) => {
         const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
         return allIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
@@ -304,8 +289,7 @@ function CreateNewTestPlan() {
           bg="bg.surface"
         >
           <Checkbox.Root
-            checked={allSelected}
-            disabled={selectingAll}
+            checked={selectingAll || allSelected}
             onCheckedChange={(e) => handleSelectAll(e.checked === true)}
           >
             <Checkbox.HiddenInput />
@@ -313,7 +297,6 @@ function CreateNewTestPlan() {
             <Checkbox.Label>
               {t("test_plans.select_all_cases", { count: totalTestCases })}
             </Checkbox.Label>
-            {selectingAll && <Spinner size="xs" color="brand.solid" />}
           </Checkbox.Root>
         </Box>
 
