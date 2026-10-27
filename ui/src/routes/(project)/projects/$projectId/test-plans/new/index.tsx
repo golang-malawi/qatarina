@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
@@ -29,11 +29,18 @@ import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
 import { useTranslation } from "react-i18next";
 
+const TEST_CASES_PAGE_SIZE = 10;
+
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
 )({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
-    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
+    queryClient.ensureQueryData(
+      testCasesByProjectIdQueryOptions(projectId, {
+        page: 1,
+        pageSize: TEST_CASES_PAGE_SIZE,
+      })
+    ),
   component: CreateNewTestPlan,
 });
 
@@ -60,11 +67,19 @@ function CreateNewTestPlan() {
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
 
+  const [page, setPage] = useState(1);
   const {
     data: testCases,
     isPending,
+    isFetching,
     error,
-  } = useSuspenseQuery(testCasesByProjectIdQueryOptions(projectId));
+  } = useQuery({
+    ...testCasesByProjectIdQueryOptions(projectId, {
+      page,
+      pageSize: TEST_CASES_PAGE_SIZE,
+    }),
+    placeholderData: keepPreviousData,
+  });
 
   if (isPending) {
     return (
@@ -78,18 +93,27 @@ function CreateNewTestPlan() {
     return <Text color="fg.error">{t("test_plans.error_cases")}</Text>;
   }
 
+  const totalTestCases = testCases?.pagination?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
+
+  // Selection persists across pages; "select all" applies to the current page only
   const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
   const allSelected =
-    testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
+    testCaseIds.length > 0 &&
+    testCaseIds.every((id) => selectedTestCases.some((tc) => tc.test_case_id === id));
 
   function handleSelectAll(checked: boolean) {
     if (checked) {
       setSelectedTestCases((prev) => {
-        const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
-        return testCaseIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
+        const prevIds = new Set(prev.map((tc) => tc.test_case_id));
+        const added = testCaseIds
+          .filter((id) => !prevIds.has(id))
+          .map((id) => ({ test_case_id: id, user_ids: [] }));
+        return [...prev, ...added];
       });
     } else {
-      setSelectedTestCases([]);
+      const pageIds = new Set(testCaseIds);
+      setSelectedTestCases((prev) => prev.filter((tc) => !pageIds.has(tc.test_case_id)));
     }
   }
 
@@ -255,7 +279,7 @@ function CreateNewTestPlan() {
           </Checkbox.Root>
         </Box>
 
-        {testCases.test_cases?.map((testCase) => (
+        {testCases?.test_cases?.map((testCase) => (
           <Box
             key={testCase.id}
             border="sm"
@@ -333,6 +357,29 @@ function CreateNewTestPlan() {
           </Box>
         ))}
 
+        {totalPages > 1 && (
+          <Flex justify="space-between" align="center" mt={2}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1 || isFetching}
+            >
+              {t("test_plans.previous_page")}
+            </Button>
+            <Text fontSize="xs" color="fg.muted">
+              {t("test_plans.page_of", { page, totalPages, total: totalTestCases })}
+            </Text>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page >= totalPages || isFetching}
+            >
+              {t("test_plans.next_page")}
+            </Button>
+          </Flex>
+        )}
       </Box>
 
       {/* Assign testers modal */}
