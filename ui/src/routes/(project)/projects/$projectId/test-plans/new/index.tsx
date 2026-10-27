@@ -14,7 +14,12 @@ import {
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
-import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
@@ -30,6 +35,8 @@ import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environmen
 import { useTranslation } from "react-i18next";
 
 const TEST_CASES_PAGE_SIZE = 10;
+// Backend caps pageSize at 100
+const SELECT_ALL_FETCH_PAGE_SIZE = 100;
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
@@ -50,6 +57,7 @@ function CreateNewTestPlan() {
   const { t } = useTranslation();
   const createTestPlanMutation = useCreateTestPlanMutation();
   const redirect = useNavigate();
+  const queryClient = useQueryClient();
   const { projectId } = Route.useParams();
 
   const testersQuery = useProjectTestersQuery(Number(projectId)); 
@@ -68,6 +76,7 @@ function CreateNewTestPlan() {
   const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
 
   const [page, setPage] = useState(1);
+  const [selectingAll, setSelectingAll] = useState(false);
   const {
     data: testCases,
     isPending,
@@ -96,24 +105,49 @@ function CreateNewTestPlan() {
   const totalTestCases = testCases?.pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
 
-  // Selection persists across pages; "select all" applies to the current page only
-  const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
+  // Selection persists across pages; "select all" covers every test case in the project
   const allSelected =
-    testCaseIds.length > 0 &&
-    testCaseIds.every((id) => selectedTestCases.some((tc) => tc.test_case_id === id));
+    totalTestCases > 0 && selectedTestCases.length >= totalTestCases;
 
-  function handleSelectAll(checked: boolean) {
-    if (checked) {
+  async function fetchAllTestCaseIds(): Promise<string[]> {
+    const ids: string[] = [];
+    for (let p = 1; ; p++) {
+      const res = await queryClient.fetchQuery(
+        testCasesByProjectIdQueryOptions(projectId, {
+          page: p,
+          pageSize: SELECT_ALL_FETCH_PAGE_SIZE,
+        })
+      );
+      const pageCases = res?.test_cases ?? [];
+      ids.push(...pageCases.map((tc) => tc.id!.toString()));
+      const total = res?.pagination?.total ?? 0;
+      if (pageCases.length < SELECT_ALL_FETCH_PAGE_SIZE || ids.length >= total) {
+        return ids;
+      }
+    }
+  }
+
+  async function handleSelectAll(checked: boolean) {
+    if (!checked) {
+      setSelectedTestCases([]);
+      return;
+    }
+
+    setSelectingAll(true);
+    try {
+      const allIds = await fetchAllTestCaseIds();
       setSelectedTestCases((prev) => {
-        const prevIds = new Set(prev.map((tc) => tc.test_case_id));
-        const added = testCaseIds
-          .filter((id) => !prevIds.has(id))
-          .map((id) => ({ test_case_id: id, user_ids: [] }));
-        return [...prev, ...added];
+        const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
+        return allIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
       });
-    } else {
-      const pageIds = new Set(testCaseIds);
-      setSelectedTestCases((prev) => prev.filter((tc) => !pageIds.has(tc.test_case_id)));
+    } catch {
+      toaster.create({
+        title: t("test_plans.error_cases"),
+        type: "error",
+        duration: 4000,
+      });
+    } finally {
+      setSelectingAll(false);
     }
   }
 
@@ -271,11 +305,15 @@ function CreateNewTestPlan() {
         >
           <Checkbox.Root
             checked={allSelected}
+            disabled={selectingAll}
             onCheckedChange={(e) => handleSelectAll(e.checked === true)}
           >
             <Checkbox.HiddenInput />
             <Checkbox.Control />
-            <Checkbox.Label>{t("test_plans.select_all_cases")}</Checkbox.Label>
+            <Checkbox.Label>
+              {t("test_plans.select_all_cases", { count: totalTestCases })}
+            </Checkbox.Label>
+            {selectingAll && <Spinner size="xs" color="brand.solid" />}
           </Checkbox.Root>
         </Box>
 
