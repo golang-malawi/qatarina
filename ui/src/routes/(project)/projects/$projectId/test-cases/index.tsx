@@ -20,6 +20,7 @@ import {
   Select,
   Input,
   createListCollection,
+  Stack,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,6 +57,7 @@ import {
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
+import { useProjectTestersQuery } from "@/services/TesterService";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjectsQuery } from "@/services/ProjectService";
@@ -125,6 +127,9 @@ export default function ListProjectTestCases() {
   );
 
   const { data: usersData } = useUsersQuery();
+  // Only testers assigned to this project can be assigned its test cases
+  const { data: projectTestersData } = useProjectTestersQuery(Number(projectId));
+  const projectTesters = projectTestersData?.testers ?? [];
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
   const { data: projectsData } = useProjectsQuery();
 
@@ -806,24 +811,42 @@ export default function ListProjectTestCases() {
               count: selectedCount,
             })}
           </Box>
-          <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
-            <Fieldset.Root>
-              <Fieldset.Legend fontSize="sm">
-                {t("test_plans.select_testers")}
-              </Fieldset.Legend>
-              <Fieldset.Content>
-                <For each={userMap ? Object.entries(userMap) : []}>
-                  {([userId, userName]) => (
-                    <Checkbox.Root key={userId} value={userId}>
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label>{String(userName)}</Checkbox.Label>
-                    </Checkbox.Root>
-                  )}
-                </For>
-              </Fieldset.Content>
-            </Fieldset.Root>
-          </CheckboxGroup>
+          {projectTesters.length === 0 ? (
+            <Stack gap={2}>
+              <Text color="fg.error">{t("testers.none_assigned")}</Text>
+              <Button
+                size="sm"
+                colorPalette="brand"
+                onClick={() =>
+                  navigate({
+                    to: "/projects/$projectId/testers/new",
+                    params: { projectId },
+                  })
+                }
+              >
+                {t("testers.add_button")}
+              </Button>
+            </Stack>
+          ) : (
+            <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
+              <Fieldset.Root>
+                <Fieldset.Legend fontSize="sm">
+                  {t("test_plans.select_testers")}
+                </Fieldset.Legend>
+                <Fieldset.Content>
+                  <For each={projectTesters}>
+                    {(tester) => (
+                      <Checkbox.Root key={tester.user_id} value={String(tester.user_id)}>
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>{tester.name}</Checkbox.Label>
+                      </Checkbox.Root>
+                    )}
+                  </For>
+                </Fieldset.Content>
+              </Fieldset.Root>
+            </CheckboxGroup>
+          )}
         </AppDialog>
       )}
 
