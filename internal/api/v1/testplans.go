@@ -290,9 +290,15 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 		if request.PlanID != planID {
 			return problemdetail.BadRequest(c, "plan_id in request body and param do not match")
 		}
+		if len(request.PlannedTests) == 0 && request.AllTestCases == nil {
+			return problemdetail.BadRequest(c, "either planned_tests or all_test_cases is required")
+		}
 
 		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanProjectMismatch) {
+				return problemdetail.BadRequest(c, err.Error())
+			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}

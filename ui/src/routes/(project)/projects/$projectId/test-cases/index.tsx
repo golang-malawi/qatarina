@@ -26,12 +26,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
-import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import {
+  AllRowsSelection,
+  AppDataTable,
+  AppTableColumn,
+} from "@/components/ui/app-data-table";
 import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
   TestCaseListQueryParams,
-  fetchAllProjectTestCases,
   testCasesByProjectIdQueryOptions,
 } from "@/data/queries/test-cases";
 import { LuEye, LuGitBranch, LuPencil, LuArrowRightLeft } from "react-icons/lu";
@@ -80,6 +83,11 @@ export default function ListProjectTestCases() {
   const [moduleFilter, setModuleFilter] = useState<string>("");
   const [selectedRows, setSelectedRows] = useState<TestCase[]>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  // Set when "Select all" is used: the backend resolves which test cases that covers
+  const [allSelection, setAllSelection] = useState<AllRowsSelection | null>(null);
+  const selectedCount = allSelection
+    ? allSelection.total - allSelection.excludedIds.length
+    : selectedRows.length;
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
   const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
@@ -114,20 +122,6 @@ export default function ListProjectTestCases() {
       enabled: !!projectId,
     }),
     [projectId, moduleFilter],
-  );
-
-  const fetchAllTestCases = React.useCallback(
-    ({
-      sortBy,
-      sortOrder,
-      search,
-    }: Pick<TestCaseListQueryParams, "sortBy" | "sortOrder" | "search">) =>
-      fetchAllProjectTestCases(queryClient, projectId, {
-        sortBy,
-        sortOrder,
-        search: moduleFilter || search,
-      }),
-    [projectId, moduleFilter, queryClient],
   );
 
   const { data: usersData } = useUsersQuery();
@@ -245,7 +239,7 @@ export default function ListProjectTestCases() {
   };
 
   const handleBulkUseInTestSession = () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     setBulkAssignOpen(true);
     setBulkAssignStep("plan");
     setSelectedTestPlans([]);
@@ -285,6 +279,7 @@ export default function ListProjectTestCases() {
       });
       setSelectedRows([]);
       setRowSelection({});
+      setAllSelection(null);
       setBulkDeleteOpen(false);
     } catch (err: any) {
       toaster.error({
@@ -427,7 +422,8 @@ export default function ListProjectTestCases() {
               filterPlaceholder={t("test_cases.search_placeholder")}
               enableRowSelection={true}
               getRowId={getTestCaseRowId}
-              fetchAllRows={fetchAllTestCases}
+              allRowsSelection={allSelection}
+              onAllRowsSelectionChange={setAllSelection}
               rowSelection={rowSelection}
               onRowSelectionChange={(newSelection) => {
                 setRowSelection(newSelection);
@@ -447,13 +443,18 @@ export default function ListProjectTestCases() {
                       <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
                         {t("test_cases.use_in_test_session")}
                       </Menu.Item>
-                      <Menu.Item value="export" onClick={handleExportClick}>
+                      {allSelection && (
+                        <Text px="2" py="1" fontSize="xs" color="fg.muted" maxW="64">
+                          {t("test_cases.all_selected_actions_hint")}
+                        </Text>
+                      )}
+                      <Menu.Item value="export" disabled={!!allSelection} onClick={handleExportClick}>
                         Export
                       </Menu.Item>
-                      <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
+                      <Menu.Item value="transfer" disabled={!!allSelection} onClick={handleBulkTransferClick}>
                         {t("test_cases.transfer")}
                       </Menu.Item>
-                      <Menu.Item value="delete" color="fg.error" onClick={() => setBulkDeleteOpen(true)}>
+                      <Menu.Item value="delete" color="fg.error" disabled={!!allSelection} onClick={() => setBulkDeleteOpen(true)}>
                         {t("test_cases.delete")}
                       </Menu.Item>
                     </Menu.Content>
@@ -662,7 +663,7 @@ export default function ListProjectTestCases() {
           }
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
-            Select test plan(s) to add {selectedRows.length} test case(s)
+            Select test plan(s) to add {selectedCount} test case(s)
           </Box>
           <Box maxH="300px" overflowY="auto" pr={2}>
             {projectTestPlans.length === 0 ? (
@@ -750,17 +751,28 @@ export default function ListProjectTestCases() {
                         assignTestersToTestPlan(planId, {
                           project_id: Number(projectId),
                           test_plan_id: Number(planId),
-                          planned_tests: selectedRows.map((row) => ({
-                            test_case_id: String(row.id),
-                            user_ids: bulkSelectedUsers.map(Number),
-                          })),
+                          ...(allSelection
+                            ? {
+                                all_test_cases: {
+                                  user_ids: bulkSelectedUsers.map(Number),
+                                  // Same filter the list was showing when "Select all" was used
+                                  search: moduleFilter || allSelection.search,
+                                  excluded_test_case_ids: allSelection.excludedIds,
+                                },
+                              }
+                            : {
+                                planned_tests: selectedRows.map((row) => ({
+                                  test_case_id: String(row.id),
+                                  user_ids: bulkSelectedUsers.map(Number),
+                                })),
+                              }),
                         })
                       )
                     );
 
                     toaster.create({
                       title: "Success",
-                      description: `Successfully assigned ${selectedRows.length} test case(s) to test plan(s)`,
+                      description: `Successfully assigned ${selectedCount} test case(s) to test plan(s)`,
                       type: "success",
                     });
 
@@ -774,6 +786,7 @@ export default function ListProjectTestCases() {
                     setSelectedTestPlans([]);
                     setSelectedRows([]);
                     setRowSelection({});
+                    setAllSelection(null);
                   } catch (err: any) {
                     toaster.create({
                       title: "Assignment failed",
@@ -790,7 +803,7 @@ export default function ListProjectTestCases() {
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
             {t("test_plans.bulk_assign_description", {
-              count: selectedRows.length,
+              count: selectedCount,
             })}
           </Box>
           <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
@@ -956,6 +969,7 @@ export default function ListProjectTestCases() {
                   setProjectSearchQuery("");
                   setSelectedRows([]);
                   setRowSelection({});
+                  setAllSelection(null);
                 } catch (err: any) {
                   toaster.error({
                     title: "Transfer failed",

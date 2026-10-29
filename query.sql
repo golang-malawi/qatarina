@@ -497,6 +497,28 @@ VALUES (
 )
 ON CONFLICT DO NOTHING;
 
+-- name: AddProjectTestCasesToPlan :execrows
+-- Adds every (non-suggested) test case in a project matching the search filter to a
+-- test plan, assigning each one to all the given testers, without loading the cases
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
+SELECT
+    sqlc.arg(test_plan_id)::bigint,
+    tc.id,
+    u.user_id,
+    COALESCE(
+        (SELECT pc.urgency FROM test_plan_cases pc
+         WHERE pc.test_plan_id = sqlc.arg(test_plan_id)::bigint AND pc.test_case_id = tc.id
+         LIMIT 1),
+        'medium'
+    )
+FROM test_cases tc
+CROSS JOIN unnest(sqlc.arg(user_ids)::bigint[]) AS u(user_id)
+WHERE tc.project_id = sqlc.arg(project_id)::int
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND (sqlc.arg(search)::text = '' OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%' OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%')
+  AND NOT (tc.id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[]))
+ON CONFLICT DO NOTHING;
+
 -- name: UpdateTestPlanCaseUrgency :execrows
 UPDATE test_plan_cases
 SET urgency = sqlc.arg(urgency)

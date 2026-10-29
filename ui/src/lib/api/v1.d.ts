@@ -2272,7 +2272,9 @@ export interface components {
             test_case_template: string;
         };
         "schema.AssignTestsToPlanRequest": {
-            planned_tests: components["schemas"]["schema.TestCaseAssignment"][];
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
+            /** @description Required unless all_test_cases is set */
+            planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
             test_plan_id: number;
         };
@@ -2426,6 +2428,7 @@ export interface components {
             title: string;
         };
         "schema.CreateTestPlan": {
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
             assigned_to_id?: number;
             closed_at?: string;
             created_by_id?: number;
@@ -2595,6 +2598,14 @@ export interface components {
             updated_at?: string;
             version?: string;
             website_url?: string;
+        };
+        "schema.ProjectTestCaseSelection": {
+            /** @description Test cases the user deselected */
+            excluded_test_case_ids?: string[];
+            /** @description Same filter as the project test case list (matches title or code) */
+            search?: string;
+            /** @description Testers assigned to each of the selected test cases */
+            user_ids: number[];
         };
         "schema.ProjectTestCaseSummaryResponse": {
             blocked?: number;

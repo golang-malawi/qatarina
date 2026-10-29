@@ -66,6 +66,7 @@
   "test_cases.delete.success": "Test case deleted successfully",
   "test_cases.delete.error": "Failed to delete test case",
   "test_cases.bulk_delete.title": "Delete {{count}} test case(s)?",
+  "test_cases.all_selected_actions_hint": "Export, transfer and delete work on test cases you tick individually, not on \"Select all\".",
   "test_cases.bulk_delete.description": "This will permanently delete {{count}} selected test case(s). This action cannot be undone.",
   "test_cases.add": "Add Test Cases",
   "test_cases.tab.all": "All Test Cases",

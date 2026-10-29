@@ -42,11 +42,13 @@ components:
       type: object
     schema.AssignTestsToPlanRequest:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         planned_tests:
+          description: Required unless all_test_cases is set
           items:
             $ref: '#/components/schemas/schema.TestCaseAssignment'
           maxItems: 100
-          minItems: 1
           type: array
           uniqueItems: false
         project_id:
@@ -54,7 +56,6 @@ components:
         test_plan_id:
           type: integer
       required:
-      - planned_tests
       - project_id
       - test_plan_id
       type: object
@@ -418,6 +419,8 @@ components:
       type: object
     schema.CreateTestPlan:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         assigned_to_id:
           type: integer
         closed_at:
@@ -794,6 +797,29 @@ components:
           type: string
         website_url:
           type: string
+      type: object
+    schema.ProjectTestCaseSelection:
+      properties:
+        excluded_test_case_ids:
+          description: Test cases the user deselected
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        search:
+          description: Same filter as the project test case list (matches title or
+            code)
+          type: string
+        user_ids:
+          description: Testers assigned to each of the selected test cases
+          items:
+            type: integer
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - user_ids
       type: object
     schema.ProjectTestCaseSummaryResponse:
       properties:
