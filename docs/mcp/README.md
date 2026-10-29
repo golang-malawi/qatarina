@@ -771,6 +771,36 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 
 - To be documented.
 
+## Available tools
+
+| Tool | What it does |
+| --- | --- |
+| `whoami` | Returns the profile of the user the server runs as. |
+| `list_users` | Lists all users on the platform. |
+| `list_projects` | Lists all projects. |
+| `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
+| `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
+
+### Adding test cases
+
+`add_test_cases` takes a `project_id` and a list of test cases. Each test case
+needs a `title`, a `description` (the steps and expected result) and a
+`feature_or_module`. You can also set `kind` (defaults to `general`), `priority`
+(defaults to `medium`), `preconditions`, `tags`, `is_draft` and `code`.
+
+When you ask the agent to add test cases for a feature, it designs a set that
+covers the feature and adds them all in one call. The set includes the main
+success path, validation and error handling, edge cases and permissions. For
+example:
+
+> Add test cases for password reset to the Sunga project on Qatarina.
+
+- Test cases are recorded as created by the user the MCP server runs as.
+- Codes such as `SNG012` are generated when `code` is left empty. A test case
+  whose code already exists in the project is skipped and counted in `skipped`.
+- The batch is all or nothing. If one test case is invalid, none of them are
+  added and the error names the one at fault.
+
 ## Security notes
 
 - Treat tokens and the STDIO credentials like passwords; don't commit them to

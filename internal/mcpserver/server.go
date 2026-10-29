@@ -115,6 +115,8 @@ func (s *Server) registerTools() {
 		),
 		s.listProjectTestCases,
 	)
+
+	s.mcp.AddTool(addTestCasesTool(), s.addTestCases)
 }
 
 func (s *Server) whoami(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
