@@ -164,6 +164,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			return nil, skipped, err
 		}
 
+		userID, _ := strconv.Atoi(request.CreatedByID)
 		uuidVal, _ := uuid.NewV7()
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
@@ -178,7 +179,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
-			CreatedByID:      1,
+			CreatedByID:      int32(userID),
 			CreatedAt:        common.NewNullTime(time.Now()),
 			UpdatedAt:        common.NewNullTime(time.Now()),
 			Runner:           common.NullString(request.Runner),

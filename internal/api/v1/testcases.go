@@ -471,6 +471,11 @@ func BulkCreateTestCases(testCaseService services.TestCaseService, logger loggin
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
 
+		createdByID := strconv.Itoa(int(authutil.GetAuthUserID(c)))
+		for i := range request.TestCases {
+			request.TestCases[i].CreatedByID = createdByID
+		}
+
 		testCases, _, err := testCaseService.BulkCreate(context.Background(), request)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to create test cases", "error", err)
