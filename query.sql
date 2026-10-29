@@ -143,6 +143,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_at,
@@ -271,12 +272,12 @@ WHERE p.project_id IS NULL;
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
     is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
-    priority, preconditions
+    priority, preconditions, external_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $13, $14, $15, $16,
-    $17, $18
+    $17, $18, $19
 )
 RETURNING id;
 
@@ -322,6 +323,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_by_id,
@@ -419,7 +421,8 @@ updated_at = $9,
 runner = $10,
 script_path = $11,
 priority = $12,
-preconditions = $13
+preconditions = $13,
+external_id = $14
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one

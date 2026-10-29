@@ -164,6 +164,7 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			return nil, skipped, err
 		}
 
+		userID, _ := strconv.Atoi(request.CreatedByID)
 		uuidVal, _ := uuid.NewV7()
 		params := dbsqlc.CreateTestCaseParams{
 			ID:               uuidVal,
@@ -174,10 +175,11 @@ func (t *testCaseServiceImpl) BulkCreate(ctx context.Context, bulkRequest *schem
 			Title:            request.Title,
 			Description:      request.Description,
 			Preconditions:    common.NullString(request.Preconditions),
+			ExternalID:       common.NullString(request.ExternalID),
 			ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 			IsDraft:          common.NewNullBool(request.IsDraft),
 			Tags:             request.Tags,
-			CreatedByID:      1,
+			CreatedByID:      int32(userID),
 			CreatedAt:        common.NewNullTime(time.Now()),
 			UpdatedAt:        common.NewNullTime(time.Now()),
 			Runner:           common.NullString(request.Runner),
@@ -259,6 +261,7 @@ func (t *testCaseServiceImpl) Create(ctx context.Context, request *schema.Create
 		Title:            request.Title,
 		Description:      request.Description,
 		Preconditions:    common.NullString(request.Preconditions),
+		ExternalID:       common.NullString(request.ExternalID),
 		ParentTestCaseID: common.NewNullUUID(request.ParentTestCaseID),
 		IsDraft:          common.NewNullBool(request.IsDraft),
 		Tags:             request.Tags,
@@ -559,6 +562,7 @@ func (t *testCaseServiceImpl) Update(ctx context.Context, req *schema.UpdateTest
 		Code:            req.Code,
 		Description:     req.Description,
 		Preconditions:   common.NullString(req.Preconditions),
+		ExternalID:      common.NullString(req.ExternalID),
 		FeatureOrModule: common.NullString(req.FeatureOrModule),
 		IsDraft:         common.NewNullBool(req.IsDraft),
 		Tags:            req.Tags,
@@ -636,6 +640,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 			Title:           row.Title,
 			Description:     row.Description,
 			Preconditions:   row.Preconditions.String,
+			ExternalID:      row.ExternalID.String,
 			IsDraft:         row.IsDraft.Bool,
 			Tags:            row.Tags,
 			CreatedByID:     row.CreatedByID,

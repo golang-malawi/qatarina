@@ -1,19 +1,21 @@
-# QATARINA MCP Server
-QATARINA ships an [MCP (Model Context Protocol)](https://modelcontextprotocol.io)
-server, so AI assistants and agents such as Claude Code, Claude Desktop, Cursor and
-VS Code can work with your QATARINA platform directly.
+# Qatarina MCP Server
+Qatarina ships an [MCP (Model Context Protocol)](https://modelcontextprotocol.io)
+server, so AI assistants and agents such as Claude Code, Claude Desktop,
+VS Code and Codex can work with your Qatarina platform directly.
 
 The MCP server is part of the `qatarina` binary and runs as its own subcommand,
 `qatarina mcp`. It connects to the same database as `qatarina server` and uses the
-same configuration file. Every tool call runs as an authenticated QATARINA user.
+same configuration file. Every tool call runs as an authenticated Qatarina user.
 
-This guide covers how to run the server and connect your AI agent to it.
+This guide covers how to run the server and connect your AI agent to it. Instructions
+are given first for Linux, macOS and WSL, followed by the equivalent steps for Windows
+using PowerShell.
 
 ## Prerequisites
 - A built `qatarina` binary (see [Building and running](../../README.md#building-and-running)).
 - A running, migrated database (`qatarina migrate`).
-- A QATARINA user account that the agent will act as.
-- An MCP-capable client (any of the ones under [Connecting your AI agent](#connecting-your-ai-agent)).
+- A Qatarina user account that the agent will act as.
+- An MCP-capable client (any of the ones under [Connecting to AI Agents](#3-connecting-to-ai-agents)).
 
 ## 1. Configure the server
 
@@ -38,130 +40,491 @@ mcp:
 The transport and address can also be set from the command line, which takes
 precedence over the config file:
 
-```sh
-$ qatarina mcp --transport http --addr localhost:4598
-$ qatarina mcp --transport stdio
+**Linux, macOS and WSL**
+
+```bash
+./qatarina mcp --transport http --addr localhost:4598
+./qatarina mcp --transport stdio
 ```
 
-Use `--config /path/to/qatarina.yaml` if the config file is not in the current
-directory, your home directory or `/etc/qatarina.d`.
+**Windows**
+
+```powershell
+.\qatarina.exe mcp --transport http --addr localhost:4598
+.\qatarina.exe mcp --transport stdio
+```
+
+Use `--config /path/to/qatarina/qatarina.yaml` if the config file is not in the
+current directory, your home directory or `/etc/qatarina.d`.
 
 ## 2. Choose a transport
 
 | Transport | Best for                                              | Who starts the server | Authentication                      |
 |-----------|-------------------------------------------------------|-----------------------|-------------------------------------|
 | `http`    | A shared or remote server that several users connect to. | You, with `qatarina mcp` | Each request sends the user's JWT. |
-| `stdio`   | A local agent on the same machine as QATARINA.        | The agent, as a child process | Signs in once with email and password. |
+| `stdio`   | A local agent on the same machine as Qatarina.        | The agent, as a child process | Signs in once with email and password. |
 
-If you're not sure, start with **stdio** for a local setup: it needs no token and
+If you're not sure, start with **STDIO** for a local setup: it needs no token and
 works with every client.
 
-## 3. Get your credentials
+## 3. Connecting to AI Agents
 
-### For HTTP: a JWT
+The sections below explain how to connect each AI agent to Qatarina using either transport described in [Choose a transport](#2-choose-a-transport).
 
-The HTTP transport accepts the same JWTs that the QATARINA REST API issues. Every
-request must carry one as an `Authorization: Bearer <token>` header; requests
-without a valid, unexpired token are rejected with `401 Unauthorized`.
+### Setting Up the Servers for Local Development
 
-1. Start the MCP server (and `qatarina server`, which issues the token):
+These servers are only required for HTTP transport. With STDIO transport, the AI agent starts the MCP server itself, so you can skip this section.
 
-   ```sh
-   $ qatarina server
-   $ qatarina mcp
+---
+
+#### Linux, macOS and WSL
+
+1. Open two terminals and navigate to the Qatarina root directory in both.
+2. Run `go build` to ensure the executable includes the latest code changes.
+3. In the first terminal, start the Qatarina server. This server issues JWT authorization tokens.
+
+   ```bash
+   ./qatarina server
    ```
 
-2. Sign in through the REST API:
+4. In the second terminal, start the Qatarina MCP server.
 
-   ```sh
-   $ curl -s -X POST http://localhost:4597/v1/auth/login \
-       -H "Content-Type: application/json" \
-       -d '{"email": "you@example.com", "password": "your-password"}'
+   ```bash
+   ./qatarina mcp
    ```
 
-3. Copy the `token` value from the response. It expires after
-   `auth.jwt_expiry_timeout` seconds, after which you need to sign in again and
-   update the token in your client.
+---
 
-### For stdio: email and password
+#### Windows
 
-With stdio the agent launches `qatarina mcp` as a child process and talks to it
-over stdin/stdout. There are no request headers, so the server signs in once at
-startup using the `QATARINA_EMAIL` and `QATARINA_PASSWORD` environment variables
-and runs every tool call as that user. The server exits with an error if either
-is missing or the sign-in fails.
+1. Open two PowerShell windows and navigate to the Qatarina root directory in both.
+2. Run `go build` to ensure the executable includes the latest code changes.
+3. In the first window, start the Qatarina server. This server issues JWT authorization tokens.
 
-You don't start the server yourself; the client does. Because the client may start
-it from any directory, always pass `--config` with an absolute path. Logs are
-written to stderr (and the configured log file) so they don't interfere with the
-protocol on stdout.
+   ```powershell
+   .\qatarina.exe server
+   ```
 
-## Connecting your AI agent
+4. In the second window, start the Qatarina MCP server.
 
-In the examples below, replace:
+   ```powershell
+   .\qatarina.exe mcp
+   ```
 
-- `/path/to/qatarina` with the absolute path to the binary. On Windows use the
-  full path to `qatarina.exe` and escape backslashes in JSON, e.g.
-  `"C:\\tools\\qatarina.exe"`.
-- `/path/to/qatarina.yaml` with the absolute path to your config file.
-- `<token>` with the JWT from [step 3](#for-http-a-jwt).
+### Setting Up the Servers for Production
 
-After changing a client's config, restart the client (or reload its MCP servers)
-so it picks up the new server.
+- To be documented.
 
-### Claude Code
+## 4. Claude Code
 
-**stdio**
+For more information on integrating MCP servers with Claude Code, refer to the [official MCP quickstart guide](https://code.claude.com/docs/en/mcp-quickstart).
 
-```sh
-$ claude mcp add qatarina \
-    --env QATARINA_EMAIL=you@example.com \
-    --env QATARINA_PASSWORD=your-password \
-    -- /path/to/qatarina --config /path/to/qatarina.yaml mcp --transport stdio
+### Configuration scope
+
+When you register an MCP server, Claude Code stores it in one of three scopes. The scope decides where the server is available:
+
+| Scope | Where Qatarina is available | Stored in |
+|-------|-----------------------------|-----------|
+| `local` (default) | Only in the directory you ran `claude mcp add` from. Running `claude` in any other directory will not show Qatarina. | `~/.claude.json`, under that directory |
+| `user` | In every directory on your machine. | `~/.claude.json` |
+| `project` | For everyone working in the repository. | `.mcp.json` in the repository root |
+
+The instructions below use `--scope user`, so that Qatarina is available wherever you start Claude Code. Avoid `--scope project`, because it writes your token or password to `.mcp.json`, which may end up committed to the repository.
+
+To remove a server, pass the same scope it was registered with. `claude mcp get qatarina` shows the scope of an existing server.
+
+### HTTP Transport for Local Development
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Code is installed on your machine.
+- The Qatarina server and MCP server are running locally.
+- You have valid Qatarina login credentials.
+
+---
+
+#### Linux, macOS and WSL
+
+**Step 1: Check the existing MCP configuration**
+
+Open a terminal. You can run these commands from any directory.
+
+First, list the configured MCP servers:
+
+```bash
+claude mcp list
 ```
 
-**HTTP**
+To inspect the configuration and scope of an existing Qatarina MCP server, run:
 
-```sh
-$ claude mcp add --transport http qatarina http://localhost:4598/mcp \
-    --header "Authorization: Bearer <token>"
+```bash
+claude mcp get qatarina
 ```
 
-By default the server is only added for the current project. Add `--scope user`
-to make it available in every project, or `--scope project` to write it to a
-`.mcp.json` file in the repository (don't commit credentials in it).
+If the server is already configured but its settings need updating, remove the existing configuration before proceeding to the next step. Use the scope shown by `claude mcp get qatarina`, for example:
 
-Run `claude mcp list`, or `/mcp` inside a session, to check that `qatarina` shows
-as connected.
-
-### Claude Desktop
-
-Open **Settings → Developer → Edit Config**, or edit `claude_desktop_config.json`
-directly:
-
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-**stdio** (recommended for Claude Desktop)
-
-```json
-{
-  "mcpServers": {
-    "qatarina": {
-      "command": "/path/to/qatarina",
-      "args": ["--config", "/path/to/qatarina.yaml", "mcp", "--transport", "stdio"],
-      "env": {
-        "QATARINA_EMAIL": "you@example.com",
-        "QATARINA_PASSWORD": "your-password"
-      }
-    }
-  }
-}
+```bash
+claude mcp remove qatarina --scope user
 ```
 
-**HTTP**: Claude Desktop's config file only launches local commands, so use
-[`mcp-remote`](https://www.npmjs.com/package/mcp-remote) (requires Node.js) to
-connect to the HTTP endpoint:
+**Step 2: Obtain an authorization token**
+
+The Qatarina server issues JWT authorization tokens that Claude Code uses to authenticate requests to the MCP server. These tokens expire, so you may need to obtain a new token when the current one expires. A more robust authentication solution is under development.
+
+Run the following command, replacing the email and password with your Qatarina login credentials:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:4597/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token)
+```
+
+This command authenticates with the local Qatarina server and stores the returned JWT in the `TOKEN` variable. It requires [`jq`](https://jqlang.org/download/). Without `jq`, run the `curl` command on its own and copy the `token` value from the response.
+
+**Step 3: Register the MCP server**
+
+Register the Qatarina MCP server with Claude Code using HTTP transport:
+
+```bash
+claude mcp add --scope user --transport http qatarina http://localhost:4598/mcp --header "Authorization: Bearer $TOKEN"
+```
+
+This registers the local MCP server for all directories and supplies the JWT as an HTTP authorization header.
+
+**Step 4: Verify the configuration**
+
+Run the following command to check the registered MCP servers:
+
+```bash
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+**Step 5: Start Claude Code**
+
+Launch Claude Code from any directory:
+
+```bash
+claude
+```
+
+If Claude Code requests permission to use the Qatarina MCP server or its tools, review and approve the request as appropriate.
+
+You can then interact with Qatarina through Claude Code. For example, try asking:
+
+> What can I do on Qatarina?
+
+---
+
+#### Windows
+
+**Step 1: Check the existing MCP configuration**
+
+Open a PowerShell window. You can run these commands from any directory.
+
+First, list the configured MCP servers:
+
+```powershell
+claude mcp list
+```
+
+To inspect the configuration and scope of an existing Qatarina MCP server, run:
+
+```powershell
+claude mcp get qatarina
+```
+
+If the server is already configured but its settings need updating, remove the existing configuration before proceeding to the next step. Use the scope shown by `claude mcp get qatarina`, for example:
+
+```powershell
+claude mcp remove qatarina --scope user
+```
+
+**Step 2: Obtain an authorization token**
+
+The Qatarina server issues JWT authorization tokens that Claude Code uses to authenticate requests to the MCP server. These tokens expire, so you may need to obtain a new token when the current one expires. A more robust authentication solution is under development.
+
+Run the following command in PowerShell, replacing the email and password with your Qatarina login credentials:
+
+```powershell
+$AuthorizationToken = (Invoke-RestMethod -Method Post -Uri "http://localhost:4597/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+This command authenticates with the local Qatarina server and stores the returned JWT in the `$AuthorizationToken` variable.
+
+**Step 3: Register the MCP server**
+
+Register the Qatarina MCP server with Claude Code using HTTP transport:
+
+```powershell
+claude mcp add --scope user --transport http qatarina http://localhost:4598/mcp --header "Authorization: Bearer $AuthorizationToken"
+```
+
+This registers the local MCP server for all directories and supplies the JWT as an HTTP authorization header.
+
+**Step 4: Verify the configuration**
+
+Run the following command to check the registered MCP servers:
+
+```powershell
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+**Step 5: Start Claude Code**
+
+Launch Claude Code from any directory:
+
+```powershell
+claude
+```
+
+If Claude Code requests permission to use the Qatarina MCP server or its tools, review and approve the request as appropriate.
+
+You can then interact with Qatarina through Claude Code. For example, try asking:
+
+> What can I do on Qatarina?
+
+### STDIO Transport for Local Development
+
+With STDIO transport, Claude Code starts the Qatarina MCP server itself and talks to it directly, so you don't need to run `qatarina server` or `qatarina mcp` yourself, and no authorization token is required. Instead, the MCP server signs in once at startup using your Qatarina email and password.
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Code is installed on your machine.
+- Qatarina's database is running and migrated.
+- You have valid Qatarina login credentials.
+
+---
+
+#### Linux, macOS and WSL
+
+**Step 1: Build the executable**
+
+Open a terminal, navigate to the Qatarina root directory and run:
+
+```bash
+go build
+```
+
+This produces the `qatarina` executable in the Qatarina root directory.
+
+**Step 2: Find the absolute paths**
+
+Claude Code starts the MCP server from whichever directory you run `claude` in, so the configuration must use absolute paths for both the executable and the `qatarina.yaml` configuration file.
+
+From the Qatarina root directory, run the following command to print both paths:
+
+```bash
+echo "$PWD/qatarina"; echo "$PWD/qatarina.yaml"
+```
+
+Copy the two paths for use in the next steps.
+
+**Step 3: Set an absolute log file path**
+
+For the same reason, the log file configured in `qatarina.yaml` must also use an absolute path. If it is a relative path such as `qatarina.log`, the MCP server creates the log file in whichever directory you run `claude` in, and exits with `failed to setup logfile ... permission denied` if it is not allowed to write there.
+
+Open `qatarina.yaml` and set `logging.file` to an absolute path inside the Qatarina root directory:
+
+```yaml
+logging:
+  file: "/path/to/qatarina/qatarina.log"
+```
+
+**Step 4: Check the existing MCP configuration**
+
+You can run these commands from any directory.
+
+First, list the configured MCP servers:
+
+```bash
+claude mcp list
+```
+
+To inspect the configuration and scope of an existing Qatarina MCP server, run:
+
+```bash
+claude mcp get qatarina
+```
+
+If the server is already configured, for example using HTTP transport, remove the existing configuration before proceeding to the next step. Use the scope shown by `claude mcp get qatarina`, for example:
+
+```bash
+claude mcp remove qatarina --scope user
+```
+
+**Step 5: Register the MCP server**
+
+Register the Qatarina MCP server with Claude Code using STDIO transport. Replace the paths with the ones obtained in Step 2, and the email and password with your Qatarina login credentials:
+
+```bash
+claude mcp add --scope user qatarina --env QATARINA_EMAIL=you@example.com --env QATARINA_PASSWORD=your-password -- /path/to/qatarina/qatarina --config /path/to/qatarina/qatarina.yaml mcp --transport stdio
+```
+
+Everything after `--` is the command Claude Code runs to start the MCP server. The path must point to the `qatarina` executable itself, not the Qatarina root directory.
+
+**Step 6: Verify the configuration**
+
+Run the following command to check the registered MCP servers:
+
+```bash
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`. With STDIO transport, this command starts the MCP server to check it, so a `Connected` status confirms that the paths and credentials are correct.
+
+**Step 7: Start Claude Code**
+
+Launch Claude Code from any directory:
+
+```bash
+claude
+```
+
+If Claude Code requests permission to use the Qatarina MCP server or its tools, review and approve the request as appropriate.
+
+You can then interact with Qatarina through Claude Code. For example, try asking:
+
+> Who am I on Qatarina?
+
+---
+
+#### Windows
+
+**Step 1: Build the executable**
+
+Open a PowerShell window, navigate to the Qatarina root directory and run:
+
+```powershell
+go build
+```
+
+This produces `qatarina.exe` in the Qatarina root directory.
+
+**Step 2: Find the absolute paths**
+
+Claude Code starts the MCP server from whichever directory you run `claude` in, so the configuration must use absolute paths for both the executable and the `qatarina.yaml` configuration file.
+
+From the Qatarina root directory, run the following command in PowerShell to print both paths:
+
+```powershell
+(Resolve-Path .\qatarina.exe).Path; (Resolve-Path .\qatarina.yaml).Path
+```
+
+Copy the two paths for use in the next steps.
+
+**Step 3: Set an absolute log file path**
+
+For the same reason, the log file configured in `qatarina.yaml` must also use an absolute path. If it is a relative path such as `qatarina.log`, the MCP server creates the log file in whichever directory you run `claude` in, and exits with `failed to setup logfile ... Access is denied` if it is not allowed to write there.
+
+Open `qatarina.yaml` and set `logging.file` to an absolute path inside the Qatarina root directory. Use forward slashes (`/`), which work on Windows and need no escaping in YAML:
+
+```yaml
+logging:
+  file: "C:/path/to/qatarina/qatarina.log"
+```
+
+**Step 4: Check the existing MCP configuration**
+
+You can run these commands from any directory.
+
+First, list the configured MCP servers:
+
+```powershell
+claude mcp list
+```
+
+To inspect the configuration and scope of an existing Qatarina MCP server, run:
+
+```powershell
+claude mcp get qatarina
+```
+
+If the server is already configured, for example using HTTP transport, remove the existing configuration before proceeding to the next step. Use the scope shown by `claude mcp get qatarina`, for example:
+
+```powershell
+claude mcp remove qatarina --scope user
+```
+
+**Step 5: Register the MCP server**
+
+Register the Qatarina MCP server with Claude Code using STDIO transport. Replace the paths with the ones obtained in Step 2, and the email and password with your Qatarina login credentials:
+
+```powershell
+claude mcp add --scope user qatarina --env QATARINA_EMAIL=you@example.com --env QATARINA_PASSWORD=your-password -- "C:\path\to\qatarina\qatarina.exe" --config "C:\path\to\qatarina\qatarina.yaml" mcp --transport stdio
+```
+
+Everything after `--` is the command Claude Code runs to start the MCP server. The path must point to the `qatarina.exe` file itself, not the Qatarina root directory. Unlike the JSON configuration for Claude Desktop, backslashes do not need to be escaped here.
+
+**Step 6: Verify the configuration**
+
+Run the following command to check the registered MCP servers:
+
+```powershell
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`. With STDIO transport, this command starts the MCP server to check it, so a `Connected` status confirms that the paths and credentials are correct.
+
+**Step 7: Start Claude Code**
+
+Launch Claude Code from any directory:
+
+```powershell
+claude
+```
+
+If Claude Code requests permission to use the Qatarina MCP server or its tools, review and approve the request as appropriate.
+
+You can then interact with Qatarina through Claude Code. For example, try asking:
+
+> Who am I on Qatarina?
+
+### Production Environment
+
+- To be documented.
+
+## 5. Claude Desktop
+
+To configure Qatarina in Claude Desktop, open **Settings → Developer → Edit Config** or edit the `claude_desktop_config.json` file directly. Claude Desktop applies its configuration everywhere, so there is no scope to choose.
+
+Claude Desktop is available for macOS and Windows. If you use WSL, follow the Windows instructions and build Qatarina on Windows, since Claude Desktop runs on the Windows side.
+
+### HTTP Transport for Local Development
+
+Claude Desktop requires a local command to launch an MCP server through its configuration. To connect to Qatarina's HTTP endpoint, we'll use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), which requires Node.js.
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Desktop and Node.js are installed on your machine.
+- The Qatarina server and MCP server are running locally.
+- You have valid Qatarina login credentials.
+
+---
+
+#### macOS
+
+**Step 1: Obtain an authorization token**
+
+You can obtain the authorization token from your browser's developer tools after successfully logging in to Qatarina, or retrieve it directly from a terminal.
+
+To retrieve it from a terminal, replace the email and password with your Qatarina login credentials:
+
+```bash
+curl -s -X POST http://localhost:4597/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token
+```
+
+This requires [`jq`](https://jqlang.org/download/). Without `jq`, run the `curl` command on its own and copy the `token` value from the response.
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Add the following configuration to `claude_desktop_config.json`, which is located at `~/Library/Application Support/Claude/claude_desktop_config.json`. Replace `<token>` with the authorization token obtained in the previous step.
 
 ```json
 {
@@ -169,30 +532,138 @@ connect to the HTTP endpoint:
     "qatarina": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "http://localhost:4598/mcp",
-        "--header", "Authorization: Bearer <token>"
-      ]
+        "-y",
+        "mcp-remote",
+        "http://localhost:4598/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
     }
   }
 }
 ```
 
-Fully quit and reopen Claude Desktop after saving. The server appears under the
-tools/connectors menu in the chat input.
+**Step 3: Restart Claude Desktop**
 
-### Cursor
+Save the configuration and fully quit Claude Desktop (choose **Claude → Quit Claude** from the menu bar, or press `Cmd+Q`; closing the window is not enough), then reopen it for the changes to take effect.
 
-Edit `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` in the project, or
-go to **Cursor Settings → MCP → Add new MCP server**.
+Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu in the chat input. If the connection succeeds, you should be able to interact with Qatarina through Claude Desktop.
 
-**stdio**
+---
+
+#### Windows
+
+**Step 1: Obtain an authorization token**
+
+You can obtain the authorization token from your browser's developer tools after successfully logging in to Qatarina, or retrieve it directly using PowerShell.
+
+To retrieve it using PowerShell, replace the email and password with your Qatarina login credentials:
+
+```powershell
+(Invoke-RestMethod -Method Post -Uri "http://localhost:4597/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Add the following configuration to `claude_desktop_config.json`. Replace `<token>` with the authorization token obtained in the previous step.
 
 ```json
 {
   "mcpServers": {
     "qatarina": {
-      "command": "/path/to/qatarina",
-      "args": ["--config", "/path/to/qatarina.yaml", "mcp", "--transport", "stdio"],
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:4598/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+**Step 3: Restart Claude Desktop**
+
+Save the configuration and fully quit Claude Desktop (right-click its icon in the system tray and choose **Quit**; closing the window is not enough), then reopen it for the changes to take effect.
+
+Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu in the chat input. If the connection succeeds, you should be able to interact with Qatarina through Claude Desktop.
+
+### STDIO Transport for Local Development
+
+With STDIO transport, Claude Desktop starts the Qatarina MCP server itself and talks to it directly, so you don't need to run `qatarina server` or `qatarina mcp` yourself, and no authorization token is required. Instead, the MCP server signs in once at startup using your Qatarina email and password.
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Desktop is installed on your machine.
+- Qatarina's database is running and migrated.
+- You have valid Qatarina login credentials.
+
+---
+
+#### macOS
+
+**Step 1: Build the executable**
+
+Open a terminal, navigate to the Qatarina root directory and run:
+
+```bash
+go build
+```
+
+This produces the `qatarina` executable in the Qatarina root directory.
+
+**Step 2: Find the absolute paths**
+
+Claude Desktop may start the MCP server from any directory, so the configuration must use absolute paths for both the executable and the `qatarina.yaml` configuration file.
+
+From the Qatarina root directory, run the following command to print both paths:
+
+```bash
+echo "$PWD/qatarina"; echo "$PWD/qatarina.yaml"
+```
+
+Copy the two paths for use in the next steps.
+
+**Step 3: Set an absolute log file path**
+
+For the same reason, the log file configured in `qatarina.yaml` must also use an absolute path. If it is a relative path such as `qatarina.log`, the MCP server tries to create the log file in Claude Desktop's own working directory, which it is not allowed to write to, and exits immediately with `failed to setup logfile`.
+
+Open `qatarina.yaml` and set `logging.file` to an absolute path inside the Qatarina root directory:
+
+```yaml
+logging:
+  file: "/path/to/qatarina/qatarina.log"
+```
+
+**Step 4: Configure the MCP server**
+
+Add the following configuration to `claude_desktop_config.json`, which is located at `~/Library/Application Support/Claude/claude_desktop_config.json`. Replace the paths with the ones obtained in Step 2, and the email and password with your Qatarina login credentials.
+
+The `command` must point to the `qatarina` executable itself, not the Qatarina root directory.
+
+```json
+{
+  "mcpServers": {
+    "qatarina": {
+      "command": "/path/to/qatarina/qatarina",
+      "args": [
+        "--config",
+        "/path/to/qatarina/qatarina.yaml",
+        "mcp",
+        "--transport",
+        "stdio"
+      ],
       "env": {
         "QATARINA_EMAIL": "you@example.com",
         "QATARINA_PASSWORD": "your-password"
@@ -202,142 +673,137 @@ go to **Cursor Settings → MCP → Add new MCP server**.
 }
 ```
 
-**HTTP**
+If you previously configured Qatarina using HTTP transport, replace the existing `qatarina` entry instead of adding a second one.
+
+**Step 5: Restart Claude Desktop**
+
+Save the configuration and fully quit Claude Desktop (choose **Claude → Quit Claude** from the menu bar, or press `Cmd+Q`; closing the window is not enough), then reopen it for the changes to take effect.
+
+Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu in the chat input. If the connection succeeds, you should be able to interact with Qatarina through Claude Desktop. For example, try asking:
+
+> Who am I on Qatarina?
+
+---
+
+#### Windows
+
+**Step 1: Build the executable**
+
+Open a PowerShell window, navigate to the Qatarina root directory and run:
+
+```powershell
+go build
+```
+
+This produces `qatarina.exe` in the Qatarina root directory.
+
+**Step 2: Find the absolute paths**
+
+Claude Desktop may start the MCP server from any directory, so the configuration must use absolute paths for both the executable and the `qatarina.yaml` configuration file.
+
+From the Qatarina root directory, run the following command in PowerShell to print both paths:
+
+```powershell
+(Resolve-Path .\qatarina.exe).Path; (Resolve-Path .\qatarina.yaml).Path
+```
+
+Copy the two paths for use in the next steps.
+
+**Step 3: Set an absolute log file path**
+
+For the same reason, the log file configured in `qatarina.yaml` must also use an absolute path. If it is a relative path such as `qatarina.log`, the MCP server tries to create the log file in Claude Desktop's own directory, which it is not allowed to write to, and exits immediately with `failed to setup logfile ... Access is denied`.
+
+Open `qatarina.yaml` and set `logging.file` to an absolute path inside the Qatarina root directory. Use forward slashes (`/`), which work on Windows and need no escaping in YAML:
+
+```yaml
+logging:
+  file: "C:/path/to/qatarina/qatarina.log"
+```
+
+**Step 4: Configure the MCP server**
+
+Add the following configuration to `claude_desktop_config.json`. Replace the paths with the ones obtained in Step 2, and the email and password with your Qatarina login credentials.
+
+The `command` must point to the `qatarina.exe` file itself, not the Qatarina root directory. Otherwise Claude Desktop fails with `'C:\path\to\qatarina' is not recognized as an internal or external command`.
+
+In JSON, every backslash in a Windows path must be escaped as a double backslash (`\\`). For example, `C:\opensource\qatarina\qatarina.exe` becomes `C:\\opensource\\qatarina\\qatarina.exe`.
 
 ```json
 {
   "mcpServers": {
     "qatarina": {
-      "url": "http://localhost:4598/mcp",
-      "headers": {
-        "Authorization": "Bearer <token>"
-      }
-    }
-  }
-}
-```
-
-Check **Cursor Settings → MCP**; `qatarina` should show a green status. Use the
-agent mode in chat to call its tools.
-
-### VS Code (GitHub Copilot)
-
-Create `.vscode/mcp.json` in your workspace (or run **MCP: Add Server** from the
-command palette). Note that VS Code uses a `servers` key, not `mcpServers`. The
-`inputs` section makes VS Code prompt for secrets instead of storing them in the
-file.
-
-**stdio**
-
-```json
-{
-  "inputs": [
-    { "type": "promptString", "id": "qatarina-password", "description": "QATARINA password", "password": true }
-  ],
-  "servers": {
-    "qatarina": {
-      "type": "stdio",
-      "command": "/path/to/qatarina",
-      "args": ["--config", "/path/to/qatarina.yaml", "mcp", "--transport", "stdio"],
+      "command": "C:\\path\\to\\qatarina\\qatarina.exe",
+      "args": [
+        "--config",
+        "C:\\path\\to\\qatarina\\qatarina.yaml",
+        "mcp",
+        "--transport",
+        "stdio"
+      ],
       "env": {
         "QATARINA_EMAIL": "you@example.com",
-        "QATARINA_PASSWORD": "${input:qatarina-password}"
+        "QATARINA_PASSWORD": "your-password"
       }
     }
   }
 }
 ```
 
-**HTTP**
+If you previously configured Qatarina using HTTP transport, replace the existing `qatarina` entry instead of adding a second one.
 
-```json
-{
-  "inputs": [
-    { "type": "promptString", "id": "qatarina-token", "description": "QATARINA JWT", "password": true }
-  ],
-  "servers": {
-    "qatarina": {
-      "type": "http",
-      "url": "http://localhost:4598/mcp",
-      "headers": {
-        "Authorization": "Bearer ${input:qatarina-token}"
-      }
-    }
-  }
-}
-```
+**Step 5: Restart Claude Desktop**
 
-Click **Start** above the server entry in `mcp.json`, then open Copilot Chat in
-**Agent** mode; the QATARINA tools are listed under the tools button.
+Save the configuration and fully quit Claude Desktop (right-click its icon in the system tray and choose **Quit**; closing the window is not enough), then reopen it for the changes to take effect.
 
-### Windsurf
+Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu in the chat input. If the connection succeeds, you should be able to interact with Qatarina through Claude Desktop. For example, try asking:
 
-Edit `~/.codeium/windsurf/mcp_config.json` (or **Windsurf Settings → Cascade →
-MCP Servers → View raw config**).
+> Who am I on Qatarina?
 
-**stdio**: same `mcpServers` block as [Cursor](#cursor).
+### Production Environment
 
-**HTTP**: Windsurf uses `serverUrl` instead of `url`:
+- To be documented.
 
-```json
-{
-  "mcpServers": {
-    "qatarina": {
-      "serverUrl": "http://localhost:4598/mcp",
-      "headers": {
-        "Authorization": "Bearer <token>"
-      }
-    }
-  }
-}
-```
+## 6. VS Code MCP Copilot Extension
 
-### Other clients
+- To be documented.
 
-Any MCP client works if it supports one of:
+## 7. Codex
 
-- **stdio**: command `/path/to/qatarina`, arguments
-  `--config /path/to/qatarina.yaml mcp --transport stdio`, and the environment
-  variables `QATARINA_EMAIL` and `QATARINA_PASSWORD`.
-- **Streamable HTTP**: URL `http://<host>:4598/mcp` with the header
-  `Authorization: Bearer <token>`. If the client can't send custom headers, wrap
-  the endpoint with `mcp-remote` as shown for [Claude Desktop](#claude-desktop).
+- To be documented.
 
-## Verifying the connection
+## Available tools
 
-Once your client is connected, ask the agent something like *"Who am I on
-QATARINA?"*. It should call the `whoami` tool and return your user profile.
+| Tool | What it does |
+| --- | --- |
+| `whoami` | Returns the profile of the user the server runs as. |
+| `list_users` | Lists all users on the platform. |
+| `list_projects` | Lists all projects. |
+| `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
+| `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
 
-You can also test the server without an agent using the
-[MCP Inspector](https://github.com/modelcontextprotocol/inspector):
+### Adding test cases
 
-```sh
-$ npx @modelcontextprotocol/inspector
-```
+`add_test_cases` takes a `project_id` and a list of test cases. Each test case
+needs a `title`, a `description` (the steps and expected result) and a
+`feature_or_module`. You can also set `kind` (defaults to `general`), `priority`
+(defaults to `medium`), `preconditions`, `tags`, `is_draft` and `code`.
 
-In the Inspector, pick **STDIO** with the command and arguments above (and the two
-environment variables), or **Streamable HTTP** with the URL and an `Authorization`
-header, then click **Connect** and **List Tools**.
+When you ask the agent to add test cases for a feature, it designs a set that
+covers the feature and adds them all in one call. The set includes the main
+success path, validation and error handling, edge cases and permissions. For
+example:
 
-## Troubleshooting
+> Add test cases for password reset to the Sunga project on Qatarina.
 
-- **`401 missing bearer token` / `invalid or expired token`** (HTTP): check the
-  `Authorization` header and sign in again for a fresh token. Tokens are signed
-  with `auth.jwt_secret_key`, so the MCP server and the REST API must share the
-  same config.
-- **`email and password are required for the stdio transport`**: set
-  `QATARINA_EMAIL` and `QATARINA_PASSWORD` in the client's `env`.
-- **`Can't read config`**: pass `--config` with the absolute path to your
-  `qatarina.yaml`.
-- **Client shows the server as failed / disconnected** (stdio): run the exact
-  command from your client config in a terminal to see the error, and check that
-  the binary and config paths are absolute.
-- **Stdio client hangs or reports invalid JSON**: make sure nothing else writes
-  to stdout; check the log file configured under `logging.file` for errors.
+- Test cases are recorded as created by the user the MCP server runs as.
+- Codes such as `SNG012` are generated when `code` is left empty. A test case
+  whose code already exists in the project is skipped and counted in `skipped`.
+- The batch is all or nothing. If one test case is invalid, none of them are
+  added and the error names the one at fault.
 
 ## Security notes
 
-- Treat tokens and the stdio credentials like passwords; don't commit them to
+- Treat tokens and the STDIO credentials like passwords; don't commit them to
   shared config files such as a project `.mcp.json`, `.cursor/mcp.json` or
   `.vscode/mcp.json`.
 - The MCP server has the same access as the user it runs as. Use a dedicated

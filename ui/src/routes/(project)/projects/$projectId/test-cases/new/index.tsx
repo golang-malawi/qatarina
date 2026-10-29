@@ -272,6 +272,7 @@ function NewTestCases() {
       formData.append("title", values.title);
       formData.append("description", values.description);
       formData.append("preconditions", values.preconditions ?? "");
+      formData.append("external_id", values.external_id ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
       formData.append("priority", values.priority ?? DEFAULT_PRIORITY);
       tags.forEach((tag) => formData.append("tags", tag));
@@ -287,6 +288,7 @@ function NewTestCases() {
         title: values.title,
         description: values.description,
         preconditions: values.preconditions ?? "",
+        external_id: values.external_id ?? "",
         is_draft: values.is_draft ?? false,
         priority: values.priority ?? DEFAULT_PRIORITY,
         tags,
@@ -351,6 +353,7 @@ function NewTestCases() {
           kind: "",
           priority: DEFAULT_PRIORITY,
           preconditions: "",
+          external_id: "",
           description: templateData?.test_case_template ?? "",
           runner: "basi",
           tags: [],

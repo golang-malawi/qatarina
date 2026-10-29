@@ -347,6 +347,7 @@ function EditTestCase() {
       formData.append("title", values.title ?? "");
       formData.append("description", values.description ?? "");
       formData.append("preconditions", values.preconditions ?? "");
+      formData.append("external_id", values.external_id ?? "");
       formData.append("is_draft", (values.is_draft ?? false).toString());
       formData.append("priority", values.priority ?? DEFAULT_PRIORITY);
       tagsArray.forEach((tag) => formData.append("tags", tag));
@@ -363,6 +364,7 @@ function EditTestCase() {
         title: values.title,
         description: values.description,
         preconditions: values.preconditions ?? "",
+        external_id: values.external_id ?? "",
         is_draft: values.is_draft ?? false,
         priority: values.priority ?? DEFAULT_PRIORITY,
         ...(tagsArray.length ? { tags: tagsArray } : {}),
@@ -414,6 +416,7 @@ function EditTestCase() {
           code: data.code ?? "",
           description: data.description ?? "",
           preconditions: data.preconditions ?? "",
+          external_id: data.external_id ?? "",
           kind: data.kind ?? "",
           feature_or_module: data.feature_or_module ?? "",
           is_draft: data.is_draft ?? false,
