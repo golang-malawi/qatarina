@@ -4075,6 +4075,96 @@ func (q *Queries) TestCaseCountUnseenByAssignedUser(ctx context.Context, userID 
 	return count, err
 }
 
+const testCaseGetByAssignedUser = `-- name: TestCaseGetByAssignedUser :one
+SELECT
+  tc.id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.preconditions,
+  tc.external_id,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at,
+  tc.updated_at,
+  tc.project_id,
+  MAX(pc.test_plan_id)::int AS test_plan_id,
+  MAX(pc.assigned_to_id)::int AS assigned_to_id,
+  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND tc.id = $2
+GROUP BY tc.id
+`
+
+type TestCaseGetByAssignedUserParams struct {
+	UserID     int64
+	TestCaseID uuid.UUID
+}
+
+type TestCaseGetByAssignedUserRow struct {
+	ID              uuid.UUID
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	Preconditions   sql.NullString
+	ExternalID      sql.NullString
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedByID     int32
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	ProjectID       sql.NullInt32
+	TestPlanID      int32
+	AssignedToID    int32
+	EnvironmentID   int32
+	IsClosed        bool
+	IsViewed        bool
+	Priority        PriorityLevel
+	Urgency         PriorityLevel
+}
+
+func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGetByAssignedUserParams) (TestCaseGetByAssignedUserRow, error) {
+	row := q.db.QueryRowContext(ctx, testCaseGetByAssignedUser, arg.UserID, arg.TestCaseID)
+	var i TestCaseGetByAssignedUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Code,
+		&i.FeatureOrModule,
+		&i.Title,
+		&i.Description,
+		&i.Preconditions,
+		&i.ExternalID,
+		&i.IsDraft,
+		pq.Array(&i.Tags),
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.TestPlanID,
+		&i.AssignedToID,
+		&i.EnvironmentID,
+		&i.IsClosed,
+		&i.IsViewed,
+		&i.Priority,
+		&i.Urgency,
+	)
+	return i, err
+}
+
 const testCaseListByAssignedUser = `-- name: TestCaseListByAssignedUser :many
 SELECT
   tc.id,

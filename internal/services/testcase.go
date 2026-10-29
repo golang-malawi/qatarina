@@ -63,6 +63,8 @@ type TestCaseService interface {
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
+	// FindAssignedToUserByID fetches a single test case from the user's inbox, regardless of which page it is on
+	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error)
 	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
 	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
 	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
@@ -667,6 +669,48 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	}
 
 	return res, total, nil
+}
+
+func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error) {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	row, err := t.queries.TestCaseGetByAssignedUser(ctx, dbsqlc.TestCaseGetByAssignedUserParams{
+		UserID:     userID,
+		TestCaseID: id,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to load assigned test case: %w", err)
+	}
+
+	return &schema.AssignedTestCase{
+		ID:              row.ID.String(),
+		Kind:            row.Kind,
+		Code:            row.Code,
+		FeatureOrModule: row.FeatureOrModule.String,
+		Title:           row.Title,
+		Description:     row.Description,
+		Preconditions:   row.Preconditions.String,
+		ExternalID:      row.ExternalID.String,
+		IsDraft:         row.IsDraft.Bool,
+		Tags:            row.Tags,
+		CreatedByID:     row.CreatedByID,
+		CreatedAt:       row.CreatedAt.Time,
+		UpdatedAt:       row.UpdatedAt.Time,
+		ProjectID:       int64(row.ProjectID.Int32),
+		TestPlanID:      int32(row.TestPlanID),
+		AssignedToID:    int32(row.AssignedToID),
+		EnvironmentID:   row.EnvironmentID,
+		IsClosed:        row.IsClosed,
+		IsViewed:        row.IsViewed,
+		Priority:        string(row.Priority),
+		Urgency:         string(row.Urgency),
+	}, nil
 }
 
 func (t *testCaseServiceImpl) CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error) {

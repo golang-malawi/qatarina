@@ -1845,6 +1845,51 @@ paths:
       summary: List Test Cases assigned to the current user
       tags:
       - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}:
+    get:
+      description: Get a single Test Case assigned to the current user, regardless
+        of which inbox page it is on
+      operationId: GetAssignedTestCase
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AssignedTestCase'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get a single Test Case from the current user's inbox
+      tags:
+      - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
     post:
       description: Mark a Test Case in the current user's inbox as viewed

@@ -206,6 +206,29 @@ function TestCasePageInbox() {
   const totalPages = Math.ceil((pagination?.total ?? 0) / pageSize) || 1;
   const isFiltered = Boolean(filterType && filterValue);
 
+  // Shared by the top and bottom pagination bars
+  const paginationControls = (
+    <Flex justify="space-between" align="center">
+      <Button
+        size="xs"
+        onClick={() => setPage((p) => Math.max(p - 1, 1))}
+        disabled={page === 1}
+      >
+        Previous
+      </Button>
+      <Text fontSize="xs">
+        Page {page} of {totalPages}
+      </Text>
+      <Button
+        size="xs"
+        onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+        disabled={page >= totalPages}
+      >
+        Next
+      </Button>
+    </Flex>
+  );
+
   return (
     <Flex h="100vh" direction={{ base: "column", md: "row" }}>
       {/* Left Pane - Test Case List / Navigation with increased width */}
@@ -328,6 +351,13 @@ function TestCasePageInbox() {
               </Text>
             )}
           </Box>
+
+          {/* Top Pagination Controls (Hidden when a client-side filter is active) */}
+          {!isFiltered && (
+            <Box px={3} py={2} borderBottom="sm" borderColor="border.subtle" bg="bg.surface">
+              {paginationControls}
+            </Box>
+          )}
 
           <Box flex="1" overflowY="auto">
             {isGrouped ? (
@@ -476,28 +506,10 @@ function TestCasePageInbox() {
             )}
           </Box>
 
-          {/* Standard Pagination Controls (Hidden when a client-side filter is active) */}
+          {/* Bottom Pagination Controls (Hidden when a client-side filter is active) */}
           {!isFiltered && (
             <Box p={3} borderTop="sm" borderColor="border.subtle" bg="bg.surface">
-              <Flex justify="space-between" align="center">
-                <Button
-                  size="xs"
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  disabled={page === 1}
-                >
-                  Previous
-                </Button>
-                <Text fontSize="xs">
-                  Page {page} of {totalPages}
-                </Text>
-                <Button
-                  size="xs"
-                  onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
-                  disabled={page >= totalPages}
-                >
-                  Next
-                </Button>
-              </Flex>
+              {paginationControls}
             </Box>
           )}
         </Box>
