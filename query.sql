@@ -348,6 +348,37 @@ GROUP BY tc.id
 ORDER BY tc.created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
+-- name: TestCaseGetByAssignedUser :one
+SELECT
+  tc.id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.preconditions,
+  tc.external_id,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at,
+  tc.updated_at,
+  tc.project_id,
+  MAX(pc.test_plan_id)::int AS test_plan_id,
+  MAX(pc.assigned_to_id)::int AS assigned_to_id,
+  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND tc.id = sqlc.arg(test_case_id)
+GROUP BY tc.id;
+
 -- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)
 FROM (

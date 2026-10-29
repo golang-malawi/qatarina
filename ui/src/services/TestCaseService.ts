@@ -65,6 +65,12 @@ export async function getInboxTestCases(params?: {
   });
 }
 
+export async function getInboxTestCaseById(testCaseID: string) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
+}
+
 export async function getInboxUnseenCount() {
   return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
 }
