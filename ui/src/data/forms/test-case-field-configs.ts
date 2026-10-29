@@ -19,6 +19,16 @@ export const createTestCaseFields = (): FieldConfig[] => [
     required: false,
   },
   {
+    // Hidden until importers from external systems (e.g. TestLink) use it
+    name: "external_id",
+    label: "External ID",
+    type: "text",
+    placeholder: "e.g. PRJ-42",
+    helperText: "Identifier of this test case in the system it was imported from.",
+    required: false,
+    hidden: true,
+  },
+  {
     name: "feature_or_module",
     label: "Feature, Component or Module",
     type: "feature-module",

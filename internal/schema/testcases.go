@@ -13,7 +13,8 @@ type CreateTestCaseRequest struct {
 	FeatureOrModule  string   `json:"feature_or_module" validate:"required"`
 	Title            string   `json:"title" validate:"required"`
 	Description      string   `json:"description" validate:"required"`
-	Preconditions    string   `json:"preconditions,omitempty"` // Markdown
+	Preconditions    string   `json:"preconditions,omitempty"`                  // Markdown
+	ExternalID       string   `json:"external_id,omitempty" form:"external_id"` // identifier in the source system, e.g. TestLink
 	IsDraft          bool     `json:"is_draft"`
 	Tags             []string `json:"tags"`
 	CreatedByID      string   `json:"-"` // internal only
@@ -32,7 +33,8 @@ type UpdateTestCaseRequest struct {
 	FeatureOrModule string   `json:"feature_or_module" validate:"required"`
 	Title           string   `json:"title" validate:"required"`
 	Description     string   `json:"description,omitempty"`
-	Preconditions   string   `json:"preconditions,omitempty"` // Markdown
+	Preconditions   string   `json:"preconditions,omitempty"`                  // Markdown
+	ExternalID      string   `json:"external_id,omitempty" form:"external_id"` // identifier in the source system, e.g. TestLink
 	IsDraft         bool     `json:"is_draft" validate:"-"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedByID     string   `json:"-" validate:"-"`
@@ -68,6 +70,7 @@ type TestCaseResponse struct {
 	Title            string   `json:"title"`
 	Description      string   `json:"description"`
 	Preconditions    string   `json:"preconditions"`
+	ExternalID       string   `json:"external_id"`
 	IsDraft          bool     `json:"is_draft"`
 	Tags             []string `json:"tags"`
 	CreatedAt        string   `json:"created_at"`
@@ -97,6 +100,7 @@ func NewTestCaseResponse(e *dbsqlc.GetTestCaseWithParentRow) TestCaseResponse {
 		Title:            e.Title,
 		Description:      e.Description,
 		Preconditions:    e.Preconditions.String,
+		ExternalID:       e.ExternalID.String,
 		IsDraft:          e.IsDraft.Bool,
 		Tags:             e.Tags,
 		CreatedAt:        formatSqlDateTime(e.CreatedAt),
@@ -122,6 +126,7 @@ func NewTestCaseResponseFromRow(e *dbsqlc.TestCase) TestCaseResponse {
 		Title:           e.Title,
 		Description:     e.Description,
 		Preconditions:   e.Preconditions.String,
+		ExternalID:      e.ExternalID.String,
 		IsDraft:         e.IsDraft.Bool,
 		Tags:            e.Tags,
 		CreatedAt:       formatSqlDateTime(e.CreatedAt),
@@ -165,6 +170,7 @@ type AssignedTestCase struct {
 	Title           string          `json:"title"`
 	Description     string          `json:"description"`
 	Preconditions   string          `json:"preconditions"`
+	ExternalID      string          `json:"external_id"`
 	IsDraft         bool            `json:"is_draft"`
 	Tags            []string        `json:"tags"`
 	CreatedByID     int32           `json:"created_by_id"`
