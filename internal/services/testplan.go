@@ -91,8 +91,51 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 		}
 	}
 
+	if request.AllTestCases != nil {
+		if err := t.addAllProjectTestCases(ctx, int64(testPlanID), request.ProjectID, request.AllTestCases, request.PlannedTests); err != nil {
+			return nil, err
+		}
+	}
+
 	createdTestPlan, err := t.queries.GetTestPlan(ctx, testPlanID)
 	return &createdTestPlan, err
+}
+
+// ErrTestPlanProjectMismatch is returned when test cases of one project are
+// assigned to a test plan belonging to a different project
+var ErrTestPlanProjectMismatch = errors.New("test plan does not belong to the project")
+
+// addAllProjectTestCases adds every test case in the project matching the selection
+// to the plan in a single statement. Test cases in plannedTests are skipped so they
+// keep the testers explicitly assigned to them.
+func (t *testPlanService) addAllProjectTestCases(ctx context.Context, planID, projectID int64, selection *schema.ProjectTestCaseSelection, plannedTests []schema.TestCaseAssignment) error {
+	excluded := make([]uuid.UUID, 0, len(selection.ExcludedTestCaseIDs)+len(plannedTests))
+	for _, id := range selection.ExcludedTestCaseIDs {
+		tcID, err := uuid.Parse(id)
+		if err != nil {
+			return fmt.Errorf("invalid excluded test case id %q: %w", id, err)
+		}
+		excluded = append(excluded, tcID)
+	}
+	for _, pt := range plannedTests {
+		tcID, err := uuid.Parse(pt.TestCaseID)
+		if err != nil {
+			return fmt.Errorf("invalid test case id %q: %w", pt.TestCaseID, err)
+		}
+		excluded = append(excluded, tcID)
+	}
+
+	_, err := t.queries.AddProjectTestCasesToPlan(ctx, dbsqlc.AddProjectTestCasesToPlanParams{
+		TestPlanID:          planID,
+		UserIds:             selection.UserIDs,
+		ProjectID:           int32(projectID),
+		Search:              strings.TrimSpace(selection.Search),
+		ExcludedTestCaseIds: excluded,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add project test cases to plan %d: %w", planID, err)
+	}
+	return nil
 }
 
 // FindAll implements TestPlanService.
@@ -234,7 +277,18 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: pt.Urgency})
 		}
 	}
-	return t.assignTestCases(ctx, request.PlanID, assignments)
+	testPlan, err := t.assignTestCases(ctx, request.PlanID, assignments)
+	if err != nil || request.AllTestCases == nil {
+		return testPlan, err
+	}
+
+	if int64(testPlan.ProjectID) != request.ProjectID {
+		return nil, ErrTestPlanProjectMismatch
+	}
+	if err := t.addAllProjectTestCases(ctx, request.PlanID, request.ProjectID, request.AllTestCases, request.PlannedTests); err != nil {
+		return nil, err
+	}
+	return testPlan, nil
 }
 
 // BatchAssignTestCasesToPlan implements TestPlanService.

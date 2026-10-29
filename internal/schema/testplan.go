@@ -10,17 +10,30 @@ import (
 
 // CreateTestPlan request to create a new test plan with tests assigned to specific users
 type CreateTestPlan struct {
-	ProjectID      int64                `json:"project_id" validate:"required"`
-	Kind           string               `json:"kind" validate:"required"`
-	Description    string               `json:"description" validate:"required"`
-	StartAt        time.Time            `json:"start_at" validate:"required"`
-	ClosedAt       *time.Time           `json:"closed_at,omitempty"`
-	ScheduledEndAt time.Time            `json:"scheduled_end_at" validate:"required"`
-	AssignedToID   int64                `json:"assigned_to_id" validate:"-"`
-	CreatedByID    int64                `json:"created_by_id" validate:"-"`
-	UpdatedByID    int64                `json:"updated_by_id" validate:"-"`
-	EnvironmentID  int64                `json:"environment_id" validate:"-"`
-	PlannedTests   []TestCaseAssignment `json:"planned_tests" validate:"omitempty,dive"`
+	ProjectID      int64                     `json:"project_id" validate:"required"`
+	Kind           string                    `json:"kind" validate:"required"`
+	Description    string                    `json:"description" validate:"required"`
+	StartAt        time.Time                 `json:"start_at" validate:"required"`
+	ClosedAt       *time.Time                `json:"closed_at,omitempty"`
+	ScheduledEndAt time.Time                 `json:"scheduled_end_at" validate:"required"`
+	AssignedToID   int64                     `json:"assigned_to_id" validate:"-"`
+	CreatedByID    int64                     `json:"created_by_id" validate:"-"`
+	UpdatedByID    int64                     `json:"updated_by_id" validate:"-"`
+	EnvironmentID  int64                     `json:"environment_id" validate:"-"`
+	PlannedTests   []TestCaseAssignment      `json:"planned_tests" validate:"omitempty,dive"`
+	AllTestCases   *ProjectTestCaseSelection `json:"all_test_cases,omitempty" validate:"omitempty"`
+}
+
+// ProjectTestCaseSelection selects all the test cases of a project (optionally
+// narrowed by a search filter) for a test plan. Test cases also listed in
+// planned_tests keep the testers given there instead of these UserIDs.
+type ProjectTestCaseSelection struct {
+	// Testers assigned to each of the selected test cases
+	UserIDs []int64 `json:"user_ids" validate:"required,min=1,max=100"`
+	// Same filter as the project test case list (matches title or code)
+	Search string `json:"search,omitempty"`
+	// Test cases the user deselected
+	ExcludedTestCaseIDs []string `json:"excluded_test_case_ids,omitempty" validate:"omitempty,dive,uuid"`
 }
 
 type TestCaseAssignment struct {
@@ -32,9 +45,11 @@ type TestCaseAssignment struct {
 }
 
 type AssignTestsToPlanRequest struct {
-	ProjectID    int64                `json:"project_id" validate:"required"`
-	PlanID       int64                `json:"test_plan_id" validate:"required"`
-	PlannedTests []TestCaseAssignment `json:"planned_tests" validate:"required,min=1,max=100,dive"`
+	ProjectID int64 `json:"project_id" validate:"required"`
+	PlanID    int64 `json:"test_plan_id" validate:"required"`
+	// Required unless all_test_cases is set
+	PlannedTests []TestCaseAssignment      `json:"planned_tests" validate:"required_without=AllTestCases,max=100,dive"`
+	AllTestCases *ProjectTestCaseSelection `json:"all_test_cases,omitempty" validate:"omitempty"`
 }
 
 type BatchAssignTestCasesToPlanRequest struct {
