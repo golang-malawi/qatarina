@@ -1,7 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Box, Button, Flex, Stack, Text, Textarea } from "@chakra-ui/react";
-import { useState } from "react";
+import { Badge, Box, Button, Flex, HStack, IconButton, Stack, Text, Textarea } from "@chakra-ui/react";
+import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  LuChevronDown,
+  LuChevronUp,
+  LuFilePlus,
+  LuMessageSquare,
+  LuReply,
+  LuSendHorizontal,
+  LuTrash2,
+} from "react-icons/lu";
 import { useAuth } from "@/context/AuthContext";
 import {
   useTestPlanCommentsQuery,
@@ -10,6 +19,8 @@ import {
   Comment,
 } from "@/services/TestPlanService";
 import { toaster } from "@/components/ui/toaster";
+import { Avatar } from "@/components/ui/avatar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/comments/"
@@ -40,6 +51,117 @@ function formatCommentDate(dateStr?: string) {
   }
 }
 
+const AVATAR_PALETTES = ["blue", "green", "purple", "orange", "teal", "pink", "cyan", "red"];
+
+// Gives each person a stable avatar colour so they are easy to tell apart in a thread
+function avatarPalette(name?: string) {
+  if (!name) return "gray";
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+}
+
+function byOldestFirst(a: Comment, b: Comment) {
+  const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+  const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+  return timeA - timeB;
+}
+
+// Message composer: Enter adds a new line, Ctrl/Cmd+Enter sends
+function Composer({
+  value,
+  onChange,
+  onSubmit,
+  isSubmitting,
+  placeholder,
+  authorName,
+  autoFocus,
+  onCancel,
+  compact = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+  placeholder: string;
+  authorName?: string;
+  autoFocus?: boolean;
+  onCancel?: () => void;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      onSubmit();
+    } else if (e.key === "Escape" && onCancel) {
+      onCancel();
+    }
+  };
+
+  return (
+    <Flex gap={3} align="flex-start">
+      <Avatar
+        name={authorName}
+        size={compact ? "xs" : "sm"}
+        colorPalette={avatarPalette(authorName)}
+        flexShrink={0}
+      />
+      <Box
+        flex="1"
+        borderWidth="1px"
+        borderColor="border.subtle"
+        borderRadius="xl"
+        bg="bg.panel"
+        _focusWithin={{ borderColor: "colorPalette.solid", boxShadow: "0 0 0 1px var(--chakra-colors-color-palette-solid)" }}
+        colorPalette="brand"
+        overflow="hidden"
+      >
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          size={compact ? "sm" : "md"}
+          rows={compact ? 1 : 2}
+          autoresize
+          autoFocus={autoFocus}
+          border="none"
+          bg="transparent"
+          _focusVisible={{ outline: "none", boxShadow: "none" }}
+          resize="none"
+          px={3}
+          pt={2}
+        />
+        <Flex justify="space-between" align="center" px={3} pb={2} gap={2}>
+          <Text fontSize="xs" color="fg.subtle">
+            {t("test_plans.comments.send_hint", "Ctrl + Enter to send")}
+          </Text>
+          <HStack gap={1}>
+            {onCancel && (
+              <Button size="xs" variant="ghost" onClick={onCancel}>
+                {t("test_plans.comments.cancel", "Cancel")}
+              </Button>
+            )}
+            <IconButton
+              size="xs"
+              colorPalette="brand"
+              borderRadius="full"
+              aria-label={t("test_plans.comments.send", "Send")}
+              onClick={onSubmit}
+              loading={isSubmitting}
+              disabled={!value.trim()}
+            >
+              <LuSendHorizontal />
+            </IconButton>
+          </HStack>
+        </Flex>
+      </Box>
+    </Flex>
+  );
+}
+
 function CommentItem({
   comment,
   numericTestPlanId,
@@ -58,7 +180,8 @@ function CommentItem({
   const navigate = useNavigate();
 
   const [replyContent, setReplyContent] = useState("");
-  const [showReplies, setShowReplies] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [showReplies, setShowReplies] = useState(true);
 
   const createMutation = useCreateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
@@ -76,6 +199,7 @@ function CommentItem({
         },
       });
       setReplyContent("");
+      setIsReplying(false);
       setShowReplies(true);
       toaster.success({ title: t("test_plans.comments.reply_success", "Reply added") });
       refetch();
@@ -110,95 +234,139 @@ function CommentItem({
     });
   };
 
-  const repliesArray = comment.replies ?? [];
+  const repliesArray = [...(comment.replies ?? [])].sort(byOldestFirst);
   const hasReplies = repliesArray.length > 0;
   const formattedDate = formatCommentDate(comment.created_at);
+  const isOwn = !!user?.user_id && comment.user_id === user.user_id;
 
   return (
-    <Box
-      p={isReply ? 3 : 4}
-      borderWidth="1px"
-      borderColor="border.subtle"
-      borderRadius="md"
-      bg={isReply ? "bg.subtle" : "bg.surface"}
-    >
-      <Flex justify="space-between" align="center" mb={1}>
-        <Text fontWeight="bold" fontSize={isReply ? "sm" : "md"}>
-          {comment.user_name}
-        </Text>
-        {formattedDate && (
-          <Text fontSize="xs" color="fg.muted">
-            {formattedDate}
+    <Flex gap={3} align="flex-start">
+      <Avatar
+        name={comment.user_name}
+        size={isReply ? "xs" : "sm"}
+        colorPalette={avatarPalette(comment.user_name)}
+        flexShrink={0}
+      />
+
+      <Box flex="1" minW={0}>
+        <HStack gap={2} mb={1} wrap="wrap">
+          <Text fontWeight="semibold" fontSize="sm">
+            {comment.user_name}
           </Text>
-        )}
-      </Flex>
-      <Text mb={3} whiteSpace="pre-wrap" fontSize={isReply ? "sm" : "md"} color={isReply ? "fg.muted" : "fg.default"}>
-        {comment.content}
-      </Text>
+          {isOwn && (
+            <Badge size="sm" variant="subtle" colorPalette="brand">
+              {t("test_plans.comments.you", "You")}
+            </Badge>
+          )}
+          {formattedDate && (
+            <Text fontSize="xs" color="fg.muted">
+              {formattedDate}
+            </Text>
+          )}
+        </HStack>
 
-      {/* GitHub-style inline reply box */}
-      <Flex gap={2} mb={3} align="flex-start">
-        <Textarea
-          value={replyContent}
-          onChange={(e) => setReplyContent(e.target.value)}
-          placeholder={t("test_plans.comments.reply_placeholder", "Leave a reply...")}
-          size="sm"
-          rows={2}
-          autoresize
-        />
-        <Button size="sm" onClick={handleReply} colorPalette="brand">
-          {t("test_plans.comments.send_reply", "Reply")}
-        </Button>
-      </Flex>
-
-      <Flex gap={2} mb={2} align="center" wrap="wrap">
-        <Button
-          size="sm"
-          variant="outline"
-          colorPalette="red"
-          onClick={() => comment.id && handleDelete(comment.id)}
+        <Box
+          display="inline-block"
+          maxW="full"
+          px={4}
+          py={2.5}
+          bg={isOwn ? "brand.subtle" : "bg.muted"}
+          borderRadius="2xl"
+          borderTopLeftRadius="sm"
         >
-          {t("test_plans.comments.delete", "Delete")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          colorPalette="brand"
-          onClick={() => comment.content && handleConvert(comment.content)}
-        >
-          {t("test_plans.comments.convert", "Convert to Test Case")}
-        </Button>
+          <Text fontSize="sm" whiteSpace="pre-wrap" wordBreak="break-word" color="fg">
+            {comment.content}
+          </Text>
+        </Box>
 
-        {/* View/Hide Replies button is now cleanly aligned with other actions */}
-        {hasReplies && (
+        <HStack gap={2} mt={2} wrap="wrap">
           <Button
-            size="sm"
-            variant="ghost"
-            colorPalette="gray"
-            onClick={() => setShowReplies(!showReplies)}
+            size="2xs"
+            variant="subtle"
+            colorPalette="brand"
+            borderRadius="full"
+            px={2.5}
+            onClick={() => setIsReplying(true)}
           >
-            {showReplies
-              ? t("test_plans.comments.hide_replies", "Hide replies")
-              : t("test_plans.comments.view_replies", `View replies (${repliesArray.length})`)}
+            <LuReply />
+            {t("test_plans.comments.send_reply", "Reply")}
           </Button>
-        )}
-      </Flex>
+          <Button
+            size="2xs"
+            variant="subtle"
+            colorPalette="green"
+            borderRadius="full"
+            px={2.5}
+            onClick={() => comment.content && handleConvert(comment.content)}
+          >
+            <LuFilePlus />
+            {t("test_plans.comments.convert", "Convert to Test Case")}
+          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button size="2xs" variant="subtle" colorPalette="red" borderRadius="full" px={2.5}>
+                <LuTrash2 />
+                {t("test_plans.comments.delete", "Delete")}
+              </Button>
+            }
+            title={t("test_plans.comments.delete_confirm_title", "Delete comment?")}
+            description={t(
+              "test_plans.comments.delete_confirm_description",
+              "This comment will be permanently removed."
+            )}
+            confirmLabel={t("test_plans.comments.delete", "Delete")}
+            onConfirm={() => (comment.id ? handleDelete(comment.id) : undefined)}
+          />
+          {hasReplies && (
+            <Button
+              size="2xs"
+              variant="ghost"
+              colorPalette="brand"
+              borderRadius="full"
+              px={2.5}
+              onClick={() => setShowReplies(!showReplies)}
+            >
+              {showReplies ? <LuChevronUp /> : <LuChevronDown />}
+              {showReplies
+                ? t("test_plans.comments.hide_replies", "Hide replies")
+                : t("test_plans.comments.view_replies", `View replies (${repliesArray.length})`)}
+            </Button>
+          )}
+        </HStack>
 
-      {showReplies && hasReplies && (
-        <Stack gap={3} pl={6} mt={3} borderLeftWidth="1px" borderColor="border.subtle">
-          {repliesArray.map((reply) => (
-            <CommentItem
-              key={reply.id}
-              comment={reply}
-              numericTestPlanId={numericTestPlanId}
-              projectId={projectId}
-              refetch={refetch}
-              isReply={true}
-            />
-          ))}
-        </Stack>
-      )}
-    </Box>
+        {(isReplying || (showReplies && hasReplies)) && (
+          <Stack gap={4} mt={3} pl={4} borderLeftWidth="2px" borderColor="border.subtle">
+            {showReplies &&
+              repliesArray.map((reply) => (
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  numericTestPlanId={numericTestPlanId}
+                  projectId={projectId}
+                  refetch={refetch}
+                  isReply={true}
+                />
+              ))}
+            {isReplying && (
+              <Composer
+                value={replyContent}
+                onChange={setReplyContent}
+                onSubmit={handleReply}
+                isSubmitting={createMutation.isPending}
+                placeholder={t("test_plans.comments.reply_placeholder", "Leave a reply...")}
+                authorName={user?.displayName}
+                autoFocus
+                compact
+                onCancel={() => {
+                  setIsReplying(false);
+                  setReplyContent("");
+                }}
+              />
+            )}
+          </Stack>
+        )}
+      </Box>
+    </Flex>
   );
 }
 
@@ -235,40 +403,53 @@ function TestPlanComments() {
     }
   };
 
-  const sortedComments = data?.comments
-    ? [...data.comments].sort((a, b) => {
-        const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return timeB - timeA;
-      })
-    : [];
+  // Newest comments first
+  const sortedComments = data?.comments ? [...data.comments].sort((a, b) => byOldestFirst(b, a)) : [];
 
   return (
     <Box p={6}>
-      <Stack gap={4}>
-        <Flex gap={2} align="flex-start">
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
-            rows={3}
-            autoresize
-          />
-          <Button onClick={handleAdd} colorPalette="brand">
-            {t("test_plans.comments.add", "Add")}
-          </Button>
+      <Box borderWidth="1px" borderColor="border.subtle" borderRadius="xl" bg="bg.panel" overflow="hidden">
+        <Flex align="center" gap={2} px={5} py={3} borderBottomWidth="1px" borderColor="border.subtle">
+          <LuMessageSquare />
+          <Text fontWeight="semibold">{t("test_plans.comments.title", "Discussion")}</Text>
+          <Badge size="sm" variant="subtle" borderRadius="full">
+            {sortedComments.length}
+          </Badge>
         </Flex>
 
-        {sortedComments.map((c) => (
-          <CommentItem
-            key={c.id}
-            comment={c}
-            numericTestPlanId={numericTestPlanId}
-            projectId={projectId}
-            refetch={refetch}
+        <Stack gap={6} px={5} py={5}>
+          {sortedComments.length === 0 ? (
+            <Stack align="center" gap={1} py={8} color="fg.muted">
+              <LuMessageSquare size={28} />
+              <Text fontWeight="medium">{t("test_plans.comments.empty_title", "No comments yet")}</Text>
+              <Text fontSize="sm">
+                {t("test_plans.comments.empty_description", "Start the conversation about this test plan below.")}
+              </Text>
+            </Stack>
+          ) : (
+            sortedComments.map((c) => (
+              <CommentItem
+                key={c.id}
+                comment={c}
+                numericTestPlanId={numericTestPlanId}
+                projectId={projectId}
+                refetch={refetch}
+              />
+            ))
+          )}
+        </Stack>
+
+        <Box px={5} py={4} borderTopWidth="1px" borderColor="border.subtle" bg="bg.subtle">
+          <Composer
+            value={newComment}
+            onChange={setNewComment}
+            onSubmit={handleAdd}
+            isSubmitting={createMutation.isPending}
+            placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
+            authorName={user?.displayName}
           />
-        ))}
-      </Stack>
+        </Box>
+      </Box>
     </Box>
   );
 }
