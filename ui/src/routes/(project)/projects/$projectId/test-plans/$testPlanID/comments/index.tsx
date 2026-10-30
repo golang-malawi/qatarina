@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
@@ -132,17 +132,19 @@ function CommentItem({
           </Text>
         )}
       </Flex>
-      <Text mb={3} fontSize={isReply ? "sm" : "md"} color={isReply ? "fg.muted" : "fg.default"}>
+      <Text mb={3} whiteSpace="pre-wrap" fontSize={isReply ? "sm" : "md"} color={isReply ? "fg.muted" : "fg.default"}>
         {comment.content}
       </Text>
 
       {/* GitHub-style inline reply box */}
-      <Flex gap={2} mb={3}>
-        <Input
+      <Flex gap={2} mb={3} align="flex-start">
+        <Textarea
           value={replyContent}
           onChange={(e) => setReplyContent(e.target.value)}
           placeholder={t("test_plans.comments.reply_placeholder", "Leave a reply...")}
           size="sm"
+          rows={2}
+          autoresize
         />
         <Button size="sm" onClick={handleReply} colorPalette="brand">
           {t("test_plans.comments.send_reply", "Reply")}
@@ -244,11 +246,13 @@ function TestPlanComments() {
   return (
     <Box p={6}>
       <Stack gap={4}>
-        <Flex gap={2}>
-          <Input
+        <Flex gap={2} align="flex-start">
+          <Textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
+            rows={3}
+            autoresize
           />
           <Button onClick={handleAdd} colorPalette="brand">
             {t("test_plans.comments.add", "Add")}
