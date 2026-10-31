@@ -169,6 +169,19 @@ components:
       - old_password
       - user_id
       type: object
+    schema.CommentAttachment:
+      properties:
+        content_type:
+          type: string
+        created_at:
+          type: string
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        id:
+          type: string
+      type: object
     schema.CommentListResponse:
       properties:
         comments:
@@ -176,9 +189,16 @@ components:
             $ref: '#/components/schemas/schema.CommentResponseItem'
           type: array
           uniqueItems: false
+        pagination:
+          $ref: '#/components/schemas/schema.Pagination'
       type: object
     schema.CommentResponseItem:
       properties:
+        attachments:
+          items:
+            $ref: '#/components/schemas/schema.CommentAttachment'
+          type: array
+          uniqueItems: false
         content:
           type: string
         created_at:
@@ -243,7 +263,14 @@ components:
       type: object
     schema.CreateComment:
       properties:
+        attachment_ids:
+          items:
+            type: string
+          maxItems: 10
+          type: array
+          uniqueItems: false
         content:
+          description: Content may be empty when the comment only carries attachments
           type: string
         parent_comment_id:
           type: string
@@ -252,7 +279,6 @@ components:
         user_id:
           type: integer
       required:
-      - content
       - test_plan_id
       - user_id
       type: object
@@ -609,6 +635,21 @@ components:
       properties:
         unseen_count:
           type: integer
+      type: object
+    schema.LinkPreview:
+      properties:
+        description:
+          type: string
+        favicon:
+          type: string
+        image:
+          type: string
+        site_name:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
       type: object
     schema.LoginRequest:
       properties:
@@ -1798,6 +1839,40 @@ paths:
       summary: Get details of a single environment by ID
       tags:
       - environments
+  /v1/link-preview:
+    get:
+      description: Fetches the page server side and reads its Open Graph tags. Only
+        public http and https URLs are allowed.
+      operationId: GetLinkPreview
+      parameters:
+      - description: URL to preview
+        in: query
+        name: url
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.LinkPreview'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+      summary: Get preview metadata (title, description, image) for a URL
+      tags:
+      - link-previews
   /v1/me/test-cases/inbox:
     get:
       description: List Test Cases assigned to the current user
@@ -4985,12 +5060,24 @@ paths:
       - test-plans
   /v1/test-plans/{testPlanID}/comments:
     get:
+      description: Pages over top-level comments; each comment includes all of its
+        replies.
       operationId: ListTestPlanComments
       parameters:
       - description: Test Plan ID
         in: path
         name: testPlanID
         required: true
+        schema:
+          type: integer
+      - description: Page number (1-based)
+        in: query
+        name: page
+        schema:
+          type: integer
+      - description: Top-level comments per page (default 10, max 50)
+        in: query
+        name: pageSize
         schema:
           type: integer
       responses:
@@ -5012,7 +5099,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: List all comments for a test plan
+      summary: List comments for a test plan, newest first
       tags:
       - test-plans
       - comments
@@ -5134,6 +5221,108 @@ paths:
       - test-plans
       - comments
       - test-cases
+  /v1/test-plans/{testPlanID}/comments/attachments:
+    post:
+      description: Uploads an image (PNG, JPEG, GIF or WebP, max 10MB). Pass the returned
+        id in attachment_ids when creating the comment.
+      operationId: UploadTestPlanCommentAttachment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Image file
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.CommentAttachment'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload a screenshot to attach to a test plan comment
+      tags:
+      - test-plans
+      - comments
+  /v1/test-plans/{testPlanID}/comments/attachments/{attachmentID}:
+    get:
+      operationId: GetTestPlanCommentAttachment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Attachment ID
+        in: path
+        name: attachmentID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: file
+            image/gif:
+              schema:
+                format: binary
+                type: string
+            image/jpeg:
+              schema:
+                format: binary
+                type: string
+            image/png:
+              schema:
+                format: binary
+                type: string
+            image/webp:
+              schema:
+                type: string
+          description: Image file
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get the image file of a test plan comment attachment
+      tags:
+      - test-plans
+      - comments
   /v1/test-plans/{testPlanID}/environment:
     post:
       description: Change environment of a Test Plan

@@ -1,6 +1,8 @@
 import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
 import { components } from "@/lib/api/v1";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export type TestPlan = components["schemas"]["schema.TestPlanResponseItem"];
 
@@ -10,6 +12,8 @@ export type TestPlansResponse = {
 
 export type Comment = components["schemas"]["schema.CommentResponseItem"];
 export type CommentListResponse = components["schemas"]["schema.CommentListResponse"];
+export type CommentAttachment = components["schemas"]["schema.CommentAttachment"];
+export type LinkPreview = components["schemas"]["schema.LinkPreview"];
 
 type AssignTestsToPlanPayload = {
   planned_tests: { test_case_id?: string; user_ids?: number[] }[];
@@ -159,9 +163,22 @@ export async function getTestPlanTestCases(testPlanID: number) {
   return res.data as components["schemas"]["schema.TestCaseListResponse"];
 }
 
-export function useTestPlanCommentsQuery(testPlanID: number) {
-  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/comments", {
-    params: { path: { testPlanID } },
+// Loads top-level comments (newest first, with their replies) a page at a time for infinite scrolling
+export function useTestPlanCommentsInfiniteQuery(testPlanID: number, pageSize = 10) {
+  return useInfiniteQuery({
+    queryKey: ["test-plan-comments", testPlanID, pageSize],
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await apiClient.GET("/v1/test-plans/{testPlanID}/comments", {
+        params: { path: { testPlanID }, query: { page: pageParam, pageSize } },
+      });
+      if (error || !data) throw new Error(error?.detail || "Failed to load comments");
+      return data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const total = lastPage.pagination?.total ?? 0;
+      return allPages.length * pageSize < total ? allPages.length + 1 : undefined;
+    },
   });
 }
 
@@ -175,6 +192,58 @@ export function useDeleteCommentMutation() {
 
 export function useConvertCommentMutation() {
   return $api.useMutation("post", "/v1/test-plans/{testPlanID}/comments/{commentID}/convert");
+}
+
+export async function uploadCommentAttachment(testPlanID: number, file: File): Promise<CommentAttachment> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data, error } = await apiClient.POST("/v1/test-plans/{testPlanID}/comments/attachments", {
+    params: { path: { testPlanID } },
+    body: formData as never,
+    bodySerializer: (body) => body as unknown as FormData,
+  });
+  if (error || !data) {
+    throw new Error(error?.detail || error?.title || "Failed to upload attachment");
+  }
+  return data;
+}
+
+// Attachments need the auth header, so the image is fetched as a blob and shown through an object URL
+export function useCommentAttachmentImage(testPlanID: number, attachmentID?: string) {
+  const query = useQuery({
+    queryKey: ["comment-attachment", testPlanID, attachmentID],
+    enabled: !!attachmentID,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const res = await apiClient.GET("/v1/test-plans/{testPlanID}/comments/attachments/{attachmentID}", {
+        params: { path: { testPlanID, attachmentID: attachmentID! } },
+        parseAs: "blob",
+      });
+      if (!res.response.ok || !res.data) {
+        throw new Error("Failed to load attachment");
+      }
+      return res.data as Blob;
+    },
+  });
+
+  const [objectUrl, setObjectUrl] = useState<string>();
+  useEffect(() => {
+    if (!query.data) return;
+    const url = URL.createObjectURL(query.data);
+    setObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [query.data]);
+
+  return { src: objectUrl, isLoading: query.isLoading, isError: query.isError };
+}
+
+export function useLinkPreviewQuery(url: string) {
+  return $api.useQuery(
+    "get",
+    "/v1/link-preview",
+    { params: { query: { url } } },
+    { staleTime: 60 * 60 * 1000, retry: false }
+  );
 }
 
 export async function getTestPlanComments(testPlanID: number): Promise<CommentListResponse> {

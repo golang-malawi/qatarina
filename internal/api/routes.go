@@ -35,6 +35,8 @@ func (api *API) routes() {
 		authV1.Post("/reset-password", apiv1.ResetPassword(api.AuthService, api.logger))
 	}
 
+	router.Get("/v1/link-preview", authenticationMiddleware, apiv1.GetLinkPreview(api.LinkPreviewService, api.logger))
+
 	usersV1 := router.Group("/v1/users", authenticationMiddleware)
 	{
 		usersV1.Get("", apiv1.ListUsers(api.UserService, api.logger))
@@ -153,7 +155,9 @@ func (api *API) routes() {
 		{
 			commentsV1.Get("", apiv1.ListTestPlanComments(api.TestPlansService, api.logger))
 			commentsV1.Post("", apiv1.CreateTestPlanComment(api.TestPlansService, api.logger))
-			commentsV1.Delete("/:commentID", apiv1.DeleteTestPlanComment(api.TestPlansService, api.logger))
+			commentsV1.Delete("/:commentID", apiv1.DeleteTestPlanComment(api.TestPlansService, api.Config.Storage, api.logger))
+			commentsV1.Post("/attachments", apiv1.UploadTestPlanCommentAttachment(api.TestPlansService, api.Config.Storage, api.logger))
+			commentsV1.Get("/attachments/:attachmentID", apiv1.GetTestPlanCommentAttachment(api.TestPlansService, api.Config.Storage, api.logger))
 			commentsV1.Post("/:commentID/convert", apiv1.ConvertCommentToTestCase(api.TestPlansService, api.logger))
 		}
 	}

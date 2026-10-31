@@ -389,6 +389,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/link-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get preview metadata (title, description, image) for a URL
+         * @description Fetches the page server side and reads its Open Graph tags. Only public http and https URLs are allowed.
+         */
+        get: operations["GetLinkPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox": {
         parameters: {
             query?: never;
@@ -1757,7 +1777,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all comments for a test plan */
+        /**
+         * List comments for a test plan, newest first
+         * @description Pages over top-level comments; each comment includes all of its replies.
+         */
         get: operations["ListTestPlanComments"];
         put?: never;
         /** Add a new comment to a test plan */
@@ -1796,6 +1819,43 @@ export interface paths {
         put?: never;
         /** Convert a comment into a test case */
         post: operations["ConvertCommentToTestCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/comments/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a screenshot to attach to a test plan comment
+         * @description Uploads an image (PNG, JPEG, GIF or WebP, max 10MB). Pass the returned id in attachment_ids when creating the comment.
+         */
+        post: operations["UploadTestPlanCommentAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/comments/attachments/{attachmentID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the image file of a test plan comment attachment */
+        get: operations["GetTestPlanCommentAttachment"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2343,10 +2403,19 @@ export interface components {
             old_password: string;
             user_id: number;
         };
+        "schema.CommentAttachment": {
+            content_type?: string;
+            created_at?: string;
+            file_name?: string;
+            file_size?: number;
+            id?: string;
+        };
         "schema.CommentListResponse": {
             comments?: components["schemas"]["schema.CommentResponseItem"][];
+            pagination?: components["schemas"]["schema.Pagination"];
         };
         "schema.CommentResponseItem": {
+            attachments?: components["schemas"]["schema.CommentAttachment"][];
             content?: string;
             created_at?: string;
             id?: string;
@@ -2373,7 +2442,9 @@ export interface components {
             users?: components["schemas"]["schema.UserCompact"][];
         };
         "schema.CreateComment": {
-            content: string;
+            attachment_ids?: string[];
+            /** @description Content may be empty when the comment only carries attachments */
+            content?: string;
             parent_comment_id?: string;
             test_plan_id: number;
             user_id: number;
@@ -2533,6 +2604,14 @@ export interface components {
         "schema.ImportProjectRequest": Record<string, never>;
         "schema.InboxUnseenCountResponse": {
             unseen_count?: number;
+        };
+        "schema.LinkPreview": {
+            description?: string;
+            favicon?: string;
+            image?: string;
+            site_name?: string;
+            title?: string;
+            url?: string;
         };
         "schema.LoginRequest": {
             email: string;
@@ -3124,6 +3203,47 @@ export interface operations {
             };
             /** @description Internal Server Error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetLinkPreview: {
+        parameters: {
+            query: {
+                /** @description URL to preview */
+                url: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.LinkPreview"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6818,7 +6938,12 @@ export interface operations {
     };
     ListTestPlanComments: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page number (1-based) */
+                page?: number;
+                /** @description Top-level comments per page (default 10, max 50) */
+                pageSize?: number;
+            };
             header?: never;
             path: {
                 /** @description Test Plan ID */
@@ -6971,6 +7096,108 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UploadTestPlanCommentAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        /** @description Image file */
+        requestBody: {
+            content: {
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentAttachment"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetTestPlanCommentAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Attachment ID */
+                attachmentID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                    "image/gif": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

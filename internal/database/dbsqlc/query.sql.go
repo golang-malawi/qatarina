@@ -287,6 +287,18 @@ func (q *Queries) CountCompletedTestCasesByProject(ctx context.Context, projectI
 	return count, err
 }
 
+const countRootComments = `-- name: CountRootComments :one
+SELECT COUNT(*) FROM test_plan_comments
+WHERE test_plan_id = $1 AND parent_comment_id IS NULL
+`
+
+func (q *Queries) CountRootComments(ctx context.Context, testPlanID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countRootComments, testPlanID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countTestCasesByProject = `-- name: CountTestCasesByProject :one
 SELECT COUNT(*) FROM test_cases WHERE project_id = $1
 `
@@ -377,6 +389,49 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createCommentAttachment = `-- name: CreateCommentAttachment :one
+INSERT INTO test_plan_comment_attachments (
+    id, test_plan_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+RETURNING id, test_plan_id, comment_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at
+`
+
+type CreateCommentAttachmentParams struct {
+	ID           uuid.UUID
+	TestPlanID   int64
+	UploadedByID int64
+	FileName     string
+	ContentType  string
+	FileSize     int64
+	StoragePath  string
+}
+
+func (q *Queries) CreateCommentAttachment(ctx context.Context, arg CreateCommentAttachmentParams) (TestPlanCommentAttachment, error) {
+	row := q.db.QueryRowContext(ctx, createCommentAttachment,
+		arg.ID,
+		arg.TestPlanID,
+		arg.UploadedByID,
+		arg.FileName,
+		arg.ContentType,
+		arg.FileSize,
+		arg.StoragePath,
+	)
+	var i TestPlanCommentAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.TestPlanID,
+		&i.CommentID,
+		&i.UploadedByID,
+		&i.FileName,
+		&i.ContentType,
+		&i.FileSize,
+		&i.StoragePath,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -1530,6 +1585,27 @@ func (q *Queries) GetComment(ctx context.Context, id uuid.UUID) (GetCommentRow, 
 		&i.Content,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getCommentAttachment = `-- name: GetCommentAttachment :one
+SELECT id, test_plan_id, comment_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at FROM test_plan_comment_attachments WHERE id = $1
+`
+
+func (q *Queries) GetCommentAttachment(ctx context.Context, id uuid.UUID) (TestPlanCommentAttachment, error) {
+	row := q.db.QueryRowContext(ctx, getCommentAttachment, id)
+	var i TestPlanCommentAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.TestPlanID,
+		&i.CommentID,
+		&i.UploadedByID,
+		&i.FileName,
+		&i.ContentType,
+		&i.FileSize,
+		&i.StoragePath,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -2705,7 +2781,118 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	return i, err
 }
 
-const listCommentsByTestPlan = `-- name: ListCommentsByTestPlan :many
+const linkCommentAttachments = `-- name: LinkCommentAttachments :execrows
+UPDATE test_plan_comment_attachments
+SET comment_id = $1
+WHERE id = ANY($2::uuid[])
+  AND test_plan_id = $3
+  AND uploaded_by_id = $4
+  AND comment_id IS NULL
+`
+
+type LinkCommentAttachmentsParams struct {
+	CommentID     uuid.NullUUID
+	AttachmentIds []uuid.UUID
+	TestPlanID    int64
+	UploadedByID  int64
+}
+
+func (q *Queries) LinkCommentAttachments(ctx context.Context, arg LinkCommentAttachmentsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, linkCommentAttachments,
+		arg.CommentID,
+		pq.Array(arg.AttachmentIds),
+		arg.TestPlanID,
+		arg.UploadedByID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const listCommentAttachmentsByComments = `-- name: ListCommentAttachmentsByComments :many
+SELECT id, test_plan_id, comment_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at FROM test_plan_comment_attachments
+WHERE comment_id = ANY($1::uuid[])
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListCommentAttachmentsByComments(ctx context.Context, commentIds []uuid.UUID) ([]TestPlanCommentAttachment, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentAttachmentsByComments, pq.Array(commentIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestPlanCommentAttachment
+	for rows.Next() {
+		var i TestPlanCommentAttachment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TestPlanID,
+			&i.CommentID,
+			&i.UploadedByID,
+			&i.FileName,
+			&i.ContentType,
+			&i.FileSize,
+			&i.StoragePath,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCommentThreadAttachmentPaths = `-- name: ListCommentThreadAttachmentPaths :many
+WITH RECURSIVE thread AS (
+    SELECT c.id FROM test_plan_comments c WHERE c.id = $1
+    UNION ALL
+    SELECT c.id FROM test_plan_comments c JOIN thread t ON c.parent_comment_id = t.id
+)
+SELECT a.storage_path FROM test_plan_comment_attachments a
+WHERE a.comment_id IN (SELECT id FROM thread)
+`
+
+func (q *Queries) ListCommentThreadAttachmentPaths(ctx context.Context, id uuid.UUID) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentThreadAttachmentPaths, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var storage_path string
+		if err := rows.Scan(&storage_path); err != nil {
+			return nil, err
+		}
+		items = append(items, storage_path)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCommentThreadsPage = `-- name: ListCommentThreadsPage :many
+WITH RECURSIVE roots AS (
+    SELECT r.id FROM test_plan_comments r
+    WHERE r.test_plan_id = $1 AND r.parent_comment_id IS NULL
+    ORDER BY r.created_at DESC, r.id DESC
+    LIMIT $3 OFFSET $2
+), thread AS (
+    SELECT roots.id FROM roots
+    UNION ALL
+    SELECT c.id FROM test_plan_comments c JOIN thread t ON c.parent_comment_id = t.id
+)
 SELECT
     c.id,
     c.test_plan_id,
@@ -2717,11 +2904,17 @@ SELECT
     c.updated_at
 FROM test_plan_comments c
 JOIN users u ON u.id = c.user_id
-WHERE c.test_plan_id = $1
-ORDER BY c.created_at DESC
+WHERE c.id IN (SELECT thread.id FROM thread)
+ORDER BY c.created_at DESC, c.id DESC
 `
 
-type ListCommentsByTestPlanRow struct {
+type ListCommentThreadsPageParams struct {
+	TestPlanID int64
+	PageOffset int32
+	PageLimit  int32
+}
+
+type ListCommentThreadsPageRow struct {
 	ID              uuid.UUID
 	TestPlanID      int64
 	ParentCommentID uuid.NullUUID
@@ -2732,15 +2925,16 @@ type ListCommentsByTestPlanRow struct {
 	UpdatedAt       sql.NullTime
 }
 
-func (q *Queries) ListCommentsByTestPlan(ctx context.Context, testPlanID int64) ([]ListCommentsByTestPlanRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCommentsByTestPlan, testPlanID)
+// Returns a page of top-level comments, newest first, together with all of their replies
+func (q *Queries) ListCommentThreadsPage(ctx context.Context, arg ListCommentThreadsPageParams) ([]ListCommentThreadsPageRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentThreadsPage, arg.TestPlanID, arg.PageOffset, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListCommentsByTestPlanRow
+	var items []ListCommentThreadsPageRow
 	for rows.Next() {
-		var i ListCommentsByTestPlanRow
+		var i ListCommentThreadsPageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TestPlanID,
