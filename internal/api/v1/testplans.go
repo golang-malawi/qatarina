@@ -6,10 +6,12 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-malawi/qatarina/internal/api/authutil"
 	"github.com/golang-malawi/qatarina/internal/common"
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/logging/loggedmodule"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -458,10 +460,13 @@ func UpdateTestPlanCaseUrgency(testPlanService services.TestPlanService, logger 
 // ListTestPlanComments godoc
 //
 // @ID      ListTestPlanComments
-// @Summary List all comments for a test plan
+// @Summary List comments for a test plan, newest first
+// @Description Pages over top-level comments; each comment includes all of its replies.
 // @Tags    test-plans, comments
 // @Produce json
 // @Param   testPlanID path int true "Test Plan ID"
+// @Param   page       query int false "Page number (1-based)"
+// @Param   pageSize   query int false "Top-level comments per page (default 10, max 50)"
 // @Success 200 {object} schema.CommentListResponse
 // @Failure 400 {object} problemdetail.ProblemDetail
 // @Failure 500 {object} problemdetail.ProblemDetail
@@ -472,12 +477,22 @@ func ListTestPlanComments(testPlanService services.TestPlanService, logger loggi
 		if err != nil || planID <= 0 {
 			return problemdetail.BadRequest(c, "invalid testPlanID")
 		}
-		comments, err := testPlanService.ListComments(c.Context(), int64(planID))
+		page := max(c.QueryInt("page", 1), 1)
+		pageSize := min(max(c.QueryInt("pageSize", 10), 1), 50)
+
+		comments, total, err := testPlanService.ListComments(c.Context(), int64(planID), int32(pageSize), int32((page-1)*pageSize))
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to list comments", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to list comments")
 		}
-		return c.JSON(schema.CommentListResponse{Comments: comments})
+		return c.JSON(schema.CommentListResponse{
+			Comments: comments,
+			Pagination: &schema.Pagination{
+				Page:     page,
+				PageSize: pageSize,
+				Total:    total,
+			},
+		})
 	}
 }
 
@@ -502,6 +517,13 @@ func CreateTestPlanComment(testPlanService services.TestPlanService, logger logg
 				return problemdetail.ValidationErrors(c, "invalid data", err)
 			}
 			return problemdetail.BadRequest(c, "failed to parse request")
+		}
+
+		// Comments are always posted as the signed-in user
+		req.UserID = authutil.GetAuthUserID(c)
+
+		if strings.TrimSpace(req.Content) == "" && len(req.AttachmentIDs) == 0 {
+			return problemdetail.BadRequest(c, "a comment needs either content or attachments")
 		}
 
 		// Extract testPlanID from route parameters if not populated in body
@@ -545,13 +567,15 @@ func CreateTestPlanComment(testPlanService services.TestPlanService, logger logg
 // @Failure 400 {object} problemdetail.ProblemDetail
 // @Failure 500 {object} problemdetail.ProblemDetail
 // @Router  /v1/test-plans/{testPlanID}/comments/{commentID} [delete]
-func DeleteTestPlanComment(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+func DeleteTestPlanComment(testPlanService services.TestPlanService, storage config.StorageConfiguration, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		commentID := c.Params("commentID")
-		if err := testPlanService.DeleteComment(c.Context(), commentID); err != nil {
+		attachmentPaths, err := testPlanService.DeleteComment(c.Context(), commentID)
+		if err != nil {
 			logger.Error(loggedmodule.ApiTestPlans, "failed to delete comment", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to delete comment")
 		}
+		removeCommentAttachmentFiles(storage, attachmentPaths, logger)
 		return c.JSON(fiber.Map{"message": "comment deleted"})
 	}
 }

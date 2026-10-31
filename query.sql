@@ -936,7 +936,22 @@ SELECT
     COUNT(*) FILTER (WHERE status = 'Failed') AS failed
 FROM reports WHERE project_id = $1;
 
--- name: ListCommentsByTestPlan :many
+-- name: CountRootComments :one
+SELECT COUNT(*) FROM test_plan_comments
+WHERE test_plan_id = $1 AND parent_comment_id IS NULL;
+
+-- name: ListCommentThreadsPage :many
+-- Returns a page of top-level comments, newest first, together with all of their replies
+WITH RECURSIVE roots AS (
+    SELECT r.id FROM test_plan_comments r
+    WHERE r.test_plan_id = sqlc.arg(test_plan_id) AND r.parent_comment_id IS NULL
+    ORDER BY r.created_at DESC, r.id DESC
+    LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset)
+), thread AS (
+    SELECT roots.id FROM roots
+    UNION ALL
+    SELECT c.id FROM test_plan_comments c JOIN thread t ON c.parent_comment_id = t.id
+)
 SELECT
     c.id,
     c.test_plan_id,
@@ -948,8 +963,8 @@ SELECT
     c.updated_at
 FROM test_plan_comments c
 JOIN users u ON u.id = c.user_id
-WHERE c.test_plan_id = $1
-ORDER BY c.created_at DESC;
+WHERE c.id IN (SELECT thread.id FROM thread)
+ORDER BY c.created_at DESC, c.id DESC;
 
 -- name: GetComment :one
 SELECT
@@ -979,6 +994,38 @@ RETURNING
 
 -- name: DeleteComment :execrows
 DELETE FROM test_plan_comments WHERE id = $1;
+
+-- name: CreateCommentAttachment :one
+INSERT INTO test_plan_comment_attachments (
+    id, test_plan_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+RETURNING *;
+
+-- name: GetCommentAttachment :one
+SELECT * FROM test_plan_comment_attachments WHERE id = $1;
+
+-- name: LinkCommentAttachments :execrows
+UPDATE test_plan_comment_attachments
+SET comment_id = sqlc.arg(comment_id)
+WHERE id = ANY(sqlc.arg(attachment_ids)::uuid[])
+  AND test_plan_id = sqlc.arg(test_plan_id)
+  AND uploaded_by_id = sqlc.arg(uploaded_by_id)
+  AND comment_id IS NULL;
+
+-- name: ListCommentAttachmentsByComments :many
+SELECT * FROM test_plan_comment_attachments
+WHERE comment_id = ANY(sqlc.arg(comment_ids)::uuid[])
+ORDER BY created_at ASC;
+
+-- name: ListCommentThreadAttachmentPaths :many
+WITH RECURSIVE thread AS (
+    SELECT c.id FROM test_plan_comments c WHERE c.id = $1
+    UNION ALL
+    SELECT c.id FROM test_plan_comments c JOIN thread t ON c.parent_comment_id = t.id
+)
+SELECT a.storage_path FROM test_plan_comment_attachments a
+WHERE a.comment_id IN (SELECT id FROM thread);
 
 -- name: ConvertCommentToTestCase :one
 INSERT INTO test_cases (

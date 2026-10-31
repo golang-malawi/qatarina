@@ -26,9 +26,13 @@ type TestPlanService interface {
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	CloseTestPlan(context.Context, int32) error
 	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
-	ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error)
+	// ListComments returns a page of top-level comments (newest first) with their replies, and the total number of top-level comments
+	ListComments(ctx context.Context, testPlanID int64, limit, offset int32) ([]schema.CommentResponseItem, int64, error)
 	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
-	DeleteComment(ctx context.Context, commentID string) error
+	// DeleteComment deletes a comment and its replies, returning the storage paths of their attachments
+	DeleteComment(ctx context.Context, commentID string) ([]string, error)
+	CreateCommentAttachment(ctx context.Context, params dbsqlc.CreateCommentAttachmentParams) (*schema.CommentAttachment, error)
+	GetCommentAttachment(ctx context.Context, attachmentID string) (*dbsqlc.TestPlanCommentAttachment, error)
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
 
 	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
@@ -398,43 +402,87 @@ func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, env
 	return t.queries.ChangeEnvironment(ctx, params)
 }
 
-func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64) ([]schema.CommentResponseItem, error) {
-	rows, err := t.queries.ListCommentsByTestPlan(ctx, testPlanID)
+func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64, limit, offset int32) ([]schema.CommentResponseItem, int64, error) {
+	total, err := t.queries.CountRootComments(ctx, testPlanID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	commentMap := make(map[string]*schema.CommentResponseItem)
-	var rootComments []schema.CommentResponseItem
+	rows, err := t.queries.ListCommentThreadsPage(ctx, dbsqlc.ListCommentThreadsPageParams{
+		TestPlanID: testPlanID,
+		PageLimit:  limit,
+		PageOffset: offset,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	commentIDs := make([]uuid.UUID, 0, len(rows))
+	for _, r := range rows {
+		commentIDs = append(commentIDs, r.ID)
+	}
+	attachmentRows, err := t.queries.ListCommentAttachmentsByComments(ctx, commentIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	attachmentsByComment := make(map[string][]schema.CommentAttachment)
+	for _, a := range attachmentRows {
+		commentID := a.CommentID.UUID.String()
+		attachmentsByComment[commentID] = append(attachmentsByComment[commentID], toCommentAttachment(a))
+	}
+
+	items := make(map[string]*schema.CommentResponseItem, len(rows))
+	childIDs := make(map[string][]string)
+	var rootIDs []string
 
 	for _, r := range rows {
-		item := schema.CommentResponseItem{
-			ID:         r.ID.String(),
-			TestPlanID: r.TestPlanID,
-			UserID:     r.UserID,
-			UserName:   r.DisplayName.String,
-			Content:    r.Content,
-			CreatedAt:  r.CreatedAt.Time.Format(time.RFC3339),
-			UpdatedAt:  r.UpdatedAt.Time.Format(time.RFC3339),
+		item := &schema.CommentResponseItem{
+			ID:          r.ID.String(),
+			TestPlanID:  r.TestPlanID,
+			UserID:      r.UserID,
+			UserName:    r.DisplayName.String,
+			Content:     r.Content,
+			Attachments: attachmentsByComment[r.ID.String()],
+			CreatedAt:   r.CreatedAt.Time.Format(time.RFC3339),
+			UpdatedAt:   r.UpdatedAt.Time.Format(time.RFC3339),
 		}
 		if r.ParentCommentID.Valid {
 			parentStr := r.ParentCommentID.UUID.String()
 			item.ParentCommentID = &parentStr
-		}
-		commentMap[item.ID] = &item
-	}
-
-	for _, item := range commentMap {
-		if item.ParentCommentID != nil {
-			if parent, exists := commentMap[*item.ParentCommentID]; exists {
-				parent.Replies = append(parent.Replies, *item)
-			}
+			childIDs[parentStr] = append(childIDs[parentStr], item.ID)
 		} else {
-			rootComments = append(rootComments, *item)
+			rootIDs = append(rootIDs, item.ID)
 		}
+		items[item.ID] = item
 	}
 
-	return rootComments, nil
+	// Build the tree bottom-up from IDs so replies nested at any depth are kept,
+	// regardless of the order the rows come back in
+	var build func(id string) schema.CommentResponseItem
+	build = func(id string) schema.CommentResponseItem {
+		item := *items[id]
+		for _, childID := range childIDs[id] {
+			item.Replies = append(item.Replies, build(childID))
+		}
+		return item
+	}
+
+	rootComments := make([]schema.CommentResponseItem, 0, len(rootIDs))
+	for _, id := range rootIDs {
+		rootComments = append(rootComments, build(id))
+	}
+
+	return rootComments, total, nil
+}
+
+func toCommentAttachment(a dbsqlc.TestPlanCommentAttachment) schema.CommentAttachment {
+	return schema.CommentAttachment{
+		ID:          a.ID.String(),
+		FileName:    a.FileName,
+		ContentType: a.ContentType,
+		FileSize:    a.FileSize,
+		CreatedAt:   a.CreatedAt.Time.Format(time.RFC3339),
+	}
 }
 
 func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error) {
@@ -460,6 +508,26 @@ func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateC
 		return nil, err
 	}
 
+	if len(req.AttachmentIDs) > 0 {
+		attachmentIDs := make([]uuid.UUID, 0, len(req.AttachmentIDs))
+		for _, raw := range req.AttachmentIDs {
+			attachmentID, err := uuid.Parse(raw)
+			if err != nil {
+				return nil, fmt.Errorf("invalid attachment ID: %w", err)
+			}
+			attachmentIDs = append(attachmentIDs, attachmentID)
+		}
+		// Only unclaimed attachments the author uploaded to this test plan are linked
+		if _, err := t.queries.LinkCommentAttachments(ctx, dbsqlc.LinkCommentAttachmentsParams{
+			CommentID:     uuid.NullUUID{UUID: row.ID, Valid: true},
+			AttachmentIds: attachmentIDs,
+			TestPlanID:    req.TestPlanID,
+			UploadedByID:  req.UserID,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to link attachments: %w", err)
+		}
+	}
+
 	var parentStr *string
 	if row.ParentCommentID.Valid {
 		s := row.ParentCommentID.UUID.String()
@@ -477,13 +545,44 @@ func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateC
 	}, nil
 }
 
-func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) error {
+func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) ([]string, error) {
 	id, err := uuid.Parse(commentID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = t.queries.DeleteComment(ctx, id)
-	return err
+	// Collect file paths first, the attachment rows are removed by the cascading delete
+	paths, err := t.queries.ListCommentThreadAttachmentPaths(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = t.queries.DeleteComment(ctx, id); err != nil {
+		return nil, err
+	}
+	return paths, nil
+}
+
+func (t *testPlanService) CreateCommentAttachment(ctx context.Context, params dbsqlc.CreateCommentAttachmentParams) (*schema.CommentAttachment, error) {
+	row, err := t.queries.CreateCommentAttachment(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	attachment := toCommentAttachment(row)
+	return &attachment, nil
+}
+
+func (t *testPlanService) GetCommentAttachment(ctx context.Context, attachmentID string) (*dbsqlc.TestPlanCommentAttachment, error) {
+	id, err := uuid.Parse(attachmentID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	row, err := t.queries.GetCommentAttachment(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &row, nil
 }
 
 func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error) {

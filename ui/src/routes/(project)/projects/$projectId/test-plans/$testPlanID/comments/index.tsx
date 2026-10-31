@@ -1,19 +1,28 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Badge, Box, Button, Flex, HStack, IconButton, Stack, Text, Textarea } from "@chakra-ui/react";
-import { useState, type KeyboardEvent } from "react";
+import {
+  Badge,
+  Box,
+  Button,
+  Flex,
+  HStack,
+  Spinner,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  LuArrowUp,
   LuChevronDown,
   LuChevronUp,
   LuFilePlus,
   LuMessageSquare,
   LuReply,
-  LuSendHorizontal,
   LuTrash2,
 } from "react-icons/lu";
 import { useAuth } from "@/context/AuthContext";
 import {
-  useTestPlanCommentsQuery,
+  useTestPlanCommentsInfiniteQuery,
   useCreateCommentMutation,
   useDeleteCommentMutation,
   Comment,
@@ -21,6 +30,9 @@ import {
 import { toaster } from "@/components/ui/toaster";
 import { Avatar } from "@/components/ui/avatar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CommentBody } from "@/components/comments/CommentBody";
+import { CommentComposer } from "@/components/comments/CommentComposer";
+import { stripAttachmentTokens } from "@/components/comments/attachmentTokens";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/comments/"
@@ -67,39 +79,11 @@ function byOldestFirst(a: Comment, b: Comment) {
   return timeA - timeB;
 }
 
-// Message composer: Enter adds a new line, Ctrl/Cmd+Enter sends
 function Composer({
-  value,
-  onChange,
-  onSubmit,
-  isSubmitting,
-  placeholder,
   authorName,
-  autoFocus,
-  onCancel,
   compact = false,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  placeholder: string;
-  authorName?: string;
-  autoFocus?: boolean;
-  onCancel?: () => void;
-  compact?: boolean;
-}) {
-  const { t } = useTranslation();
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      onSubmit();
-    } else if (e.key === "Escape" && onCancel) {
-      onCancel();
-    }
-  };
-
+  ...props
+}: { authorName?: string } & ComponentProps<typeof CommentComposer>) {
   return (
     <Flex gap={3} align="flex-start">
       <Avatar
@@ -108,56 +92,7 @@ function Composer({
         colorPalette={avatarPalette(authorName)}
         flexShrink={0}
       />
-      <Box
-        flex="1"
-        borderWidth="1px"
-        borderColor="border.subtle"
-        borderRadius="xl"
-        bg="bg.panel"
-        _focusWithin={{ borderColor: "colorPalette.solid", boxShadow: "0 0 0 1px var(--chakra-colors-color-palette-solid)" }}
-        colorPalette="brand"
-        overflow="hidden"
-      >
-        <Textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          size={compact ? "sm" : "md"}
-          rows={compact ? 1 : 2}
-          autoresize
-          autoFocus={autoFocus}
-          border="none"
-          bg="transparent"
-          _focusVisible={{ outline: "none", boxShadow: "none" }}
-          resize="none"
-          px={3}
-          pt={2}
-        />
-        <Flex justify="space-between" align="center" px={3} pb={2} gap={2}>
-          <Text fontSize="xs" color="fg.subtle">
-            {t("test_plans.comments.send_hint", "Ctrl + Enter to send")}
-          </Text>
-          <HStack gap={1}>
-            {onCancel && (
-              <Button size="xs" variant="ghost" onClick={onCancel}>
-                {t("test_plans.comments.cancel", "Cancel")}
-              </Button>
-            )}
-            <IconButton
-              size="xs"
-              colorPalette="brand"
-              borderRadius="full"
-              aria-label={t("test_plans.comments.send", "Send")}
-              onClick={onSubmit}
-              loading={isSubmitting}
-              disabled={!value.trim()}
-            >
-              <LuSendHorizontal />
-            </IconButton>
-          </HStack>
-        </Flex>
-      </Box>
+      <CommentComposer compact={compact} {...props} />
     </Flex>
   );
 }
@@ -179,35 +114,36 @@ function CommentItem({
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [replyContent, setReplyContent] = useState("");
   const [isReplying, setIsReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(true);
 
   const createMutation = useCreateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
 
-  const handleReply = async () => {
-    if (!replyContent.trim() || !user?.user_id || !comment.id) return;
+  const handleReply = async (content: string, attachmentIds: string[]) => {
+    if (!user?.user_id || !comment.id) return false;
     try {
       await createMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId } },
         body: {
           user_id: user.user_id,
           test_plan_id: numericTestPlanId,
-          content: replyContent,
+          content,
           parent_comment_id: comment.id,
+          attachment_ids: attachmentIds,
         },
       });
-      setReplyContent("");
       setIsReplying(false);
       setShowReplies(true);
       toaster.success({ title: t("test_plans.comments.reply_success", "Reply added") });
       refetch();
+      return true;
     } catch (err: any) {
       toaster.error({
         title: t("test_plans.comments.reply_error", "Failed to add reply"),
         description: err?.message,
       });
+      return false;
     }
   };
 
@@ -230,7 +166,7 @@ function CommentItem({
     navigate({
       to: "/projects/$projectId/test-cases/new",
       params: { projectId },
-      search: { title: content },
+      search: { title: stripAttachmentTokens(content) },
     });
   };
 
@@ -265,19 +201,12 @@ function CommentItem({
           )}
         </HStack>
 
-        <Box
-          display="inline-block"
-          maxW="full"
-          px={4}
-          py={2.5}
-          bg={isOwn ? "brand.subtle" : "bg.muted"}
-          borderRadius="2xl"
-          borderTopLeftRadius="sm"
-        >
-          <Text fontSize="sm" whiteSpace="pre-wrap" wordBreak="break-word" color="fg">
-            {comment.content}
-          </Text>
-        </Box>
+        <CommentBody
+          testPlanId={numericTestPlanId}
+          content={comment.content}
+          attachments={comment.attachments}
+          isOwn={isOwn}
+        />
 
         <HStack gap={2} mt={2} wrap="wrap">
           <Button
@@ -349,18 +278,14 @@ function CommentItem({
               ))}
             {isReplying && (
               <Composer
-                value={replyContent}
-                onChange={setReplyContent}
+                testPlanId={numericTestPlanId}
                 onSubmit={handleReply}
                 isSubmitting={createMutation.isPending}
                 placeholder={t("test_plans.comments.reply_placeholder", "Leave a reply...")}
                 authorName={user?.displayName}
                 autoFocus
                 compact
-                onCancel={() => {
-                  setIsReplying(false);
-                  setReplyContent("");
-                }}
+                onCancel={() => setIsReplying(false)}
               />
             )}
           </Stack>
@@ -376,54 +301,131 @@ function TestPlanComments() {
   const { projectId, testPlanID } = Route.useParams();
 
   const numericTestPlanId = Number(testPlanID);
-  const { data, refetch } = useTestPlanCommentsQuery(Number(testPlanID));
+  const { data, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
+    useTestPlanCommentsInfiniteQuery(numericTestPlanId);
 
   const createMutation = useCreateCommentMutation();
-  const [newComment, setNewComment] = useState("");
-
-  const handleAdd = async () => {
-    if (!newComment.trim() || !user?.user_id) return;
+  const handleAdd = async (content: string, attachmentIds: string[]) => {
+    if (!user?.user_id) return false;
     try {
       await createMutation.mutateAsync({
         params: { path: { testPlanID: numericTestPlanId } },
         body: {
           user_id: user.user_id,
           test_plan_id: numericTestPlanId,
-          content: newComment,
+          content,
+          attachment_ids: attachmentIds,
         },
       });
-      setNewComment("");
       toaster.success({ title: t("test_plans.comments.add_success", "Comment added") });
       await refetch();
+      return true;
     } catch (err: any) {
       toaster.error({
         title: t("test_plans.comments.add_error", "Failed to add comment"),
         description: err?.message || t("test_plans.comments.unexpected_error", "An unexpected error occurred"),
       });
+      return false;
     }
   };
 
-  // Newest comments first
-  const sortedComments = data?.comments ? [...data.comments].sort((a, b) => byOldestFirst(b, a)) : [];
+  // Pages come back newest first; a comment can show up twice if new ones were posted between page loads
+  const sortedComments = useMemo(() => {
+    const seen = new Set<string>();
+    return (data?.pages ?? [])
+      .flatMap((page) => page.comments ?? [])
+      .filter((c) => !!c.id && !seen.has(c.id) && !!seen.add(c.id));
+  }, [data]);
+  const totalComments = data?.pages[0]?.pagination?.total ?? sortedComments.length;
+
+  // Load the next page when the end of the list scrolls into view
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingNextPage) fetchNextPage();
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, sortedComments.length]);
+
+  // Show a "Back to top" button once the comment box has scrolled up out of view
+  const composerRef = useRef<HTMLDivElement>(null);
+  const discussionRef = useRef<HTMLDivElement>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const rect = composerRef.current?.getBoundingClientRect();
+        setShowBackToTop(!!rect && rect.bottom < 0);
+      });
+    };
+    // Captured on the document because the page scrolls inside the app shell, not the window
+    document.addEventListener("scroll", update, { capture: true, passive: true });
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("scroll", update, { capture: true });
+    };
+  }, []);
+
+  const scrollToComposer = () => {
+    discussionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Focus once the scroll has settled: the editor scrolls its cursor into view on focus,
+    // which would cut the smooth scroll short
+    window.setTimeout(
+      () => composerRef.current?.querySelector<HTMLElement>(".ProseMirror")?.focus({ preventScroll: true }),
+      700
+    );
+  };
 
   return (
     <Box p={6}>
-      <Box borderWidth="1px" borderColor="border.subtle" borderRadius="xl" bg="bg.panel" overflow="hidden">
+      <Box
+        ref={discussionRef}
+        scrollMarginTop={4}
+        borderWidth="1px"
+        borderColor="border.subtle"
+        borderRadius="xl"
+        bg="bg.panel"
+        overflow="hidden"
+      >
         <Flex align="center" gap={2} px={5} py={3} borderBottomWidth="1px" borderColor="border.subtle">
           <LuMessageSquare />
           <Text fontWeight="semibold">{t("test_plans.comments.title", "Discussion")}</Text>
           <Badge size="sm" variant="subtle" borderRadius="full">
-            {sortedComments.length}
+            {totalComments}
           </Badge>
         </Flex>
 
+        {/* Composer sits above the comments since the newest ones are shown first */}
+        <Box ref={composerRef} px={5} py={4} borderBottomWidth="1px" borderColor="border.subtle" bg="bg.subtle">
+          <Composer
+            testPlanId={numericTestPlanId}
+            onSubmit={handleAdd}
+            isSubmitting={createMutation.isPending}
+            placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
+            authorName={user?.displayName}
+          />
+        </Box>
+
         <Stack gap={6} px={5} py={5}>
-          {sortedComments.length === 0 ? (
+          {isPending ? (
+            <Flex justify="center" py={8}>
+              <Spinner color="fg.muted" />
+            </Flex>
+          ) : sortedComments.length === 0 ? (
             <Stack align="center" gap={1} py={8} color="fg.muted">
               <LuMessageSquare size={28} />
               <Text fontWeight="medium">{t("test_plans.comments.empty_title", "No comments yet")}</Text>
               <Text fontSize="sm">
-                {t("test_plans.comments.empty_description", "Start the conversation about this test plan below.")}
+                {t("test_plans.comments.empty_description", "Start the conversation about this test plan above.")}
               </Text>
             </Stack>
           ) : (
@@ -437,19 +439,39 @@ function TestPlanComments() {
               />
             ))
           )}
-        </Stack>
 
-        <Box px={5} py={4} borderTopWidth="1px" borderColor="border.subtle" bg="bg.subtle">
-          <Composer
-            value={newComment}
-            onChange={setNewComment}
-            onSubmit={handleAdd}
-            isSubmitting={createMutation.isPending}
-            placeholder={t("test_plans.comments.placeholder", "Write a comment...")}
-            authorName={user?.displayName}
-          />
-        </Box>
+          <Box ref={sentinelRef} h="1px" />
+          {isFetchingNextPage && (
+            <HStack justify="center" gap={2} color="fg.muted" fontSize="sm">
+              <Spinner size="sm" />
+              <Text>{t("test_plans.comments.loading_more", "Loading more comments...")}</Text>
+            </HStack>
+          )}
+          {!hasNextPage && (data?.pages.length ?? 0) > 1 && (
+            <Text textAlign="center" fontSize="sm" color="fg.subtle">
+              {t("test_plans.comments.end_of_discussion", "You've reached the start of the discussion")}
+            </Text>
+          )}
+        </Stack>
       </Box>
+
+      {showBackToTop && (
+        <Button
+          position="fixed"
+          bottom={8}
+          // Kept clear of the React Query devtools button in the corner during development
+          right={20}
+          zIndex="sticky"
+          size="sm"
+          colorPalette="brand"
+          borderRadius="full"
+          boxShadow="lg"
+          onClick={scrollToComposer}
+        >
+          <LuArrowUp />
+          {t("test_plans.comments.back_to_top", "Back to top")}
+        </Button>
+      )}
     </Box>
   );
 }

@@ -411,6 +411,18 @@ type TestPlanComment struct {
 	ParentCommentID uuid.NullUUID
 }
 
+type TestPlanCommentAttachment struct {
+	ID           uuid.UUID
+	TestPlanID   int64
+	CommentID    uuid.NullUUID
+	UploadedByID int64
+	FileName     string
+	ContentType  string
+	FileSize     int64
+	StoragePath  string
+	CreatedAt    sql.NullTime
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID

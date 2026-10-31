@@ -147,7 +147,17 @@ type CreateComment struct {
 	TestPlanID      int64   `json:"test_plan_id" validate:"required"`
 	ParentCommentID *string `json:"parent_comment_id,omitempty"`
 	UserID          int64   `json:"user_id" validate:"required"`
-	Content         string  `json:"content" validate:"required"`
+	// Content may be empty when the comment only carries attachments
+	Content       string   `json:"content"`
+	AttachmentIDs []string `json:"attachment_ids,omitempty" validate:"max=10,dive,uuid"`
+}
+
+type CommentAttachment struct {
+	ID          string `json:"id"`
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	FileSize    int64  `json:"file_size"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type CommentResponseItem struct {
@@ -157,11 +167,13 @@ type CommentResponseItem struct {
 	UserID          int64                 `json:"user_id"`
 	UserName        string                `json:"user_name"`
 	Content         string                `json:"content"`
+	Attachments     []CommentAttachment   `json:"attachments,omitempty"`
 	Replies         []CommentResponseItem `json:"replies,omitempty"`
 	CreatedAt       string                `json:"created_at"`
 	UpdatedAt       string                `json:"updated_at"`
 }
 
 type CommentListResponse struct {
-	Comments []CommentResponseItem `json:"comments"`
+	Comments   []CommentResponseItem `json:"comments"`
+	Pagination *Pagination           `json:"pagination,omitempty"`
 }
