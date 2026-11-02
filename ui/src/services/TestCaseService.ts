@@ -65,6 +65,12 @@ export async function getInboxTestCases(params?: {
   });
 }
 
+export async function getInboxTestCaseById(testCaseID: string) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}", {
+    params: { path: { testCaseID } },
+  });
+}
+
 export async function getInboxUnseenCount() {
   return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
 }
@@ -245,14 +251,22 @@ export interface ExportedTestCasePayload {
   isDraft: boolean;
 }
 
+export type ExportFileFormat = "CSV" | "XLSX" | "JSON";
+
+const exportFileExtensions: Record<ExportFileFormat, string> = {
+  CSV: ".csv",
+  XLSX: ".xlsx",
+  JSON: ".json",
+};
+
 export interface ExportTestCasesPayload {
   filename: string;
-  fileformat: "CSV" | "XLSX";
+  fileformat: ExportFileFormat;
   testcases: ExportedTestCasePayload[];
 }
 
 /**
- * Export test cases to a CSV/XLSX file and trigger a browser download.
+ * Export test cases to a CSV/XLSX/JSON file and trigger a browser download.
  * The endpoint responds with a binary file (octet-stream) and a
  * Content-Disposition header containing the file name.
  */
@@ -278,8 +292,7 @@ export async function exportTestCasesToFile(payload: ExportTestCasesPayload) {
   // NOT rely on the Content-Disposition header because browsers refuse to
   // expose it cross-origin unless the server sets
   // Access-Control-Expose-Headers: Content-Disposition.
-  const extension =
-    payload.fileformat.toUpperCase() === "CSV" ? ".csv" : ".xlsx";
+  const extension = exportFileExtensions[payload.fileformat];
   const baseName = payload.filename.trim() || "qatarina-testcases";
   const fileName = baseName.endsWith(extension)
     ? baseName

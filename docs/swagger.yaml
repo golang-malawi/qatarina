@@ -72,6 +72,8 @@ components:
           type: string
         environment_id:
           type: integer
+        external_id:
+          type: string
         feature_or_module:
           type: string
         id:
@@ -429,6 +431,10 @@ components:
           description: optional; auto-generated if blank
           type: string
         description:
+          type: string
+        external_id:
+          description: identifier in the source system, e.g. TestLink
+          form: external_id
           type: string
         feature_or_module:
           type: string
@@ -1051,6 +1057,8 @@ components:
           type: string
         executed_by:
           type: integer
+        external_id:
+          type: string
         feature_or_module:
           type: string
         id:
@@ -1428,6 +1436,10 @@ components:
         code:
           type: string
         description:
+          type: string
+        external_id:
+          description: identifier in the source system, e.g. TestLink
+          form: external_id
           type: string
         feature_or_module:
           type: string
@@ -1887,6 +1899,51 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: List Test Cases assigned to the current user
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}:
+    get:
+      description: Get a single Test Case assigned to the current user, regardless
+        of which inbox page it is on
+      operationId: GetAssignedTestCase
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AssignedTestCase'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get a single Test Case from the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
@@ -4564,7 +4621,7 @@ paths:
       - test-cases
   /v1/test-cases/export-file:
     post:
-      description: Export test cases to a CSV or XLSX file
+      description: Export test cases to a CSV, XLSX or JSON file
       operationId: ExportFileFromTestCases
       requestBody:
         content:
@@ -4596,7 +4653,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: Export test cases to a CSV or XLSX file
+      summary: Export test cases to a CSV, XLSX or JSON file
       tags:
       - test-cases
   /v1/test-cases/import-file:

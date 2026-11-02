@@ -49,6 +49,7 @@ import {
   deleteTestCase,
   transferTestCase,
   exportTestCasesToFile,
+  type ExportFileFormat,
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
@@ -87,7 +88,7 @@ export default function ListProjectTestCases() {
   const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFileName, setExportFileName] = useState<string>("");
-  const [exportFileFormat, setExportFileFormat] = useState<"CSV" | "XLSX">("XLSX");
+  const [exportFileFormat, setExportFileFormat] = useState<ExportFileFormat>("XLSX");
   const [exporting, setExporting] = useState(false);
 
   const queryFactory = React.useCallback(
@@ -128,6 +129,7 @@ export default function ListProjectTestCases() {
         items: [
           { label: "CSV (.csv)", value: "CSV" },
           { label: "Excel (.xlsx)", value: "XLSX" },
+          { label: "JSON (.json)", value: "JSON" },
         ],
       }),
     [],
@@ -816,7 +818,7 @@ export default function ListProjectTestCases() {
                 collection={fileFormatCollection}
                 value={[exportFileFormat]}
                 onValueChange={(details) =>
-                  setExportFileFormat(details.value[0] as "CSV" | "XLSX")
+                  setExportFileFormat(details.value[0] as ExportFileFormat)
                 }
               >
                 <Select.HiddenSelect />

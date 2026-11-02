@@ -735,12 +735,12 @@ const createTestCase = `-- name: CreateTestCase :one
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
     is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
-    priority, preconditions
+    priority, preconditions, external_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $13, $14, $15, $16,
-    $17, $18
+    $17, $18, $19
 )
 RETURNING id
 `
@@ -764,6 +764,7 @@ type CreateTestCaseParams struct {
 	ScriptPath       sql.NullString
 	Priority         PriorityLevel
 	Preconditions    sql.NullString
+	ExternalID       sql.NullString
 }
 
 func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) (uuid.UUID, error) {
@@ -786,6 +787,7 @@ func (q *Queries) CreateTestCase(ctx context.Context, arg CreateTestCaseParams) 
 		arg.ScriptPath,
 		arg.Priority,
 		arg.Preconditions,
+		arg.ExternalID,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -1171,7 +1173,7 @@ func (q *Queries) ExecuteTestRun(ctx context.Context, arg ExecuteTestRunParams) 
 }
 
 const findAllSuggestedByProject = `-- name: FindAllSuggestedByProject :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases WHERE project_id = $1 AND suggested = $2
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases WHERE project_id = $1 AND suggested = $2
 `
 
 type FindAllSuggestedByProjectParams struct {
@@ -1207,6 +1209,7 @@ func (q *Queries) FindAllSuggestedByProject(ctx context.Context, arg FindAllSugg
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -1905,7 +1908,7 @@ func (q *Queries) GetReportCountSummary(ctx context.Context, projectID int32) (G
 }
 
 const getTestCase = `-- name: GetTestCase :one
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases WHERE id = $1
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases WHERE id = $1
 `
 
 func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, error) {
@@ -1930,12 +1933,13 @@ func (q *Queries) GetTestCase(ctx context.Context, id uuid.UUID) (TestCase, erro
 		&i.ParentTestCaseID,
 		&i.Preconditions,
 		&i.Priority,
+		&i.ExternalID,
 	)
 	return i, err
 }
 
 const getTestCaseByCode = `-- name: GetTestCaseByCode :one
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases
 WHERE project_id = $1 AND code = $2
 `
 
@@ -1966,6 +1970,7 @@ func (q *Queries) GetTestCaseByCode(ctx context.Context, arg GetTestCaseByCodePa
 		&i.ParentTestCaseID,
 		&i.Preconditions,
 		&i.Priority,
+		&i.ExternalID,
 	)
 	return i, err
 }
@@ -2039,6 +2044,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_at,
@@ -2064,6 +2070,7 @@ type GetTestCaseWithParentRow struct {
 	Title            string
 	Description      string
 	Preconditions    sql.NullString
+	ExternalID       sql.NullString
 	IsDraft          sql.NullBool
 	Tags             []string
 	CreatedAt        sql.NullTime
@@ -2089,6 +2096,7 @@ func (q *Queries) GetTestCaseWithParent(ctx context.Context, id uuid.UUID) (GetT
 		&i.Title,
 		&i.Description,
 		&i.Preconditions,
+		&i.ExternalID,
 		&i.IsDraft,
 		pq.Array(&i.Tags),
 		&i.CreatedAt,
@@ -2675,7 +2683,7 @@ func (q *Queries) IsTestCaseActive(ctx context.Context, id uuid.UUID) (sql.NullB
 
 const isTestCaseLinkedToProject = `-- name: IsTestCaseLinkedToProject :one
 SELECT EXISTS(
-    SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases WHERE project_id = $1
+    SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases WHERE project_id = $1
 )
 `
 
@@ -2948,7 +2956,7 @@ func (q *Queries) ListReportsByProject(ctx context.Context, projectID int32) ([]
 }
 
 const listScriptTestCasesByPlan = `-- name: ListScriptTestCasesByPlan :many
-SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path, tc.parent_test_case_id, tc.preconditions, tc.priority
+SELECT tc.id, tc.kind, tc.code, tc.feature_or_module, tc.title, tc.description, tc.is_draft, tc.tags, tc.created_by_id, tc.created_at, tc.updated_at, tc.project_id, tc.suggested, tc.runner, tc.script_path, tc.parent_test_case_id, tc.preconditions, tc.priority, tc.external_id
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 WHERE pc.test_plan_id = $1
@@ -2984,6 +2992,7 @@ func (q *Queries) ListScriptTestCasesByPlan(ctx context.Context, testPlanID int6
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -3074,7 +3083,7 @@ func (q *Queries) ListTestCaseRelations(ctx context.Context, testCaseID uuid.UUI
 }
 
 const listTestCases = `-- name: ListTestCases :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases ORDER BY created_at DESC
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases ORDER BY created_at DESC
 `
 
 func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
@@ -3105,6 +3114,7 @@ func (q *Queries) ListTestCases(ctx context.Context) ([]TestCase, error) {
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -3223,7 +3233,7 @@ func (q *Queries) ListTestCasesByAssignedUser(ctx context.Context, arg ListTestC
 }
 
 const listTestCasesByCreator = `-- name: ListTestCasesByCreator :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases WHERE created_by_id = $1
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases WHERE created_by_id = $1
 `
 
 func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32) ([]TestCase, error) {
@@ -3254,6 +3264,7 @@ func (q *Queries) ListTestCasesByCreator(ctx context.Context, createdByID int32)
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -3323,7 +3334,7 @@ func (q *Queries) ListTestCasesByPlan(ctx context.Context, testPlanID int64) ([]
 }
 
 const listTestCasesByProject = `-- name: ListTestCasesByProject :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases WHERE project_id = $1
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases WHERE project_id = $1
 `
 
 func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.NullInt32) ([]TestCase, error) {
@@ -3354,6 +3365,7 @@ func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.Null
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -3981,7 +3993,7 @@ func (q *Queries) SearchProjectTesters(ctx context.Context, dollar_1 sql.NullStr
 }
 
 const searchTestCases = `-- name: SearchTestCases :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority FROM test_cases
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases
 WHERE title ILIKE '%' || $1 || '%'
 OR code ILIKE '%' || $1 || '%'
 `
@@ -4014,6 +4026,7 @@ func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) 
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -4162,6 +4175,96 @@ func (q *Queries) TestCaseCountUnseenByAssignedUser(ctx context.Context, userID 
 	return count, err
 }
 
+const testCaseGetByAssignedUser = `-- name: TestCaseGetByAssignedUser :one
+SELECT
+  tc.id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.preconditions,
+  tc.external_id,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at,
+  tc.updated_at,
+  tc.project_id,
+  MAX(pc.test_plan_id)::int AS test_plan_id,
+  MAX(pc.assigned_to_id)::int AS assigned_to_id,
+  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND tc.id = $2
+GROUP BY tc.id
+`
+
+type TestCaseGetByAssignedUserParams struct {
+	UserID     int64
+	TestCaseID uuid.UUID
+}
+
+type TestCaseGetByAssignedUserRow struct {
+	ID              uuid.UUID
+	Kind            TestKind
+	Code            string
+	FeatureOrModule sql.NullString
+	Title           string
+	Description     string
+	Preconditions   sql.NullString
+	ExternalID      sql.NullString
+	IsDraft         sql.NullBool
+	Tags            []string
+	CreatedByID     int32
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	ProjectID       sql.NullInt32
+	TestPlanID      int32
+	AssignedToID    int32
+	EnvironmentID   int32
+	IsClosed        bool
+	IsViewed        bool
+	Priority        PriorityLevel
+	Urgency         PriorityLevel
+}
+
+func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGetByAssignedUserParams) (TestCaseGetByAssignedUserRow, error) {
+	row := q.db.QueryRowContext(ctx, testCaseGetByAssignedUser, arg.UserID, arg.TestCaseID)
+	var i TestCaseGetByAssignedUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Code,
+		&i.FeatureOrModule,
+		&i.Title,
+		&i.Description,
+		&i.Preconditions,
+		&i.ExternalID,
+		&i.IsDraft,
+		pq.Array(&i.Tags),
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProjectID,
+		&i.TestPlanID,
+		&i.AssignedToID,
+		&i.EnvironmentID,
+		&i.IsClosed,
+		&i.IsViewed,
+		&i.Priority,
+		&i.Urgency,
+	)
+	return i, err
+}
+
 const testCaseListByAssignedUser = `-- name: TestCaseListByAssignedUser :many
 SELECT
   tc.id,
@@ -4171,6 +4274,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_by_id,
@@ -4212,6 +4316,7 @@ type TestCaseListByAssignedUserRow struct {
 	Title           string
 	Description     string
 	Preconditions   sql.NullString
+	ExternalID      sql.NullString
 	IsDraft         sql.NullBool
 	Tags            []string
 	CreatedByID     int32
@@ -4250,6 +4355,7 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 			&i.Title,
 			&i.Description,
 			&i.Preconditions,
+			&i.ExternalID,
 			&i.IsDraft,
 			pq.Array(&i.Tags),
 			&i.CreatedByID,
@@ -4278,7 +4384,7 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 }
 
 const testCaseListByProjectPaged = `-- name: TestCaseListByProjectPaged :many
-SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id
 FROM test_cases
 WHERE project_id = $1
   AND (suggested IS NULL OR suggested = false)
@@ -4327,6 +4433,7 @@ func (q *Queries) TestCaseListByProjectPaged(ctx context.Context, arg TestCaseLi
 			&i.ParentTestCaseID,
 			&i.Preconditions,
 			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -4670,7 +4777,8 @@ updated_at = $9,
 runner = $10,
 script_path = $11,
 priority = $12,
-preconditions = $13
+preconditions = $13,
+external_id = $14
 WHERE id = $1
 `
 
@@ -4688,6 +4796,7 @@ type UpdateTestCaseParams struct {
 	ScriptPath      sql.NullString
 	Priority        PriorityLevel
 	Preconditions   sql.NullString
+	ExternalID      sql.NullString
 }
 
 func (q *Queries) UpdateTestCase(ctx context.Context, arg UpdateTestCaseParams) error {
@@ -4705,6 +4814,7 @@ func (q *Queries) UpdateTestCase(ctx context.Context, arg UpdateTestCaseParams) 
 		arg.ScriptPath,
 		arg.Priority,
 		arg.Preconditions,
+		arg.ExternalID,
 	)
 	return err
 }

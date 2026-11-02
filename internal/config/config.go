@@ -25,6 +25,7 @@ type Config struct {
 	S3          S3Configuration         `mapstructure:"s3"`
 	Storage     StorageConfiguration    `mapstructure:"storage"`
 	Attachments AttachmentConfiguration `mapstructure:"attachments"`
+	MCP         MCPConfiguration        `mapstructure:"mcp"`
 }
 
 type DatabaseConfiguration struct {
@@ -129,6 +130,20 @@ type S3Configuration struct {
 
 type AttachmentConfiguration struct {
 	MaxFileSize int64 `mapstructure:"max_file_size" envconfig:"QATARINA_ATTACHMENTS_MAX_FILE_SIZE"`
+}
+
+const (
+	MCPTransportHTTP  = "http"
+	MCPTransportStdio = "stdio"
+)
+
+type MCPConfiguration struct {
+	// Transport is either "http" (default) or "stdio"
+	Transport string `mapstructure:"transport" envconfig:"QATARINA_MCP_TRANSPORT"`
+	Host      string `mapstructure:"host" envconfig:"QATARINA_MCP_HOST"`
+	Port      int    `mapstructure:"port" envconfig:"QATARINA_MCP_PORT"`
+	// Path is the HTTP endpoint the MCP server is mounted on, defaults to /mcp
+	Path string `mapstructure:"path" envconfig:"QATARINA_MCP_PATH"`
 }
 
 func (c *Config) GetDatabaseURL() string {
@@ -238,5 +253,14 @@ var DefaultConfig = Config{
 	S3: S3Configuration{
 		Bucket: "",
 		Region: "us-east-1",
+	},
+	Attachments: AttachmentConfiguration{
+		MaxFileSize: 10 << 20, // optional or leave default struct init
+	},
+	MCP: MCPConfiguration{
+		Transport: MCPTransportHTTP,
+		Host:      "",
+		Port:      4598,
+		Path:      "/mcp",
 	},
 }

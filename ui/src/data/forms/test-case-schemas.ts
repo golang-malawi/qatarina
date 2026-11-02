@@ -7,6 +7,7 @@ export const testCaseCreationSchema = z.object({
   feature_or_module: z.string().min(1, "Feature or module is required").default("feature"),
   kind: z.string().min(1, "Test kind is required"),
   preconditions: z.string().optional().default(""),
+  external_id: z.string().optional().default(""),
   description: z.string().min(1, "Description is required"),
   tags: z.union([z.string(), z.array(z.string())]).optional().default([]),
   is_draft: z.boolean().optional().default(false),

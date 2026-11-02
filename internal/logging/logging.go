@@ -86,7 +86,19 @@ func GetLoggingLevel(lc *config.LoggingConfiguration) slog.Level {
 	}
 }
 
+// NewFromConfigWithOutput is like NewFromConfig but writes to out instead of
+// stdout, e.g. for the MCP stdio transport where stdout is the protocol channel
+func NewFromConfigWithOutput(loggingConfig *config.LoggingConfiguration, out io.Writer) Logger {
+	return &slogLogger{
+		logger: createLogger(loggingConfig, out),
+	}
+}
+
 func CreateLogger(lc *config.LoggingConfiguration) *slog.Logger {
+	return createLogger(lc, os.Stdout)
+}
+
+func createLogger(lc *config.LoggingConfiguration, out io.Writer) *slog.Logger {
 	absDir, _ := filepath.Abs(lc.File)
 	baseDir := filepath.Dir(absDir)
 	os.Mkdir(baseDir, 0o766) // attempt to create the directory if does not exist
@@ -97,7 +109,7 @@ func CreateLogger(lc *config.LoggingConfiguration) *slog.Logger {
 	}
 
 	return slog.New(slog.NewJSONHandler(
-		io.MultiWriter(os.Stdout, logFile),
+		io.MultiWriter(out, logFile),
 		&slog.HandlerOptions{
 			Level: GetLoggingLevel(lc),
 		},

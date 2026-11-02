@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,14 +16,14 @@ type ExportFileService struct {
 }
 
 type TestCase struct {
-	Title           string
-	Description     string
-	Kind            string
-	Code            string
-	FeatureOrModule string
-	Tags            []string
-	IsDraft         bool
-	Priority        string
+	Title           string   `json:"title"`
+	Description     string   `json:"description"`
+	Kind            string   `json:"kind"`
+	Code            string   `json:"code"`
+	FeatureOrModule string   `json:"featureOrModule"`
+	Tags            []string `json:"tags"`
+	IsDraft         bool     `json:"isDraft"`
+	Priority        string   `json:"priority"`
 }
 
 func (e *ExportFileService) ToCSV() ([]byte, error) {
@@ -106,4 +107,21 @@ func (e *ExportFileService) ToXLSX() ([]byte, error) {
 	}
 
 	return buffer.Bytes(), nil
+}
+
+func (e *ExportFileService) ToJSON() ([]byte, error) {
+	testCases := make([]TestCase, 0, len(e.TestCases))
+	for _, testCase := range e.TestCases {
+		if testCase.Tags == nil {
+			testCase.Tags = []string{}
+		}
+		testCases = append(testCases, testCase)
+	}
+
+	data, err := json.MarshalIndent(testCases, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("unable to write JSON data: %w", err)
+	}
+
+	return data, nil
 }
