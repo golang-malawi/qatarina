@@ -74,4 +74,9 @@ storage:
 attachments:
   max_file_size: 10485760 # 10 MB
 
-
+mcp:
+  # "http" (default) or "stdio"
+  transport: "http"
+  host: "localhost"
+  port: 4598
+  path: "/mcp"

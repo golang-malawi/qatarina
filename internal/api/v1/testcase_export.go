@@ -16,8 +16,8 @@ import (
 // ExportFileFromTestCases godoc
 //
 //	@ID				ExportFileFromTestCases
-//	@Summary		Export test cases to a CSV or XLSX file
-//	@Description	Export test cases to a CSV or XLSX file
+//	@Summary		Export test cases to a CSV, XLSX or JSON file
+//	@Description	Export test cases to a CSV, XLSX or JSON file
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		application/octet-stream
@@ -71,8 +71,12 @@ func ExportFileFromTestCases(logger logging.Logger) fiber.Handler {
 			data, err = exportService.ToXLSX()
 			contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 			extension = ".xlsx"
+		case "JSON":
+			data, err = exportService.ToJSON()
+			contentType = fiber.MIMEApplicationJSON
+			extension = ".json"
 		default:
-			return problemdetail.BadRequest(c, "invalid fileformat: must be CSV or XLSX")
+			return problemdetail.BadRequest(c, "invalid fileformat: must be CSV, XLSX or JSON")
 		}
 
 		if err != nil {

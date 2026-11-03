@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -16,7 +17,7 @@ import (
 func TestModuleUpdateAndDelete(t *testing.T) {
 	db := openTestDB()
 	ctx := context.Background()
-	svc := services.NewModuleService(dbsqlc.New(db))
+	svc := services.NewModuleService(dbsqlc.New(db), config.DefaultMaxModuleDepth)
 
 	var projectID int32
 	if err := db.QueryRowContext(ctx, `SELECT id FROM projects ORDER BY id LIMIT 1`).Scan(&projectID); err != nil {

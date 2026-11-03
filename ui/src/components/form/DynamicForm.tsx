@@ -81,6 +81,8 @@ export interface FieldConfig {
   addable?: boolean;
   /** Minimum height of a markdown-textarea's editor and preview */
   minHeight?: string;
+  /** Keep the field's value in the form but don't render it */
+  hidden?: boolean;
 }
 
 export interface FormConfig<T extends z.ZodTypeAny> {
@@ -618,10 +620,11 @@ export function DynamicForm<T extends z.ZodTypeAny>({
   };
 
   const renderFields = () => {
+    const visibleFields = fields.filter((field) => !field.hidden);
     if (layout === "horizontal") {
       const chunks = [];
-      for (let i = 0; i < fields.length; i += 2) {
-        chunks.push(fields.slice(i, i + 2));
+      for (let i = 0; i < visibleFields.length; i += 2) {
+        chunks.push(visibleFields.slice(i, i + 2));
       }
       return chunks.map((chunk, index) => (
         <HStack key={index} gap={spacing} align="start">
@@ -633,7 +636,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
         </HStack>
       ));
     }
-    return fields.map(renderField);
+    return visibleFields.map(renderField);
   };
 
   return (

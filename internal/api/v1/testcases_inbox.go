@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -70,6 +71,41 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 			},
 		})
 
+	}
+}
+
+// GetAssignedTestCase godoc
+//
+//	@ID             GetAssignedTestCase
+//	@Summary        Get a single Test Case from the current user's inbox
+//	@Description    Get a single Test Case assigned to the current user, regardless of which inbox page it is on
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string  true    "Test Case ID"
+//	@Success        200         {object}    schema.AssignedTestCase
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        404         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/me/test-cases/inbox/{testCaseID} [get]
+func GetAssignedTestCase(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		userID := authutil.GetAuthUserID(ctx)
+		testCaseID := ctx.Params("testCaseID", "")
+		if _, err := uuid.Parse(testCaseID); err != nil {
+			return problemdetail.BadRequest(ctx, "invalid test case id")
+		}
+
+		testCase, err := testCasesService.FindAssignedToUserByID(ctx.Context(), userID, testCaseID)
+		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(ctx, "test case not found in inbox")
+			}
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch assigned test case", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to fetch assigned test case")
+		}
+
+		return ctx.JSON(testCase)
 	}
 }
 

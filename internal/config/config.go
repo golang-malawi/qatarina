@@ -20,6 +20,7 @@ type Config struct {
 	Runner      RunnerConfiguration     `mapstructure:"runner"`
 	Storage     StorageConfiguration    `mapstructure:"storage"`
 	Attachments AttachmentConfiguration `mapstructure:"attachments"`
+	MCP         MCPConfiguration        `mapstructure:"mcp"`
 }
 
 type DatabaseConfiguration struct {
@@ -136,6 +137,20 @@ func (a *AttachmentConfiguration) GetMaxFileSize() int64 {
 	return a.MaxFileSize
 }
 
+const (
+	MCPTransportHTTP  = "http"
+	MCPTransportStdio = "stdio"
+)
+
+type MCPConfiguration struct {
+	// Transport is either "http" (default) or "stdio"
+	Transport string `mapstructure:"transport" envconfig:"QATARINA_MCP_TRANSPORT"`
+	Host      string `mapstructure:"host" envconfig:"QATARINA_MCP_HOST"`
+	Port      int    `mapstructure:"port" envconfig:"QATARINA_MCP_PORT"`
+	// Path is the HTTP endpoint the MCP server is mounted on, defaults to /mcp
+	Path string `mapstructure:"path" envconfig:"QATARINA_MCP_PATH"`
+}
+
 func (c *Config) GetDatabaseURL() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s", c.Database.Username, c.Database.Password, c.Database.Host, c.Database.Port, c.Database.Database, c.Database.Options)
 }
@@ -209,5 +224,11 @@ var DefaultConfig = Config{
 	},
 	Attachments: AttachmentConfiguration{
 		MaxFileSize: DefaultMaxFileSize,
+	},
+	MCP: MCPConfiguration{
+		Transport: MCPTransportHTTP,
+		Host:      "",
+		Port:      4598,
+		Path:      "/mcp",
 	},
 }

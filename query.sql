@@ -143,6 +143,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_at,
@@ -271,12 +272,12 @@ WHERE p.project_id IS NULL;
 INSERT INTO test_cases (
     id, kind, code, feature_or_module, title, description, parent_test_case_id,
     is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
-    priority, preconditions
+    priority, preconditions, external_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $13, $14, $15, $16,
-    $17, $18
+    $17, $18, $19
 )
 RETURNING id;
 
@@ -322,6 +323,7 @@ SELECT
   tc.title,
   tc.description,
   tc.preconditions,
+  tc.external_id,
   tc.is_draft,
   tc.tags,
   tc.created_by_id,
@@ -345,6 +347,37 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
 GROUP BY tc.id
 ORDER BY tc.created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
+-- name: TestCaseGetByAssignedUser :one
+SELECT
+  tc.id,
+  tc.kind,
+  tc.code,
+  tc.feature_or_module,
+  tc.title,
+  tc.description,
+  tc.preconditions,
+  tc.external_id,
+  tc.is_draft,
+  tc.tags,
+  tc.created_by_id,
+  tc.created_at,
+  tc.updated_at,
+  tc.project_id,
+  MAX(pc.test_plan_id)::int AS test_plan_id,
+  MAX(pc.assigned_to_id)::int AS assigned_to_id,
+  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
+  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
+  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  tc.priority,
+  MAX(pc.urgency)::priority_level AS urgency
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND tc.id = sqlc.arg(test_case_id)
+GROUP BY tc.id;
 
 -- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)
@@ -419,7 +452,8 @@ updated_at = $9,
 runner = $10,
 script_path = $11,
 priority = $12,
-preconditions = $13
+preconditions = $13,
+external_id = $14
 WHERE id = $1;
 
 -- name: GetTestCaseByCode :one
@@ -1033,6 +1067,7 @@ ORDER BY r.created_at, r.id;
 DELETE FROM test_case_relations
 WHERE id = sqlc.arg(id)
   AND (test_case_id = sqlc.arg(test_case_id) OR related_test_case_id = sqlc.arg(test_case_id));
+
 -- name: ListDocumentsByProject :many
 SELECT * FROM project_documents 
 WHERE project_id = $1 

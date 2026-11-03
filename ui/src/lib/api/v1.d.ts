@@ -409,6 +409,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/inbox/{testCaseID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a single Test Case from the current user's inbox
+         * @description Get a single Test Case assigned to the current user, regardless of which inbox page it is on
+         */
+        get: operations["GetAssignedTestCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox/{testCaseID}/view": {
         parameters: {
             query?: never;
@@ -1731,8 +1751,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Export test cases to a CSV or XLSX file
-         * @description Export test cases to a CSV or XLSX file
+         * Export test cases to a CSV, XLSX or JSON file
+         * @description Export test cases to a CSV, XLSX or JSON file
          */
         post: operations["ExportFileFromTestCases"];
         delete?: never;
@@ -2490,6 +2510,7 @@ export interface components {
             created_by_id?: number;
             description?: string;
             environment_id?: number;
+            external_id?: string;
             feature_or_module?: string;
             id?: string;
             is_closed?: boolean;
@@ -2642,6 +2663,8 @@ export interface components {
             /** @description optional; auto-generated if blank */
             code?: string;
             description: string;
+            /** @description identifier in the source system, e.g. TestLink */
+            external_id?: string;
             feature_or_module: string;
             is_draft?: boolean;
             kind: string;
@@ -2929,6 +2952,7 @@ export interface components {
             created_by?: number;
             description?: string;
             executed_by?: number;
+            external_id?: string;
             feature_or_module?: string;
             id?: string;
             is_draft?: boolean;
@@ -3098,6 +3122,8 @@ export interface components {
         "schema.UpdateTestCaseRequest": {
             code?: string;
             description?: string;
+            /** @description identifier in the source system, e.g. TestLink */
+            external_id?: string;
             feature_or_module: string;
             id: string;
             is_draft?: boolean;
@@ -3374,6 +3400,60 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetAssignedTestCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AssignedTestCase"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

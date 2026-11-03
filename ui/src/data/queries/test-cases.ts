@@ -2,6 +2,7 @@ import $api from "@/lib/api/query";
 import {
   getTestCaseById,
   getInboxTestCases,
+  getInboxTestCaseById,
   getInboxUnseenCount,
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
@@ -54,13 +55,10 @@ export const findTestCaseInboxByIdQueryOptions =(id: string) =>
   queryOptions({
     queryKey: ["testCases", "inbox", id],
     queryFn: async (): Promise<AssignedTestCase> => {
-      const res = await getInboxTestCases({ includeClosed: true });
-      const response = (res?.data ?? res) as AssignedTestCaseListResponse;
-
-      const match = response.test_cases?.find(
-        (tc: AssignedTestCase) => tc.id === id,
-      );
-      if (!match) {
+      // Fetch the test case directly so it is found no matter which inbox page it is on
+      const res = await getInboxTestCaseById(id);
+      const match = (res?.data ?? res) as AssignedTestCase | undefined;
+      if (!match?.id) {
         throw new Error(`Inbox test case ${id} not found`);
       }
       return match;
