@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
 
 export type CommitTestRunPayload = {
   test_run_id: string;
@@ -23,6 +24,34 @@ export async function getTestRunsByPlan(testPlanID: string) {
     params: { path: { testPlanID } },
   });
   return res.data;
+}
+
+export async function uploadTestRunAttachment(resultID: string, file: File) {
+    const formData = new FormData();
+    formData.append("files", file);
+
+    const res = await apiClient.request("post", "/v1/test-runs/{resultID}/attachments", {
+        params: { path: { resultID } },
+        body: formData as any,
+    });
+    if (res.error) {
+        throw new Error(`Failed to upload attachment ${file.name}`);
+    }
+    return res.data;
+}
+
+export async function getTestRunAttachments(resultID: string) {
+    const res = await apiClient.request("get", "/v1/test-runs/{resultID}/attachments", {
+        params: { path: { resultID } },
+    });
+    const data = res.data as
+        | components["schemas"]["schema.AttachmentResponse"][]
+        | { attachments?: components["schemas"]["schema.AttachmentResponse"][] };
+
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return data.attachments ?? [];
 }
 
 export async function closeTestRun(testRunID: string) {

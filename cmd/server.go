@@ -20,7 +20,7 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
-		apiServer := api.NewAPI(qatarinaConfig)
+		apiServer := api.NewAPI(qatarinaConfig, fs)
 		// var err error
 		// apiServer.RiverClient, err = worker.StartRiverWorker(qatarinaConfig)
 		// if err != nil {

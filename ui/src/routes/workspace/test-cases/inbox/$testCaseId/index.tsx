@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Box,
   Button,
   Badge,
   Container,
   Heading,
+  Input,
   Menu,
   Flex,
   Text,
@@ -27,7 +28,11 @@ import {
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
+import {
+  createTestRun,
+  executeTestRun,
+  uploadTestRunAttachment,
+} from "@/services/TestRunService";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
@@ -62,6 +67,8 @@ function TestCaseInboxItem() {
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const checklist = useChecklistState(
     `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
@@ -117,7 +124,7 @@ function TestCaseInboxItem() {
       if (!run?.id) throw new Error("Run ID is missing.");
 
       // Step 2: record the result immediately
-      return executeTestRun(run.id, {
+      const response = await executeTestRun(run.id, {
         test_run_id: run.id,
         result_state: status,
         actual_result: resultText,
@@ -130,6 +137,17 @@ function TestCaseInboxItem() {
         tested_on: new Date().toISOString(),
         is_closed: false,
       });
+
+      const resultId = response.data?.result_id;
+
+      if (attachmentFiles.length > 0) {
+        if (!resultId) {
+          throw new Error("Attachment upload failed because execution response did not return a result_id.");
+        }
+        for (const file of attachmentFiles) {
+          await uploadTestRunAttachment(resultId, file);
+  }
+      }
     },
     onSuccess: () => {
       toaster.create({
@@ -140,6 +158,10 @@ function TestCaseInboxItem() {
       setResultText("");
       setNotesText("");
       checklist.reset();
+      setAttachmentFiles([]);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -308,6 +330,25 @@ function TestCaseInboxItem() {
           onChange={(e) => setNotesText(e.target.value)}
           mb="4"
         />
+        <Box mb="4">
+          <Text mb="2" fontSize="sm" fontWeight="semibold">
+            Attach files (optional)
+          </Text>
+          <Input
+            id="attachmentFile"
+            type="file"
+            multiple
+            accept=".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg"
+            ref={attachmentInputRef}
+            onChange={(e) => setAttachmentFiles(Array.from(e.currentTarget.files || []))}
+          />
+          {attachmentFiles.length > 0 && (
+            <Text mt="2" fontSize="sm" color="fg.muted">
+              Selected files: {attachmentFiles.map(f => f.name).join(", ")}
+            </Text>
+          )}
+        </Box>
+
         <Button
           type="button"
           variant="outline"
