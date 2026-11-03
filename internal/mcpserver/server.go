@@ -28,6 +28,7 @@ type Server struct {
 	projectService  services.ProjectService
 	testCaseService services.TestCaseService
 	testPlanService services.TestPlanService
+	testerService   services.TesterService
 }
 
 func New(cfg *config.Config, logger logging.Logger) *Server {
@@ -43,6 +44,7 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		projectService:  services.NewProjectService(dbConn, logger, moduleService),
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		testPlanService: services.NewTestPlanService(dbConn, logger),
+		testerService:   services.NewTesterService(dbConn, logger),
 		mcp: server.NewMCPServer(
 			"qatarina",
 			version.Version,
@@ -130,7 +132,18 @@ func (s *Server) registerTools() {
 		s.listProjectTestPlans,
 	)
 
+	s.mcp.AddTool(
+		mcp.NewTool("list_project_testers",
+			mcp.WithDescription("List the testers assigned to a project, with their roles. Use their user IDs to assign test cases."),
+			mcp.WithNumber("project_id", mcp.Required(), mcp.Description("ID of the project, as returned by list_projects.")),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjectTesters,
+	)
+
 	s.mcp.AddTool(addTestCasesTool(), s.addTestCases)
+	s.mcp.AddTool(assignTestCasesTool(), s.assignTestCases)
 }
 
 func (s *Server) whoami(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
