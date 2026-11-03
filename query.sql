@@ -655,9 +655,11 @@ RETURNING id;
 
 -- name: InsertTestRunAttachment :exec
 INSERT INTO test_run_attachments (
-    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2,
+    (SELECT tr.project_id FROM test_run_results trr JOIN test_runs tr ON tr.id = trr.test_run_id WHERE trr.id = $2),
+    $3, $4, $5, $6, $7, $8, $9
 );
 
 -- name: ListTestRunAttachments :many

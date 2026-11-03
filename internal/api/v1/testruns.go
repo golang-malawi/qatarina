@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -493,12 +494,14 @@ func UploadAttachment(testRunService services.TestRunService, logger logging.Log
 			return problemdetail.BadRequest(c, "missing file in request")
 		}
 
-		var responses []schema.AttachmentResponse
+		uploadedBy := authutil.GetAuthUserID(c)
+
+		responses := make([]schema.AttachmentResponse, 0, len(files))
 		for _, fileHeader := range files {
 			file, err := fileHeader.Open()
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestRuns, "failed to open uploaded file", "error", err)
-				continue
+				return problemdetail.BadRequest(c, fmt.Sprintf("failed to read file %s", fileHeader.Filename))
 			}
 			defer file.Close()
 
@@ -509,10 +512,10 @@ func UploadAttachment(testRunService services.TestRunService, logger logging.Log
 				Content:     file,
 			}
 
-			resp, err := testRunService.SaveAttachment(c.Context(), resultID, attachmentReq)
+			resp, err := testRunService.SaveAttachment(c.Context(), resultID, uploadedBy, attachmentReq)
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "error", err)
-				continue
+				return problemdetail.ServerErrorProblem(c, fmt.Sprintf("failed to save attachment %s", fileHeader.Filename))
 			}
 			responses = append(responses, *resp)
 		}

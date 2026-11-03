@@ -2601,15 +2601,18 @@ func (q *Queries) InitTestCaseSequence(ctx context.Context, arg InitTestCaseSequ
 
 const insertTestRunAttachment = `-- name: InsertTestRunAttachment :exec
 INSERT INTO test_run_attachments (
-    id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2,
+    (SELECT tr.project_id FROM test_run_results trr JOIN test_runs tr ON tr.id = trr.test_run_id WHERE trr.id = $2),
+    $3, $4, $5, $6, $7, $8, $9
 )
 `
 
 type InsertTestRunAttachmentParams struct {
 	ID              uuid.UUID
 	TestRunResultID uuid.UUID
+	UploadedBy      sql.NullInt32
 	FileName        string
 	FileType        string
 	FileSize        int64
@@ -2622,6 +2625,7 @@ func (q *Queries) InsertTestRunAttachment(ctx context.Context, arg InsertTestRun
 	_, err := q.db.ExecContext(ctx, insertTestRunAttachment,
 		arg.ID,
 		arg.TestRunResultID,
+		arg.UploadedBy,
 		arg.FileName,
 		arg.FileType,
 		arg.FileSize,

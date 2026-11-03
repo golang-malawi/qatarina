@@ -445,7 +445,7 @@ type TestRunAttachment struct {
 	ID              uuid.UUID
 	TestRunResultID uuid.UUID
 	ProjectID       int64
-	UploadedBy      int32
+	UploadedBy      sql.NullInt32
 	FileName        string
 	FileType        string
 	FileSize        int64

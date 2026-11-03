@@ -30,10 +30,14 @@ export async function uploadTestRunAttachment(resultID: string, file: File) {
     const formData = new FormData();
     formData.append("files", file);
 
-    return apiClient.request("post", "/v1/test-runs/{resultID}/attachments", {
+    const res = await apiClient.request("post", "/v1/test-runs/{resultID}/attachments", {
         params: { path: { resultID } },
         body: formData as any,
     });
+    if (res.error) {
+        throw new Error(`Failed to upload attachment ${file.name}`);
+    }
+    return res.data;
 }
 
 export async function getTestRunAttachments(resultID: string) {

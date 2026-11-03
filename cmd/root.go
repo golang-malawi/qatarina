@@ -119,7 +119,8 @@ func initConfig() {
 		fs = storage.NewS3Fs(qatarinaConfig.Storage.S3Bucket, awsS3Client)
 
 	case "local":
-		fs = afero.NewOsFs()
+		// Root the filesystem at local_path so stored files match what /uploads serves.
+		fs = afero.NewBasePathFs(afero.NewOsFs(), qatarinaConfig.Storage.LocalPath)
 
 	default:
 		fmt.Println("Invalid storage driver specified in config")

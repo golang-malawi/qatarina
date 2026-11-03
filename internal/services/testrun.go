@@ -7,6 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
@@ -40,7 +43,7 @@ type TestRunService interface {
 	CloseTestRun(ctx context.Context, testRunID string) (*dbsqlc.TestRun, error)
 	SubscribeToLogs(runID string) (<-chan schema.RunnerMessage, error)
 	PublishLog(runID string, msg schema.RunnerMessage) error
-	SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error)
+	SaveAttachment(ctx context.Context, resultID string, uploadedBy int64, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error)
 	GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error)
 }
 
@@ -367,13 +370,28 @@ func (t *testRunService) PublishLog(runID string, msg schema.RunnerMessage) erro
 	return nil
 }
 
-func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
-	_, err := common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
+func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, uploadedBy int64, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error) {
+	resultUUID, err := uuid.Parse(resultID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run result ID: %w", err)
+	}
+
+	_, err = common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)
 	if err != nil {
 		return nil, err
 	}
 
-	storageKey := fmt.Sprintf("test-results/%s/%s", resultID, file.FileName)
+	// Use only the base name so a crafted file name cannot escape the storage directory,
+	// and nest under the attachment ID so files with the same name don't overwrite each other.
+	attachmentID := uuid.New()
+	fileName := filepath.Base(file.FileName)
+	storageDir := fmt.Sprintf("test-results/%s/%s", resultUUID, attachmentID)
+	storageKey := path.Join(storageDir, fileName)
+	storageURL := "/uploads/" + path.Join(storageDir, url.PathEscape(fileName))
+
+	if err := t.storage.MkdirAll(storageDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create storage directory: %w", err)
+	}
 
 	f, err := t.storage.Create(storageKey)
 	if err != nil {
@@ -385,15 +403,15 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 		return nil, fmt.Errorf("failed to write file content: %w", err)
 	}
 
-	attachmentID := uuid.New()
 	err = t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
 		ID:              attachmentID,
-		TestRunResultID: uuid.MustParse(resultID),
-		FileName:        file.FileName,
+		TestRunResultID: resultUUID,
+		UploadedBy:      common.NewNullInt32(int32(uploadedBy)),
+		FileName:        fileName,
 		FileType:        file.ContentType,
 		FileSize:        file.Size,
 		StorageKey:      storageKey,
-		StorageUrl:      storageKey,
+		StorageUrl:      storageURL,
 		CreatedAt:       common.NewNullTime(time.Now()),
 	})
 	if err != nil {
@@ -402,10 +420,10 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, fi
 
 	return &schema.AttachmentResponse{
 		ID:         attachmentID.String(),
-		FileName:   file.FileName,
+		FileName:   fileName,
 		FileType:   file.ContentType,
 		FileSize:   file.Size,
-		StorageUrl: storageKey,
+		StorageUrl: storageURL,
 	}, nil
 }
 
