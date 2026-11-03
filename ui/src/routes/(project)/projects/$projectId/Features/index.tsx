@@ -10,6 +10,7 @@ import {
   IconButton,
   Menu,
   Portal,
+  Badge,
 } from "@chakra-ui/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -28,7 +29,13 @@ import {
   FeatureModuleEditFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
-import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconPencil,
+  IconSnowflake,
+  IconSnowflakeOff,
+  IconTrash,
+} from "@tabler/icons-react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/"
@@ -48,10 +55,32 @@ function RouteComponent() {
     [features],
   );
 
+  // Modules are frozen when they, or one of the modules above them, are frozen
+  const frozenByParent = useMemo(() => {
+    const byId = new Map(features.map((f) => [f.id, f]));
+    const inherited = new Set<string>();
+    for (const f of features) {
+      const seen = new Set<string>([f.id]);
+      let parentId = f.parent_module_id;
+      while (parentId && !seen.has(parentId)) {
+        seen.add(parentId);
+        const parent = byId.get(parentId);
+        if (parent?.is_frozen) {
+          inherited.add(f.id);
+          break;
+        }
+        parentId = parent?.parent_module_id ?? null;
+      }
+    }
+    return inherited;
+  }, [features]);
+
   const [moduleToEdit, setModuleToEdit] = useState<Module | null>(null);
   const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moduleToFreeze, setModuleToFreeze] = useState<Module | null>(null);
+  const [freezing, setFreezing] = useState(false);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -140,6 +169,32 @@ function RouteComponent() {
     }
   };
 
+  const handleSetFrozen = async (module: Module, frozen: boolean) => {
+    try {
+      setFreezing(true);
+      const service = new ModuleService();
+      await service.setModuleFrozen(module.id, frozen);
+      setFeatures((prev) =>
+        prev.map((f) => (f.id === module.id ? { ...f, is_frozen: frozen } : f))
+      );
+      toaster.create({
+        title: t(frozen ? "features.freeze.success" : "features.unfreeze.success"),
+        type: "success",
+        duration: 3000,
+      });
+      setModuleToFreeze(null);
+    } catch (err) {
+      console.error(err);
+      toaster.create({
+        title: t(frozen ? "features.freeze.error" : "features.unfreeze.error"),
+        type: "error",
+        duration: 3000,
+      });
+    } finally {
+      setFreezing(false);
+    }
+  };
+
   return (
     <Box p={6}>
       <Flex justify="space-between" align="center" mb={4}>
@@ -171,6 +226,7 @@ function RouteComponent() {
                 <Table.ColumnHeader>{t("features.index.table.type")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.parent")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("features.index.table.description")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("features.index.table.status")}</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="end">
                   {t("features.index.table.actions")}
                 </Table.ColumnHeader>
@@ -192,6 +248,21 @@ function RouteComponent() {
                     {item.parent_module_id ? namesById.get(item.parent_module_id) : "-"}
                   </Table.Cell>
                   <Table.Cell>{item.description}</Table.Cell>
+                  <Table.Cell>
+                    {item.is_frozen ? (
+                      <Badge colorPalette="blue">
+                        <IconSnowflake size={12} />
+                        {t("features.index.frozen")}
+                      </Badge>
+                    ) : frozenByParent.has(item.id) ? (
+                      <Badge colorPalette="blue" variant="outline">
+                        <IconSnowflake size={12} />
+                        {t("features.index.frozen_inherited")}
+                      </Badge>
+                    ) : (
+                      "-"
+                    )}
+                  </Table.Cell>
                   <Table.Cell textAlign="end">
                     <Menu.Root>
                       <Menu.Trigger asChild>
@@ -218,6 +289,24 @@ function RouteComponent() {
                               <IconPencil size={16} />
                               {t("features.index.edit_button")}
                             </Menu.Item>
+                            {item.is_frozen ? (
+                              <Menu.Item
+                                value="unfreeze"
+                                disabled={freezing}
+                                onClick={() => handleSetFrozen(item, false)}
+                              >
+                                <IconSnowflakeOff size={16} />
+                                {t("features.index.unfreeze_button")}
+                              </Menu.Item>
+                            ) : (
+                              <Menu.Item
+                                value="freeze"
+                                onClick={() => setModuleToFreeze(item)}
+                              >
+                                <IconSnowflake size={16} />
+                                {t("features.index.freeze_button")}
+                              </Menu.Item>
+                            )}
                             <Menu.Item
                               value="delete"
                               color="fg.error"
@@ -269,6 +358,36 @@ function RouteComponent() {
             spacing={4}
           />
         ) : null}
+      </AppDialog>
+
+      <AppDialog
+        open={moduleToFreeze !== null}
+        onOpenChange={(details) => {
+          if (!details.open && !freezing) setModuleToFreeze(null);
+        }}
+        title={t("features.freeze.title")}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setModuleToFreeze(null)}
+              disabled={freezing}
+            >
+              {t("features.dialog.cancel")}
+            </Button>
+            <Button
+              colorPalette="blue"
+              onClick={() => moduleToFreeze && handleSetFrozen(moduleToFreeze, true)}
+              loading={freezing}
+            >
+              {t("features.freeze.confirm")}
+            </Button>
+          </>
+        }
+      >
+        <Text color="fg.subtle">
+          {t("features.freeze.description", { name: moduleToFreeze?.name ?? "" })}
+        </Text>
       </AppDialog>
 
       <AppDialog

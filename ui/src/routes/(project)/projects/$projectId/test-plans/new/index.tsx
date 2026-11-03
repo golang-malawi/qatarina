@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  Alert,
+  Badge,
   Box,
   Button,
   Checkbox,
@@ -28,6 +30,8 @@ import {
 import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
 import { useTranslation } from "react-i18next";
+import { useFrozenModules } from "@/services/ModuleService";
+import { IconSnowflake } from "@tabler/icons-react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
@@ -59,6 +63,7 @@ function CreateNewTestPlan() {
 
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
+  const { isFrozen } = useFrozenModules(projectId);
 
   const {
     data: testCases,
@@ -78,7 +83,13 @@ function CreateNewTestPlan() {
     return <Text color="fg.error">{t("test_plans.error_cases")}</Text>;
   }
 
-  const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
+  // Test cases from frozen modules cannot be added to a test plan
+  const frozenCount =
+    testCases?.test_cases?.filter((tc) => isFrozen(tc.feature_or_module)).length ?? 0;
+  const testCaseIds =
+    testCases?.test_cases
+      ?.filter((tc) => !isFrozen(tc.feature_or_module))
+      .map((tc) => tc.id!.toString()) ?? [];
   const allSelected =
     testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
 
@@ -116,7 +127,9 @@ function CreateNewTestPlan() {
 
     const toISODate = (dateStr: string) => new Date(dateStr + "T00:00:00").toISOString();
 
-    const res = await createTestPlanMutation.mutateAsync({
+    let res;
+    try {
+      res = await createTestPlanMutation.mutateAsync({
       body: {
         project_id: parseInt(projectId!),
         environment_id: Number(data.environment_id),
@@ -130,7 +143,16 @@ function CreateNewTestPlan() {
           user_ids: tc.user_ids.map(Number),
         })),
       },
-    });
+      });
+    } catch (err: any) {
+      toaster.create({
+        title: t("test_plans.create.error"),
+        description: err?.detail || err?.message || t("test_plans.create.error_description"),
+        type: "error",
+        duration: 6000,
+      });
+      return;
+    }
 
     if (res) {
       toaster.create({
@@ -237,6 +259,17 @@ function CreateNewTestPlan() {
           </Button>
         </Flex>
 
+        {frozenCount > 0 && (
+          <Alert.Root status="info" mb={4}>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Description>
+                {t("test_plans.frozen_cases_notice", { count: frozenCount })}
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+
         <Box
           mb={4}
           p={4}
@@ -255,7 +288,9 @@ function CreateNewTestPlan() {
           </Checkbox.Root>
         </Box>
 
-        {testCases.test_cases?.map((testCase) => (
+        {testCases.test_cases?.map((testCase) => {
+          const frozen = isFrozen(testCase.feature_or_module);
+          return (
           <Box
             key={testCase.id}
             border="sm"
@@ -264,9 +299,12 @@ function CreateNewTestPlan() {
             bg="bg.surface"
             p={4}
             mb={3}
+            opacity={frozen ? 0.6 : 1}
+            title={frozen ? t("test_cases.frozen_module_hint") : undefined}
           >
             <Flex justify="space-between" align="center">
               <Checkbox.Root
+                disabled={frozen}
                 checked={selectedTestCases.some(
                   (t) => t.test_case_id === testCase.id!.toString()
                 )}
@@ -287,6 +325,12 @@ function CreateNewTestPlan() {
                 <Checkbox.Control />
                 <Checkbox.Label>
                   <strong>{testCase.code}</strong> — {testCase.title}
+                  {frozen && (
+                    <Badge colorPalette="blue" variant="outline" ml={2}>
+                      <IconSnowflake size={12} />
+                      {t("test_cases.frozen_module")}
+                    </Badge>
+                  )}
                 </Checkbox.Label>
               </Checkbox.Root>
 
@@ -294,15 +338,20 @@ function CreateNewTestPlan() {
                 size="sm"
                 colorPalette="brand"
                 variant="outline"
+                disabled={frozen}
                 onClick={() => openAssignModal(testCase.id!.toString())}
               >
                 {t("test_plans.assign_tester")}
               </Button>
             </Flex>
 
-            {/* Assigned testers preview */}
-            {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
+            {frozen ? (
+              <Box mt={2} fontSize="sm" color="fg.subtle">
+                {t("test_cases.frozen_module_hint")}
+              </Box>
+            ) : selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
               ?.user_ids.length ? (
+              /* Assigned testers preview */
               <Flex mt={2} gap={2} wrap="wrap">
                 {selectedTestCases
                   .find((t) => t.test_case_id === testCase.id!.toString())!
@@ -331,7 +380,8 @@ function CreateNewTestPlan() {
               </Box>
             )}
           </Box>
-        ))}
+          );
+        })}
 
       </Box>
 

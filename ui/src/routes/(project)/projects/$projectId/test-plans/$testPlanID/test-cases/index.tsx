@@ -156,9 +156,12 @@ function TestPlanTestCasesPage() {
       });
       toaster.success({ title: t("test_plans.confirm_assignment") });
       await refetch();
-    } catch (assignError) {
+    } catch (assignError: any) {
       console.error("Failed to assign testers", assignError);
-      toaster.error({ title: t("test_plans.assign_error") });
+      toaster.error({
+        title: t("test_plans.assign_error"),
+        description: assignError?.message,
+      });
     }
   };
 

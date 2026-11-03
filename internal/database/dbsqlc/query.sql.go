@@ -654,7 +654,7 @@ INSERT INTO modules(
     project_id, name, code, priority, type, description, parent_module_id, created_at, updated_at
 )VALUES($1, $2, $3, $4, $5, $6, $7, now(), now()
 )
-RETURNING id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id
+RETURNING id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id, is_frozen, frozen_at
 `
 
 type CreateProjectModulesParams struct {
@@ -689,6 +689,8 @@ func (q *Queries) CreateProjectModules(ctx context.Context, arg CreateProjectMod
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ParentModuleID,
+		&i.IsFrozen,
+		&i.FrozenAt,
 	)
 	return i, err
 }
@@ -1344,7 +1346,7 @@ func (q *Queries) FindUserLoginByEmail(ctx context.Context, email string) (FindU
 }
 
 const getAllModules = `-- name: GetAllModules :many
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id, is_frozen, frozen_at FROM modules
 ORDER BY created_at DESC
 `
 
@@ -1368,6 +1370,8 @@ func (q *Queries) GetAllModules(ctx context.Context) ([]Module, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ParentModuleID,
+			&i.IsFrozen,
+			&i.FrozenAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1654,7 +1658,7 @@ func (q *Queries) GetNextTestCaseSequence(ctx context.Context, arg GetNextTestCa
 }
 
 const getOneModule = `-- name: GetOneModule :one
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id, is_frozen, frozen_at FROM modules
 WHERE id = $1
 `
 
@@ -1672,6 +1676,8 @@ func (q *Queries) GetOneModule(ctx context.Context, id int32) (Module, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ParentModuleID,
+		&i.IsFrozen,
+		&i.FrozenAt,
 	)
 	return i, err
 }
@@ -1774,7 +1780,7 @@ func (q *Queries) GetProjectCount(ctx context.Context) (int64, error) {
 }
 
 const getProjectModules = `-- name: GetProjectModules :many
-SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id FROM modules
+SELECT id, project_id, name, code, priority, type, description, created_at, updated_at, parent_module_id, is_frozen, frozen_at FROM modules
 WHERE project_id = $1
 `
 
@@ -1798,6 +1804,8 @@ func (q *Queries) GetProjectModules(ctx context.Context, projectID int32) ([]Mod
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ParentModuleID,
+			&i.IsFrozen,
+			&i.FrozenAt,
 		); err != nil {
 			return nil, err
 		}
@@ -3347,6 +3355,55 @@ func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.Null
 	return items, nil
 }
 
+const listTestCasesInFrozenModules = `-- name: ListTestCasesInFrozenModules :many
+WITH RECURSIVE frozen AS (
+    SELECT m.id, m.project_id, m.name, m.code, 1 AS level
+    FROM modules m
+    WHERE m.is_frozen
+    UNION ALL
+    SELECT c.id, c.project_id, c.name, c.code, f.level + 1
+    FROM modules c
+    INNER JOIN frozen f ON c.parent_module_id = f.id
+    WHERE f.level < 100
+)
+SELECT DISTINCT tc.id, tc.code
+FROM test_cases tc
+INNER JOIN frozen f ON f.project_id = tc.project_id
+    AND lower(trim(tc.feature_or_module)) IN (lower(f.name), lower(f.code))
+WHERE tc.id = ANY($1::uuid[])
+ORDER BY tc.code
+`
+
+type ListTestCasesInFrozenModulesRow struct {
+	ID   uuid.UUID
+	Code string
+}
+
+// Returns the test cases among the given IDs whose module is frozen or sits below a frozen module.
+// Test cases refer to their module by name or code in feature_or_module
+func (q *Queries) ListTestCasesInFrozenModules(ctx context.Context, testCaseIds []uuid.UUID) ([]ListTestCasesInFrozenModulesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesInFrozenModules, pq.Array(testCaseIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTestCasesInFrozenModulesRow
+	for rows.Next() {
+		var i ListTestCasesInFrozenModulesRow
+		if err := rows.Scan(&i.ID, &i.Code); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestPlans = `-- name: ListTestPlans :many
 SELECT id, project_id, assigned_to_id, created_by_id, updated_by_id, kind, description, start_at, closed_at, scheduled_end_at, num_test_cases, num_failures, is_complete, is_locked, has_report, created_at, updated_at, environment_id FROM test_plans ORDER BY created_at DESC
 `
@@ -3991,6 +4048,27 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 		return nil, err
 	}
 	return items, nil
+}
+
+const setModuleFrozen = `-- name: SetModuleFrozen :execrows
+UPDATE modules SET
+    is_frozen = $1::bool,
+    frozen_at = CASE WHEN $1::bool THEN now() ELSE NULL END,
+    updated_at = now()
+WHERE id = $2
+`
+
+type SetModuleFrozenParams struct {
+	IsFrozen bool
+	ID       int32
+}
+
+func (q *Queries) SetModuleFrozen(ctx context.Context, arg SetModuleFrozenParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setModuleFrozen, arg.IsFrozen, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setTestCaseDraftStatus = `-- name: SetTestCaseDraftStatus :exec
