@@ -60,6 +60,14 @@ func NewTestRunService(db *sql.DB, conn *dbsqlc.Queries, logger logging.Logger) 
 func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequest) (*dbsqlc.TestRun, error) {
 	id := uuid.New()
 
+	testCaseID, err := uuid.Parse(request.TestCaseID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test case id: %w", err)
+	}
+	if err := ensureNotInFrozenModules(ctx, t.queries, []uuid.UUID{testCaseID}); err != nil {
+		return nil, err
+	}
+
 	// Determine result state: use provided state, or default to pending if no feedback provided
 	resultState := dbsqlc.TestRunStatePending
 	if request.ResultState != nil {
@@ -73,11 +81,11 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 		planID = sql.NullInt32{Valid: false}
 	}
 
-	_, err := t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
+	_, err = t.queries.CreateNewTestRun(ctx, dbsqlc.CreateNewTestRunParams{
 		ID:            id,
 		ProjectID:     request.ProjectID,
 		TestPlanID:    planID,
-		TestCaseID:    uuid.MustParse(request.TestCaseID),
+		TestCaseID:    testCaseID,
 		OwnerID:       request.OwnerID,
 		TestedByID:    common.NewNullInt32(request.TestedByID),
 		AssignedToID:  common.NewNullInt32(request.AssignedToID),

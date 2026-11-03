@@ -751,6 +751,33 @@ WITH RECURSIVE descendants AS (
 )
 SELECT id::integer AS id, level::integer AS level FROM descendants;
 
+-- name: SetModuleFrozen :execrows
+UPDATE modules SET
+    is_frozen = sqlc.arg(is_frozen)::bool,
+    frozen_at = CASE WHEN sqlc.arg(is_frozen)::bool THEN now() ELSE NULL END,
+    updated_at = now()
+WHERE id = sqlc.arg(id);
+
+-- name: ListTestCasesInFrozenModules :many
+-- Returns the test cases among the given IDs whose module is frozen or sits below a frozen module.
+-- Test cases refer to their module by name or code in feature_or_module
+WITH RECURSIVE frozen AS (
+    SELECT m.id, m.project_id, m.name, m.code, 1 AS level
+    FROM modules m
+    WHERE m.is_frozen
+    UNION ALL
+    SELECT c.id, c.project_id, c.name, c.code, f.level + 1
+    FROM modules c
+    INNER JOIN frozen f ON c.parent_module_id = f.id
+    WHERE f.level < 100
+)
+SELECT DISTINCT tc.id, tc.code
+FROM test_cases tc
+INNER JOIN frozen f ON f.project_id = tc.project_id
+    AND lower(trim(tc.feature_or_module)) IN (lower(f.name), lower(f.code))
+WHERE tc.id = ANY(sqlc.arg(test_case_ids)::uuid[])
+ORDER BY tc.code;
+
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;

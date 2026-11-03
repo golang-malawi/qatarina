@@ -2175,6 +2175,96 @@ paths:
       summary: Update a Module
       tags:
       - modules
+  /v1/modules/{moduleID}/freeze:
+    post:
+      description: Freeze a Module. Test cases in a frozen module, or in any module
+        below it, cannot be added to test plans or used in new test runs. Existing
+        test plans are not changed
+      operationId: FreezeModule
+      parameters:
+      - description: moduleID
+        in: path
+        name: moduleID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Freeze a Module
+      tags:
+      - modules
+  /v1/modules/{moduleID}/unfreeze:
+    post:
+      description: Unfreeze a Module so that its test cases can be used in tests again
+      operationId: UnfreezeModule
+      parameters:
+      - description: moduleID
+        in: path
+        name: moduleID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Unfreeze a Module
+      tags:
+      - modules
   /v1/orgs:
     get:
       description: List All organizations

@@ -84,6 +84,8 @@ func (api *API) routes() {
 		modulesV1.Get("", apiv1.GetAllModules(api.ModuleService, api.logger))
 		modulesV1.Post("/:moduleID", apiv1.UpdateModule(api.ModuleService, api.logger))
 		modulesV1.Delete("/:moduleID", apiv1.DeleteModule(api.ModuleService, api.logger))
+		modulesV1.Post("/:moduleID/freeze", apiv1.FreezeModule(api.ModuleService, api.logger))
+		modulesV1.Post("/:moduleID/unfreeze", apiv1.UnfreezeModule(api.ModuleService, api.logger))
 
 	}
 

@@ -237,3 +237,66 @@ func GetProjectModules(modules services.ModuleService, logger logging.Logger) fi
 	}
 
 }
+
+// FreezeModule godoc
+//
+//	@ID				FreezeModule
+//	@Summary		Freeze a Module
+//	@Description	Freeze a Module. Test cases in a frozen module, or in any module below it, cannot be added to test plans or used in new test runs. Existing test plans are not changed
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			moduleID	path		string	true	"moduleID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules/{moduleID}/freeze [post]
+func FreezeModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
+	return setModuleFrozen(module, logger, true)
+}
+
+// UnfreezeModule godoc
+//
+//	@ID				UnfreezeModule
+//	@Summary		Unfreeze a Module
+//	@Description	Unfreeze a Module so that its test cases can be used in tests again
+//	@Tags			modules
+//	@Accept			json
+//	@Produce		json
+//	@Param			moduleID	path		string	true	"moduleID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/modules/{moduleID}/unfreeze [post]
+func UnfreezeModule(module services.ModuleService, logger logging.Logger) fiber.Handler {
+	return setModuleFrozen(module, logger, false)
+}
+
+func setModuleFrozen(module services.ModuleService, logger logging.Logger, frozen bool) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		moduleID, err := c.ParamsInt("moduleID", 0)
+		if err != nil {
+			return problemdetail.BadRequest(c, "failed to parse id data in request")
+		}
+
+		if err := module.SetFrozen(c.Context(), int32(moduleID), frozen); err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "module not found")
+			}
+			logger.Error(loggedmodule.ApiModules, "failed to change module frozen state", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		}
+
+		message := "Module unfrozen successfully"
+		if frozen {
+			message = "Module frozen successfully"
+		}
+		return c.JSON(fiber.Map{
+			"message":  message,
+			"moduleID": moduleID,
+			"frozen":   frozen,
+		})
+	}
+}

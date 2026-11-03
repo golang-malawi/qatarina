@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/schema"
+	"github.com/google/uuid"
 )
 
 type ModuleService interface {
@@ -24,6 +26,8 @@ type ModuleService interface {
 	Delete(ctx context.Context, id int32) error
 	// GetProjectModules retrieves all modules in database which belong to one project
 	GetProjectModules(ctx context.Context, projectID int32) ([]dbsqlc.Module, error)
+	// SetFrozen freezes or unfreezes a module, test cases in a frozen module (or below it) cannot be used in tests
+	SetFrozen(ctx context.Context, id int32, frozen bool) error
 }
 
 var (
@@ -31,6 +35,7 @@ var (
 	ErrModuleParentProject    = errors.New("parent module must belong to the same project")
 	ErrModuleHierarchyCycle   = errors.New("a module cannot be its own parent or the parent of one of its ancestors")
 	ErrModuleMaxDepthExceeded = errors.New("module hierarchy would exceed the maximum depth")
+	ErrModuleFrozen           = errors.New("test cases from frozen modules cannot be used in tests")
 )
 
 // IsModuleHierarchyError reports whether err is a validation error for the module hierarchy
@@ -204,4 +209,35 @@ func (m *moduleServiceImpl) GetProjectModules(ctx context.Context, projectID int
 
 	return modules, nil
 
+}
+
+func (m *moduleServiceImpl) SetFrozen(ctx context.Context, id int32, frozen bool) error {
+	rows, err := m.db.SetModuleFrozen(ctx, dbsqlc.SetModuleFrozenParams{ID: id, IsFrozen: frozen})
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ensureNotInFrozenModules returns ErrModuleFrozen, naming the offending test cases,
+// if any of the given test cases belongs to a frozen module
+func ensureNotInFrozenModules(ctx context.Context, queries *dbsqlc.Queries, testCaseIDs []uuid.UUID) error {
+	if len(testCaseIDs) == 0 {
+		return nil
+	}
+	frozen, err := queries.ListTestCasesInFrozenModules(ctx, testCaseIDs)
+	if err != nil {
+		return fmt.Errorf("failed to check for frozen modules: %w", err)
+	}
+	if len(frozen) == 0 {
+		return nil
+	}
+	codes := make([]string, 0, len(frozen))
+	for _, tc := range frozen {
+		codes = append(codes, tc.Code)
+	}
+	return fmt.Errorf("%w: %s", ErrModuleFrozen, strings.Join(codes, ", "))
 }

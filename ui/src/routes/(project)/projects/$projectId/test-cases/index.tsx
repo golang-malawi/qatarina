@@ -5,6 +5,7 @@ import {
 } from "@/common/constants/priority";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Badge,
   Button,
   Box,
   Flex,
@@ -21,7 +22,7 @@ import {
   Input,
   createListCollection,
 } from "@chakra-ui/react";
-import { IconList, IconListDetails } from "@tabler/icons-react";
+import { IconList, IconListDetails, IconSnowflake } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
@@ -29,6 +30,7 @@ import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
 import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
+import { useFrozenModules } from "@/services/ModuleService";
 import {
   TestCaseListQueryParams,
   testCasesByProjectIdQueryOptions,
@@ -90,6 +92,7 @@ export default function ListProjectTestCases() {
   const [exportFileName, setExportFileName] = useState<string>("");
   const [exportFileFormat, setExportFileFormat] = useState<ExportFileFormat>("XLSX");
   const [exporting, setExporting] = useState(false);
+  const { isFrozen } = useFrozenModules(projectId);
 
   const queryFactory = React.useCallback(
     ({
@@ -137,7 +140,26 @@ export default function ListProjectTestCases() {
 
   const columns: AppTableColumn<TestCase>[] = [
     { key: "code", header: t("test_cases.column.code"), sortKey: "code" },
-    { key: "title", header: t("test_cases.column.title"), sortKey: "title" },
+    {
+      key: "title",
+      header: t("test_cases.column.title"),
+      sortKey: "title",
+      cell: (value, row) => (
+        <Flex align="center" gap={2} wrap="wrap">
+          <Text>{String(value ?? "")}</Text>
+          {isFrozen(row.feature_or_module) && (
+            <Badge
+              colorPalette="blue"
+              variant="outline"
+              title={t("test_cases.frozen_module_hint")}
+            >
+              <IconSnowflake size={12} />
+              {t("test_cases.frozen_module")}
+            </Badge>
+          )}
+        </Flex>
+      ),
+    },
     { key: "kind", header: t("test_cases.column.kind"), sortKey: "kind" },
     {
       key: "priority",
@@ -228,6 +250,17 @@ export default function ListProjectTestCases() {
 
   const handleBulkUseInTestSession = () => {
     if (selectedRows.length === 0) return;
+    const frozenRows = selectedRows.filter((row) => isFrozen(row.feature_or_module));
+    if (frozenRows.length > 0) {
+      toaster.error({
+        title: t("test_cases.frozen_selection_title"),
+        description: t("test_cases.frozen_selection_description", {
+          codes: frozenRows.map((row) => row.code).join(", "),
+        }),
+        duration: 6000,
+      });
+      return;
+    }
     setBulkAssignOpen(true);
     setBulkAssignStep("plan");
     setSelectedTestPlans([]);
@@ -538,7 +571,11 @@ export default function ListProjectTestCases() {
                 },
                 {
                   name: "use",
-                  label: t("test_cases.use_in_test_session"),
+                  label: (row) =>
+                    isFrozen(row.feature_or_module)
+                      ? t("test_cases.use_in_test_session_frozen")
+                      : t("test_cases.use_in_test_session"),
+                  disabled: (row) => isFrozen(row.feature_or_module),
                   link: (row) =>
                     `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
                 },

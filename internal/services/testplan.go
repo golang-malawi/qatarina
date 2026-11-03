@@ -52,6 +52,19 @@ func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanSer
 
 // Create implements TestPlanService.
 func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error) {
+	testCaseIDs := make([]uuid.UUID, 0, len(request.PlannedTests))
+	for _, pt := range request.PlannedTests {
+		tcID, err := uuid.Parse(pt.TestCaseID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid test case id: %w", err)
+		}
+		testCaseIDs = append(testCaseIDs, tcID)
+	}
+	// Check before creating the plan so that a rejected request leaves no empty plan behind
+	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
+		return nil, err
+	}
+
 	testPlanParams := dbsqlc.CreateTestPlanParams{
 		ProjectID:     int32(request.ProjectID),
 		AssignedToID:  int32(request.AssignedToID),
@@ -197,6 +210,26 @@ func newNullUrgency(urgency string) dbsqlc.NullPriorityLevel {
 func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, assignments []testCaseAssignment) (*dbsqlc.GetTestPlanRow, error) {
 	testPlan, err := t.queries.GetTestPlan(ctx, planID)
 	if err != nil {
+		return nil, err
+	}
+
+	// Test cases already in the plan stay usable there (e.g. to change their testers),
+	// only test cases newly added to the plan must not come from frozen modules
+	planCases, err := t.queries.ListTestCasesByPlan(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+	inPlan := make(map[uuid.UUID]bool, len(planCases))
+	for _, pc := range planCases {
+		inPlan[pc.ID] = true
+	}
+	testCaseIDs := make([]uuid.UUID, 0, len(assignments))
+	for _, a := range assignments {
+		if !inPlan[a.TestCaseID] {
+			testCaseIDs = append(testCaseIDs, a.TestCaseID)
+		}
+	}
+	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
 		return nil, err
 	}
 
