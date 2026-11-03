@@ -27,6 +27,7 @@ type Server struct {
 	userService     services.UserService
 	projectService  services.ProjectService
 	testCaseService services.TestCaseService
+	testPlanService services.TestPlanService
 }
 
 func New(cfg *config.Config, logger logging.Logger) *Server {
@@ -41,6 +42,7 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		userService:     services.NewUserService(dbConn, logger, cfg.SMTP),
 		projectService:  services.NewProjectService(dbConn, logger, moduleService),
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
+		testPlanService: services.NewTestPlanService(dbConn, logger),
 		mcp: server.NewMCPServer(
 			"qatarina",
 			version.Version,
@@ -114,6 +116,18 @@ func (s *Server) registerTools() {
 			mcp.WithDestructiveHintAnnotation(false),
 		),
 		s.listProjectTestCases,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool("list_project_test_plans",
+			mcp.WithDescription("List a project's test plans with their progress. Test cases are assigned to testers "+
+				"within a test plan, so use this to find the plan to assign work in. Plans that are complete or locked "+
+				"should not receive new assignments."),
+			mcp.WithNumber("project_id", mcp.Required(), mcp.Description("ID of the project, as returned by list_projects.")),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjectTestPlans,
 	)
 
 	s.mcp.AddTool(addTestCasesTool(), s.addTestCases)
