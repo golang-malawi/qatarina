@@ -779,6 +779,7 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 | `list_users` | Lists all users on the platform. |
 | `list_projects` | Lists all projects. |
 | `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
+| `list_project_test_plans` | Lists a project's test plans with their progress and whether they are complete or locked. |
 | `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
 
 ### Adding test cases
