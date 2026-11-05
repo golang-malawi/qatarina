@@ -780,7 +780,9 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 | `list_projects` | Lists all projects. |
 | `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
 | `list_project_test_plans` | Lists a project's test plans with their progress and whether they are complete or locked. |
+| `list_project_testers` | Lists the testers assigned to a project, with their roles. |
 | `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
+| `assign_test_cases` | Assigns up to 100 test cases to testers within a test plan. |
 
 ### Adding test cases
 
@@ -801,6 +803,29 @@ example:
   whose code already exists in the project is skipped and counted in `skipped`.
 - The batch is all or nothing. If one test case is invalid, none of them are
   added and the error names the one at fault.
+
+### Assigning test cases to testers
+
+Test cases are assigned to testers within a test plan, and show up in each
+tester's inbox. `assign_test_cases` takes a `project_id`, a `test_plan_id` and
+a list of `planned_tests`. Each entry has a `test_case_id`, the `user_ids` of
+the testers to assign and an optional `urgency` (`low`, `medium`, `high` or
+`urgent`). For example:
+
+> Assign all the login test cases in the Sunga project to Jane in the
+> Release 2.0 test plan, with high urgency.
+
+The agent finds the IDs with `list_project_test_plans`,
+`list_project_test_cases` and `list_project_testers`, then assigns them in one
+call.
+
+- Test plans are created in the web UI. The plan must not be complete or locked.
+- Every test case must belong to the project, and every user must be a tester
+  on it. Assign people to the project in the web UI first.
+- A test case can be assigned to several testers. Assigning a test case to a
+  tester who already has it has no effect.
+- The batch is checked as a whole before anything is assigned. If one entry is
+  invalid, nothing is assigned and the error names the one at fault.
 
 ## Security notes
 
