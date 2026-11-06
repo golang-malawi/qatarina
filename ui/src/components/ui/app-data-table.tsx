@@ -106,6 +106,18 @@ export type TableQueryFactory<TResponse> = (
   params: TableQueryParams,
 ) => TableQueryOptions<TResponse>;
 
+/**
+ * "Select all" across every page, resolved by the backend: rows are not loaded,
+ * only the filter at the time of selecting and the rows deselected since.
+ */
+export type AllRowsSelection = {
+  search: string;
+  total: number;
+  excludedIds: string[];
+};
+
+const NO_ROWS: never[] = [];
+
 export interface AppDataTableProps<TData, TResponse> {
   query: TableQueryOptions<TResponse> | TableQueryFactory<TResponse>;
   columns: AppTableColumn<TData>[];
@@ -125,12 +137,22 @@ export interface AppDataTableProps<TData, TResponse> {
   onRowClick?: (row: TData) => void;
   rowActions?: AppTableRowAction<TData>[];
   rowActionsLabel?: string;
-  renderBulkActions?: (selectedRows: TData[]) => React.ReactNode;
+  renderBulkActions?: (
+    selectedRows: TData[],
+    allRowsSelection: AllRowsSelection | null,
+  ) => React.ReactNode;
   dataAccessor?: (response: TResponse | undefined) => TData[];
   paginationAccessor?: (
     response: TResponse | undefined,
   ) => PaginationInfo | undefined;
   getRowId?: (row: TData, index: number, parent?: any) => string;
+  /**
+   * Enables selecting every row across all pages (requires getRowId and a query
+   * factory). While set, selectedRows is empty and the selection is described by
+   * the AllRowsSelection instead. Cleared when the search or query changes.
+   */
+  allRowsSelection?: AllRowsSelection | null;
+  onAllRowsSelectionChange?: (selection: AllRowsSelection | null) => void;
 }
 
 function titleize(value: string) {
@@ -193,6 +215,8 @@ export function AppDataTable<TData, TResponse>({
   dataAccessor,
   paginationAccessor,
   getRowId,
+  allRowsSelection: externalAllRowsSelection,
+  onAllRowsSelectionChange,
 }: AppDataTableProps<TData, TResponse>) {
   const navigate = useNavigate();
   const [sorting, setSorting] = React.useState<SortingState>(() => {
@@ -470,6 +494,52 @@ export function AppDataTable<TData, TResponse>({
     renderRowActions,
   ]);
 
+  const canSelectAcrossPages = !!(onAllRowsSelectionChange && getRowId && isServerMode);
+  const allRowsSelection = canSelectAcrossPages ? externalAllRowsSelection ?? null : null;
+  const setAllRowsSelection = (selection: AllRowsSelection | null) =>
+    onAllRowsSelectionChange?.(selection);
+
+  // In "all rows" mode the current page's checkboxes are derived from the exclusions
+  const effectiveRowSelection = React.useMemo(() => {
+    if (!allRowsSelection || !getRowId) return rowSelection;
+    const excluded = new Set(allRowsSelection.excludedIds);
+    const selection: RowSelectionState = {};
+    rawData.forEach((row, index) => {
+      const id = getRowId(row, index);
+      if (!excluded.has(id)) selection[id] = true;
+    });
+    return selection;
+  }, [allRowsSelection, rawData, rowSelection, getRowId]);
+
+  const handleRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) => {
+    if (!allRowsSelection || !getRowId) {
+      setRowSelection(updater);
+      return;
+    }
+    const next = typeof updater === "function" ? updater(effectiveRowSelection) : updater;
+    const excluded = new Set(allRowsSelection.excludedIds);
+    rawData.forEach((row, index) => {
+      const id = getRowId(row, index);
+      if (next[id]) excluded.delete(id);
+      else excluded.add(id);
+    });
+    if (excluded.size >= allRowsSelection.total) {
+      setAllRowsSelection(null);
+      return;
+    }
+    setAllRowsSelection({ ...allRowsSelection, excludedIds: Array.from(excluded) });
+  };
+
+  // The selection was made for a specific filter, so drop it when the filter changes
+  const filterKeyRef = React.useRef({ globalFilter, query });
+  React.useEffect(() => {
+    const prev = filterKeyRef.current;
+    if (prev.globalFilter === globalFilter && prev.query === query) return;
+    filterKeyRef.current = { globalFilter, query };
+    if (allRowsSelection) setAllRowsSelection(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalFilter, query]);
+
   const table = useReactTable({
     data: rawData,
     columns: builtColumns,
@@ -477,12 +547,12 @@ export function AppDataTable<TData, TResponse>({
       sorting,
       globalFilter,
       pagination,
-      rowSelection,
+      rowSelection: effectiveRowSelection,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: isServerMode ? undefined : getFilteredRowModel(),
     getSortedRowModel: isServerMode ? undefined : getSortedRowModel(),
@@ -497,16 +567,51 @@ export function AppDataTable<TData, TResponse>({
     getRowId,
   });
 
+  // Remembers rows seen on any page so selections survive pagination (requires getRowId)
+  const rowCacheRef = React.useRef(new Map<string, TData>());
+  if (getRowId) {
+    rawData.forEach((row, index) => {
+      rowCacheRef.current.set(getRowId(row, index), row);
+    });
+  }
+
+  const hasRowId = !!getRowId;
   const selectedRows = React.useMemo(() => {
-    // Fallback direct extraction from rawData using rowSelection map keys if getRowId is provided
-    if (getRowId) {
-      return rawData.filter((row, index) => {
-        const id = getRowId(row, index);
-        return !!rowSelection[id];
-      });
+    if (allRowsSelection) return NO_ROWS as TData[];
+    if (hasRowId) {
+      return Object.keys(rowSelection)
+        .filter((id) => rowSelection[id])
+        .map((id) => rowCacheRef.current.get(id))
+        .filter((row): row is TData => row !== undefined);
     }
     return table.getSelectedRowModel().rows.map((row) => row.original);
-  }, [table, rowSelection, rawData, getRowId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, rowSelection, rawData, hasRowId, allRowsSelection]);
+
+  const selectedCount = allRowsSelection
+    ? Math.max(0, allRowsSelection.total - allRowsSelection.excludedIds.length)
+    : selectedRows.length;
+
+  const selectAllChecked = canSelectAcrossPages
+    ? allRowsSelection
+      ? allRowsSelection.excludedIds.length === 0
+        ? true
+        : "indeterminate"
+      : false
+    : table.getIsAllPageRowsSelected();
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!canSelectAcrossPages) {
+      table.toggleAllPageRowsSelected(checked);
+      return;
+    }
+    setRowSelection({});
+    setAllRowsSelection(
+      checked && totalRows > 0
+        ? { search: globalFilter, total: totalRows, excludedIds: [] }
+        : null,
+    );
+  };
 
   React.useEffect(() => {
     if (!onRowSelectionChangeRows) return;
@@ -548,23 +653,23 @@ export function AppDataTable<TData, TResponse>({
       {enableRowSelection && (
         <Flex align="center" gap="3">
           <Checkbox.Root
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={({ checked }) =>
-              table.toggleAllPageRowsSelected(!!checked)
-            }
+            checked={selectAllChecked}
+            onCheckedChange={({ checked }) => handleSelectAll(!!checked)}
           >
             <Checkbox.HiddenInput />
             <Checkbox.Control />
             <Checkbox.Label fontSize="sm" fontWeight="medium">
-              Select all test cases
+              {canSelectAcrossPages
+                ? `Select all ${totalRows} test cases`
+                : "Select all test cases"}
             </Checkbox.Label>
           </Checkbox.Root>
           <Text fontSize="sm" color="fg.subtle">
-            | {selectedRows.length} selected
+            | {selectedCount} selected
           </Text>
-          {selectedRows.length > 0 &&
+          {selectedCount > 0 &&
             (renderBulkActions ? (
-              renderBulkActions(selectedRows)
+              renderBulkActions(selectedRows, allRowsSelection)
             ) : (
               <Button
                 size="sm"

@@ -31,6 +31,51 @@ func (q *Queries) AddProjectTestCaseTemplate(ctx context.Context, arg AddProject
 	return err
 }
 
+const addProjectTestCasesToPlan = `-- name: AddProjectTestCasesToPlan :execrows
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
+SELECT
+    $1::bigint,
+    tc.id,
+    u.user_id,
+    COALESCE(
+        (SELECT pc.urgency FROM test_plan_cases pc
+         WHERE pc.test_plan_id = $1::bigint AND pc.test_case_id = tc.id
+         LIMIT 1),
+        'medium'
+    )
+FROM test_cases tc
+CROSS JOIN unnest($2::bigint[]) AS u(user_id)
+WHERE tc.project_id = $3::int
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND ($4::text = '' OR tc.title ILIKE '%' || $4::text || '%' OR tc.code ILIKE '%' || $4::text || '%')
+  AND NOT (tc.id = ANY($5::uuid[]))
+ON CONFLICT DO NOTHING
+`
+
+type AddProjectTestCasesToPlanParams struct {
+	TestPlanID          int64
+	UserIds             []int64
+	ProjectID           int32
+	Search              string
+	ExcludedTestCaseIds []uuid.UUID
+}
+
+// Adds every (non-suggested) test case in a project matching the search filter to a
+// test plan, assigning each one to all the given testers, without loading the cases
+func (q *Queries) AddProjectTestCasesToPlan(ctx context.Context, arg AddProjectTestCasesToPlanParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, addProjectTestCasesToPlan,
+		arg.TestPlanID,
+		pq.Array(arg.UserIds),
+		arg.ProjectID,
+		arg.Search,
+		pq.Array(arg.ExcludedTestCaseIds),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const addTestCaseToPlan = `-- name: AddTestCaseToPlan :exec
 INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
 VALUES (
