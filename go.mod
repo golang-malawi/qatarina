@@ -25,6 +25,7 @@ require (
 	github.com/pressly/goose/v3 v3.21.1
 	github.com/riverqueue/river v0.8.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.8.0
+	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
 	github.com/sqlc-dev/pqtype v0.3.0

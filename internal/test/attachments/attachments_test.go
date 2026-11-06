@@ -24,6 +24,20 @@ func TestValidateAttachment(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name:        "txt file with empty contentType resolves to text/plain with charset",
+			fileName:    "notes.txt",
+			contentType: "",
+			size:        128,
+			wantErr:     false,
+		},
+		{
+			name:        "content type with parameters",
+			fileName:    "notes.txt",
+			contentType: "text/plain; charset=utf-8",
+			size:        128,
+			wantErr:     false,
+		},
+		{
 			name:        "invalid file type",
 			fileName:    "malware.exe",
 			contentType: "application/x-msdownload",

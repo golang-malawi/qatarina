@@ -46,6 +46,9 @@ func ValidateAttachment(fileName string, contentType string, size int64, maxSize
 
 // isAllowed checks if a MIME type is in the AllowedFileTypes slice.
 func isAllowed(mimeType string) bool {
+	if mediaType, _, err := mime.ParseMediaType(mimeType); err == nil {
+		mimeType = mediaType
+	}
 	for _, allowed := range AllowedFileTypes {
 		if mimeType == allowed {
 			return true

@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -497,27 +496,40 @@ func UploadAttachment(testRunService services.TestRunService, logger logging.Log
 		uploadedBy := authutil.GetAuthUserID(c)
 
 		responses := make([]schema.AttachmentResponse, 0, len(files))
+		var lastErr error
+
 		for _, fileHeader := range files {
 			file, err := fileHeader.Open()
 			if err != nil {
 				logger.Error(loggedmodule.ApiTestRuns, "failed to open uploaded file", "error", err)
-				return problemdetail.BadRequest(c, fmt.Sprintf("failed to read file %s", fileHeader.Filename))
+				lastErr = err
+				continue
 			}
-			defer file.Close()
 
 			attachmentReq := &schema.AttachmentRequest{
 				FileName:    fileHeader.Filename,
 				ContentType: fileHeader.Header.Get("Content-Type"),
 				Size:        fileHeader.Size,
 				Content:     file,
+				UploadedBy:  uploadedBy,
 			}
 
 			resp, err := testRunService.SaveAttachment(c.Context(), resultID, uploadedBy, attachmentReq)
+			file.Close()
 			if err != nil {
-				logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "error", err)
-				return problemdetail.ServerErrorProblem(c, fmt.Sprintf("failed to save attachment %s", fileHeader.Filename))
+				logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "fileName", fileHeader.Filename, "error", err)
+				lastErr = err
+				continue
 			}
 			responses = append(responses, *resp)
+		}
+
+		// Report failure when nothing was saved instead of returning an empty 200
+		if len(responses) == 0 && lastErr != nil {
+			if errors.Is(lastErr, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "test run result not found")
+			}
+			return problemdetail.BadRequest(c, "failed to save attachment: "+lastErr.Error())
 		}
 
 		return c.JSON(responses)

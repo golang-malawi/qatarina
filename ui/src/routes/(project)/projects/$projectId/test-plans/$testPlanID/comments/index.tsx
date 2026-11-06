@@ -177,7 +177,7 @@ function CommentItem({
           >
             {showReplies
               ? t("test_plans.comments.hide_replies", "Hide replies")
-              : t("test_plans.comments.view_replies", `View replies (${repliesArray.length})`)}
+              : t("test_plans.comments.view_replies", { total: repliesArray.length, defaultValue: "View replies ({{total}})" })}
           </Button>
         )}
       </Flex>
