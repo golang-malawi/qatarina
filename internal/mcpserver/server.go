@@ -29,6 +29,8 @@ type Server struct {
 	testCaseService services.TestCaseService
 	testPlanService services.TestPlanService
 	testerService   services.TesterService
+
+	environmentService services.EnvironmentService
 }
 
 func New(cfg *config.Config, logger logging.Logger) *Server {
@@ -45,6 +47,8 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		testPlanService: services.NewTestPlanService(dbConn, logger),
 		testerService:   services.NewTesterService(dbConn, logger),
+
+		environmentService: services.NewEnvironmentService(dbConn),
 		mcp: server.NewMCPServer(
 			"qatarina",
 			version.Version,
@@ -144,6 +148,8 @@ func (s *Server) registerTools() {
 
 	s.mcp.AddTool(addTestCasesTool(), s.addTestCases)
 	s.mcp.AddTool(assignTestCasesTool(), s.assignTestCases)
+	s.mcp.AddTool(listProjectEnvironmentsTool(), s.listProjectEnvironments)
+	s.mcp.AddTool(createProjectEnvironmentTool(), s.createProjectEnvironment)
 }
 
 func (s *Server) whoami(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
