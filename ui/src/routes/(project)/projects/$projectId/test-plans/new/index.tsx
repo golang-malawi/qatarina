@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { SelectAssignedTestCase } from "@/common/models";
 import { useCreateTestPlanMutation } from "@/services/TestPlanService";
@@ -29,15 +29,29 @@ import { testPlanCreationFields } from "@/data/forms/test-plan-field-configs";
 import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environments";
 import { useTranslation } from "react-i18next";
 
+const TEST_CASES_PAGE_SIZE = 10;
+
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/new/"
 )({
   loader: ({ context: { queryClient }, params: { projectId } }) =>
-    queryClient.ensureQueryData(testCasesByProjectIdQueryOptions(projectId)),
+    queryClient.ensureQueryData(
+      testCasesByProjectIdQueryOptions(projectId, {
+        page: 1,
+        pageSize: TEST_CASES_PAGE_SIZE,
+      })
+    ),
   component: CreateNewTestPlan,
 });
 
 type CreateTestPlanForm = TestPlanCreationFormValues;
+
+// "Select all" is resolved on the backend, so only deselected test cases and the
+// default testers are tracked instead of loading every test case in the project
+type AllTestCasesSelection = {
+  excludedIds: Set<string>;
+  userIds: number[];
+};
 
 function CreateNewTestPlan() {
   const { t } = useTranslation();
@@ -60,11 +74,20 @@ function CreateNewTestPlan() {
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkSelectedTesters, setBulkSelectedTesters] = useState<string[]>([]);
 
+  const [page, setPage] = useState(1);
+  const [allSelection, setAllSelection] = useState<AllTestCasesSelection | null>(null);
   const {
     data: testCases,
     isPending,
+    isFetching,
     error,
-  } = useSuspenseQuery(testCasesByProjectIdQueryOptions(projectId));
+  } = useQuery({
+    ...testCasesByProjectIdQueryOptions(projectId, {
+      page,
+      pageSize: TEST_CASES_PAGE_SIZE,
+    }),
+    placeholderData: keepPreviousData,
+  });
 
   if (isPending) {
     return (
@@ -78,27 +101,63 @@ function CreateNewTestPlan() {
     return <Text color="fg.error">{t("test_plans.error_cases")}</Text>;
   }
 
-  const testCaseIds = testCases?.test_cases?.map((tc) => tc.id!.toString()) ?? [];
-  const allSelected =
-    testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
+  const totalTestCases = testCases?.pagination?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
+
+  // In "select all" mode selectedTestCases only holds per-case tester overrides
+  const selectedCount = allSelection
+    ? Math.max(0, totalTestCases - allSelection.excludedIds.size)
+    : selectedTestCases.length;
+  const selectAllChecked = allSelection
+    ? allSelection.excludedIds.size === 0
+      ? true
+      : "indeterminate"
+    : false;
 
   function handleSelectAll(checked: boolean) {
-    if (checked) {
-      setSelectedTestCases((prev) => {
-        const prevMap = new Map(prev.map((tc) => [tc.test_case_id, tc]));
-        return testCaseIds.map((id) => prevMap.get(id) ?? { test_case_id: id, user_ids: [] });
+    setSelectedTestCases([]);
+    setAllSelection(checked ? { excludedIds: new Set(), userIds: [] } : null);
+  }
+
+  function isTestCaseSelected(testCaseId: string) {
+    if (allSelection) return !allSelection.excludedIds.has(testCaseId);
+    return selectedTestCases.some((tc) => tc.test_case_id === testCaseId);
+  }
+
+  function setTestCaseSelected(testCaseId: string, checked: boolean) {
+    if (allSelection) {
+      setAllSelection((prev) => {
+        if (!prev) return prev;
+        const excludedIds = new Set(prev.excludedIds);
+        if (checked) excludedIds.delete(testCaseId);
+        else excludedIds.add(testCaseId);
+        return { ...prev, excludedIds };
       });
-    } else {
-      setSelectedTestCases([]);
     }
+    setSelectedTestCases((prev) => {
+      if (!checked) return prev.filter((tc) => tc.test_case_id !== testCaseId);
+      if (allSelection || prev.some((tc) => tc.test_case_id === testCaseId)) return prev;
+      return [...prev, { test_case_id: testCaseId, user_ids: [] }];
+    });
+  }
+
+  function testerIdsFor(testCaseId: string): number[] {
+    const override = selectedTestCases.find((tc) => tc.test_case_id === testCaseId);
+    if (override?.user_ids.length) return override.user_ids.map(Number);
+    if (allSelection && !allSelection.excludedIds.has(testCaseId)) return allSelection.userIds;
+    return [];
   }
 
   async function handleSubmit(data: CreateTestPlanForm) {
-    const { isValid, unassigned } = validateTestCaseAssignments(selectedTestCases);
-    if (!isValid) {
+    const unassignedCount = allSelection
+      ? allSelection.userIds.length === 0
+        ? selectedCount - selectedTestCases.filter((tc) => tc.user_ids.length > 0).length
+        : 0
+      : validateTestCaseAssignments(selectedTestCases).unassigned.length;
+    if (unassignedCount > 0) {
       toaster.create({
         title: t("test_plans.assign_error"),
-        description: t("test_plans.assign_missing", { count: unassigned.length }),
+        description: t("test_plans.assign_missing", { count: unassignedCount }),
         type: "error",
         duration: 4000,
       });
@@ -125,10 +184,18 @@ function CreateNewTestPlan() {
         start_at: data.start_at ? toISODate(data.start_at) : new Date().toISOString(),
         scheduled_end_at: toISODate(data.scheduled_end_at),
         closed_at: data.closed_at ? toISODate(data.closed_at) : undefined,
-        planned_tests: selectedTestCases.map((tc) => ({
-          test_case_id: tc.test_case_id,
-          user_ids: tc.user_ids.map(Number),
-        })),
+        planned_tests: selectedTestCases
+          .filter((tc) => !allSelection || tc.user_ids.length > 0)
+          .map((tc) => ({
+            test_case_id: tc.test_case_id,
+            user_ids: tc.user_ids.map(Number),
+          })),
+        all_test_cases: allSelection
+          ? {
+              user_ids: allSelection.userIds,
+              excluded_test_case_ids: Array.from(allSelection.excludedIds),
+            }
+          : undefined,
       },
     });
 
@@ -146,6 +213,13 @@ function CreateNewTestPlan() {
   }
 
   function openAssignModal(testCaseId: string) {
+    // In "select all" mode, start the per-case override from the default testers
+    if (allSelection && !selectedTestCases.some((tc) => tc.test_case_id === testCaseId)) {
+      setSelectedTestCases((prev) => [
+        ...prev,
+        { test_case_id: testCaseId, user_ids: testerIdsFor(testCaseId) },
+      ]);
+    }
     setActiveTestCaseId(testCaseId);
   }
 
@@ -222,15 +296,15 @@ function CreateNewTestPlan() {
           justify="space-between"
         >
           <Box fontSize="sm">
-            <strong>{selectedTestCases.length}</strong>{" "}
-            {t("test_plans.selected_cases", { count: selectedTestCases.length })}
+            <strong>{selectedCount}</strong>{" "}
+            {t("test_plans.selected_cases", { count: selectedCount })}
           </Box>
 
           <Button
             size="sm"
             variant="solid"
             colorPalette="brand"
-            disabled={selectedTestCases.length === 0} 
+            disabled={selectedCount === 0}
             onClick={() => setBulkAssignOpen(true)}
           >
             {t("test_plans.bulk_assign")}
@@ -246,16 +320,18 @@ function CreateNewTestPlan() {
           bg="bg.surface"
         >
           <Checkbox.Root
-            checked={allSelected}
+            checked={selectAllChecked}
             onCheckedChange={(e) => handleSelectAll(e.checked === true)}
           >
             <Checkbox.HiddenInput />
             <Checkbox.Control />
-            <Checkbox.Label>{t("test_plans.select_all_cases")}</Checkbox.Label>
+            <Checkbox.Label>
+              {t("test_plans.select_all_cases", { count: totalTestCases })}
+            </Checkbox.Label>
           </Checkbox.Root>
         </Box>
 
-        {testCases.test_cases?.map((testCase) => (
+        {testCases?.test_cases?.map((testCase) => (
           <Box
             key={testCase.id}
             border="sm"
@@ -267,21 +343,10 @@ function CreateNewTestPlan() {
           >
             <Flex justify="space-between" align="center">
               <Checkbox.Root
-                checked={selectedTestCases.some(
-                  (t) => t.test_case_id === testCase.id!.toString()
-                )}
-                onCheckedChange={(e) => {
-                  setSelectedTestCases((prev) => {
-                    if (e.checked) {
-                      if (!prev.some((t) => t.test_case_id === testCase.id!.toString())) {
-                        return [...prev, { test_case_id: testCase.id!.toString(), user_ids: [] }];
-                      }
-                      return prev;
-                    } else {
-                      return prev.filter((t) => t.test_case_id !== testCase.id!.toString());
-                    }
-                  });
-                }}
+                checked={isTestCaseSelected(testCase.id!.toString())}
+                onCheckedChange={(e) =>
+                  setTestCaseSelected(testCase.id!.toString(), e.checked === true)
+                }
               >
                 <Checkbox.HiddenInput />
                 <Checkbox.Control />
@@ -301,12 +366,9 @@ function CreateNewTestPlan() {
             </Flex>
 
             {/* Assigned testers preview */}
-            {selectedTestCases.find((t) => t.test_case_id === testCase.id!.toString())
-              ?.user_ids.length ? (
+            {testerIdsFor(testCase.id!.toString()).length ? (
               <Flex mt={2} gap={2} wrap="wrap">
-                {selectedTestCases
-                  .find((t) => t.test_case_id === testCase.id!.toString())!
-                  .user_ids.map((uid) => {
+                {testerIdsFor(testCase.id!.toString()).map((uid) => {
                     const tester = testers.find(
                       (t) => t.user_id?.toString() === uid.toString()
                     );
@@ -333,6 +395,29 @@ function CreateNewTestPlan() {
           </Box>
         ))}
 
+        {totalPages > 1 && (
+          <Flex justify="space-between" align="center" mt={2}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1 || isFetching}
+            >
+              {t("test_plans.previous_page")}
+            </Button>
+            <Text fontSize="xs" color="fg.muted">
+              {t("test_plans.page_of", { page, totalPages, total: totalTestCases })}
+            </Text>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page >= totalPages || isFetching}
+            >
+              {t("test_plans.next_page")}
+            </Button>
+          </Flex>
+        )}
       </Box>
 
       {/* Assign testers modal */}
@@ -369,6 +454,7 @@ function CreateNewTestPlan() {
           <CheckboxGroup
             value={activeTestCase?.user_ids.map(String) ?? []}
             onValueChange={(value) => {
+              if (allSelection && activeTestCaseId) setTestCaseSelected(activeTestCaseId, true);
               setSelectedTestCases((prev) => {
                 const exists = prev.find((t) => t.test_case_id === activeTestCaseId);
                 if (exists) {
@@ -422,6 +508,16 @@ function CreateNewTestPlan() {
               colorPalette="brand"
               disabled={bulkSelectedTesters.length === 0}
               onClick={() => {
+                if (allSelection) {
+                  setAllSelection((prev) =>
+                    prev && {
+                      ...prev,
+                      userIds: Array.from(
+                        new Set([...prev.userIds, ...bulkSelectedTesters.map(Number)])
+                      ),
+                    }
+                  );
+                }
                 setSelectedTestCases((prev) =>
                   prev.map((tc) => ({
                     ...tc,
@@ -459,7 +555,7 @@ function CreateNewTestPlan() {
           <>
             <Box fontSize="sm" mb={3} color="fg.muted">
               {t("test_plans.bulk_assign_description", {
-                count: selectedTestCases.length,
+                count: selectedCount,
               })}
             </Box>
             <CheckboxGroup
