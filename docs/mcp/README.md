@@ -783,6 +783,8 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 | `list_project_testers` | Lists the testers assigned to a project, with their roles. |
 | `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
 | `assign_test_cases` | Assigns up to 100 test cases to testers within a test plan. |
+| `list_project_environments` | Lists a project's environments, such as staging and production, with their base URLs. |
+| `create_project_environment` | Creates an environment in a project. |
 
 ### Adding test cases
 
@@ -826,6 +828,19 @@ call.
   tester who already has it has no effect.
 - The batch is checked as a whole before anything is assigned. If one entry is
   invalid, nothing is assigned and the error names the one at fault.
+
+### Creating project environments
+
+Environments are where a project is tested, such as development, staging and
+production. `create_project_environment` takes a `project_id` and a `name`, and
+optionally a `description` and a `base_url`. For example:
+
+> Add a staging environment at https://staging.sunga.example.com to the Sunga
+> project on Qatarina.
+
+- Names are unique within a project, ignoring case. Creating an environment
+  whose name already exists is rejected, and the error gives the existing ID.
+- `base_url` must be an absolute URL, such as `https://staging.example.com`.
 
 ## Security notes
 
