@@ -11,7 +11,7 @@ COPY docs/ ../docs/
 RUN npx vite build
 
 # Stage 2: Build the Go Binary (Backend)
-FROM golang:1.25.1-alpine AS go-builder
+FROM golang:1.25.5-alpine AS go-builder
 RUN apk add --no-cache git
 
 WORKDIR /go/qatarina
