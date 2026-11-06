@@ -406,13 +406,13 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, up
 	rows, err := t.queries.InsertTestRunAttachment(ctx, dbsqlc.InsertTestRunAttachmentParams{
 		ID:              attachmentID,
 		TestRunResultID: resultUUID,
-		UploadedBy:      common.NewNullInt32(int32(uploadedBy)),
+		UploadedBy:      int32(uploadedBy),
 		FileName:        fileName,
 		FileType:        file.ContentType,
 		FileSize:        file.Size,
 		StorageKey:      storageKey,
 		StorageUrl:      storageURL,
-		CreatedAt:       common.NewNullTime(time.Now()),
+		CreatedAt:       time.Now(),
 	})
 	if err != nil || rows == 0 {
 		_ = t.storage.Remove(storageKey)
