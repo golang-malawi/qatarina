@@ -24,6 +24,7 @@ import {
   LoadingState,
 } from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
 import {
@@ -298,10 +299,12 @@ function TestPlanTestRunsPage() {
                       <DetailItem
                         label={t("test_plans.detail.expected_result")}
                         value={run.expected_result}
+                        markdown
                       />
                       <DetailItem
                         label={t("test_plans.detail.actual_result")}
                         value={run.actual_result}
+                        markdown
                       />
                       <DetailItem
                         label={t("test_plans.detail.environment")}
@@ -318,9 +321,11 @@ function TestPlanTestRunsPage() {
                       <Text fontSize="xs" color="fg.subtle">
                         {t("test_plans.detail.notes")}
                       </Text>
-                      <Text color="fg.default">
-                        {run.notes?.trim() || t("test_plans.no_notes")}
-                      </Text>
+                      {run.notes?.trim() ? (
+                        <MarkdownChecklist markdown={run.notes.trim()} />
+                      ) : (
+                        <Text color="fg.default">{t("test_plans.no_notes")}</Text>
+                      )}
                     </Stack>
 
                     <AttachmentSection
@@ -472,14 +477,28 @@ function getResultColor(state: ResultFilter) {
   }
 }
 
-function DetailItem({ label, value }: { label: string; value?: string }) {
+function DetailItem({
+  label,
+  value,
+  markdown = false,
+}: {
+  label: string;
+  value?: string;
+  /** Render the value as GitHub-flavoured markdown (read-only checklists) */
+  markdown?: boolean;
+}) {
   const { t } = useTranslation();
+  const content = value?.trim();
   return (
-    <Stack gap={1}>
+    <Stack gap={1} minW={0}>
       <Text fontSize="xs" color="fg.subtle">
         {label}
       </Text>
-      <Text color="fg.default">{value?.trim() || t("test_plans.not_available")}</Text>
+      {markdown && content ? (
+        <MarkdownChecklist markdown={content} />
+      ) : (
+        <Text color="fg.default">{content || t("test_plans.not_available")}</Text>
+      )}
     </Stack>
   );
 }

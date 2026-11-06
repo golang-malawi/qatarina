@@ -13,7 +13,6 @@ import {
   Alert,
   Stack,
   Spinner,
-  Code,
   Badge,
 } from "@chakra-ui/react";
 
@@ -32,7 +31,6 @@ import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { TestCaseRelations } from "@/components/TestCaseRelations";
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -212,56 +210,7 @@ function ViewTestCase() {
               borderColor="border.subtle"
             >
               {testCase.description ? (
-                <ReactMarkdown
-                  components={{
-                    h1: (props) => <Heading size="lg" mb={2} {...props} />,
-                    h2: (props) => <Heading size="md" mb={2} {...props} />,
-                    h3: (props) => <Heading size="sm" mb={2} {...props} />,
-                    p: (props) => <Text mb={2} {...props} />,
-                    code: (props) => <Code colorPalette="yellow" {...props} />,
-                    ul: (props) => (
-                      <ul
-                        style={{ paddingLeft: "1.25rem", listStyleType: "disc" }}
-                        {...props}
-                      />
-                    ),
-                    ol: (props) => (
-                      <ol
-                        style={{
-                          paddingLeft: "1.25rem",
-                          listStyleType: "decimal",
-                        }}
-                        {...props}
-                      />
-                    ),
-                    li: (props) => (
-                      <li style={{ marginBottom: "0.25rem" }} {...props} />
-                    ),
-                    blockquote: (props) => (
-                      <blockquote
-                        style={{
-                          paddingLeft: "1rem",
-                          borderLeft: "4px solid var(--chakra-colors-border-emphasized)",
-                          color: "var(--chakra-colors-fg-muted)",
-                          fontStyle: "italic",
-                          margin: "0.5rem 0",
-                        }}
-                        {...props}
-                      />
-                    ),
-                    a: (props) => (
-                      <a
-                        style={{
-                          color: "var(--chakra-colors-brand-solid)",
-                          textDecoration: "underline",
-                        }}
-                        {...props}
-                      />
-                    ),
-                  }}
-                >
-                  {testCase.description}
-                </ReactMarkdown>
+                <MarkdownChecklist markdown={testCase.description} />
               ) : (
                 <Text color="fg.subtle">No description provided.</Text>
               )}
