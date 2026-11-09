@@ -485,7 +485,92 @@ You can then interact with Qatarina through Claude Code. For example, try asking
 
 ### Production Environment
 
-- To be documented.
+Use these steps to connect Claude Code to a Qatarina instance that is already deployed, such as a shared staging server, instead of one running on your machine. Only the HTTP transport is used, because STDIO needs the Qatarina binary and direct database access on your machine.
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Code is installed on your machine.
+- You have an account on the deployed Qatarina instance.
+- You know two URLs, which you can get from the maintainers of the deployment:
+  - the **Qatarina URL**, where you log in to the web app, for example `https://qatarina.example.com`
+  - the **MCP URL**, where the MCP server is served, for example `https://mcp.qatarina.example.com/mcp`
+
+The MCP server is often served on its own host name rather than under the web app's address, so don't assume the MCP URL is the Qatarina URL with `/mcp` added. Requesting `/mcp` on the web app's address returns `404 Cannot POST /mcp`.
+
+You can check that the MCP URL is right before configuring anything. A request without a token should return `401` with the body `missing bearer token`:
+
+```bash
+curl -s -X POST <mcp-url> -w "\n%{http_code}\n"
+```
+
+On Windows, use `curl.exe` instead of `curl` in PowerShell.
+
+---
+
+#### Linux, macOS and WSL
+
+**Step 1: Obtain an authorization token**
+
+Log in to the deployed instance, replacing the Qatarina URL, email and password:
+
+```bash
+TOKEN=$(curl -s -X POST <qatarina-url>/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token)
+```
+
+Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
+
+**Step 2: Register the MCP server**
+
+If `claude mcp get qatarina` shows an existing configuration, for example your local one, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
+
+```bash
+claude mcp add --scope user --transport http qatarina <mcp-url> --header "Authorization: Bearer $TOKEN"
+```
+
+**Step 3: Verify the configuration**
+
+```bash
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+---
+
+#### Windows
+
+**Step 1: Obtain an authorization token**
+
+Run the following in a local PowerShell window, replacing the Qatarina URL, email and password:
+
+```powershell
+$AuthorizationToken = (Invoke-RestMethod -Method Post -Uri "<qatarina-url>/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
+
+**Step 2: Register the MCP server**
+
+If `claude mcp get qatarina` shows an existing configuration, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
+
+```powershell
+claude mcp add --scope user --transport http qatarina <mcp-url> --header "Authorization: Bearer $AuthorizationToken"
+```
+
+**Step 3: Verify the configuration**
+
+```powershell
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+---
+
+**When the token expires**
+
+Tokens expire after the period set by `auth.jwt_expiry_timeout` on the server. When Qatarina tools start failing with authorization errors, obtain a new token, remove the server with `claude mcp remove qatarina --scope user`, and register it again.
 
 ## 5. Claude Desktop
 
@@ -761,7 +846,118 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 
 ### Production Environment
 
-- To be documented.
+Use these steps to connect Claude Desktop to a Qatarina instance that is already deployed, such as a shared staging server. As with local development, Claude Desktop reaches the HTTP endpoint through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote).
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Desktop and Node.js are installed on your machine.
+- You have an account on the deployed Qatarina instance.
+- You know the deployment's **Qatarina URL** and **MCP URL**. See the [Claude Code production prerequisites](#production-environment) for what these are and how to check the MCP URL.
+
+---
+
+#### macOS
+
+**Step 1: Obtain an authorization token**
+
+Replace the Qatarina URL, email and password:
+
+```bash
+curl -s -X POST <qatarina-url>/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token
+```
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing the MCP URL and `<token>`:
+
+```json
+{
+  "mcpServers": {
+    "qatarina": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "<mcp-url>",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+If the file already contains other MCP servers, add the `qatarina` entry alongside them instead of replacing the file.
+
+**Step 3: Restart Claude Desktop**
+
+Fully quit Claude Desktop (choose **Claude → Quit Claude** from the menu bar, or press `Cmd+Q`), then reopen it.
+
+---
+
+#### Windows
+
+**Step 1: Obtain an authorization token**
+
+Run the following in a local PowerShell window, replacing the Qatarina URL, email and password:
+
+```powershell
+(Invoke-RestMethod -Method Post -Uri "<qatarina-url>/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+If you are connected to a server over SSH, run this in a separate local PowerShell window. It fails with a syntax error in a Linux shell.
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing the MCP URL and `<token>`. Opening the file from Settings is the most reliable way to find it, because its location depends on how Claude Desktop was installed.
+
+```json
+{
+  "mcpServers": {
+    "qatarina": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "<mcp-url>",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+Keep `Authorization:${AUTH_HEADER}` without a space after the colon. On Windows, a space inside that argument is mangled when `npx` passes it on, so the space goes in the `AUTH_HEADER` value instead.
+
+**Step 3: Restart Claude Desktop**
+
+Fully quit Claude Desktop (right-click its icon in the system tray and choose **Quit**), then reopen it.
+
+---
+
+**Troubleshooting**
+
+Claude Desktop writes a log for each MCP server, named `mcp-server-qatarina.log`. Open it from **Settings → Developer**, or find it in `~/Library/Logs/Claude/` on macOS and `%APPDATA%\Claude\logs\` on Windows (Microsoft Store installs keep it under `%LOCALAPPDATA%`).
+
+| Log message | Cause | Fix |
+| --- | --- | --- |
+| `Dynamic Client Registration rejected (HTTP 404)` | The MCP server answered `401`, so `mcp-remote` tried to sign in with OAuth, which Qatarina does not support. The token was rejected. | Obtain a new token from the same deployment as the MCP URL, update `AUTH_HEADER` and restart. |
+| `Cannot POST /mcp` or `Invalid content type, expected "text/event-stream"` | The URL points at the web app, not the MCP server. | Use the MCP URL. |
+| `Connected to remote server` followed by `tools/list` | Working. | Nothing to do. |
+
+Tokens expire after the period set by `auth.jwt_expiry_timeout` on the server. When Qatarina tools stop working, repeat Steps 1 to 3 with a new token.
 
 ## 6. VS Code MCP Copilot Extension
 
