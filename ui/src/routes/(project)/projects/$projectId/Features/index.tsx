@@ -28,6 +28,7 @@ import {
   FeatureModuleEditFormData,
 } from "@/data/forms/feature-module-schemas";
 import { featureModuleEditFields } from "@/data/forms/feature-module-field-configs";
+import SelectParentModule from "@/components/form/SelectParentModule";
 import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
 
 export const Route = createFileRoute(
@@ -75,14 +76,38 @@ function RouteComponent() {
     fetchModules();
   }, [projectId, t]);
 
+  const editFields = moduleToEdit
+    ? [
+        ...featureModuleEditFields,
+        {
+          name: "parent_module_id",
+          label: t("features.form.parent"),
+          type: "custom" as const,
+          helperText: t("features.form.parent_helper"),
+          customComponent: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
+            <SelectParentModule
+              projectId={projectId}
+              moduleId={moduleToEdit.id}
+              value={(value as string) || ""}
+              onChange={onChange}
+            />
+          ),
+        },
+      ]
+    : featureModuleEditFields;
+
   const handleUpdate = async (values: FeatureModuleEditFormData) => {
     if (!moduleToEdit) return;
+    // The update endpoint replaces every field, an omitted parent_module_id
+    // moves the module to the top level, so it must always be sent
+    const parentModuleId = values.parent_module_id || null;
     const payload = {
       name: values.name,
       type: values.type,
       description: values.description || "",
       code: values.code,
       priority: Number(values.priority),
+      parent_module_id: parentModuleId ? Number(parentModuleId) : undefined,
     };
 
     try {
@@ -90,7 +115,11 @@ function RouteComponent() {
       const service = new ModuleService();
       await service.updateModule(moduleToEdit.id, payload);
       setFeatures((prev) =>
-        prev.map((f) => (f.id === moduleToEdit.id ? { ...f, ...payload } : f))
+        prev.map((f) =>
+          f.id === moduleToEdit.id
+            ? { ...f, ...payload, parent_module_id: parentModuleId }
+            : f
+        )
       );
       toaster.create({
         title: t("features.edit.success"),
@@ -254,13 +283,14 @@ function RouteComponent() {
           <DynamicForm
             key={moduleToEdit.id}
             schema={featureModuleEditSchema}
-            fields={featureModuleEditFields}
+            fields={editFields}
             defaultValues={{
               name: moduleToEdit.name || "",
               type: moduleToEdit.type || "feature",
               description: moduleToEdit.description || "",
               code: moduleToEdit.code || "",
               priority: moduleToEdit.priority || 1,
+              parent_module_id: moduleToEdit.parent_module_id ?? "",
             }}
             onSubmit={handleUpdate}
             submitText={t("features.edit.submit")}
