@@ -18,4 +18,5 @@ const (
 	ApiDashboard    Name = "apiv1:dashboard"
 	ApiOrgs         Name = "apiv1:orgs"
 	ApiEnvironments Name = "apiv1:environments"
+	ApiGraphQL      Name = "api:graphql"
 )
