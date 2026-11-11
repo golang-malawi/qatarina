@@ -10,7 +10,6 @@ import {
   Spinner,
   Menu,
   IconButton,
-  Input,
   Fieldset,
 } from "@chakra-ui/react";
 import { IconUser, IconDotsVertical } from "@tabler/icons-react";
@@ -23,6 +22,7 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
@@ -247,8 +247,7 @@ function RouteComponent() {
               <Text fontSize="xs" fontWeight="medium" mb={1}>
                 New password
               </Text>
-              <Input
-                type="password"
+              <PasswordInput
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
@@ -258,8 +257,7 @@ function RouteComponent() {
               <Text fontSize="xs" fontWeight="medium" mb={1}>
                 Confirm password
               </Text>
-              <Input
-                type="password"
+              <PasswordInput
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"

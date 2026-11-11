@@ -39,7 +39,9 @@ function RouteComponent() {
   ];
 
   const handleSubmit = async (values: any) => {
-    const userId = localStorage.getItem("userId");
+    // Use the authenticated user from the auth context; the API rejects any
+    // user_id that doesn't match the token.
+    const userId = loggedInUser?.user_id;
 
     if (!userId) {
       toaster.create({
@@ -53,7 +55,7 @@ function RouteComponent() {
 
     mutation.mutate(
       {
-        user_id: parseInt(userId, 10),
+        user_id: Number(userId),
         old_password: values.old_password,
         new_password: values.new_password,
         confirm_password: values.confirm_password,
