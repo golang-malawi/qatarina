@@ -1085,6 +1085,81 @@ func TransferTestCase(testCaseService services.TestCaseService, logger logging.L
 	}
 }
 
+// BulkDeleteTestCases godoc
+//
+//	@ID				BulkDeleteTestCases
+//	@Summary		Delete the selected test cases of a project
+//	@Description	Delete the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.BulkDeleteTestCasesRequest	true	"Test cases to delete"
+//	@Success		200		{object}	schema.BulkDeleteTestCasesResponse
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/bulk-delete [post]
+func BulkDeleteTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.BulkDeleteTestCasesRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+		if request.Selection.IsEmpty() {
+			return problemdetail.BadRequest(c, services.ErrEmptyTestCaseSelection.Error())
+		}
+
+		deleted, err := testCaseService.DeleteBySelection(c.Context(), request.Selection)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to delete test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to delete test cases")
+		}
+
+		return c.JSON(schema.BulkDeleteTestCasesResponse{Deleted: deleted})
+	}
+}
+
+// BulkTransferTestCases godoc
+//
+//	@ID				BulkTransferTestCases
+//	@Summary		Transfer the selected test cases of a project to another project
+//	@Description	Move the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones, to another project and feature/module
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.BulkTransferTestCasesRequest	true	"Test cases to transfer and where to"
+//	@Success		200		{object}	schema.BulkTransferTestCasesResponse
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/bulk-transfer [post]
+func BulkTransferTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.BulkTransferTestCasesRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+		if request.Selection.IsEmpty() {
+			return problemdetail.BadRequest(c, services.ErrEmptyTestCaseSelection.Error())
+		}
+
+		transferred, err := testCaseService.TransferBySelection(c.Context(), *request)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.BadRequest(c, "target project not found")
+			}
+			logger.Error(loggedmodule.ApiTestCases, "failed to transfer test cases", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to transfer test cases")
+		}
+
+		return c.JSON(schema.BulkTransferTestCasesResponse{Transferred: transferred})
+	}
+}
+
 // GetProjectTestCasesSummary godoc
 //
 //	@ID				GetProjectTestCaseSummary

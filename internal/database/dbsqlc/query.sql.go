@@ -1201,6 +1201,18 @@ func (q *Queries) DeleteTestCaseRelation(ctx context.Context, arg DeleteTestCase
 	return result.RowsAffected()
 }
 
+const deleteTestCasesByIDs = `-- name: DeleteTestCasesByIDs :execrows
+DELETE FROM test_cases WHERE id = ANY($1::uuid[])
+`
+
+func (q *Queries) DeleteTestCasesByIDs(ctx context.Context, ids []uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTestCasesByIDs, pq.Array(ids))
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteTestPlan = `-- name: DeleteTestPlan :execrows
 DELETE FROM test_plans WHERE id = $1
 `
@@ -3512,6 +3524,79 @@ SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, cr
 
 func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.NullInt32) ([]TestCase, error) {
 	rows, err := q.db.QueryContext(ctx, listTestCasesByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.Suggested,
+			&i.Runner,
+			&i.ScriptPath,
+			&i.ParentTestCaseID,
+			&i.Preconditions,
+			&i.Priority,
+			&i.ExternalID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestCasesBySelection = `-- name: ListTestCasesBySelection :many
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id
+FROM test_cases
+WHERE project_id = $1::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    ($2::bool
+      AND ($3::text = '' OR title ILIKE '%' || $3::text || '%' OR code ILIKE '%' || $3::text || '%')
+      AND NOT (id = ANY($4::uuid[])))
+    OR (NOT $2::bool AND id = ANY($5::uuid[]))
+  )
+ORDER BY created_at ASC, id ASC
+`
+
+type ListTestCasesBySelectionParams struct {
+	ProjectID           int32
+	SelectAll           bool
+	Search              string
+	ExcludedTestCaseIds []uuid.UUID
+	TestCaseIds         []uuid.UUID
+}
+
+// Test cases picked in a project's test case list: the given test_case_ids, or with
+// select_all every test case the list shows for the search, minus the excluded ones
+func (q *Queries) ListTestCasesBySelection(ctx context.Context, arg ListTestCasesBySelectionParams) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesBySelection,
+		arg.ProjectID,
+		arg.SelectAll,
+		arg.Search,
+		pq.Array(arg.ExcludedTestCaseIds),
+		pq.Array(arg.TestCaseIds),
+	)
 	if err != nil {
 		return nil, err
 	}

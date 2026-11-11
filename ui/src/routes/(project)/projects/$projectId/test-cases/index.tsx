@@ -54,7 +54,10 @@ import {
   deleteTestCase,
   transferTestCase,
   exportTestCasesToFile,
+  bulkDeleteTestCases,
+  bulkTransferTestCases,
   type ExportFileFormat,
+  type TestCaseSelection,
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
@@ -91,6 +94,25 @@ export default function ListProjectTestCases() {
   const selectedCount = allSelection
     ? allSelection.total - allSelection.excludedIds.length
     : selectedRows.length;
+  // What the bulk actions act on; "Select all" is resolved by the backend
+  const buildSelection = (): TestCaseSelection =>
+    allSelection
+      ? {
+          project_id: Number(projectId),
+          select_all: true,
+          // Same filter the list was showing when "Select all" was used
+          search: moduleFilter || allSelection.search,
+          excluded_test_case_ids: allSelection.excludedIds,
+        }
+      : {
+          project_id: Number(projectId),
+          test_case_ids: selectedRows.filter((row) => row.id).map((row) => String(row.id)),
+        };
+  const clearSelection = () => {
+    setSelectedRows([]);
+    setRowSelection({});
+    setAllSelection(null);
+  };
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
   const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
@@ -262,7 +284,7 @@ export default function ListProjectTestCases() {
   };
 
   const handleBulkTransferClick = () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     setTestCaseToTransfer(null);
     setTargetProjectId("");
     setTargetFeatureOrModule("");
@@ -271,22 +293,17 @@ export default function ListProjectTestCases() {
   };
 
   const handleBulkDelete = async () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     setBulkDeleting(true);
     try {
-      await Promise.all(
-        selectedRows.map((row) => {
-          if (row.id) return deleteTestCase(String(row.id));
-          return Promise.resolve();
-        })
-      );
-      toaster.success({ title: t("test_cases.delete.success") });
+      const result = await bulkDeleteTestCases(buildSelection());
+      toaster.success({
+        title: t("test_cases.bulk_delete.success", { count: result?.deleted ?? 0 }),
+      });
       await queryClient.invalidateQueries({
         queryKey: ["get", "/v1/projects/{projectID}/test-cases"],
       });
-      setSelectedRows([]);
-      setRowSelection({});
-      setAllSelection(null);
+      clearSelection();
       setBulkDeleteOpen(false);
     } catch (err: any) {
       toaster.error({
@@ -299,40 +316,27 @@ export default function ListProjectTestCases() {
   };
 
   const handleExportClick = () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     setExportFileName(`test-cases-${new Date().toISOString().slice(0, 10)}`);
     setExportFileFormat("XLSX");
     setExportModalOpen(true);
   };
 
   const handleExportConfirm = async () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     try {
       setExporting(true);
 
-      const testcases = selectedRows.map((row) => ({
-        title: row.title ?? "",
-        description: row.description ?? "",
-        kind: row.kind ?? "",
-        code: row.code ?? "",
-        featureOrModule:
-          (row as any).feature_or_module ?? (row as any).featureOrModule ?? "",
-        tags: Array.isArray((row as any).tags)
-          ? ((row as any).tags as string[])
-          : [],
-        isDraft: Boolean((row as any).is_draft ?? (row as any).isDraft),
-        priority: row.priority ?? "",
-      }));
-
+      // The server loads the selected test cases, so "Select all" exports every page
       await exportTestCasesToFile({
         filename: exportFileName.trim(),
         fileformat: exportFileFormat,
-        testcases,
+        selection: buildSelection(),
       });
 
       toaster.success({
         title: "Export successful",
-        description: `Exported ${testcases.length} test case(s) as ${exportFileFormat}.`,
+        description: `Exported ${selectedCount} test case(s) as ${exportFileFormat}.`,
       });
       setExportModalOpen(false);
     } catch (err: any) {
@@ -450,18 +454,13 @@ export default function ListProjectTestCases() {
                       <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
                         {t("test_cases.use_in_test_session")}
                       </Menu.Item>
-                      {allSelection && (
-                        <Text px="2" py="1" fontSize="xs" color="fg.muted" maxW="64">
-                          {t("test_cases.all_selected_actions_hint")}
-                        </Text>
-                      )}
-                      <Menu.Item value="export" disabled={!!allSelection} onClick={handleExportClick}>
+                      <Menu.Item value="export" onClick={handleExportClick}>
                         Export
                       </Menu.Item>
-                      <Menu.Item value="transfer" disabled={!!allSelection} onClick={handleBulkTransferClick}>
+                      <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
                         {t("test_cases.transfer")}
                       </Menu.Item>
-                      <Menu.Item value="delete" color="fg.error" disabled={!!allSelection} onClick={() => setBulkDeleteOpen(true)}>
+                      <Menu.Item value="delete" color="fg.error" onClick={() => setBulkDeleteOpen(true)}>
                         {t("test_cases.delete")}
                       </Menu.Item>
                     </Menu.Content>
@@ -619,7 +618,7 @@ export default function ListProjectTestCases() {
       <AppDialog
         open={bulkDeleteOpen}
         onOpenChange={(event) => !bulkDeleting && setBulkDeleteOpen(event.open)}
-        title={t("test_cases.bulk_delete.title", { count: selectedRows.length })}
+        title={t("test_cases.bulk_delete.title", { count: selectedCount })}
         footer={
           <>
             <Button
@@ -636,7 +635,7 @@ export default function ListProjectTestCases() {
         }
       >
         <Text color="fg.subtle">
-          {t("test_cases.bulk_delete.description", { count: selectedRows.length })}
+          {t("test_cases.bulk_delete.description", { count: selectedCount })}
         </Text>
       </AppDialog>
 
@@ -861,7 +860,7 @@ export default function ListProjectTestCases() {
             setExportFileName("");
           }
         }}
-        title={`Export ${selectedRows.length} Test Case(s)`}
+        title={`Export ${selectedCount} Test Case(s)`}
         footer={
           <>
             <Button
@@ -872,7 +871,7 @@ export default function ListProjectTestCases() {
             </Button>
             <Button
               colorPalette="brand"
-              disabled={selectedRows.length === 0}
+              disabled={selectedCount === 0}
               loading={exporting}
               onClick={handleExportConfirm}
             >
@@ -882,7 +881,7 @@ export default function ListProjectTestCases() {
         }
       >
         <Box fontSize="sm" mb={3} color="fg.muted">
-          Choose a file name and format to export {selectedRows.length}{" "}
+          Choose a file name and format to export {selectedCount}{" "}
           selected test case(s).
         </Box>
         <Fieldset.Root>
@@ -945,7 +944,7 @@ export default function ListProjectTestCases() {
             setProjectSearchQuery("");
           }
         }}
-        title={testCaseToTransfer ? t("test_cases.transfer") : `Transfer ${selectedRows.length} Test Case(s)`}
+        title={testCaseToTransfer ? t("test_cases.transfer") : `Transfer ${selectedCount} Test Case(s)`}
         footer={
           <>
             <Button variant="outline" onClick={() => setTransferModalOpen(false)}>
@@ -965,17 +964,11 @@ export default function ListProjectTestCases() {
                       feature_or_module: featureOrModuleVal,
                     });
                   } else {
-                    await Promise.all(
-                      selectedRows.map((row) => {
-                        if (row.id) {
-                          return transferTestCase(String(row.id), {
-                            target_project_id: targetIdNum,
-                            feature_or_module: featureOrModuleVal,
-                          });
-                        }
-                        return Promise.resolve();
-                      })
-                    );
+                    await bulkTransferTestCases({
+                      selection: buildSelection(),
+                      target_project_id: targetIdNum,
+                      feature_or_module: featureOrModuleVal,
+                    });
                   }
 
                   toaster.success({
@@ -992,9 +985,7 @@ export default function ListProjectTestCases() {
                   setTargetProjectId("");
                   setTargetFeatureOrModule("");
                   setProjectSearchQuery("");
-                  setSelectedRows([]);
-                  setRowSelection({});
-                  setAllSelection(null);
+                  clearSelection();
                 } catch (err: any) {
                   toaster.error({
                     title: "Transfer failed",
@@ -1011,7 +1002,7 @@ export default function ListProjectTestCases() {
         <Box fontSize="sm" mb={3} color="fg.muted">
           {testCaseToTransfer
             ? `Select the destination project and feature/module to move test case "${testCaseToTransfer.title}" (${testCaseToTransfer.code}):`
-            : `Select the destination project and feature/module to move ${selectedRows.length} selected test case(s):`}
+            : `Select the destination project and feature/module to move ${selectedCount} selected test case(s):`}
         </Box>
         
         <Fieldset.Root>

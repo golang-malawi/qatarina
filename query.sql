@@ -420,6 +420,24 @@ WHERE project_id = sqlc.arg(project_id)
 ORDER BY created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
+-- name: ListTestCasesBySelection :many
+-- Test cases picked in a project's test case list: the given test_case_ids, or with
+-- select_all every test case the list shows for the search, minus the excluded ones
+SELECT *
+FROM test_cases
+WHERE project_id = sqlc.arg(project_id)::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    (sqlc.arg(select_all)::bool
+      AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%')
+      AND NOT (id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[])))
+    OR (NOT sqlc.arg(select_all)::bool AND id = ANY(sqlc.arg(test_case_ids)::uuid[]))
+  )
+ORDER BY created_at ASC, id ASC;
+
+-- name: DeleteTestCasesByIDs :execrows
+DELETE FROM test_cases WHERE id = ANY(sqlc.arg(ids)::uuid[]);
+
 -- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
 WHERE code LIKE $1 || '%'
