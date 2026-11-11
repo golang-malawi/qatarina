@@ -276,7 +276,7 @@ export interface paths {
         put?: never;
         /**
          * Resets a user's password
-         * @description Resets a user's password without requiring the old one
+         * @description Resets a user's password without requiring the old one. Restricted to super admins.
          */
         post: operations["ResetPassword"];
         delete?: never;
@@ -3275,6 +3275,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
