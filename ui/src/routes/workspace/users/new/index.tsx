@@ -22,6 +22,7 @@ function CreateNewUser() {
   const handleSubmit = async (values: {
     first_name: string;
     last_name: string;
+    display_name?: string;
     email: string;
     password: string;
   }) => {
@@ -29,7 +30,9 @@ function CreateNewUser() {
     try {
       const res = await createUserMutation.mutateAsync({
         body: {
-          display_name: `${values.first_name} ${values.last_name}`,
+          display_name:
+            values.display_name?.trim() ||
+            `${values.first_name} ${values.last_name}`.trim(),
           first_name: values.first_name,
           last_name: values.last_name,
           password: values.password,

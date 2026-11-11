@@ -500,6 +500,7 @@
   "first_name": "First Name",
   "last_name": "Last Name",
   "display_name": "Display Name",
+  "display_name_helper": "Optional. Defaults to your first and last name.",
   "phone": "Phone",
   "city": "City",
   "address": "Address",
