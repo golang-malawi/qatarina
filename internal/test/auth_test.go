@@ -319,3 +319,98 @@ func TestAuthService_ChangePassword_UnknownUser(t *testing.T) {
 		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// ResetPassword
+// ---------------------------------------------------------------------------
+
+func makeSuperAdmin(t *testing.T, db *sql.DB, userID int64) {
+	t.Helper()
+	if _, err := db.Exec(`UPDATE users SET is_super_admin = true WHERE id = $1`, userID); err != nil {
+		t.Fatalf("failed to promote user %d to super admin: %v", userID, err)
+	}
+}
+
+func TestAuthService_ResetPassword_NonAdminCannotResetOtherUser(t *testing.T) {
+	db := openTestDB()
+	svc := newAuthService(t, db)
+
+	_, attackerID := createTestUser(t, db, svc, "attacker-pass")
+	victimEmail, victimID := createTestUser(t, db, svc, "victim-pass")
+
+	err := svc.ResetPassword(context.Background(), attackerID, &schema.ResetPasswordRequest{
+		UserID:          victimID,
+		NewPassword:     "hijacked",
+		ConfirmPassword: "hijacked",
+	})
+	if !errors.Is(err, services.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+
+	if _, err := svc.SignIn(&schema.LoginRequest{Email: victimEmail, Password: "victim-pass"}); err != nil {
+		t.Errorf("victim's original password should still work: %v", err)
+	}
+}
+
+func TestAuthService_ResetPassword_NonAdminCannotResetOwnPassword(t *testing.T) {
+	db := openTestDB()
+	svc := newAuthService(t, db)
+
+	email, userID := createTestUser(t, db, svc, "old-pass")
+
+	err := svc.ResetPassword(context.Background(), userID, &schema.ResetPasswordRequest{
+		UserID:          userID,
+		NewPassword:     "new-pass",
+		ConfirmPassword: "new-pass",
+	})
+	if !errors.Is(err, services.ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+
+	if _, err := svc.SignIn(&schema.LoginRequest{Email: email, Password: "old-pass"}); err != nil {
+		t.Errorf("original password should still work: %v", err)
+	}
+}
+
+func TestAuthService_ResetPassword_SuperAdminCanResetOtherUser(t *testing.T) {
+	db := openTestDB()
+	svc := newAuthService(t, db)
+
+	_, adminID := createTestUser(t, db, svc, "admin-pass")
+	makeSuperAdmin(t, db, adminID)
+	userEmail, userID := createTestUser(t, db, svc, "old-pass")
+
+	err := svc.ResetPassword(context.Background(), adminID, &schema.ResetPasswordRequest{
+		UserID:          userID,
+		NewPassword:     "new-pass",
+		ConfirmPassword: "new-pass",
+	})
+	if err != nil {
+		t.Fatalf("ResetPassword by super admin failed: %v", err)
+	}
+
+	if _, err := svc.SignIn(&schema.LoginRequest{Email: userEmail, Password: "new-pass"}); err != nil {
+		t.Errorf("sign in with new password failed: %v", err)
+	}
+}
+
+func TestAuthService_ResetPassword_SuperAdminCannotResetOwnPassword(t *testing.T) {
+	db := openTestDB()
+	svc := newAuthService(t, db)
+
+	adminEmail, adminID := createTestUser(t, db, svc, "admin-pass")
+	makeSuperAdmin(t, db, adminID)
+
+	err := svc.ResetPassword(context.Background(), adminID, &schema.ResetPasswordRequest{
+		UserID:          adminID,
+		NewPassword:     "new-pass",
+		ConfirmPassword: "new-pass",
+	})
+	if !errors.Is(err, services.ErrCannotResetOwnPassword) {
+		t.Fatalf("expected ErrCannotResetOwnPassword, got %v", err)
+	}
+
+	if _, err := svc.SignIn(&schema.LoginRequest{Email: adminEmail, Password: "admin-pass"}); err != nil {
+		t.Errorf("original password should still work: %v", err)
+	}
+}

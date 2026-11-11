@@ -138,13 +138,14 @@ func ChangePassword(authService services.AuthService, logger logging.Logger) fib
 //
 //	@ID				ResetPassword
 //	@Summary		Resets a user's password
-//	@Description	Resets a user's password without requiring the old one
+//	@Description	Resets a user's password without requiring the old one. Restricted to super admins.
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		schema.ResetPasswordRequest	true	"Password reset request"
 //	@Success		200		{object}	map[string]string
 //	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		403		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/auth/reset-password [post]
 func ResetPassword(authService services.AuthService, logger logging.Logger) fiber.Handler {
@@ -157,8 +158,14 @@ func ResetPassword(authService services.AuthService, logger logging.Logger) fibe
 			return problemdetail.BadRequest(ctx, "failed to parse request body")
 		}
 
-		err := authService.ResetPassword(ctx.Context(), &req)
+		err := authService.ResetPassword(ctx.Context(), authutil.GetAuthUserID(ctx), &req)
 		if err != nil {
+			if errors.Is(err, services.ErrForbidden) {
+				return problemdetail.Forbidden(ctx, "only super admins can reset another user's password")
+			}
+			if errors.Is(err, services.ErrCannotResetOwnPassword) {
+				return problemdetail.BadRequest(ctx, "use change password to update your own password")
+			}
 			if strings.Contains(err.Error(), "do not match") {
 				return problemdetail.BadRequest(ctx, "new password and confirmation do not match")
 			}
