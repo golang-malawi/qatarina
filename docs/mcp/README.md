@@ -492,16 +492,24 @@ Use these steps to connect Claude Code to a Qatarina instance that is already de
 Before proceeding, ensure that:
 - Claude Code is installed on your machine.
 - You have an account on the deployed Qatarina instance.
-- You know two URLs, which you can get from the maintainers of the deployment:
-  - the **Qatarina URL**, where you log in to the web app, for example `https://qatarina.example.com`
-  - the **MCP URL**, where the MCP server is served, for example `https://mcp.qatarina.example.com/mcp`
 
-The MCP server is often served on its own host name rather than under the web app's address, so don't assume the MCP URL is the Qatarina URL with `/mcp` added. Requesting `/mcp` on the web app's address returns `404 Cannot POST /mcp`.
+**Staging deployment URLs**
 
-You can check that the MCP URL is right before configuring anything. A request without a token should return `401` with the body `missing bearer token`:
+The commands below use the shared staging deployment:
+
+| What | URL |
+| --- | --- |
+| Qatarina URL (web app, where you log in and get a token) | `https://qatarina.6g.nndi.cloud` |
+| MCP URL (the MCP server) | `https://mcp.qatarina.6g.nndi.cloud/mcp` |
+
+To connect to a different deployment, replace both URLs in the commands with that deployment's URLs.
+
+The MCP server is served on its own host name (`mcp.qatarina...`), not under the web app's address, so don't use the Qatarina URL with `/mcp` added. `https://qatarina.6g.nndi.cloud/mcp` is the web app and returns `404 Cannot POST /mcp`.
+
+You can check that the MCP URL is reachable before configuring anything. A request without a token should return `401` with the body `missing bearer token`:
 
 ```bash
-curl -s -X POST <mcp-url> -w "\n%{http_code}\n"
+curl -s -X POST https://mcp.qatarina.6g.nndi.cloud/mcp -w "\n%{http_code}\n"
 ```
 
 On Windows, use `curl.exe` instead of `curl` in PowerShell.
@@ -512,10 +520,10 @@ On Windows, use `curl.exe` instead of `curl` in PowerShell.
 
 **Step 1: Obtain an authorization token**
 
-Log in to the deployed instance, replacing the Qatarina URL, email and password:
+Log in to the deployed instance, replacing the email and password with your login on the deployment:
 
 ```bash
-TOKEN=$(curl -s -X POST <qatarina-url>/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token)
+TOKEN=$(curl -s -X POST https://qatarina.6g.nndi.cloud/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token)
 ```
 
 Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
@@ -525,7 +533,7 @@ Get the token from the same deployment as the MCP server. A token issued by a di
 If `claude mcp get qatarina` shows an existing configuration, for example your local one, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
 
 ```bash
-claude mcp add --scope user --transport http qatarina <mcp-url> --header "Authorization: Bearer $TOKEN"
+claude mcp add --scope user --transport http qatarina https://mcp.qatarina.6g.nndi.cloud/mcp --header "Authorization: Bearer $TOKEN"
 ```
 
 **Step 3: Verify the configuration**
@@ -542,10 +550,10 @@ Confirm that `qatarina` appears in the list and that its connection status is `C
 
 **Step 1: Obtain an authorization token**
 
-Run the following in a local PowerShell window, replacing the Qatarina URL, email and password:
+Run the following in a local PowerShell window, replacing the email and password with your login on the deployment:
 
 ```powershell
-$AuthorizationToken = (Invoke-RestMethod -Method Post -Uri "<qatarina-url>/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+$AuthorizationToken = (Invoke-RestMethod -Method Post -Uri "https://qatarina.6g.nndi.cloud/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
 ```
 
 Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
@@ -555,7 +563,7 @@ Get the token from the same deployment as the MCP server. A token issued by a di
 If `claude mcp get qatarina` shows an existing configuration, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
 
 ```powershell
-claude mcp add --scope user --transport http qatarina <mcp-url> --header "Authorization: Bearer $AuthorizationToken"
+claude mcp add --scope user --transport http qatarina https://mcp.qatarina.6g.nndi.cloud/mcp --header "Authorization: Bearer $AuthorizationToken"
 ```
 
 **Step 3: Verify the configuration**
@@ -853,7 +861,15 @@ Use these steps to connect Claude Desktop to a Qatarina instance that is already
 Before proceeding, ensure that:
 - Claude Desktop and Node.js are installed on your machine.
 - You have an account on the deployed Qatarina instance.
-- You know the deployment's **Qatarina URL** and **MCP URL**. See the [Claude Code production prerequisites](#production-environment) for what these are and how to check the MCP URL.
+
+**Staging deployment URLs**
+
+| What | URL |
+| --- | --- |
+| Qatarina URL (web app, where you log in and get a token) | `https://qatarina.6g.nndi.cloud` |
+| MCP URL (the MCP server, used in the Claude Desktop config) | `https://mcp.qatarina.6g.nndi.cloud/mcp` |
+
+The steps below use these URLs. See the [Claude Code production section](#production-environment) for how to check the MCP URL and how to connect to a different deployment.
 
 ---
 
@@ -861,17 +877,17 @@ Before proceeding, ensure that:
 
 **Step 1: Obtain an authorization token**
 
-Replace the Qatarina URL, email and password:
+Replace the email and password with your login on the deployment:
 
 ```bash
-curl -s -X POST <qatarina-url>/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token
+curl -s -X POST https://qatarina.6g.nndi.cloud/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token
 ```
 
 Copy the returned token for use in the next step.
 
 **Step 2: Configure the MCP server**
 
-Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing the MCP URL and `<token>`:
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing `<token>`:
 
 ```json
 {
@@ -881,7 +897,7 @@ Open **Settings → Developer → Edit Config** and set the `qatarina` entry, re
       "args": [
         "-y",
         "mcp-remote",
-        "<mcp-url>",
+        "https://mcp.qatarina.6g.nndi.cloud/mcp",
         "--header",
         "Authorization:${AUTH_HEADER}"
       ],
@@ -905,10 +921,10 @@ Fully quit Claude Desktop (choose **Claude → Quit Claude** from the menu bar, 
 
 **Step 1: Obtain an authorization token**
 
-Run the following in a local PowerShell window, replacing the Qatarina URL, email and password:
+Run the following in a local PowerShell window, replacing the email and password with your login on the deployment:
 
 ```powershell
-(Invoke-RestMethod -Method Post -Uri "<qatarina-url>/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+(Invoke-RestMethod -Method Post -Uri "https://qatarina.6g.nndi.cloud/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
 ```
 
 If you are connected to a server over SSH, run this in a separate local PowerShell window. It fails with a syntax error in a Linux shell.
@@ -917,7 +933,7 @@ Copy the returned token for use in the next step.
 
 **Step 2: Configure the MCP server**
 
-Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing the MCP URL and `<token>`. Opening the file from Settings is the most reliable way to find it, because its location depends on how Claude Desktop was installed.
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing `<token>`. Opening the file from Settings is the most reliable way to find it, because its location depends on how Claude Desktop was installed.
 
 ```json
 {
@@ -927,7 +943,7 @@ Open **Settings → Developer → Edit Config** and set the `qatarina` entry, re
       "args": [
         "-y",
         "mcp-remote",
-        "<mcp-url>",
+        "https://mcp.qatarina.6g.nndi.cloud/mcp",
         "--header",
         "Authorization:${AUTH_HEADER}"
       ],
