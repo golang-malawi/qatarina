@@ -484,6 +484,7 @@ type TestRunsComment struct {
 	AuthorID  int32
 	Content   string
 	MediaUrls pqtype.NullRawMessage
+	CreatedAt time.Time
 }
 
 type User struct {

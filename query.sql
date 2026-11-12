@@ -1109,3 +1109,132 @@ RETURNING *;
 
 -- name: DeleteProjectDocument :execrows
 DELETE FROM project_documents WHERE id = $1;
+-- name: ListUntestedTestCasesByProject :many
+-- Test cases with no recorded result (passed or failed) yet. With a test plan,
+-- only the plan's test cases are listed and only results in that plan count.
+SELECT * FROM test_cases
+WHERE project_id = sqlc.arg(project_id)::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    sqlc.narg(test_plan_id)::bigint IS NULL
+    OR EXISTS (
+      SELECT 1 FROM test_plan_cases tpc
+      WHERE tpc.test_case_id = test_cases.id
+        AND tpc.test_plan_id = sqlc.narg(test_plan_id)::bigint
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = test_cases.id
+      AND tr.result_state <> 'pending'
+      AND (sqlc.narg(test_plan_id)::bigint IS NULL OR tr.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  )
+ORDER BY created_at DESC, id DESC;
+
+-- name: ListFailedTestCasesByProject :many
+-- Test cases whose most recently recorded result is a failure, with that result.
+-- With a test plan, only results recorded in that plan count.
+SELECT
+  tc.id,
+  tc.code,
+  tc.title,
+  tc.feature_or_module,
+  tc.priority,
+  tr.id AS test_run_id,
+  tr.test_plan_id,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.actual_result,
+  tr.notes,
+  tr.updated_at AS failed_at
+FROM test_cases tc
+JOIN LATERAL (
+  SELECT r.id, r.test_plan_id, r.tested_by_id, r.result_state, r.actual_result, r.notes, r.updated_at
+  FROM test_runs r
+  WHERE r.test_case_id = tc.id
+    AND r.result_state <> 'pending'
+    AND (sqlc.narg(test_plan_id)::bigint IS NULL OR r.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  ORDER BY r.updated_at DESC NULLS LAST, r.id DESC
+  LIMIT 1
+) tr ON true
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tc.project_id = sqlc.arg(project_id)::int
+  AND tr.result_state = 'failed'
+ORDER BY tr.updated_at DESC NULLS LAST, tc.id DESC;
+
+-- name: ListProjectTestRuns :many
+-- A project's test runs, most recently updated first, optionally narrowed to a
+-- test plan, a test case or a result state.
+SELECT
+  tr.id,
+  tr.project_id,
+  tr.test_plan_id,
+  tr.test_case_id,
+  tc.code AS test_case_code,
+  tc.title AS test_case_title,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.assigned_to_id,
+  tr.result_state,
+  tr.is_closed,
+  tr.notes,
+  tr.actual_result,
+  tr.expected_result,
+  tr.tested_on,
+  tr.environment_id,
+  tr.created_at,
+  tr.updated_at
+FROM test_runs tr
+JOIN test_cases tc ON tc.id = tr.test_case_id
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tr.project_id = sqlc.arg(project_id)::int
+  AND (sqlc.narg(test_plan_id)::bigint IS NULL OR tr.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  AND (sqlc.narg(test_case_id)::uuid IS NULL OR tr.test_case_id = sqlc.narg(test_case_id)::uuid)
+  AND (sqlc.narg(result_state)::test_run_state IS NULL OR tr.result_state = sqlc.narg(result_state)::test_run_state)
+ORDER BY tr.updated_at DESC NULLS LAST, tr.id DESC
+LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::int;
+
+-- name: ListTestRunResults :many
+-- Every result recorded against a test run, newest first
+SELECT
+  trr.id,
+  trr.status,
+  trr.result,
+  trr.notes,
+  trr.executed_by,
+  COALESCE(u.display_name, '')::text AS executed_by_name,
+  trr.executed_at
+FROM test_run_results trr
+LEFT JOIN users u ON u.id = trr.executed_by
+WHERE trr.test_run_id = $1
+ORDER BY trr.executed_at DESC, trr.id DESC;
+
+-- name: CreateTestRunComment :one
+INSERT INTO test_runs_comments (test_run_id, author_id, content, created_at)
+VALUES (sqlc.arg(test_run_id), sqlc.arg(author_id), sqlc.arg(content), NOW())
+RETURNING id, created_at;
+
+-- name: ListTestRunComments :many
+SELECT
+  c.id,
+  c.author_id,
+  COALESCE(u.display_name, '')::text AS author_name,
+  c.content,
+  c.created_at
+FROM test_runs_comments c
+LEFT JOIN users u ON u.id = c.author_id
+WHERE c.test_run_id = $1
+ORDER BY c.created_at, c.id;
+
+-- name: UpdateTestPlanDetails :execrows
+-- Updates the editable details of a test plan, leaving its counters, status and
+-- assignments untouched
+UPDATE test_plans SET
+  kind = sqlc.arg(kind),
+  description = sqlc.arg(description),
+  environment_id = sqlc.narg(environment_id),
+  start_at = sqlc.arg(start_at),
+  scheduled_end_at = sqlc.arg(scheduled_end_at),
+  updated_by_id = sqlc.arg(updated_by_id),
+  updated_at = NOW()
+WHERE id = sqlc.arg(id);

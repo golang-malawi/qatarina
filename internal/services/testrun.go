@@ -45,6 +45,14 @@ type TestRunService interface {
 	PublishLog(runID string, msg schema.RunnerMessage) error
 	SaveAttachment(ctx context.Context, resultID string, uploadedBy int64, file *schema.AttachmentRequest) (*schema.AttachmentResponse, error)
 	GetAttachments(ctx context.Context, resultID string) ([]schema.AttachmentResponse, error)
+	// FindFiltered lists a project's test runs, most recently updated first
+	FindFiltered(ctx context.Context, filter schema.TestRunFilter) ([]schema.TestRunListItem, error)
+	// FindResults lists every result recorded against a test run, newest first
+	FindResults(ctx context.Context, testRunID string) ([]schema.TestRunResultItem, error)
+	// CreateComment adds a comment to a test run
+	CreateComment(ctx context.Context, testRunID string, authorID int64, content string) (*schema.TestRunComment, error)
+	// ListComments lists a test run's comments, oldest first
+	ListComments(ctx context.Context, testRunID string) ([]schema.TestRunComment, error)
 }
 
 type testRunService struct {
@@ -453,4 +461,114 @@ func (t *testRunService) GetAttachments(ctx context.Context, resultID string) ([
 		})
 	}
 	return attachments, nil
+}
+func (t *testRunService) FindFiltered(ctx context.Context, filter schema.TestRunFilter) ([]schema.TestRunListItem, error) {
+	params := dbsqlc.ListProjectTestRunsParams{
+		ProjectID:  int32(filter.ProjectID),
+		TestPlanID: common.NewNullInt64(filter.TestPlanID),
+		TestCaseID: common.NewNullUUID(filter.TestCaseID),
+		ResultState: dbsqlc.NullTestRunState{
+			TestRunState: dbsqlc.TestRunState(filter.ResultState),
+			Valid:        filter.ResultState != "",
+		},
+		PageLimit:  int32(filter.Limit),
+		PageOffset: int32(filter.Offset),
+	}
+	rows, err := t.queries.ListProjectTestRuns(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	runs := make([]schema.TestRunListItem, 0, len(rows))
+	for _, row := range rows {
+		runs = append(runs, schema.TestRunListItem{
+			ID:             row.ID.String(),
+			ProjectID:      int64(row.ProjectID),
+			TestPlanID:     int64(row.TestPlanID.Int32),
+			TestCaseID:     row.TestCaseID.String(),
+			TestCaseCode:   row.TestCaseCode,
+			TestCaseTitle:  row.TestCaseTitle,
+			TestedByID:     int64(row.TestedByID.Int32),
+			TestedBy:       row.TestedBy,
+			AssignedToID:   int64(row.AssignedToID.Int32),
+			ResultState:    string(row.ResultState),
+			IsClosed:       row.IsClosed.Bool,
+			Notes:          row.Notes,
+			ActualResult:   row.ActualResult.String,
+			ExpectedResult: row.ExpectedResult.String,
+			TestedOn:       row.TestedOn.Format(time.DateOnly),
+			EnvironmentID:  int64(row.EnvironmentID.Int32),
+			CreatedAt:      common.FormatNullTime(row.CreatedAt),
+			UpdatedAt:      common.FormatNullTime(row.UpdatedAt),
+		})
+	}
+	return runs, nil
+}
+
+func (t *testRunService) FindResults(ctx context.Context, testRunID string) ([]schema.TestRunResultItem, error) {
+	id, err := uuid.Parse(testRunID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID %q: %w", testRunID, err)
+	}
+	rows, err := t.queries.ListTestRunResults(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]schema.TestRunResultItem, 0, len(rows))
+	for _, row := range rows {
+		results = append(results, schema.TestRunResultItem{
+			ID:             row.ID.String(),
+			Status:         string(row.Status),
+			Result:         row.Result,
+			Notes:          row.Notes.String,
+			ExecutedByID:   int64(row.ExecutedBy.Int32),
+			ExecutedByName: row.ExecutedByName,
+			ExecutedAt:     row.ExecutedAt.Format(time.RFC3339),
+		})
+	}
+	return results, nil
+}
+
+func (t *testRunService) CreateComment(ctx context.Context, testRunID string, authorID int64, content string) (*schema.TestRunComment, error) {
+	id, err := uuid.Parse(testRunID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID %q: %w", testRunID, err)
+	}
+	row, err := t.queries.CreateTestRunComment(ctx, dbsqlc.CreateTestRunCommentParams{
+		TestRunID: id,
+		AuthorID:  int32(authorID),
+		Content:   content,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create test run comment: %w", err)
+	}
+	return &schema.TestRunComment{
+		ID:        row.ID,
+		TestRunID: id.String(),
+		AuthorID:  authorID,
+		Content:   content,
+		CreatedAt: row.CreatedAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (t *testRunService) ListComments(ctx context.Context, testRunID string) ([]schema.TestRunComment, error) {
+	id, err := uuid.Parse(testRunID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test run ID %q: %w", testRunID, err)
+	}
+	rows, err := t.queries.ListTestRunComments(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	comments := make([]schema.TestRunComment, 0, len(rows))
+	for _, row := range rows {
+		comments = append(comments, schema.TestRunComment{
+			ID:         row.ID,
+			TestRunID:  id.String(),
+			AuthorID:   int64(row.AuthorID),
+			AuthorName: row.AuthorName,
+			Content:    row.Content,
+			CreatedAt:  row.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	return comments, nil
 }
