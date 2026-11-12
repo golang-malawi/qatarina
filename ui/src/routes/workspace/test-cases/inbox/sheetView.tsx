@@ -12,6 +12,7 @@ import {
   Wrap,
   WrapItem,
   Separator,
+  Input,
 } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import ReactMarkdown from "react-markdown";
@@ -51,6 +52,37 @@ const testRunsByPlanQueryOptions = (testPlanId: number) =>
 const lastResultKey = (testPlanId?: number, testCaseId?: string) =>
   `${testPlanId ?? ""}:${testCaseId ?? ""}`;
 
+// Filter values for the per-column filter row; empty string means "any"
+type ColumnFilters = {
+  code: string;
+  title: string;
+  project: string;
+  environment: string;
+  lastResult: string;
+};
+
+const emptyColumnFilters: ColumnFilters = {
+  code: "",
+  title: "",
+  project: "",
+  environment: "",
+  lastResult: "",
+};
+
+// Sentinel option values for rows with no environment / no run yet
+const NOT_SPECIFIED = "__none__";
+const NO_RUN = "__no_run__";
+
+const filterSelectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "2px 4px",
+  borderRadius: "2px",
+  border: "1px solid #cbd5e1",
+  background: "#ffffff",
+  fontSize: "12px",
+  fontWeight: "normal",
+};
+
 interface SheetViewProps {
   projectMap: Record<number, string>;
   environmentMap: Record<number, string>;
@@ -67,6 +99,9 @@ export function SheetView({
   const { t } = useTranslation();
   const [includeClosed, setIncludeClosed] = useState(initialIncludeClosed);
   const [moduleFilter, setModuleFilter] = useState<string>("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>(emptyColumnFilters);
+  const setColumnFilter = (key: keyof ColumnFilters, value: string) =>
+    setColumnFilters((prev) => ({ ...prev, [key]: value }));
   const [sheetStatuses, setSheetStatuses] = useState<Record<string, "passed" | "failed">>({});
   const [sheetNotes, setSheetNotes] = useState<Record<string, string>>({});
   const [selectedTestCaseForDetails, setSelectedTestCaseForDetails] =
@@ -146,12 +181,69 @@ export function SheetView({
     ).map((v) => ({ label: v as string, value: v as string }));
   }, [testCases]);
 
-  // Apply feature/module filter client-side
-  const filteredTestCases = useMemo(() => {
-    return testCases.filter(
-      (tc) => !moduleFilter || (tc as any)?.feature_or_module === moduleFilter
+  // Options for the column filters, built from the test cases loaded so far
+  const projectFilterOptions = useMemo(
+    () =>
+      Array.from(new Set(testCases.map((tc) => tc.project_id).filter(Boolean))).map((id) => ({
+        value: String(id),
+        label: projectMap[id as number] ?? `Project ${id}`,
+      })),
+    [testCases, projectMap],
+  );
+
+  const environmentFilterOptions = useMemo(() => {
+    const ids = Array.from(new Set(testCases.map((tc) => tc.environment_id).filter(Boolean)));
+    const options = ids.map((id) => ({
+      value: String(id),
+      label: environmentMap[id as number] ?? `Environment ${id}`,
+    }));
+    if (testCases.some((tc) => !tc.environment_id)) {
+      options.push({
+        value: NOT_SPECIFIED,
+        label: t("test_cases.sheet_view.not_specified", "Not specified"),
+      });
+    }
+    return options;
+  }, [testCases, environmentMap, t]);
+
+  const lastResultOf = useCallback(
+    (tc: components["schemas"]["schema.AssignedTestCase"]) =>
+      lastResultByTestCase[lastResultKey(tc.test_plan_id, tc.id)] || "",
+    [lastResultByTestCase],
+  );
+
+  const lastResultFilterOptions = useMemo(() => {
+    const states = Array.from(
+      new Set(testCases.map((tc) => lastResultOf(tc).toLowerCase()).filter(Boolean)),
     );
-  }, [testCases, moduleFilter]);
+    const options = states.map((state) => ({ value: state, label: state.toUpperCase() }));
+    if (testCases.some((tc) => !lastResultOf(tc))) {
+      options.push({ value: NO_RUN, label: t("test_cases.sheet_view.no_run", "NO RUN") });
+    }
+    return options;
+  }, [testCases, lastResultOf, t]);
+
+  // Apply the module and column filters client-side
+  const filteredTestCases = useMemo(() => {
+    const code = columnFilters.code.trim().toLowerCase();
+    const title = columnFilters.title.trim().toLowerCase();
+
+    return testCases.filter((tc) => {
+      if (moduleFilter && tc.feature_or_module !== moduleFilter) return false;
+      if (code && !(tc.code || `#${tc.id}`).toLowerCase().includes(code)) return false;
+      if (title && !(tc.title ?? "").toLowerCase().includes(title)) return false;
+      if (columnFilters.project && String(tc.project_id) !== columnFilters.project) return false;
+      if (columnFilters.environment) {
+        const env = tc.environment_id ? String(tc.environment_id) : NOT_SPECIFIED;
+        if (env !== columnFilters.environment) return false;
+      }
+      if (columnFilters.lastResult) {
+        const result = lastResultOf(tc).toLowerCase() || NO_RUN;
+        if (result !== columnFilters.lastResult) return false;
+      }
+      return true;
+    });
+  }, [testCases, moduleFilter, columnFilters, lastResultOf]);
 
   // Infinite scroll observer
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -306,6 +398,76 @@ export function SheetView({
               <Table.ColumnHeader width="12%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
               <Table.ColumnHeader width="23%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
               <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Action")}</Table.ColumnHeader>
+            </Table.Row>
+            {/* Per-column filters */}
+            <Table.Row>
+              <Table.ColumnHeader py={1} px={1}>
+                <Input
+                  size="xs"
+                  bg="white"
+                  placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
+                  aria-label={t("test_cases.sheet_view.filter.code", "Filter by code")}
+                  value={columnFilters.code}
+                  onChange={(e) => setColumnFilter("code", e.target.value)}
+                />
+              </Table.ColumnHeader>
+              <Table.ColumnHeader py={1} px={1}>
+                <Input
+                  size="xs"
+                  bg="white"
+                  placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
+                  aria-label={t("test_cases.sheet_view.filter.title", "Filter by title")}
+                  value={columnFilters.title}
+                  onChange={(e) => setColumnFilter("title", e.target.value)}
+                />
+              </Table.ColumnHeader>
+              <Table.ColumnHeader py={1} px={1}>
+                <select
+                  style={filterSelectStyle}
+                  aria-label={t("test_cases.sheet_view.filter.project", "Filter by project")}
+                  value={columnFilters.project}
+                  onChange={(e) => setColumnFilter("project", e.target.value)}
+                >
+                  <option value="">{t("common.all", "All")}</option>
+                  {projectFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </Table.ColumnHeader>
+              <Table.ColumnHeader py={1} px={1}>
+                <select
+                  style={filterSelectStyle}
+                  aria-label={t("test_cases.sheet_view.filter.environment", "Filter by environment")}
+                  value={columnFilters.environment}
+                  onChange={(e) => setColumnFilter("environment", e.target.value)}
+                >
+                  <option value="">{t("common.all", "All")}</option>
+                  {environmentFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </Table.ColumnHeader>
+              <Table.ColumnHeader py={1} px={1}>
+                <select
+                  style={filterSelectStyle}
+                  aria-label={t("test_cases.sheet_view.filter.last_result", "Filter by last result")}
+                  value={columnFilters.lastResult}
+                  onChange={(e) => setColumnFilter("lastResult", e.target.value)}
+                >
+                  <option value="">{t("common.all", "All")}</option>
+                  {lastResultFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </Table.ColumnHeader>
+              {/* Status, Comments and Action are inputs, not data, so they are not filterable */}
+              <Table.ColumnHeader colSpan={3} />
             </Table.Row>
           </Table.Header>
 
