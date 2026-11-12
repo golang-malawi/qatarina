@@ -14,6 +14,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 )
 
@@ -98,6 +99,13 @@ type TestCaseService interface {
 	FindScriptCasesByPlanID(ctx context.Context, testPlanID int64) ([]dbsqlc.TestCase, error)
 
 	Transfer(ctx context.Context, testCaseID string, req schema.TransferTestCaseRequest) (*dbsqlc.TestCase, error)
+
+	// FindBySelection lists the test cases picked in a project's test case list
+	FindBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.TestCase, error)
+	// DeleteBySelection deletes the test cases picked in a project's test case list
+	DeleteBySelection(ctx context.Context, selection schema.TestCaseSelection) (int64, error)
+	// TransferBySelection moves the test cases picked in a project's test case list to another project
+	TransferBySelection(ctx context.Context, req schema.BulkTransferTestCasesRequest) (int64, error)
 
 	// GetSummary is used to get the summary of test cases in a project
 	GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error)
@@ -1033,6 +1041,147 @@ func (t *testCaseServiceImpl) Transfer(ctx context.Context, testCaseID string, r
 		return nil, err
 	}
 	return &tc, nil
+}
+
+// ErrEmptyTestCaseSelection is returned when a selection neither selects all test
+// cases nor lists any
+var ErrEmptyTestCaseSelection = errors.New("no test cases selected")
+
+// ErrSelectionHasUnselectedBranches is returned when deleting a selection would
+// leave a branch pointing at a deleted parent test case
+var ErrSelectionHasUnselectedBranches = errors.New("some selected test cases have branches that aren't selected. Select the branches too or delete them first")
+
+// isParentTestCaseFKViolation reports whether err is a delete blocked by a branch
+// still referencing its parent test case
+func isParentTestCaseFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_parent_test_case"
+}
+
+func parseUUIDs(ids []string) ([]uuid.UUID, error) {
+	parsed := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		u, err := uuid.Parse(id)
+		if err != nil {
+			return nil, fmt.Errorf("invalid test case id %q: %w", id, err)
+		}
+		parsed = append(parsed, u)
+	}
+	return parsed, nil
+}
+
+// findBySelection resolves the selection with db, so it can run inside a transaction
+func findBySelection(ctx context.Context, db *dbsqlc.Queries, selection schema.TestCaseSelection) ([]dbsqlc.TestCase, error) {
+	if selection.IsEmpty() {
+		return nil, ErrEmptyTestCaseSelection
+	}
+	testCaseIDs, err := parseUUIDs(selection.TestCaseIDs)
+	if err != nil {
+		return nil, err
+	}
+	excluded, err := parseUUIDs(selection.ExcludedTestCaseIDs)
+	if err != nil {
+		return nil, err
+	}
+	return db.ListTestCasesBySelection(ctx, dbsqlc.ListTestCasesBySelectionParams{
+		ProjectID:           int32(selection.ProjectID),
+		SelectAll:           selection.SelectAll,
+		Search:              strings.TrimSpace(selection.Search),
+		ExcludedTestCaseIds: excluded,
+		TestCaseIds:         testCaseIDs,
+	})
+}
+
+// FindBySelection implements TestCaseService.
+func (t *testCaseServiceImpl) FindBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.TestCase, error) {
+	return findBySelection(ctx, t.queries, selection)
+}
+
+// DeleteBySelection implements TestCaseService. Either every selected test case is
+// deleted or none is.
+func (t *testCaseServiceImpl) DeleteBySelection(ctx context.Context, selection schema.TestCaseSelection) (int64, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer sqlTx.Rollback()
+	tx := dbsqlc.New(sqlTx)
+
+	testCases, err := findBySelection(ctx, tx, selection)
+	if err != nil {
+		return 0, err
+	}
+	if len(testCases) == 0 {
+		return 0, nil
+	}
+
+	ids := make([]uuid.UUID, 0, len(testCases))
+	for _, tc := range testCases {
+		ids = append(ids, tc.ID)
+	}
+	deleted, err := tx.DeleteTestCasesByIDs(ctx, ids)
+	if err != nil {
+		if isParentTestCaseFKViolation(err) {
+			return 0, ErrSelectionHasUnselectedBranches
+		}
+		return 0, fmt.Errorf("failed to delete test cases: %w", err)
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return 0, err
+	}
+	return deleted, nil
+}
+
+// TransferBySelection implements TestCaseService. Each test case gets a new code in
+// the target project, in the order they were created. Either every selected test
+// case is transferred or none is.
+func (t *testCaseServiceImpl) TransferBySelection(ctx context.Context, req schema.BulkTransferTestCasesRequest) (int64, error) {
+	sqlTx, err := t.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer sqlTx.Rollback()
+	tx := dbsqlc.New(sqlTx)
+
+	testCases, err := findBySelection(ctx, tx, req.Selection)
+	if err != nil {
+		return 0, err
+	}
+	if len(testCases) == 0 {
+		return 0, nil
+	}
+
+	targetProject, err := tx.GetProject(ctx, int32(req.TargetProjectID))
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch target project: %w", err)
+	}
+	if err := tx.InitTestCaseSequence(ctx, dbsqlc.InitTestCaseSequenceParams{
+		ProjectID: int32(req.TargetProjectID),
+		Prefix:    strings.ToLower(targetProject.Code),
+	}); err != nil {
+		return 0, fmt.Errorf("failed to ensure sequence row: %w", err)
+	}
+
+	for _, tc := range testCases {
+		newCode, err := GenerateNextCode(ctx, tx, req.TargetProjectID, &targetProject, nil)
+		if err != nil {
+			return 0, err
+		}
+		if err := tx.TransferTestCase(ctx, dbsqlc.TransferTestCaseParams{
+			ID:              tc.ID,
+			ProjectID:       common.NewNullInt32(int32(req.TargetProjectID)),
+			Code:            newCode,
+			FeatureOrModule: common.NullString(req.FeatureOrModule),
+		}); err != nil {
+			return 0, fmt.Errorf("failed to transfer test case %s: %w", tc.ID, err)
+		}
+	}
+
+	if err := sqlTx.Commit(); err != nil {
+		return 0, err
+	}
+	return int64(len(testCases)), nil
 }
 
 func (t *testCaseServiceImpl) GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error) {
