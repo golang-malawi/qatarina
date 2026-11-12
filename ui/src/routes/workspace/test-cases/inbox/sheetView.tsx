@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   Box,
   Flex,
@@ -244,6 +244,17 @@ export function SheetView({
       return true;
     });
   }, [testCases, moduleFilter, columnFilters, lastResultOf]);
+
+  const isFiltering =
+    Boolean(moduleFilter) || Object.values(columnFilters).some((v) => v.trim() !== "");
+
+  // Rows load page by page as you scroll. While filtering, load the rest so the
+  // filter covers the whole inbox and not just the rows scrolled in so far.
+  useEffect(() => {
+    if (isFiltering && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isFiltering, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Infinite scroll observer
   const observerRef = useRef<IntersectionObserver | null>(null);
