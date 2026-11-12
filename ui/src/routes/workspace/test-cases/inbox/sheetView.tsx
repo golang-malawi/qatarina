@@ -34,6 +34,17 @@ import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
 import { getInboxTestCases } from "@/services/TestCaseService";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
+import {
+  applyChecklistState,
+  readChecklistState,
+  resetChecklistState,
+  useChecklistState,
+} from "@/lib/markdown-checklist";
+import {
+  descriptionChecklistKey,
+  preconditionsChecklistKey,
+} from "@/lib/preconditions-checklist";
 import { useTranslation } from "react-i18next";
 
 // Runs for a test plan; shared by every row from the same plan
@@ -56,6 +67,7 @@ const lastResultKey = (testPlanId?: number, testCaseId?: string) =>
 type ColumnFilters = {
   code: string;
   title: string;
+  preconditions: string;
   project: string;
   environment: string;
   lastResult: string;
@@ -64,6 +76,7 @@ type ColumnFilters = {
 const emptyColumnFilters: ColumnFilters = {
   code: "",
   title: "",
+  preconditions: "",
   project: "",
   environment: "",
   lastResult: "",
@@ -74,6 +87,30 @@ type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 // Drafts can't be tested yet and closed test cases no longer accept results,
 // same as the inbox test case view
 const isLocked = (tc: AssignedTestCase) => Boolean(tc.is_draft || tc.is_closed);
+
+// Tickable markdown checklist whose ticks are shared with the inbox test case view
+function SharedChecklist({
+  storageKey,
+  markdown,
+  readOnly,
+  itemLabel,
+}: {
+  storageKey: string;
+  markdown: string;
+  readOnly?: boolean;
+  itemLabel?: string;
+}) {
+  const checklist = useChecklistState(storageKey, markdown);
+  return (
+    <MarkdownChecklist
+      markdown={markdown}
+      checked={checklist.checked}
+      onToggle={readOnly ? undefined : checklist.toggle}
+      onReset={checklist.reset}
+      itemLabel={itemLabel}
+    />
+  );
+}
 
 // Sentinel option values for rows with no environment / no run yet
 const NOT_SPECIFIED = "__none__";
@@ -233,11 +270,15 @@ export function SheetView({
   const filteredTestCases = useMemo(() => {
     const code = columnFilters.code.trim().toLowerCase();
     const title = columnFilters.title.trim().toLowerCase();
+    const preconditions = columnFilters.preconditions.trim().toLowerCase();
 
     return testCases.filter((tc) => {
       if (moduleFilter && tc.feature_or_module !== moduleFilter) return false;
       if (code && !(tc.code || `#${tc.id}`).toLowerCase().includes(code)) return false;
       if (title && !(tc.title ?? "").toLowerCase().includes(title)) return false;
+      if (preconditions && !(tc.preconditions ?? "").toLowerCase().includes(preconditions)) {
+        return false;
+      }
       if (columnFilters.project && String(tc.project_id) !== columnFilters.project) return false;
       if (columnFilters.environment) {
         const env = tc.environment_id ? String(tc.environment_id) : NOT_SPECIFIED;
@@ -321,7 +362,13 @@ export function SheetView({
         result_state: status,
         actual_result: resText,
         notes: noteText,
-        expected_result: tc.description,
+        // snapshot of the description with the steps the tester ticked, as the inbox view does
+        expected_result: tc.description
+          ? applyChecklistState(
+              tc.description,
+              readChecklistState(descriptionChecklistKey(currentUser.user_id, tc.id), tc.description),
+            )
+          : tc.description,
         environment_id: tc.environment_id,
         tested_on: new Date().toISOString(),
         is_closed: false,
@@ -335,6 +382,10 @@ export function SheetView({
       });
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
+      // Clear the ticked steps for the next run, as the inbox view does
+      if (variables.tc.id) {
+        resetChecklistState(descriptionChecklistKey(currentUser?.user_id, variables.tc.id));
+      }
       if (variables.tc.test_plan_id) {
         queryClient.invalidateQueries({ queryKey: ["testRuns", variables.tc.test_plan_id] });
       }
@@ -430,13 +481,14 @@ export function SheetView({
         <Table.Root size="sm" variant="outline" css={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
           <Table.Header position="sticky" top={0} zIndex={1} bg="gray.100">
             <Table.Row>
-              <Table.ColumnHeader width="8%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="15%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">{t("test_cases.column.project", "Project")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">{t("test_cases.column.environment", "Environment")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="10%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="23%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="6%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="13%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="18%">{t("test_cases.column.preconditions", "Preconditions")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="9%">{t("test_cases.column.project", "Project")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="9%">{t("test_cases.column.environment", "Environment")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="8%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="9%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="20%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
               <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Action")}</Table.ColumnHeader>
             </Table.Row>
             {/* Per-column filters */}
@@ -459,6 +511,16 @@ export function SheetView({
                   aria-label={t("test_cases.sheet_view.filter.title", "Filter by title")}
                   value={columnFilters.title}
                   onChange={(e) => setColumnFilter("title", e.target.value)}
+                />
+              </Table.ColumnHeader>
+              <Table.ColumnHeader py={1} px={1}>
+                <Input
+                  size="xs"
+                  bg="white"
+                  placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
+                  aria-label={t("test_cases.sheet_view.filter.preconditions", "Filter by preconditions")}
+                  value={columnFilters.preconditions}
+                  onChange={(e) => setColumnFilter("preconditions", e.target.value)}
                 />
               </Table.ColumnHeader>
               <Table.ColumnHeader py={1} px={1}>
@@ -523,6 +585,7 @@ export function SheetView({
                     tc={tc}
                     rowBg={rowBg}
                     lastResultState={lastResultByTestCase[lastResultKey(tc.test_plan_id, tc.id)]}
+                    userId={currentUser?.user_id}
                     projectMap={projectMap}
                     environmentMap={environmentMap}
                     sheetStatuses={sheetStatuses}
@@ -536,7 +599,7 @@ export function SheetView({
               })
             ) : (
               <Table.Row>
-                <Table.Cell colSpan={8} textAlign="center" color="gray.500" py={6}>
+                <Table.Cell colSpan={9} textAlign="center" color="gray.500" py={6}>
                   {isFiltering
                     ? t("test_cases.sheet_view.filter.no_matches", "No test cases match the filters.")
                     : t("test_cases.sheet_view.empty", "No test cases found.")}
@@ -546,7 +609,7 @@ export function SheetView({
 
             {isFetchingNextPage && (
               <Table.Row>
-                <Table.Cell colSpan={8} textAlign="center" py={3} color="gray.500" fontSize="xs">
+                <Table.Cell colSpan={9} textAlign="center" py={3} color="gray.500" fontSize="xs">
                   {t("test_cases.sheet_view.loading_more", "Loading more test cases...")}
                 </Table.Cell>
               </Table.Row>
@@ -679,15 +742,21 @@ export function SheetView({
             <Separator />
 
             {/* Preconditions with Markdown Support */}
-            {(selectedTestCaseForDetails as any).preconditions && (
+            {selectedTestCaseForDetails.preconditions && (
               <Box>
                 <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
                   {t("test_cases.details.preconditions", "PRECONDITIONS")}
                 </Text>
                 <Box color="gray.700" fontSize="sm">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {(selectedTestCaseForDetails as any).preconditions}
-                  </ReactMarkdown>
+                  <SharedChecklist
+                    storageKey={preconditionsChecklistKey(
+                      currentUser?.user_id,
+                      selectedTestCaseForDetails.id ?? "",
+                    )}
+                    markdown={selectedTestCaseForDetails.preconditions}
+                    readOnly={isLocked(selectedTestCaseForDetails)}
+                    itemLabel="preconditions"
+                  />
                 </Box>
               </Box>
             )}
@@ -699,9 +768,14 @@ export function SheetView({
               </Text>
               {selectedTestCaseForDetails.description ? (
                 <Box color="gray.700" fontSize="sm">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {selectedTestCaseForDetails.description}
-                  </ReactMarkdown>
+                  <SharedChecklist
+                    storageKey={descriptionChecklistKey(
+                      currentUser?.user_id,
+                      selectedTestCaseForDetails.id ?? "",
+                    )}
+                    markdown={selectedTestCaseForDetails.description}
+                    readOnly={isLocked(selectedTestCaseForDetails)}
+                  />
                 </Box>
               ) : (
                 <Text fontSize="sm" color="gray.500">
@@ -746,6 +820,7 @@ interface TestCaseRowProps {
   tc: components["schemas"]["schema.AssignedTestCase"];
   rowBg: string;
   lastResultState?: string;
+  userId?: number;
   projectMap: Record<number, string>;
   environmentMap: Record<number, string>;
   sheetStatuses: Record<string, "passed" | "failed">;
@@ -762,6 +837,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
       tc,
       rowBg,
       lastResultState,
+      userId,
       projectMap,
       environmentMap,
       sheetStatuses,
@@ -819,6 +895,29 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               {t("test_cases.sheet_view.view_steps", "View Details")}
             </Button>
           </Flex>
+        </Table.Cell>
+
+        {/* Preconditions Column: ticks are shared with the inbox test case view */}
+        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2} verticalAlign="top">
+          {tc.preconditions ? (
+            <Box
+              maxH="120px"
+              overflowY="auto"
+              fontSize="xs"
+              css={{ "& .wmde-markdown": { fontSize: "12px" } }}
+            >
+              <SharedChecklist
+                storageKey={preconditionsChecklistKey(userId, tc.id ?? "")}
+                markdown={tc.preconditions}
+                readOnly={locked}
+                itemLabel="preconditions"
+              />
+            </Box>
+          ) : (
+            <Text fontSize="xs" color="gray.500">
+              {t("test_cases.sheet_view.no_preconditions", "None")}
+            </Text>
+          )}
         </Table.Cell>
 
         <Table.Cell border="1px solid" borderColor="gray.200" fontSize="xs" py={1} px={2}>
