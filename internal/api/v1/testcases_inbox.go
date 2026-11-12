@@ -109,6 +109,41 @@ func GetAssignedTestCase(testCasesService services.TestCaseService, logger loggi
 	}
 }
 
+// GetInboxNavigation godoc
+//
+//	@ID             GetInboxNavigation
+//	@Summary        Get the previous and next Test Cases in the current user's inbox
+//	@Description    Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          testCaseID  path        string  true    "Test Case ID"
+//	@Success        200         {object}    schema.InboxNavigationResponse
+//	@Failure        400         {object}    problemdetail.ProblemDetail
+//	@Failure        404         {object}    problemdetail.ProblemDetail
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/me/test-cases/inbox/{testCaseID}/navigation [get]
+func GetInboxNavigation(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		userID := authutil.GetAuthUserID(ctx)
+		testCaseID := ctx.Params("testCaseID", "")
+		if _, err := uuid.Parse(testCaseID); err != nil {
+			return problemdetail.BadRequest(ctx, "invalid test case id")
+		}
+
+		nav, err := testCasesService.FindInboxNavigation(ctx.Context(), userID, testCaseID)
+		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(ctx, "test case not found in inbox")
+			}
+			logger.Error(loggedmodule.ApiTestCases, "failed to find inbox navigation", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to find inbox navigation")
+		}
+
+		return ctx.JSON(nav)
+	}
+}
+
 // GetInboxUnseenCount godoc
 //
 //	@ID             GetInboxUnseenCount

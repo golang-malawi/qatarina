@@ -660,6 +660,17 @@ components:
       type: object
     schema.ImportProjectRequest:
       type: object
+    schema.InboxNavigationResponse:
+      properties:
+        next_id:
+          type: string
+        position:
+          type: integer
+        previous_id:
+          type: string
+        total:
+          type: integer
+      type: object
     schema.InboxUnseenCountResponse:
       properties:
         unseen_count:
@@ -1970,6 +1981,51 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Get a single Test Case from the current user's inbox
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}/navigation:
+    get:
+      description: Get the neighbouring open Test Cases around a Test Case, following
+        the inbox order, with its position. Empty IDs mean there is none in that direction.
+      operationId: GetInboxNavigation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxNavigationResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get the previous and next Test Cases in the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
