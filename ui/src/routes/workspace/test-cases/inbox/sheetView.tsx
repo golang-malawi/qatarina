@@ -17,7 +17,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { components } from "@/lib/api/v1";
-import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useInfiniteQuery,
+  useQueries,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
@@ -28,6 +34,22 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
 import { getInboxTestCases } from "@/services/TestCaseService";
 import { useTranslation } from "react-i18next";
+
+// Runs for a test plan; shared by every row from the same plan
+const testRunsByPlanQueryOptions = (testPlanId: number) =>
+  queryOptions({
+    queryKey: ["testRuns", testPlanId],
+    queryFn: async () => {
+      const res = await (apiClient.GET as any)("/v1/test-plans/{testPlanID}/test-runs", {
+        params: { path: { testPlanID: testPlanId.toString() } },
+      });
+      if (res.error) throw new Error("Failed to fetch test runs");
+      return res.data;
+    },
+  });
+
+const lastResultKey = (testPlanId?: number, testCaseId?: string) =>
+  `${testPlanId ?? ""}:${testCaseId ?? ""}`;
 
 interface SheetViewProps {
   projectMap: Record<number, string>;
@@ -88,6 +110,34 @@ export function SheetView({
     () => data?.pages.flatMap((page: any) => page?.test_cases ?? []) ?? [],
     [data]
   );
+
+  // Last result per test case, looked up here (not per row) so it can be filtered on
+  const testPlanIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          testCases
+            .map((tc) => tc.test_plan_id)
+            .filter((id): id is number => Boolean(id)),
+        ),
+      ),
+    [testCases],
+  );
+  const testRunsQueries = useQueries({
+    queries: testPlanIds.map((id) => testRunsByPlanQueryOptions(id)),
+  });
+  const lastResultByTestCase = useMemo(() => {
+    const map: Record<string, string> = {};
+    testRunsQueries.forEach((query, idx) => {
+      const runs = (query.data as any)?.test_runs ?? [];
+      runs.forEach((r: any) => {
+        const key = lastResultKey(testPlanIds[idx], r.test_case_id);
+        // Keep the first run listed for a test case, as the row did before
+        if (!(key in map)) map[key] = r.result_state ?? "";
+      });
+    });
+    return map;
+  }, [testRunsQueries, testPlanIds]);
 
   // Derive module options from loaded test cases
   const moduleOptions = useMemo(() => {
@@ -270,6 +320,7 @@ export function SheetView({
                     ref={isLast ? lastElementRef : null}
                     tc={tc}
                     rowBg={rowBg}
+                    lastResultState={lastResultByTestCase[lastResultKey(tc.test_plan_id, tc.id)]}
                     projectMap={projectMap}
                     environmentMap={environmentMap}
                     sheetStatuses={sheetStatuses}
@@ -485,11 +536,12 @@ export function SheetView({
 }
 
 // ---------------------------------------------
-// Sub-component to isolate Last Result fetching
+// A single editable sheet row
 // ---------------------------------------------
 interface TestCaseRowProps {
   tc: components["schemas"]["schema.AssignedTestCase"];
   rowBg: string;
+  lastResultState?: string;
   projectMap: Record<number, string>;
   environmentMap: Record<number, string>;
   sheetStatuses: Record<string, "passed" | "failed">;
@@ -505,6 +557,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     {
       tc,
       rowBg,
+      lastResultState,
       projectMap,
       environmentMap,
       sheetStatuses,
@@ -517,22 +570,6 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     ref
   ) {
     const { t } = useTranslation();
-
-    const { data: runsData } = useQuery({
-      queryKey: ["testRuns", tc.test_plan_id],
-      queryFn: async () => {
-        if (!tc.test_plan_id) return null;
-        const res = await (apiClient.GET as any)("/v1/test-plans/{testPlanID}/test-runs", {
-          params: { path: { testPlanID: tc.test_plan_id.toString() } },
-        });
-        if (res.error) throw new Error("Failed to fetch test runs");
-        return res.data;
-      },
-      enabled: !!tc.test_plan_id,
-    });
-
-    const runsList = (runsData as any)?.test_runs ?? [];
-    const lastRun = runsList.find((r: any) => r.test_case_id === tc.id);
 
     return (
       <Table.Row ref={ref} bg={rowBg} _hover={{ bg: "blue.50" }} opacity={tc.is_closed ? 0.5 : 1}>
@@ -580,14 +617,14 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             variant="solid"
             size="xs"
             colorPalette={
-              lastRun?.result_state?.toLowerCase().includes("pass")
+              lastResultState?.toLowerCase().includes("pass")
                 ? "green"
-                : lastRun?.result_state?.toLowerCase().includes("fail")
+                : lastResultState?.toLowerCase().includes("fail")
                 ? "red"
                 : "gray"
             }
           >
-            {lastRun?.result_state ? lastRun.result_state.toUpperCase() : t("test_cases.sheet_view.no_run", "NO RUN")}
+            {lastResultState ? lastResultState.toUpperCase() : t("test_cases.sheet_view.no_run", "NO RUN")}
           </Badge>
         </Table.Cell>
 
