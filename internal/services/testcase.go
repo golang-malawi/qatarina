@@ -14,6 +14,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 )
 
@@ -1039,6 +1040,17 @@ func (t *testCaseServiceImpl) Transfer(ctx context.Context, testCaseID string, r
 // cases nor lists any
 var ErrEmptyTestCaseSelection = errors.New("no test cases selected")
 
+// ErrSelectionHasUnselectedBranches is returned when deleting a selection would
+// leave a branch pointing at a deleted parent test case
+var ErrSelectionHasUnselectedBranches = errors.New("some selected test cases have branches that aren't selected. Select the branches too or delete them first")
+
+// isParentTestCaseFKViolation reports whether err is a delete blocked by a branch
+// still referencing its parent test case
+func isParentTestCaseFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_parent_test_case"
+}
+
 func parseUUIDs(ids []string) ([]uuid.UUID, error) {
 	parsed := make([]uuid.UUID, 0, len(ids))
 	for _, id := range ids {
@@ -1102,6 +1114,9 @@ func (t *testCaseServiceImpl) DeleteBySelection(ctx context.Context, selection s
 	}
 	deleted, err := tx.DeleteTestCasesByIDs(ctx, ids)
 	if err != nil {
+		if isParentTestCaseFKViolation(err) {
+			return 0, ErrSelectionHasUnselectedBranches
+		}
 		return 0, fmt.Errorf("failed to delete test cases: %w", err)
 	}
 

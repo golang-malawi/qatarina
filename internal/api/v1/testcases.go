@@ -1096,6 +1096,7 @@ func TransferTestCase(testCaseService services.TestCaseService, logger logging.L
 //	@Param			request	body		schema.BulkDeleteTestCasesRequest	true	"Test cases to delete"
 //	@Success		200		{object}	schema.BulkDeleteTestCasesResponse
 //	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		409		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/bulk-delete [post]
 func BulkDeleteTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
@@ -1113,6 +1114,9 @@ func BulkDeleteTestCases(testCaseService services.TestCaseService, logger loggin
 
 		deleted, err := testCaseService.DeleteBySelection(c.Context(), request.Selection)
 		if err != nil {
+			if errors.Is(err, services.ErrSelectionHasUnselectedBranches) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			logger.Error(loggedmodule.ApiTestCases, "failed to delete test cases", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to delete test cases")
 		}

@@ -97,6 +97,46 @@ func TestDeleteBySelection_SelectAll(t *testing.T) {
 	assertIDs(t, remaining, f.search, f.suggested, f.otherProject)
 }
 
+func TestDeleteBySelection_UnselectedBranch(t *testing.T) {
+	db := openTestDB()
+	f := newSelectAllFixture(t, db)
+	svc := services.NewTestCaseService(db, dbsqlc.New(db), logging.NewForTest())
+
+	// checkout is a branch of login
+	if _, err := db.Exec(`UPDATE test_cases SET parent_test_case_id = $1 WHERE id = $2`, f.login, f.checkout); err != nil {
+		t.Fatalf("failed to branch test case: %v", err)
+	}
+	// Runs before the fixture's cleanup, which would otherwise be blocked by the branch
+	t.Cleanup(func() { db.Exec(`UPDATE test_cases SET parent_test_case_id = NULL WHERE id = $1`, f.checkout) })
+
+	_, err := svc.DeleteBySelection(context.Background(), schema.TestCaseSelection{
+		ProjectID: f.projectID, TestCaseIDs: []string{f.login, f.search},
+	})
+	if !errors.Is(err, services.ErrSelectionHasUnselectedBranches) {
+		t.Fatalf("expected ErrSelectionHasUnselectedBranches, got %v", err)
+	}
+
+	var remaining int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM test_cases WHERE id = ANY($1::uuid[])`,
+		"{"+f.login+","+f.search+"}").Scan(&remaining); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if remaining != 2 {
+		t.Errorf("expected nothing deleted, %d of 2 test cases remain", remaining)
+	}
+
+	// Selecting the branch too deletes all of them
+	deleted, err := svc.DeleteBySelection(context.Background(), schema.TestCaseSelection{
+		ProjectID: f.projectID, TestCaseIDs: []string{f.login, f.checkout},
+	})
+	if err != nil {
+		t.Fatalf("DeleteBySelection failed: %v", err)
+	}
+	if deleted != 2 {
+		t.Errorf("expected 2 test cases deleted, got %d", deleted)
+	}
+}
+
 func TestTransferBySelection_SelectAll(t *testing.T) {
 	db := openTestDB()
 	f := newSelectAllFixture(t, db)
