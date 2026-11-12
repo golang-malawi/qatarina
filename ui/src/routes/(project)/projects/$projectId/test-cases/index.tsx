@@ -963,18 +963,22 @@ export default function ListProjectTestCases() {
                       target_project_id: targetIdNum,
                       feature_or_module: featureOrModuleVal,
                     });
+                    toaster.success({
+                      title: "Transfer successful",
+                      description: "Test case moved to the target project successfully.",
+                    });
                   } else {
-                    await bulkTransferTestCases({
+                    const result = await bulkTransferTestCases({
                       selection: buildSelection(),
                       target_project_id: targetIdNum,
                       feature_or_module: featureOrModuleVal,
                     });
+                    toaster.success({
+                      title: t("test_cases.bulk_transfer.success", {
+                        count: result?.transferred ?? 0,
+                      }),
+                    });
                   }
-
-                  toaster.success({
-                    title: "Transfer successful",
-                    description: "Test case(s) moved to the target project successfully.",
-                  });
 
                   await queryClient.invalidateQueries({
                     queryKey: ["get", "/v1/projects/{projectID}/test-cases"],

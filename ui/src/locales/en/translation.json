@@ -74,6 +74,7 @@
   "test_cases.delete.error": "Failed to delete test case",
   "test_cases.bulk_delete.title": "Delete {{count}} test case(s)?",
   "test_cases.bulk_delete.success": "Deleted {{count}} test case(s)",
+  "test_cases.bulk_transfer.success": "Moved {{count}} test case(s) to the target project",
   "test_cases.bulk_delete.description": "This will permanently delete {{count}} selected test case(s). This action cannot be undone.",
   "test_cases.add": "Add Test Cases",
   "test_cases.tab.all": "All Test Cases",
