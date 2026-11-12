@@ -65,6 +65,8 @@ type TestCaseService interface {
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
 	// FindAssignedToUserByID fetches a single test case from the user's inbox, regardless of which page it is on
 	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error)
+	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox, in inbox order
+	FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error)
 	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
 	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
 	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
@@ -669,6 +671,31 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	}
 
 	return res, total, nil
+}
+
+func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error) {
+	id, err := uuid.Parse(testCaseID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid test case id: %w", err)
+	}
+
+	row, err := t.queries.TestCaseInboxNavigation(ctx, dbsqlc.TestCaseInboxNavigationParams{
+		UserID:     userID,
+		TestCaseID: id,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to find inbox navigation: %w", err)
+	}
+
+	return &schema.InboxNavigationResponse{
+		PreviousID: row.PreviousID,
+		NextID:     row.NextID,
+		Position:   row.Position,
+		Total:      row.Total,
+	}, nil
 }
 
 func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error) {

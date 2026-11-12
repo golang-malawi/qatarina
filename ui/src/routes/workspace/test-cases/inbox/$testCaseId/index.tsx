@@ -11,14 +11,20 @@ import {
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import { IconChevronDown } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  findInboxNavigationQueryOptions,
   findTestCaseInboxByIdQueryOptions,
   findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
+  useQuery,
   useSuspenseQuery,
   useMutation,
   useQueryClient,
@@ -35,6 +41,7 @@ import {
 } from "@/services/TestRunService";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
+import { components } from "@/lib/api/v1";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import {
   applyChecklistState,
@@ -53,6 +60,58 @@ export const Route = createFileRoute(
 
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
+  // Keyed so typed results, notes and attachments don't carry over between test cases
+  return <InboxTestCaseView key={testCaseId} />;
+}
+
+type InboxNavigationData =
+  components["schemas"]["schema.InboxNavigationResponse"];
+
+// Steps through the inbox in list order (newest first), one test case at a time
+function InboxNavigation({
+  nav,
+  isPending,
+  onGoTo,
+}: {
+  nav?: InboxNavigationData;
+  isPending: boolean;
+  onGoTo: (id: string) => void;
+}) {
+  return (
+    <Flex justify="space-between" align="center" mb={4} gap={2}>
+      <Button
+        size="sm"
+        variant="outline"
+        colorPalette="brand"
+        disabled={isPending || !nav?.previous_id}
+        onClick={() => nav?.previous_id && onGoTo(nav.previous_id)}
+        title="Previous test case in your inbox"
+      >
+        <IconChevronLeft />
+        Previous
+      </Button>
+      {nav?.position && nav?.total ? (
+        <Text fontSize="sm" color="fg.muted">
+          {nav.position} of {nav.total}
+        </Text>
+      ) : null}
+      <Button
+        size="sm"
+        variant="outline"
+        colorPalette="brand"
+        disabled={isPending || !nav?.next_id}
+        onClick={() => nav?.next_id && onGoTo(nav.next_id)}
+        title="Next test case in your inbox"
+      >
+        Next
+        <IconChevronRight />
+      </Button>
+    </Flex>
+  );
+}
+
+function InboxTestCaseView() {
+  const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const auth = useAuth();               
@@ -64,6 +123,22 @@ function TestCaseInboxItem() {
 
   const tc = testCase;
   const isDraft = tc.is_draft;
+
+  const { data: nav, isPending: isPendingNav } = useQuery(
+    findInboxNavigationQueryOptions(testCaseId),
+  );
+  const goToTestCase = (id: string) =>
+    navigate({
+      to: "/workspace/test-cases/inbox/$testCaseId",
+      params: { testCaseId: id },
+    });
+  const navigation = (
+    <InboxNavigation
+      nav={nav}
+      isPending={isPendingNav}
+      onGoTo={goToTestCase}
+    />
+  );
 
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
@@ -150,9 +225,13 @@ function TestCaseInboxItem() {
       }
     },
     onSuccess: () => {
+      // Move on to the next test case so testers can keep going without the list
+      const nextId = nav?.next_id;
       toaster.create({
         title: "Success",
-        description: "Test result recorded",
+        description: nextId
+          ? "Test result recorded. Moved to the next test case."
+          : "Test result recorded. That was the last test case in your inbox.",
         type: "success",
       });
       setResultText("");
@@ -170,7 +249,11 @@ function TestCaseInboxItem() {
       // Optional: force refetch for instant UI update
       queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
       queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
-        },
+
+      if (nextId) {
+        goToTestCase(nextId);
+      }
+    },
     onError: () => {
       toaster.create({
         title: "Error",
@@ -212,6 +295,7 @@ function TestCaseInboxItem() {
   if (tc.is_closed) {
     return (
       <Box>
+        {navigation}
         <Heading size="lg" color="fg.heading">
           {tc.title}
         </Heading>
@@ -240,6 +324,7 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
+      {navigation}
       <Flex alignItems="center" justifyContent="space-between">
         <Heading size="lg" color="fg.heading">
           {tc.title}
