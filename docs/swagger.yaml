@@ -741,7 +741,6 @@ components:
       - description
       - name
       - version
-      - website_url
       type: object
     schema.NewUserRequest:
       properties:
@@ -1455,7 +1454,6 @@ components:
       - name
       - project_owner_id
       - version
-      - website_url
       type: object
     schema.UpdateTestCaseRequest:
       properties:
