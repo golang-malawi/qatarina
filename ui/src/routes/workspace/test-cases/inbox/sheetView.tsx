@@ -247,6 +247,12 @@ export function SheetView({
 
   const isFiltering =
     Boolean(moduleFilter) || Object.values(columnFilters).some((v) => v.trim() !== "");
+  const totalTestCases = data?.pages[0]?.pagination?.total ?? testCases.length;
+
+  const clearFilters = () => {
+    setModuleFilter("");
+    setColumnFilters(emptyColumnFilters);
+  };
 
   // Rows load page by page as you scroll. While filtering, load the rest so the
   // filter covers the whole inbox and not just the rows scrolled in so far.
@@ -385,6 +391,22 @@ export function SheetView({
               </option>
             ))}
           </select>
+
+          {isFiltering && (
+            <Flex align="center" gap={2}>
+              <Text fontSize="xs" color="fg.muted">
+                {t("test_cases.sheet_view.filter.showing", "Showing {{shown}} of {{total}}", {
+                  shown: filteredTestCases.length,
+                  total: totalTestCases,
+                })}
+                {hasNextPage &&
+                  ` ${t("test_cases.sheet_view.filter.loading_rest", "(loading the rest...)")}`}
+              </Text>
+              <Button size="xs" variant="ghost" colorPalette="brand" onClick={clearFilters}>
+                {t("test_cases.sheet_view.filter.clear", "Clear filters")}
+              </Button>
+            </Flex>
+          )}
         </Flex>
 
         <Button
@@ -508,7 +530,9 @@ export function SheetView({
             ) : (
               <Table.Row>
                 <Table.Cell colSpan={8} textAlign="center" color="gray.500" py={6}>
-                  {t("test_cases.sheet_view.empty", "No test cases found.")}
+                  {isFiltering
+                    ? t("test_cases.sheet_view.filter.no_matches", "No test cases match the filters.")
+                    : t("test_cases.sheet_view.empty", "No test cases found.")}
                 </Table.Cell>
               </Table.Row>
             )}
