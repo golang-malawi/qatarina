@@ -34,6 +34,9 @@ type TestPlanService interface {
 	BatchAssignTestCasesToPlan(context.Context, *schema.BatchAssignTestCasesToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	// UpdateTestCaseUrgency sets the urgency of a test case within a test plan
 	UpdateTestCaseUrgency(ctx context.Context, testPlanID int64, testCaseID string, urgency string) error
+	// UpdateDetails changes a test plan's kind, description, environment and dates,
+	// keeping its progress, status and assignments
+	UpdateDetails(ctx context.Context, request schema.UpdateTestPlanDetails) error
 }
 
 var _ TestPlanService = &testPlanService{}
@@ -554,4 +557,43 @@ func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentI
 		return "", err
 	}
 	return id.String(), nil
+}
+func (t *testPlanService) UpdateDetails(ctx context.Context, request schema.UpdateTestPlanDetails) error {
+	plan, err := t.queries.GetTestPlan(ctx, request.ID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("failed to load test plan: %w", err)
+	}
+
+	params := dbsqlc.UpdateTestPlanDetailsParams{
+		ID:             request.ID,
+		Kind:           plan.Kind,
+		Description:    plan.Description,
+		EnvironmentID:  plan.EnvironmentID,
+		StartAt:        plan.StartAt,
+		ScheduledEndAt: plan.ScheduledEndAt,
+		UpdatedByID:    int32(request.UpdatedByID),
+	}
+	if request.Kind != nil {
+		params.Kind = dbsqlc.TestKind(*request.Kind)
+	}
+	if request.Description != nil {
+		params.Description = common.NullString(*request.Description)
+	}
+	if request.EnvironmentID != nil {
+		params.EnvironmentID = common.NewNullInt32(int32(*request.EnvironmentID))
+	}
+	if request.StartAt != nil {
+		params.StartAt = common.NullTime(*request.StartAt)
+	}
+	if request.ScheduledEndAt != nil {
+		params.ScheduledEndAt = common.NullTime(*request.ScheduledEndAt)
+	}
+
+	if _, err := t.queries.UpdateTestPlanDetails(ctx, params); err != nil {
+		return fmt.Errorf("failed to update test plan: %w", err)
+	}
+	return nil
 }

@@ -101,6 +101,13 @@ type TestCaseService interface {
 
 	// GetSummary is used to get the summary of test cases in a project
 	GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error)
+
+	// FindUntested lists a project's test cases that have no recorded result yet.
+	// A non-zero testPlanID narrows it to the plan's test cases and results.
+	FindUntested(ctx context.Context, projectID, testPlanID int64) ([]dbsqlc.TestCase, error)
+	// FindLatestFailed lists a project's test cases whose most recent result is a failure.
+	// A non-zero testPlanID only counts results recorded in that plan.
+	FindLatestFailed(ctx context.Context, projectID, testPlanID int64) ([]schema.FailedTestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -1082,4 +1089,39 @@ func (t *testCaseServiceImpl) GetSummary(ctx context.Context, projectID int64) (
 		Pending:    int(pending),
 		Blocked:    int(blocked),
 	}, nil
+}
+
+func (t *testCaseServiceImpl) FindUntested(ctx context.Context, projectID, testPlanID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListUntestedTestCasesByProject(ctx, dbsqlc.ListUntestedTestCasesByProjectParams{
+		ProjectID:  int32(projectID),
+		TestPlanID: common.NewNullInt64(testPlanID),
+	})
+}
+
+func (t *testCaseServiceImpl) FindLatestFailed(ctx context.Context, projectID, testPlanID int64) ([]schema.FailedTestCase, error) {
+	rows, err := t.queries.ListFailedTestCasesByProject(ctx, dbsqlc.ListFailedTestCasesByProjectParams{
+		ProjectID:  int32(projectID),
+		TestPlanID: common.NewNullInt64(testPlanID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	failed := make([]schema.FailedTestCase, 0, len(rows))
+	for _, row := range rows {
+		failed = append(failed, schema.FailedTestCase{
+			ID:              row.ID.String(),
+			Code:            row.Code,
+			Title:           row.Title,
+			FeatureOrModule: row.FeatureOrModule.String,
+			Priority:        string(row.Priority),
+			TestRunID:       row.TestRunID.String(),
+			TestPlanID:      int64(row.TestPlanID.Int32),
+			TestedByID:      int64(row.TestedByID.Int32),
+			TestedBy:        row.TestedBy,
+			ActualResult:    row.ActualResult.String,
+			Notes:           row.Notes,
+			FailedAt:        common.FormatNullTime(row.FailedAt),
+		})
+	}
+	return failed, nil
 }

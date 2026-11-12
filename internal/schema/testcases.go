@@ -248,3 +248,19 @@ type ProjectTestCaseSummaryResponse struct {
 	Pending    int `json:"pending"`
 	Blocked    int `json:"blocked"`
 }
+
+// FailedTestCase is a test case whose most recent recorded result is a failure
+type FailedTestCase struct {
+	ID              string `json:"id"`
+	Code            string `json:"code"`
+	Title           string `json:"title"`
+	FeatureOrModule string `json:"feature_or_module"`
+	Priority        string `json:"priority"`
+	TestRunID       string `json:"test_run_id"`
+	TestPlanID      int64  `json:"test_plan_id"`
+	TestedByID      int64  `json:"tested_by_id"`
+	TestedBy        string `json:"tested_by"`
+	ActualResult    string `json:"actual_result"`
+	Notes           string `json:"notes"`
+	FailedAt        string `json:"failed_at"`
+}
