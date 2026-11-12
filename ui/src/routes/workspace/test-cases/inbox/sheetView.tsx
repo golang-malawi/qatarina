@@ -29,7 +29,12 @@ import {
   findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
-import { createTestRun, executeTestRun } from "@/services/TestRunService";
+import {
+  createTestRun,
+  executeTestRun,
+  uploadTestRunAttachment,
+} from "@/services/TestRunService";
+import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
@@ -89,6 +94,9 @@ const emptyColumnFilters: ColumnFilters = {
 };
 
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+
+// Same file types the inbox test case view accepts
+const ATTACHMENT_ACCEPT = ".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg";
 
 // Drafts can't be tested yet and closed test cases no longer accept results,
 // same as the inbox test case view
@@ -153,6 +161,9 @@ export function SheetView({
     setColumnFilters((prev) => ({ ...prev, [key]: value }));
   const [sheetStatuses, setSheetStatuses] = useState<Record<string, "passed" | "failed">>({});
   const [sheetNotes, setSheetNotes] = useState<Record<string, string>>({});
+  const [sheetAttachments, setSheetAttachments] = useState<Record<string, File[]>>({});
+  const setRowAttachments = (testCaseId: string, files: File[]) =>
+    setSheetAttachments((prev) => ({ ...prev, [testCaseId]: files }));
   const [selectedTestCaseForDetails, setSelectedTestCaseForDetails] =
     useState<components["schemas"]["schema.AssignedTestCase"] | null>(null);
 
@@ -369,7 +380,7 @@ export function SheetView({
 
       if (!run?.id) throw new Error("Run ID is missing.");
 
-      return executeTestRun(run.id, {
+      const response = await executeTestRun(run.id, {
         test_run_id: run.id,
         result_state: status,
         actual_result: resText,
@@ -385,13 +396,41 @@ export function SheetView({
         tested_on: new Date().toISOString(),
         is_closed: false,
       });
+
+      // Upload attachments once the result exists. The result is already saved at this
+      // point, so report failed uploads separately instead of failing the whole record.
+      const files = sheetAttachments[tc.id] ?? [];
+      const failedUploads: string[] = [];
+      if (files.length > 0) {
+        const resultId = response.data?.result_id;
+        for (const file of files) {
+          try {
+            if (!resultId) throw new Error("Missing result_id");
+            await uploadTestRunAttachment(resultId, file);
+          } catch {
+            failedUploads.push(file.name);
+          }
+        }
+      }
+
+      return { failedUploads };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: ({ failedUploads }, variables) => {
       toaster.create({
         title: t("test_cases.toast.success", "Success"),
         description: t("test_cases.sheet_view.toast.success_desc", "Test result recorded via Sheet View"),
         type: "success",
       });
+      if (failedUploads.length > 0) {
+        toaster.create({
+          title: t("test_cases.sheet_view.toast.attachments_failed", "Some attachments were not uploaded"),
+          description: failedUploads.join(", "),
+          type: "warning",
+        });
+      }
+      if (variables.tc.id) {
+        setRowAttachments(variables.tc.id, []);
+      }
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
       // Clear the ticked steps for the next run, as the inbox view does
@@ -636,6 +675,8 @@ export function SheetView({
                     setSheetStatuses={setSheetStatuses}
                     sheetNotes={sheetNotes}
                     setSheetNotes={setSheetNotes}
+                    attachments={sheetAttachments[tc.id ?? ""] ?? []}
+                    onAttachmentsChange={(files) => tc.id && setRowAttachments(tc.id, files)}
                     onViewDetails={() => setSelectedTestCaseForDetails(tc)}
                     executeMutation={executeSheetMutation}
                   />
@@ -871,6 +912,8 @@ interface TestCaseRowProps {
   setSheetStatuses: React.Dispatch<React.SetStateAction<Record<string, "passed" | "failed">>>;
   sheetNotes: Record<string, string>;
   setSheetNotes: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  attachments: File[];
+  onAttachmentsChange: (files: File[]) => void;
   onViewDetails: () => void;
   executeMutation: any;
 }
@@ -888,6 +931,8 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
       setSheetStatuses,
       sheetNotes,
       setSheetNotes,
+      attachments,
+      onAttachmentsChange,
       onViewDetails,
       executeMutation,
     },
@@ -895,6 +940,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
   ) {
     const { t } = useTranslation();
     const locked = isLocked(tc);
+    const attachmentInputRef = useRef<HTMLInputElement | null>(null);
     const lockedReason = tc.is_closed
       ? t("test_cases.sheet_view.locked_closed", "This test case is closed. Results can no longer be recorded.")
       : t("test_cases.sheet_view.locked_draft", "Draft test cases can't be recorded until unmarked as draft.");
@@ -1052,6 +1098,69 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               })
             }
           />
+          <Flex align="center" gap={1} mt={1} wrap="wrap">
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              multiple
+              accept={ATTACHMENT_ACCEPT}
+              hidden
+              onChange={(e) => {
+                const picked = Array.from(e.currentTarget.files ?? []);
+                // Add to the files already chosen, skipping the same file picked twice
+                const merged = [...attachments];
+                for (const file of picked) {
+                  if (!merged.some((f) => f.name === file.name && f.size === file.size)) {
+                    merged.push(file);
+                  }
+                }
+                onAttachmentsChange(merged);
+                // Allow picking the same file again after clearing
+                e.currentTarget.value = "";
+              }}
+            />
+            <Button
+              size="2xs"
+              variant="ghost"
+              colorPalette="blue"
+              h="18px"
+              px={1}
+              disabled={locked}
+              onClick={() => attachmentInputRef.current?.click()}
+            >
+              <IconPaperclip size={12} />
+              {t("test_cases.sheet_view.attach", "Attach")}
+            </Button>
+            {attachments.length > 0 && (
+              <>
+                <Text
+                  fontSize="2xs"
+                  color="fg.muted"
+                  truncate
+                  maxW="140px"
+                  title={attachments.map((f) => f.name).join(", ")}
+                >
+                  {attachments.length === 1
+                    ? attachments[0].name
+                    : t("test_cases.sheet_view.files_selected", "{{count}} files", {
+                        count: attachments.length,
+                      })}
+                </Text>
+                <Button
+                  size="2xs"
+                  variant="ghost"
+                  h="18px"
+                  minW="18px"
+                  px={0}
+                  aria-label={t("test_cases.sheet_view.clear_attachments", "Remove attachments")}
+                  title={t("test_cases.sheet_view.clear_attachments", "Remove attachments")}
+                  onClick={() => onAttachmentsChange([])}
+                >
+                  <IconX size={12} />
+                </Button>
+              </>
+            )}
+          </Flex>
         </Table.Cell>
 
         {/* Action Column */}
