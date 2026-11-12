@@ -9,7 +9,7 @@ type NewProjectRequest struct {
 	Name                    string               `json:"name" validate:"required"`
 	Code                    string               `json:"code" validate:"required,min=3,max=10"`
 	Description             string               `json:"description" validate:"required"`
-	WebsiteURL              string               `json:"website_url,omitempty" validate:"required"`
+	WebsiteURL              string               `json:"website_url,omitempty" validate:"omitempty,url"`
 	Version                 string               `json:"version" validate:"required"`
 	GitHubURL               string               `json:"github_url,omitempty" validate:""`
 	ProjectOwnerID          int64                `json:"project_owner_id,omitempty" validate:"-"`
@@ -24,7 +24,7 @@ type UpdateProjectRequest struct {
 	Name                    string               `json:"name" validate:"required"`
 	Code                    string               `json:"code" validate:"required,min=3,max=10"`
 	Description             string               `json:"description" validate:"required"`
-	WebsiteURL              string               `json:"website_url,omitempty" validate:"required"`
+	WebsiteURL              string               `json:"website_url,omitempty" validate:"omitempty,url"`
 	Version                 string               `json:"version" validate:"required"`
 	GitHubURL               string               `json:"github_url,omitempty" validate:""`
 	ProjectOwnerID          int64                `json:"project_owner_id,omitempty" validate:"required"`

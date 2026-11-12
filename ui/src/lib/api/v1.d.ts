@@ -2802,7 +2802,7 @@ export interface components {
             project_owner_id?: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.NewUserRequest": {
             display_name: string;
@@ -3128,7 +3128,7 @@ export interface components {
             project_owner_id: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.UpdateTestCaseRequest": {
             code?: string;
