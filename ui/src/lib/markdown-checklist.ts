@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Matches a GFM task list item marker, e.g. "- [ ] step", "1. [x] step", "> * [X] step"
 export const TASK_LINE = /^(\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+\[)[ xX](\])/;
@@ -25,6 +25,29 @@ export function applyChecklistState(
 
 type StoredChecklist = { source: string; checked: ChecklistState };
 
+// Fired on window when a checklist changes, so every view showing the same
+// checklist (e.g. a sheet row and its details drawer) stays in sync
+const CHANGE_EVENT = "qatarina:checklist-change";
+
+function notifyChange(storageKey: string) {
+  window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: storageKey }));
+}
+
+/** Reads the saved ticks for a checklist, e.g. to snapshot them when recording a result */
+export function readChecklistState(storageKey: string, source: string): ChecklistState {
+  return readStored(storageKey, source);
+}
+
+/** Clears the saved ticks for a checklist and updates any view showing it */
+export function resetChecklistState(storageKey: string) {
+  try {
+    localStorage.removeItem(storageKey);
+  } catch {
+    // ignore
+  }
+  notifyChange(storageKey);
+}
+
 function readStored(storageKey: string, source: string): ChecklistState {
   try {
     const raw = localStorage.getItem(storageKey);
@@ -50,31 +73,42 @@ export function useChecklistState(storageKey: string, source: string) {
     setChecked(readStored(storageKey, source));
   }, [storageKey, source]);
 
+  // Pick up ticks made by another view of the same checklist
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === storageKey) {
+        setChecked(readStored(storageKey, source));
+      }
+    };
+    window.addEventListener(CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(CHANGE_EVENT, onChange);
+  }, [storageKey, source]);
+
+  // Latest ticks, so a toggle can save and notify straight away
+  const checkedRef = useRef(checked);
+  checkedRef.current = checked;
+
   const toggle = useCallback(
     (line: number, value: boolean) => {
-      setChecked((prev) => {
-        const next = { ...prev, [line]: value };
-        try {
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify({ source, checked: next } satisfies StoredChecklist),
-          );
-        } catch {
-          // storage unavailable (private mode / quota) - keep in-memory state only
-        }
-        return next;
-      });
+      const next = { ...checkedRef.current, [line]: value };
+      checkedRef.current = next;
+      setChecked(next);
+      try {
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ source, checked: next } satisfies StoredChecklist),
+        );
+      } catch {
+        // storage unavailable (private mode / quota) - keep in-memory state only
+      }
+      notifyChange(storageKey);
     },
     [storageKey, source],
   );
 
   const reset = useCallback(() => {
     setChecked({});
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      // ignore
-    }
+    resetChecklistState(storageKey);
   }, [storageKey]);
 
   return { checked, toggle, reset };
