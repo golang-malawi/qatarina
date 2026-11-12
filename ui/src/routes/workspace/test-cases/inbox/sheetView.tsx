@@ -69,6 +69,12 @@ const emptyColumnFilters: ColumnFilters = {
   lastResult: "",
 };
 
+type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+
+// Drafts can't be tested yet and closed test cases no longer accept results,
+// same as the inbox test case view
+const isLocked = (tc: AssignedTestCase) => Boolean(tc.is_draft || tc.is_closed);
+
 // Sentinel option values for rows with no environment / no run yet
 const NOT_SPECIFIED = "__none__";
 const NO_RUN = "__no_run__";
@@ -293,6 +299,7 @@ export function SheetView({
       const noteText = sheetNotes[tc.id!] || "";
 
       if (!tc.id) throw new Error("Test case ID is missing.");
+      if (isLocked(tc)) throw new Error("Draft and closed test cases can't be recorded.");
       if (!currentUser?.user_id) throw new Error("User ID is missing.");
       if (!tc.project_id || !tc.test_plan_id) {
         throw new Error("Project ID or Test Plan ID is missing.");
@@ -767,6 +774,10 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     ref
   ) {
     const { t } = useTranslation();
+    const locked = isLocked(tc);
+    const lockedReason = tc.is_closed
+      ? t("test_cases.sheet_view.locked_closed", "This test case is closed. Results can no longer be recorded.")
+      : t("test_cases.sheet_view.locked_draft", "Draft test cases can't be recorded until unmarked as draft.");
 
     return (
       <Table.Row ref={ref} bg={rowBg} _hover={{ bg: "blue.50" }} opacity={tc.is_closed ? 0.5 : 1}>
@@ -783,6 +794,20 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             <Text fontWeight="semibold" fontSize="xs" whiteSpace="normal" wordBreak="break-word">
               {tc.title}
             </Text>
+            {(tc.is_draft || tc.is_closed) && (
+              <Flex gap={1}>
+                {tc.is_draft && (
+                  <Badge colorPalette="warning" variant="subtle" size="xs">
+                    {t("test_cases.sheet_view.draft", "Draft")}
+                  </Badge>
+                )}
+                {tc.is_closed && (
+                  <Badge colorPalette="gray" variant="subtle" size="xs">
+                    {t("test_cases.sheet_view.closed", "Closed")}
+                  </Badge>
+                )}
+              </Flex>
+            )}
             <Button
               size="2xs"
               variant="ghost"
@@ -837,6 +862,8 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               fontSize: "12px",
             }}
             value={sheetStatuses[tc.id!] || ""}
+            disabled={locked}
+            title={locked ? lockedReason : undefined}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               setSheetStatuses({
                 ...sheetStatuses,
@@ -856,6 +883,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             size="xs"
             placeholder={t("test_cases.sheet_view.comments_placeholder", "Comments...")}
             value={sheetNotes[tc.id!] || ""}
+            disabled={locked}
             borderRadius="2px"
             borderColor="gray.300"
             bg="white"
@@ -880,7 +908,8 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
           <Button
             size="2xs"
             colorPalette="brand"
-            disabled={!sheetStatuses[tc.id!]}
+            disabled={locked || !sheetStatuses[tc.id!]}
+            title={locked ? lockedReason : undefined}
             loading={executeMutation.isPending}
             onClick={() => {
               const chosenStatus = sheetStatuses[tc.id!];
