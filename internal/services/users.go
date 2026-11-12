@@ -180,10 +180,14 @@ func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserR
 }
 
 func (u *userServiceImpl) Delete(ctx context.Context, id int32) error {
-	_, err := u.queries.DeleteUser(ctx, id)
+	rows, err := u.queries.DeleteUser(ctx, id)
 	if err != nil {
 		u.logger.Error("failed to delete user", "error", err)
 		return err
+	}
+	if rows == 0 {
+		// No active user with this ID: it doesn't exist or is already deactivated.
+		return ErrNotFound
 	}
 	return nil
 }

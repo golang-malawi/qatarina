@@ -1226,9 +1226,13 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 }
 
 const deleteUser = `-- name: DeleteUser :execrows
-DELETE FROM users WHERE id=$1
+UPDATE users
+SET is_activated = FALSE, deleted_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
 `
 
+// Soft delete: users are referenced by projects, test runs, comments, etc.,
+// so a hard DELETE would violate foreign keys and erase history.
 func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteUser, id)
 	if err != nil {
@@ -3999,6 +4003,7 @@ func (q *Queries) ListTestRunsByProject(ctx context.Context, projectID int32) ([
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
@@ -4216,10 +4221,13 @@ func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) 
 
 const searchUsers = `-- name: SearchUsers :many
 SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%'
+WHERE deleted_at IS NULL
+AND (
+    first_name ILIKE '%' || $1 || '%'
+    OR last_name ILIKE '%' || $1 || '%'
+    OR display_name ILIKE '%' || $1 || '%'
+    OR email ILIKE '%' || $1 || '%'
+)
 `
 
 func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {

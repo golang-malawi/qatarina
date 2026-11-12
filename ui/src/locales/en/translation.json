@@ -519,6 +519,8 @@
   "users.view.edit_button": "Edit Profile",
   "users.view.deactivate_button": "Deactivate User",
   "users.view.deactivate_confirm": "Are you sure you want to deactivate this user?",
+  "users.view.deactivate_success": "User deactivated",
+  "users.view.deactivate_failed": "Failed to deactivate user",
   "users.new.title": "Add New User",
   "users.new.submit": "Create User",
   "users.new.success": "User created.",

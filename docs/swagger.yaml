@@ -6352,7 +6352,8 @@ paths:
       - users
   /v1/users/{userID}:
     delete:
-      description: Delete a user
+      description: Deactivate (soft delete) a user. The user can no longer log in
+        and is hidden from user lists.
       operationId: DeleteUser
       parameters:
       - description: User ID
@@ -6379,13 +6380,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: Delete a user
+      summary: Deactivate a user
       tags:
       - users
     get:
