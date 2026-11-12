@@ -29,6 +29,9 @@ type Server struct {
 	testCaseService services.TestCaseService
 	testPlanService services.TestPlanService
 	testerService   services.TesterService
+	testRunService  services.TestRunService
+	moduleService   services.ModuleService
+	documentService services.DocumentService
 
 	environmentService services.EnvironmentService
 }
@@ -47,6 +50,10 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		testPlanService: services.NewTestPlanService(dbConn, logger),
 		testerService:   services.NewTesterService(dbConn, logger),
+		// No tool uploads or reads files, so the services get no storage backend
+		testRunService:  services.NewTestRunService(rawDB.DB, dbConn, logger, nil, cfg.Attachments.GetMaxFileSize()),
+		moduleService:   moduleService,
+		documentService: services.NewDocumentService(dbConn, logger, nil, cfg.Attachments.GetMaxFileSize()),
 
 		environmentService: services.NewEnvironmentService(dbConn),
 		mcp: server.NewMCPServer(
@@ -150,6 +157,35 @@ func (s *Server) registerTools() {
 	s.mcp.AddTool(assignTestCasesTool(), s.assignTestCases)
 	s.mcp.AddTool(listProjectEnvironmentsTool(), s.listProjectEnvironments)
 	s.mcp.AddTool(createProjectEnvironmentTool(), s.createProjectEnvironment)
+
+	// Projects
+	s.mcp.AddTool(getProjectTool(), s.getProject)
+	s.mcp.AddTool(searchProjectsTool(), s.searchProjects)
+	s.mcp.AddTool(listModulesTool(), s.listModules)
+	s.mcp.AddTool(projectListDocumentsTool(), s.projectListDocuments)
+	s.mcp.AddTool(projectSearchDocumentsTool(), s.projectSearchDocuments)
+
+	// Test cases
+	s.mcp.AddTool(getTestCaseTool(), s.getTestCase)
+	s.mcp.AddTool(searchTestCasesTool(), s.searchTestCases)
+	s.mcp.AddTool(listUntestedCasesTool(), s.listUntestedCases)
+	s.mcp.AddTool(listFailedTestCasesTool(), s.listFailedTestCases)
+	s.mcp.AddTool(addTestCaseTool(), s.addTestCase)
+	s.mcp.AddTool(updateTestCaseTool(), s.updateTestCase)
+
+	// Test plans
+	s.mcp.AddTool(getTestPlanTool(), s.getTestPlan)
+	s.mcp.AddTool(searchTestPlansTool(), s.searchTestPlans)
+	s.mcp.AddTool(addTestPlanTool(), s.addTestPlan)
+	s.mcp.AddTool(updateTestPlanTool(), s.updateTestPlan)
+	s.mcp.AddTool(addTestPlanCommentTool(), s.addTestPlanComment)
+
+	// Test runs
+	s.mcp.AddTool(listTestRunsTool(), s.listTestRuns)
+	s.mcp.AddTool(getTestRunTool(), s.getTestRun)
+	s.mcp.AddTool(listFailedTestRunsTool(), s.listFailedTestRuns)
+	s.mcp.AddTool(recordTestResultTool(), s.recordTestResult)
+	s.mcp.AddTool(recordTestCommentTool(), s.recordTestComment)
 }
 
 func (s *Server) whoami(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -971,6 +971,30 @@ func (q *Queries) CreateTestPlan(ctx context.Context, arg CreateTestPlanParams) 
 	return id, err
 }
 
+const createTestRunComment = `-- name: CreateTestRunComment :one
+INSERT INTO test_runs_comments (test_run_id, author_id, content, created_at)
+VALUES ($1, $2, $3, NOW())
+RETURNING id, created_at
+`
+
+type CreateTestRunCommentParams struct {
+	TestRunID uuid.UUID
+	AuthorID  int32
+	Content   string
+}
+
+type CreateTestRunCommentRow struct {
+	ID        int64
+	CreatedAt time.Time
+}
+
+func (q *Queries) CreateTestRunComment(ctx context.Context, arg CreateTestRunCommentParams) (CreateTestRunCommentRow, error) {
+	row := q.db.QueryRowContext(ctx, createTestRunComment, arg.TestRunID, arg.AuthorID, arg.Content)
+	var i CreateTestRunCommentRow
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     first_name, last_name, display_name, email, password, phone,
@@ -3017,6 +3041,94 @@ func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID sql.N
 	return items, nil
 }
 
+const listFailedTestCasesByProject = `-- name: ListFailedTestCasesByProject :many
+SELECT
+  tc.id,
+  tc.code,
+  tc.title,
+  tc.feature_or_module,
+  tc.priority,
+  tr.id AS test_run_id,
+  tr.test_plan_id,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.actual_result,
+  tr.notes,
+  tr.updated_at AS failed_at
+FROM test_cases tc
+JOIN LATERAL (
+  SELECT r.id, r.test_plan_id, r.tested_by_id, r.result_state, r.actual_result, r.notes, r.updated_at
+  FROM test_runs r
+  WHERE r.test_case_id = tc.id
+    AND r.result_state <> 'pending'
+    AND ($1::bigint IS NULL OR r.test_plan_id = $1::bigint)
+  ORDER BY r.updated_at DESC NULLS LAST, r.id DESC
+  LIMIT 1
+) tr ON true
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tc.project_id = $2::int
+  AND tr.result_state = 'failed'
+ORDER BY tr.updated_at DESC NULLS LAST, tc.id DESC
+`
+
+type ListFailedTestCasesByProjectParams struct {
+	TestPlanID sql.NullInt64
+	ProjectID  int32
+}
+
+type ListFailedTestCasesByProjectRow struct {
+	ID              uuid.UUID
+	Code            string
+	Title           string
+	FeatureOrModule sql.NullString
+	Priority        PriorityLevel
+	TestRunID       uuid.UUID
+	TestPlanID      sql.NullInt32
+	TestedByID      sql.NullInt32
+	TestedBy        string
+	ActualResult    sql.NullString
+	Notes           string
+	FailedAt        sql.NullTime
+}
+
+// Test cases whose most recently recorded result is a failure, with that result.
+// With a test plan, only results recorded in that plan count.
+func (q *Queries) ListFailedTestCasesByProject(ctx context.Context, arg ListFailedTestCasesByProjectParams) ([]ListFailedTestCasesByProjectRow, error) {
+	rows, err := q.db.QueryContext(ctx, listFailedTestCasesByProject, arg.TestPlanID, arg.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFailedTestCasesByProjectRow
+	for rows.Next() {
+		var i ListFailedTestCasesByProjectRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Title,
+			&i.FeatureOrModule,
+			&i.Priority,
+			&i.TestRunID,
+			&i.TestPlanID,
+			&i.TestedByID,
+			&i.TestedBy,
+			&i.ActualResult,
+			&i.Notes,
+			&i.FailedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrgs = `-- name: ListOrgs :many
 SELECT id, name, address, country, github_url, website_url, created_by_id,  created_at, updated_at
 FROM orgs
@@ -3040,6 +3152,118 @@ func (q *Queries) ListOrgs(ctx context.Context) ([]Org, error) {
 			&i.GithubUrl,
 			&i.WebsiteUrl,
 			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectTestRuns = `-- name: ListProjectTestRuns :many
+SELECT
+  tr.id,
+  tr.project_id,
+  tr.test_plan_id,
+  tr.test_case_id,
+  tc.code AS test_case_code,
+  tc.title AS test_case_title,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.assigned_to_id,
+  tr.result_state,
+  tr.is_closed,
+  tr.notes,
+  tr.actual_result,
+  tr.expected_result,
+  tr.tested_on,
+  tr.environment_id,
+  tr.created_at,
+  tr.updated_at
+FROM test_runs tr
+JOIN test_cases tc ON tc.id = tr.test_case_id
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tr.project_id = $1::int
+  AND ($2::bigint IS NULL OR tr.test_plan_id = $2::bigint)
+  AND ($3::uuid IS NULL OR tr.test_case_id = $3::uuid)
+  AND ($4::test_run_state IS NULL OR tr.result_state = $4::test_run_state)
+ORDER BY tr.updated_at DESC NULLS LAST, tr.id DESC
+LIMIT $6::int OFFSET $5::int
+`
+
+type ListProjectTestRunsParams struct {
+	ProjectID   int32
+	TestPlanID  sql.NullInt64
+	TestCaseID  uuid.NullUUID
+	ResultState NullTestRunState
+	PageOffset  int32
+	PageLimit   int32
+}
+
+type ListProjectTestRunsRow struct {
+	ID             uuid.UUID
+	ProjectID      int32
+	TestPlanID     sql.NullInt32
+	TestCaseID     uuid.UUID
+	TestCaseCode   string
+	TestCaseTitle  string
+	TestedByID     sql.NullInt32
+	TestedBy       string
+	AssignedToID   sql.NullInt32
+	ResultState    TestRunState
+	IsClosed       sql.NullBool
+	Notes          string
+	ActualResult   sql.NullString
+	ExpectedResult sql.NullString
+	TestedOn       time.Time
+	EnvironmentID  sql.NullInt32
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+}
+
+// A project's test runs, most recently updated first, optionally narrowed to a
+// test plan, a test case or a result state.
+func (q *Queries) ListProjectTestRuns(ctx context.Context, arg ListProjectTestRunsParams) ([]ListProjectTestRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProjectTestRuns,
+		arg.ProjectID,
+		arg.TestPlanID,
+		arg.TestCaseID,
+		arg.ResultState,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProjectTestRunsRow
+	for rows.Next() {
+		var i ListProjectTestRunsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.TestPlanID,
+			&i.TestCaseID,
+			&i.TestCaseCode,
+			&i.TestCaseTitle,
+			&i.TestedByID,
+			&i.TestedBy,
+			&i.AssignedToID,
+			&i.ResultState,
+			&i.IsClosed,
+			&i.Notes,
+			&i.ActualResult,
+			&i.ExpectedResult,
+			&i.TestedOn,
+			&i.EnvironmentID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -3780,6 +4004,113 @@ func (q *Queries) ListTestRunAttachments(ctx context.Context, testRunResultID uu
 	return items, nil
 }
 
+const listTestRunComments = `-- name: ListTestRunComments :many
+SELECT
+  c.id,
+  c.author_id,
+  COALESCE(u.display_name, '')::text AS author_name,
+  c.content,
+  c.created_at
+FROM test_runs_comments c
+LEFT JOIN users u ON u.id = c.author_id
+WHERE c.test_run_id = $1
+ORDER BY c.created_at, c.id
+`
+
+type ListTestRunCommentsRow struct {
+	ID         int64
+	AuthorID   int32
+	AuthorName string
+	Content    string
+	CreatedAt  time.Time
+}
+
+func (q *Queries) ListTestRunComments(ctx context.Context, testRunID uuid.UUID) ([]ListTestRunCommentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunComments, testRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTestRunCommentsRow
+	for rows.Next() {
+		var i ListTestRunCommentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AuthorID,
+			&i.AuthorName,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestRunResults = `-- name: ListTestRunResults :many
+SELECT
+  trr.id,
+  trr.status,
+  trr.result,
+  trr.notes,
+  trr.executed_by,
+  COALESCE(u.display_name, '')::text AS executed_by_name,
+  trr.executed_at
+FROM test_run_results trr
+LEFT JOIN users u ON u.id = trr.executed_by
+WHERE trr.test_run_id = $1
+ORDER BY trr.executed_at DESC, trr.id DESC
+`
+
+type ListTestRunResultsRow struct {
+	ID             uuid.UUID
+	Status         TestRunState
+	Result         string
+	Notes          sql.NullString
+	ExecutedBy     sql.NullInt32
+	ExecutedByName string
+	ExecutedAt     time.Time
+}
+
+// Every result recorded against a test run, newest first
+func (q *Queries) ListTestRunResults(ctx context.Context, testRunID uuid.UUID) ([]ListTestRunResultsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTestRunResults, testRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTestRunResultsRow
+	for rows.Next() {
+		var i ListTestRunResultsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.Result,
+			&i.Notes,
+			&i.ExecutedBy,
+			&i.ExecutedByName,
+			&i.ExecutedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTestRuns = `-- name: ListTestRuns :many
 SELECT id, project_id, test_plan_id, test_case_id, owner_id, tested_by_id, assigned_to_id, assignee_can_change_code, code, external_issue_id, result_state, is_closed, notes, actual_result, expected_result, reactions, tested_on, created_at, updated_at, environment_id FROM test_runs ORDER BY created_at DESC
 `
@@ -4068,6 +4399,77 @@ func (q *Queries) ListTestRunsByProject(ctx context.Context, projectID int32) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EnvironmentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUntestedTestCasesByProject = `-- name: ListUntestedTestCasesByProject :many
+SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id FROM test_cases
+WHERE project_id = $1::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    $2::bigint IS NULL
+    OR EXISTS (
+      SELECT 1 FROM test_plan_cases tpc
+      WHERE tpc.test_case_id = test_cases.id
+        AND tpc.test_plan_id = $2::bigint
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = test_cases.id
+      AND tr.result_state <> 'pending'
+      AND ($2::bigint IS NULL OR tr.test_plan_id = $2::bigint)
+  )
+ORDER BY created_at DESC, id DESC
+`
+
+type ListUntestedTestCasesByProjectParams struct {
+	ProjectID  int32
+	TestPlanID sql.NullInt64
+}
+
+// Test cases with no recorded result (passed or failed) yet. With a test plan,
+// only the plan's test cases are listed and only results in that plan count.
+func (q *Queries) ListUntestedTestCasesByProject(ctx context.Context, arg ListUntestedTestCasesByProjectParams) ([]TestCase, error) {
+	rows, err := q.db.QueryContext(ctx, listUntestedTestCasesByProject, arg.ProjectID, arg.TestPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCase
+	for rows.Next() {
+		var i TestCase
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.Suggested,
+			&i.Runner,
+			&i.ScriptPath,
+			&i.ParentTestCaseID,
+			&i.Preconditions,
+			&i.Priority,
+			&i.ExternalID,
 		); err != nil {
 			return nil, err
 		}
@@ -5146,6 +5548,46 @@ type UpdateTestPlanCaseUrgencyParams struct {
 
 func (q *Queries) UpdateTestPlanCaseUrgency(ctx context.Context, arg UpdateTestPlanCaseUrgencyParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateTestPlanCaseUrgency, arg.Urgency, arg.TestPlanID, arg.TestCaseID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateTestPlanDetails = `-- name: UpdateTestPlanDetails :execrows
+UPDATE test_plans SET
+  kind = $1,
+  description = $2,
+  environment_id = $3,
+  start_at = $4,
+  scheduled_end_at = $5,
+  updated_by_id = $6,
+  updated_at = NOW()
+WHERE id = $7
+`
+
+type UpdateTestPlanDetailsParams struct {
+	Kind           TestKind
+	Description    sql.NullString
+	EnvironmentID  sql.NullInt32
+	StartAt        sql.NullTime
+	ScheduledEndAt sql.NullTime
+	UpdatedByID    int32
+	ID             int64
+}
+
+// Updates the editable details of a test plan, leaving its counters, status and
+// assignments untouched
+func (q *Queries) UpdateTestPlanDetails(ctx context.Context, arg UpdateTestPlanDetailsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateTestPlanDetails,
+		arg.Kind,
+		arg.Description,
+		arg.EnvironmentID,
+		arg.StartAt,
+		arg.ScheduledEndAt,
+		arg.UpdatedByID,
+		arg.ID,
+	)
 	if err != nil {
 		return 0, err
 	}

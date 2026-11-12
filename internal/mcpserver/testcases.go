@@ -125,3 +125,144 @@ func validateTestCase(tc *schema.CreateTestCaseRequest) error {
 	}
 	return validation.ValidateTags(tc.Tags)
 }
+
+func addTestCaseTool() mcp.Tool {
+	return mcp.NewTool("add_test_case",
+		mcp.WithDescription("Add a single test case to a project. To add several, or a set covering a feature, "+
+			"use add_test_cases instead. Call search_test_cases first to avoid duplicating an existing case. "+
+			"The code is generated automatically when omitted."),
+		projectIDParam(),
+		mcp.WithString("title", mcp.Required(), mcp.Description("Short summary of what is tested.")),
+		mcp.WithString("description", mcp.Required(), mcp.Description("Steps to perform and the expected result. Markdown.")),
+		mcp.WithString("feature_or_module", mcp.Required(), mcp.Description("Feature or module under test, for example a module name from list_modules.")),
+		mcp.WithString("kind", mcp.Enum(testKinds...), mcp.Description("Kind of test. Defaults to general.")),
+		mcp.WithString("priority", mcp.Enum(priorities...), mcp.Description("Defaults to medium.")),
+		mcp.WithString("preconditions", mcp.Description("State required before running the test. Markdown.")),
+		mcp.WithArray("tags", mcp.WithStringItems()),
+		mcp.WithString("code", mcp.Description("Leave empty to generate the next code for the project.")),
+		mcp.WithBoolean("is_draft", mcp.Description("Drafts are not yet ready to be tested.")),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(false),
+	)
+}
+
+func updateTestCaseTool() mcp.Tool {
+	return mcp.NewTool("update_test_case",
+		mcp.WithDescription("Change a test case. Only the fields given are changed; the rest keep their "+
+			"current values. Tags given replace the existing tags. The code cannot be changed."),
+		mcp.WithString("test_case_id", mcp.Required(), mcp.Description("ID of the test case, as returned by list_project_test_cases or search_test_cases.")),
+		mcp.WithString("title", mcp.Description("Short summary of what is tested.")),
+		mcp.WithString("description", mcp.Description("Steps to perform and the expected result. Markdown.")),
+		mcp.WithString("feature_or_module", mcp.Description("Feature or module under test.")),
+		mcp.WithString("kind", mcp.Enum(testKinds...), mcp.Description("Kind of test.")),
+		mcp.WithString("priority", mcp.Enum(priorities...)),
+		mcp.WithString("preconditions", mcp.Description("State required before running the test. Markdown. An empty string removes them.")),
+		mcp.WithArray("tags", mcp.WithStringItems(), mcp.Description("Replaces the test case's tags. An empty list removes them.")),
+		mcp.WithBoolean("is_draft", mcp.Description("Drafts are not yet ready to be tested.")),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+	)
+}
+
+func (s *Server) addTestCase(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	identity, ok := identityFrom(ctx)
+	if !ok {
+		return mcp.NewToolResultError("not authenticated"), nil
+	}
+
+	var request schema.CreateTestCaseRequest
+	if err := req.BindArguments(&request); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("invalid arguments: %v", err)), nil
+	}
+	if request.ProjectID <= 0 {
+		return mcp.NewToolResultError("project_id must be a positive number"), nil
+	}
+	if _, errResult := s.loadProject(ctx, request.ProjectID); errResult != nil {
+		return errResult, nil
+	}
+
+	request.CreatedByID = strconv.FormatInt(identity.UserID, 10)
+	if strings.TrimSpace(request.Kind) == "" {
+		request.Kind = string(dbsqlc.TestKindGeneral)
+	}
+	if err := validateTestCase(&request); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	testCase, err := s.testCaseService.Create(ctx, &request)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to add test case: %v", err)), nil
+	}
+	return jsonResult(schema.NewTestCaseResponseFromRow(testCase))
+}
+
+func (s *Server) updateTestCase(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	testCaseID, err := requireUUID(req, "test_case_id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	existing, err := s.testCaseService.FindByID(ctx, testCaseID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to load test case %s: %v", testCaseID, err)), nil
+	}
+
+	// Start from the current values so fields that are not given stay as they are
+	request := schema.UpdateTestCaseRequest{
+		ID:              testCaseID,
+		ProjectID:       int64(existing.ProjectID.Int32),
+		Kind:            string(existing.Kind),
+		Code:            existing.Code,
+		FeatureOrModule: existing.FeatureOrModule.String,
+		Title:           existing.Title,
+		Description:     existing.Description,
+		Preconditions:   existing.Preconditions.String,
+		ExternalID:      existing.ExternalID.String,
+		IsDraft:         existing.IsDraft.Bool,
+		Tags:            existing.Tags,
+		Runner:          existing.Runner.String,
+		ScriptPath:      existing.ScriptPath.String,
+		Priority:        string(existing.Priority),
+	}
+	if v := optionalString(req, "title"); v != nil {
+		request.Title = strings.TrimSpace(*v)
+	}
+	if v := optionalString(req, "description"); v != nil {
+		request.Description = *v
+	}
+	if v := optionalString(req, "feature_or_module"); v != nil {
+		request.FeatureOrModule = strings.TrimSpace(*v)
+	}
+	if v := optionalString(req, "kind"); v != nil {
+		request.Kind = strings.TrimSpace(*v)
+	}
+	if v := optionalString(req, "priority"); v != nil {
+		request.Priority = strings.TrimSpace(*v)
+	}
+	if v := optionalString(req, "preconditions"); v != nil {
+		request.Preconditions = *v
+	}
+	if _, ok := req.GetArguments()["tags"]; ok {
+		request.Tags = req.GetStringSlice("tags", []string{})
+	}
+	if _, ok := req.GetArguments()["is_draft"]; ok {
+		request.IsDraft = req.GetBool("is_draft", request.IsDraft)
+	}
+
+	if errs := validation.ValidateStruct(request); errs != nil {
+		return mcp.NewToolResultError(errs.Error()), nil
+	}
+	if !slices.Contains(testKinds, request.Kind) {
+		return mcp.NewToolResultError(fmt.Sprintf("kind %q is not one of %s", request.Kind, strings.Join(testKinds, ", "))), nil
+	}
+	if err := validation.ValidateTags(request.Tags); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	updated, err := s.testCaseService.Update(ctx, &request)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to update test case: %v", err)), nil
+	}
+	return jsonResult(schema.NewTestCaseResponseFromRow(updated))
+}

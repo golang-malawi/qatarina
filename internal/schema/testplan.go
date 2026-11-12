@@ -180,3 +180,15 @@ type CommentResponseItem struct {
 type CommentListResponse struct {
 	Comments []CommentResponseItem `json:"comments"`
 }
+
+// UpdateTestPlanDetails changes the editable details of a test plan. Nil fields
+// keep their current value.
+type UpdateTestPlanDetails struct {
+	ID             int64
+	UpdatedByID    int64
+	Kind           *string
+	Description    *string
+	EnvironmentID  *int64
+	StartAt        *time.Time
+	ScheduledEndAt *time.Time
+}
