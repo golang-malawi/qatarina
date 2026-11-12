@@ -2876,6 +2876,17 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	return i, err
 }
 
+const isUserActive = `-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL)
+`
+
+func (q *Queries) IsUserActive(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isUserActive, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listCommentsByTestPlan = `-- name: ListCommentsByTestPlan :many
 SELECT
     c.id,

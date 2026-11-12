@@ -19,6 +19,9 @@ SELECT * FROM users WHERE id = $1;
 -- name: UserExists :one
 SELECT EXISTS(SELECT id FROM users WHERE id = $1);
 
+-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL);
+
 -- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL;
 

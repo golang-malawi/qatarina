@@ -232,6 +232,7 @@ func InviteUser(userSevice services.UserService) fiber.Handler {
 //	@Param			userID	path		string	true	"User ID"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		403		{object}	problemdetail.ProblemDetail
 //	@Failure		404		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [delete]
@@ -242,6 +243,19 @@ func DeleteUser(userService services.UserService, logger logging.Logger) fiber.H
 		if err != nil {
 			logger.Error("Failed to retrieve user id", "error", err)
 			return problemdetail.BadRequest(c, "failed to process request id")
+		}
+
+		// Only the account owner or a super admin may deactivate an account.
+		callerID := authutil.GetAuthUserID(c)
+		if callerID != int64(userID) {
+			caller, err := userService.GetOne(c.Context(), int32(callerID))
+			if err != nil {
+				logger.Error("apiv1:users", "failed to load calling user", "callerID", callerID, "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to verify permissions")
+			}
+			if !caller.IsSuperAdmin {
+				return problemdetail.Forbidden(c, "only the account owner or a super admin can deactivate this user")
+			}
 		}
 
 		err = userService.Delete(c.Context(), int32(userID))

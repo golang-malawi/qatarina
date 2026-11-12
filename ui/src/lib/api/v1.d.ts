@@ -8578,6 +8578,15 @@ export interface operations {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
             /** @description Not Found */
             404: {
                 headers: {
