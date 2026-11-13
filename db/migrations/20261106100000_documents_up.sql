@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE project_documents (
+CREATE TABLE IF NOT EXISTS project_documents (
     id UUID PRIMARY KEY NOT NULL,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     uploader_id BIGINT NOT NULL REFERENCES users(id),

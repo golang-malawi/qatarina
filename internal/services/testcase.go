@@ -352,27 +352,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 		pageSize = 100
 	}
 
-	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
-	sortMap := map[string]string{
-		"created_at": "created_at",
-		"createdat":  "created_at",
-		"updated_at": "updated_at",
-		"updatedat":  "updated_at",
-		"code":       "code",
-		"title":      "title",
-		"kind":       "kind",
-		"is_draft":   "is_draft",
-		"isdraft":    "is_draft",
-		"priority":   "priority",
-	}
-	sortColumn, ok := sortMap[sortKey]
-	if !ok || sortColumn == "" {
-		sortColumn = "created_at"
-	}
-	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
-	if sortOrder != "asc" {
-		sortOrder = "desc"
-	}
+	sortColumn, sortOrder := resolveTestCaseSort(params)
 
 	conditions := []string{"1=1"}
 	args := []interface{}{}
@@ -495,13 +475,56 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 	}
 
 	search := strings.TrimSpace(params.Search)
-	rows, err := t.queries.TestCaseListByProjectPaged(ctx, dbsqlc.TestCaseListByProjectPagedParams{
-		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
-		Search:    search,
-		RowLimit:  int32(pageSize),
-		RowOffset: int32((page - 1) * pageSize),
-	})
+	sortColumn, sortOrder := resolveTestCaseSort(params)
+
+	// The ORDER BY column and direction come from the whitelist in
+	// resolveTestCaseSort, so it is safe to interpolate them. id is a
+	// tie-breaker so pagination stays stable when sorting on non-unique columns.
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, is_draft, tags,
+	created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
+	parent_test_case_id, preconditions, priority, external_id
+FROM test_cases
+WHERE project_id = $1
+  AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%%' || $2::text || '%%' OR code ILIKE '%%' || $2::text || '%%')
+ORDER BY %s %s, id ASC
+LIMIT $3 OFFSET $4`, sortColumn, sortOrder)
+
+	sqlRows, err := t.db.QueryContext(ctx, query, projectID, search, pageSize, (page-1)*pageSize)
 	if err != nil {
+		return nil, 0, err
+	}
+	defer sqlRows.Close()
+
+	rows := []dbsqlc.TestCase{}
+	for sqlRows.Next() {
+		var i dbsqlc.TestCase
+		if err := sqlRows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.Suggested,
+			&i.Runner,
+			&i.ScriptPath,
+			&i.ParentTestCaseID,
+			&i.Preconditions,
+			&i.Priority,
+			&i.ExternalID,
+		); err != nil {
+			return nil, 0, err
+		}
+		rows = append(rows, i)
+	}
+	if err := sqlRows.Err(); err != nil {
 		return nil, 0, err
 	}
 
@@ -514,6 +537,32 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 	}
 
 	return rows, total, nil
+}
+
+// resolveTestCaseSort maps the user-supplied sortBy/sortOrder onto a
+// whitelisted column and direction, defaulting to created_at desc.
+func resolveTestCaseSort(params TestCaseQueryParams) (column, order string) {
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+		"priority":   "priority",
+	}
+	column, ok := sortMap[strings.ToLower(strings.TrimSpace(params.SortBy))]
+	if !ok {
+		column = "created_at"
+	}
+	order = strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if order != "asc" {
+		order = "desc"
+	}
+	return column, order
 }
 
 // FindAllByProjectID implements TestCaseService.
