@@ -560,7 +560,7 @@ export function SheetView({
               <Table.ColumnHeader width="7%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
               <Table.ColumnHeader width="8%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
               <Table.ColumnHeader width="15%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Action")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Actions")}</Table.ColumnHeader>
             </Table.Row>
             {/* Per-column filters */}
             <Table.Row>
