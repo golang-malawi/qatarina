@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	_ "github.com/golang-malawi/qatarina/docs"
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/internal/graphqlapi"
 	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
 )
@@ -231,6 +232,20 @@ func (api *API) routes() {
 		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
+	// Read-only GraphQL API, alongside the REST API. See docs/graphql.md.
+	gqlSchema, err := graphqlapi.NewSchema(graphqlapi.Services{
+		Projects:  api.ProjectsService,
+		TestPlans: api.TestPlansService,
+		TestCases: api.TestCasesService,
+		TestRuns:  api.TestRunsService,
+		Testers:   api.TesterService,
+	}, api.logger)
+	if err != nil {
+		// The schema is embedded at build time, so this is a programming error.
+		panic(fmt.Sprintf("failed to parse GraphQL schema: %v", err))
+	}
+	router.Post("/graphql", authenticationMiddleware, graphqlapi.Handler(gqlSchema))
+
 	// Serve uploaded files from the configured storage (local or S3)
 	router.Get("/uploads/*", api.serveStoredFile)
 
