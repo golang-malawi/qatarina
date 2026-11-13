@@ -130,15 +130,20 @@ function SharedChecklist({
 const NOT_SPECIFIED = "__none__";
 const NO_RUN = "__no_run__";
 
-const filterSelectStyle: React.CSSProperties = {
+// Native selects can't take Chakra style props, so they use the theme's CSS
+// variables directly and follow light/dark mode like the rest of the sheet
+const selectStyle: React.CSSProperties = {
   width: "100%",
-  padding: "2px 4px",
-  borderRadius: "2px",
-  border: "1px solid #cbd5e1",
-  background: "#ffffff",
+  padding: "4px 6px",
+  borderRadius: "4px",
+  border: "1px solid var(--chakra-colors-border-emphasized)",
+  background: "var(--chakra-colors-bg-surface)",
+  color: "var(--chakra-colors-fg)",
   fontSize: "12px",
   fontWeight: "normal",
 };
+
+const filterSelectStyle: React.CSSProperties = { ...selectStyle, padding: "2px 4px" };
 
 interface SheetViewProps {
   projectMap: Record<number, string>;
@@ -485,13 +490,7 @@ export function SheetView({
           <select
             value={moduleFilter}
             onChange={(e) => setModuleFilter(e.target.value)}
-            style={{
-              padding: "4px 8px",
-              borderRadius: "4px",
-              border: "1px solid #cbd5e1",
-              background: "#ffffff",
-              fontSize: "13px",
-            }}
+            style={{ ...selectStyle, width: "auto", padding: "4px 8px", fontSize: "13px" }}
           >
             <option value="">{t("common.all", "All")}</option>
             {moduleOptions.map((opt) => (
@@ -528,9 +527,28 @@ export function SheetView({
         </Button>
       </Flex>
 
-      <Box flex="1" overflowY="auto" borderTop="1px solid" borderBottom="1px solid" borderColor="gray.300" bg="white" w="full">
+      <Box flex="1" overflowY="auto" borderTop="1px solid" borderBottom="1px solid" borderColor="border" bg="bg.surface" w="full">
         <Table.Root size="sm" variant="outline" css={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
-          <Table.Header position="sticky" top={0} zIndex={1} bg="gray.100">
+          <Table.Header
+            position="sticky"
+            top={0}
+            zIndex={1}
+            bg="bg.subtle"
+            css={{
+              "& th": { borderColor: "border" },
+              // Column titles only; the filter row below keeps normal text
+              "& tr:first-of-type th": {
+                color: "fg.muted",
+                fontSize: "11px",
+                fontWeight: "semibold",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              },
+            }}
+          >
             <Table.Row>
               <Table.ColumnHeader width="6%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
               <Table.ColumnHeader width="12%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
@@ -549,7 +567,7 @@ export function SheetView({
               <Table.ColumnHeader py={1} px={1}>
                 <Input
                   size="xs"
-                  bg="white"
+                  bg="bg.surface"
                   placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
                   aria-label={t("test_cases.sheet_view.filter.code", "Filter by code")}
                   value={columnFilters.code}
@@ -559,7 +577,7 @@ export function SheetView({
               <Table.ColumnHeader py={1} px={1}>
                 <Input
                   size="xs"
-                  bg="white"
+                  bg="bg.surface"
                   placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
                   aria-label={t("test_cases.sheet_view.filter.title", "Filter by title")}
                   value={columnFilters.title}
@@ -569,7 +587,7 @@ export function SheetView({
               <Table.ColumnHeader py={1} px={1}>
                 <Input
                   size="xs"
-                  bg="white"
+                  bg="bg.surface"
                   placeholder={t("test_cases.sheet_view.filter.contains", "Contains...")}
                   aria-label={t("test_cases.sheet_view.filter.preconditions", "Filter by preconditions")}
                   value={columnFilters.preconditions}
@@ -660,7 +678,7 @@ export function SheetView({
             {filteredTestCases.length > 0 ? (
               filteredTestCases.map((tc, index) => {
                 const isLast = index === filteredTestCases.length - 1;
-                const rowBg = index % 2 === 0 ? "white" : "gray.50";
+                const rowBg = index % 2 === 0 ? "bg.surface" : "bg.canvas";
                 return (
                   <TestCaseRow
                     key={tc.id}
@@ -684,7 +702,7 @@ export function SheetView({
               })
             ) : (
               <Table.Row>
-                <Table.Cell colSpan={11} textAlign="center" color="gray.500" py={6}>
+                <Table.Cell colSpan={11} textAlign="center" color="fg.muted" py={6}>
                   {isFiltering
                     ? t("test_cases.sheet_view.filter.no_matches", "No test cases match the filters.")
                     : t("test_cases.sheet_view.empty", "No test cases found.")}
@@ -694,7 +712,7 @@ export function SheetView({
 
             {isFetchingNextPage && (
               <Table.Row>
-                <Table.Cell colSpan={11} textAlign="center" py={3} color="gray.500" fontSize="xs">
+                <Table.Cell colSpan={11} textAlign="center" py={3} color="fg.muted" fontSize="xs">
                   {t("test_cases.sheet_view.loading_more", "Loading more test cases...")}
                 </Table.Cell>
               </Table.Row>
@@ -719,7 +737,10 @@ export function SheetView({
         >
           <Box
             w="480px"
-            bg="white"
+            bg="bg.panel"
+            color="fg"
+            borderLeft="1px solid"
+            borderColor="border"
             h="full"
             p={6}
             boxShadow="xl"
@@ -754,7 +775,7 @@ export function SheetView({
                   </Badge>
                 )}
               </Flex>
-              <Text fontWeight="semibold" fontSize="md" color="gray.800">
+              <Text fontWeight="semibold" fontSize="md" color="fg.heading">
                 {selectedTestCaseForDetails.title}
               </Text>
             </Box>
@@ -764,19 +785,19 @@ export function SheetView({
             {/* Metadata Properties Grid */}
             <Box display="grid" gridTemplateColumns="1fr 1fr" gap={3}>
               <Box>
-                <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                <Text fontWeight="bold" fontSize="xs" color="fg.muted">
                   {t("test_cases.column.project", "PROJECT").toUpperCase()}
                 </Text>
-                <Text fontSize="sm" color="gray.700">
+                <Text fontSize="sm" color="fg">
                   {projectMap[selectedTestCaseForDetails.project_id ?? -1] ?? t("common.unknown", "Unknown")}
                 </Text>
               </Box>
 
               <Box>
-                <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                <Text fontWeight="bold" fontSize="xs" color="fg.muted">
                   {t("test_cases.column.environment", "ENVIRONMENT").toUpperCase()}
                 </Text>
-                <Text fontSize="sm" color="gray.700">
+                <Text fontSize="sm" color="fg">
                   {selectedTestCaseForDetails.environment_id && environmentMap[selectedTestCaseForDetails.environment_id]
                     ? environmentMap[selectedTestCaseForDetails.environment_id]
                     : t("test_cases.sheet_view.not_specified", "Not specified")}
@@ -785,7 +806,7 @@ export function SheetView({
 
               {(selectedTestCaseForDetails as any).status && (
                 <Box>
-                  <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                  <Text fontWeight="bold" fontSize="xs" color="fg.muted">
                     {t("test_cases.column.status", "STATUS").toUpperCase()}
                   </Text>
                   <Badge variant="subtle" colorPalette="blue" size="xs">
@@ -796,7 +817,7 @@ export function SheetView({
 
               {(selectedTestCaseForDetails as any).priority && (
                 <Box>
-                  <Text fontWeight="bold" fontSize="xs" color="gray.500">
+                  <Text fontWeight="bold" fontSize="xs" color="fg.muted">
                     {t("test_cases.column.priority", "PRIORITY").toUpperCase()}
                   </Text>
                   <Badge variant="subtle" colorPalette="orange" size="xs">
@@ -809,7 +830,7 @@ export function SheetView({
             {/* Tags */}
             {((selectedTestCaseForDetails as any).tags?.length ?? 0) > 0 && (
               <Box>
-                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                <Text fontWeight="bold" fontSize="xs" color="fg.muted" mb={1}>
                   {t("test_cases.details.tags", "TAGS")}
                 </Text>
                 <Wrap gap={1}>
@@ -829,10 +850,10 @@ export function SheetView({
             {/* Preconditions with Markdown Support */}
             {selectedTestCaseForDetails.preconditions && (
               <Box>
-                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                <Text fontWeight="bold" fontSize="xs" color="fg.muted" mb={1}>
                   {t("test_cases.details.preconditions", "PRECONDITIONS")}
                 </Text>
-                <Box color="gray.700" fontSize="sm">
+                <Box color="fg" fontSize="sm">
                   <SharedChecklist
                     storageKey={preconditionsChecklistKey(
                       currentUser?.user_id,
@@ -848,11 +869,11 @@ export function SheetView({
 
             {/* Description & Steps with Markdown Support */}
             <Box flex="1">
-              <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+              <Text fontWeight="bold" fontSize="xs" color="fg.muted" mb={1}>
                 {t("test_cases.sheet_view.description_and_steps", "DESCRIPTION & STEPS")}
               </Text>
               {selectedTestCaseForDetails.description ? (
-                <Box color="gray.700" fontSize="sm">
+                <Box color="fg" fontSize="sm">
                   <SharedChecklist
                     storageKey={descriptionChecklistKey(
                       currentUser?.user_id,
@@ -863,7 +884,7 @@ export function SheetView({
                   />
                 </Box>
               ) : (
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="sm" color="fg.muted">
                   {t("test_cases.sheet_view.no_steps", "No detailed steps provided.")}
                 </Text>
               )}
@@ -872,10 +893,10 @@ export function SheetView({
             {/* Expected Result with Markdown Support */}
             {(selectedTestCaseForDetails as any).expected_result && (
               <Box>
-                <Text fontWeight="bold" fontSize="xs" color="gray.500" mb={1}>
+                <Text fontWeight="bold" fontSize="xs" color="fg.muted" mb={1}>
                   {t("test_cases.details.expected_result", "EXPECTED RESULT")}
                 </Text>
-                <Box color="gray.700" fontSize="sm">
+                <Box color="fg" fontSize="sm">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {(selectedTestCaseForDetails as any).expected_result}
                   </ReactMarkdown>
@@ -946,16 +967,22 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
       : t("test_cases.sheet_view.locked_draft", "Draft test cases can't be recorded until unmarked as draft.");
 
     return (
-      <Table.Row ref={ref} bg={rowBg} _hover={{ bg: "blue.50" }} opacity={tc.is_closed ? 0.5 : 1}>
+      <Table.Row
+        ref={ref}
+        bg={rowBg}
+        color="fg"
+        _hover={{ bg: "brand.subtle" }}
+        opacity={tc.is_closed ? 0.6 : 1}
+      >
         {/* Code Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
-          <Text fontWeight="medium" fontSize="xs" truncate title={tc.code || `#${tc.id}`}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
+          <Text fontWeight="medium" fontSize="xs" fontFamily="mono" truncate title={tc.code || `#${tc.id}`}>
             {tc.code || `#${tc.id}`}
           </Text>
         </Table.Cell>
 
         {/* Title Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <Flex direction="column" gap={1} align="flex-start">
             <Text fontWeight="semibold" fontSize="xs" whiteSpace="normal" wordBreak="break-word">
               {tc.title}
@@ -977,7 +1004,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             <Button
               size="2xs"
               variant="ghost"
-              colorPalette="blue"
+              colorPalette="brand"
               h="18px"
               px={1}
               onClick={onViewDetails}
@@ -988,7 +1015,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         </Table.Cell>
 
         {/* Preconditions Column: ticks are shared with the inbox test case view */}
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2} verticalAlign="top">
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2} verticalAlign="top">
           {tc.preconditions ? (
             <Box
               maxH="120px"
@@ -1004,17 +1031,17 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               />
             </Box>
           ) : (
-            <Text fontSize="xs" color="gray.500">
+            <Text fontSize="xs" color="fg.muted">
               {t("test_cases.sheet_view.no_preconditions", "None")}
             </Text>
           )}
         </Table.Cell>
 
-        <Table.Cell border="1px solid" borderColor="gray.200" fontSize="xs" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" fontSize="xs" py={1} px={2}>
           {projectMap[tc.project_id ?? -1] ?? t("common.unknown", "Unknown")}
         </Table.Cell>
 
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <Badge variant="subtle" colorPalette="info" size="xs">
             {tc.environment_id && environmentMap[tc.environment_id]
               ? environmentMap[tc.environment_id]
@@ -1022,16 +1049,16 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
           </Badge>
         </Table.Cell>
 
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <PriorityBadge value={tc.priority} />
         </Table.Cell>
 
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <PriorityBadge value={tc.urgency} />
         </Table.Cell>
 
         {/* Last Result Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <Badge
             variant="solid"
             size="xs"
@@ -1048,16 +1075,9 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         </Table.Cell>
 
         {/* Status Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" py={1} px={2}>
+        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <select
-            style={{
-              width: "100%",
-              padding: "4px",
-              borderRadius: "2px",
-              border: "1px solid #cbd5e1",
-              background: "#ffffff",
-              fontSize: "12px",
-            }}
+            style={selectStyle}
             value={sheetStatuses[tc.id!] || ""}
             disabled={locked}
             title={locked ? lockedReason : undefined}
@@ -1075,15 +1095,15 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         </Table.Cell>
 
         {/* Comments Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" p={1}>
+        <Table.Cell border="1px solid" borderColor="border" p={1}>
           <Textarea
             size="xs"
             placeholder={t("test_cases.sheet_view.comments_placeholder", "Comments...")}
             value={sheetNotes[tc.id!] || ""}
             disabled={locked}
             borderRadius="2px"
-            borderColor="gray.300"
-            bg="white"
+            borderColor="border.emphasized"
+            bg="bg.surface"
             rows={2}
             minH="42px"
             p={1.5}
@@ -1122,7 +1142,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             <Button
               size="2xs"
               variant="ghost"
-              colorPalette="blue"
+              colorPalette="brand"
               h="18px"
               px={1}
               disabled={locked}
@@ -1164,7 +1184,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         </Table.Cell>
 
         {/* Action Column */}
-        <Table.Cell border="1px solid" borderColor="gray.200" textAlign="center" py={1} px={1}>
+        <Table.Cell border="1px solid" borderColor="border" textAlign="center" py={1} px={1}>
           <Button
             size="2xs"
             colorPalette="brand"
