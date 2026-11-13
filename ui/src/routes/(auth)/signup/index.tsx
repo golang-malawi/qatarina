@@ -54,6 +54,7 @@ function SignUpPage() {
     defaultValues: {
       firstName: "",
       lastName: "",
+      displayName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -67,8 +68,9 @@ function SignUpPage() {
       await signUp({
         firstname: data.firstName,
         lastname: data.lastName,
-        // Not asked in the form; derived so the API/JWT never carries an empty name.
-        display_name: `${data.firstName} ${data.lastName}`.trim(),
+        // Fall back to the full name so the API/JWT never carries an empty name.
+        display_name:
+          data.displayName || `${data.firstName} ${data.lastName}`.trim(),
         email: data.email,
         password: data.password,
       });
@@ -169,6 +171,18 @@ function SignUpPage() {
                     <Field.ErrorText>{errors.lastName?.message}</Field.ErrorText>
                   </Field.Root>
                 </Stack>
+
+                <Field.Root invalid={!!errors.displayName}>
+                  <Field.Label>{t("display_name", "Display name")}</Field.Label>
+                  <Input {...register("displayName")} autoComplete="nickname" />
+                  <Field.HelperText>
+                    {t(
+                      "display_name_helper",
+                      "Optional. Defaults to your first and last name."
+                    )}
+                  </Field.HelperText>
+                  <Field.ErrorText>{errors.displayName?.message}</Field.ErrorText>
+                </Field.Root>
 
                 <Field.Root invalid={!!errors.email}>
                   <Field.Label>{t("email")}</Field.Label>
