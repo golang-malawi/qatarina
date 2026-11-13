@@ -40,8 +40,6 @@ import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
 import { getInboxTestCases } from "@/services/TestCaseService";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
-import { PriorityBadge } from "@/components/PriorityBadge";
-import { normalizePriority, PRIORITY_OPTIONS } from "@/common/constants/priority";
 import {
   applyChecklistState,
   readChecklistState,
@@ -77,8 +75,6 @@ type ColumnFilters = {
   preconditions: string;
   project: string;
   environment: string;
-  priority: string;
-  urgency: string;
   lastResult: string;
 };
 
@@ -88,8 +84,6 @@ const emptyColumnFilters: ColumnFilters = {
   preconditions: "",
   project: "",
   environment: "",
-  priority: "",
-  urgency: "",
   lastResult: "",
 };
 
@@ -299,12 +293,6 @@ export function SheetView({
       if (code && !(tc.code || `#${tc.id}`).toLowerCase().includes(code)) return false;
       if (title && !(tc.title ?? "").toLowerCase().includes(title)) return false;
       if (preconditions && !(tc.preconditions ?? "").toLowerCase().includes(preconditions)) {
-        return false;
-      }
-      if (columnFilters.priority && normalizePriority(tc.priority) !== columnFilters.priority) {
-        return false;
-      }
-      if (columnFilters.urgency && normalizePriority(tc.urgency) !== columnFilters.urgency) {
         return false;
       }
       if (columnFilters.project && String(tc.project_id) !== columnFilters.project) return false;
@@ -550,16 +538,14 @@ export function SheetView({
             }}
           >
             <Table.Row>
-              <Table.ColumnHeader width="6%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="12%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="16%">{t("test_cases.column.preconditions", "Preconditions")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="7%">{t("test_cases.column.code", "Code")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="16%">{t("test_cases.column.title", "Title")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="18%">{t("test_cases.column.preconditions", "Preconditions")}</Table.ColumnHeader>
               <Table.ColumnHeader width="8%">{t("test_cases.column.project", "Project")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="8%">{t("test_cases.column.environment", "Environment")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="6%">{t("test_cases.column.priority", "Priority")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="6%">{t("test_cases.column.urgency", "Urgency")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="7%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="8%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
-              <Table.ColumnHeader width="15%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="10%">{t("test_cases.column.environment", "Environment")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="8%">{t("test_cases.column.last_result", "Last Result")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="9%">{t("test_cases.column.status", "Status")}</Table.ColumnHeader>
+              <Table.ColumnHeader width="16%">{t("test_cases.column.comments", "Comments")}</Table.ColumnHeader>
               <Table.ColumnHeader width="8%" textAlign="center">{t("test_cases.column.actions", "Actions")}</Table.ColumnHeader>
             </Table.Row>
             {/* Per-column filters */}
@@ -627,36 +613,6 @@ export function SheetView({
               <Table.ColumnHeader py={1} px={1}>
                 <select
                   style={filterSelectStyle}
-                  aria-label={t("test_cases.sheet_view.filter.priority", "Filter by priority")}
-                  value={columnFilters.priority}
-                  onChange={(e) => setColumnFilter("priority", e.target.value)}
-                >
-                  <option value="">{t("common.all", "All")}</option>
-                  {PRIORITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </Table.ColumnHeader>
-              <Table.ColumnHeader py={1} px={1}>
-                <select
-                  style={filterSelectStyle}
-                  aria-label={t("test_cases.sheet_view.filter.urgency", "Filter by urgency")}
-                  value={columnFilters.urgency}
-                  onChange={(e) => setColumnFilter("urgency", e.target.value)}
-                >
-                  <option value="">{t("common.all", "All")}</option>
-                  {PRIORITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </Table.ColumnHeader>
-              <Table.ColumnHeader py={1} px={1}>
-                <select
-                  style={filterSelectStyle}
                   aria-label={t("test_cases.sheet_view.filter.last_result", "Filter by last result")}
                   value={columnFilters.lastResult}
                   onChange={(e) => setColumnFilter("lastResult", e.target.value)}
@@ -702,7 +658,7 @@ export function SheetView({
               })
             ) : (
               <Table.Row>
-                <Table.Cell colSpan={11} textAlign="center" color="fg.muted" py={6}>
+                <Table.Cell colSpan={9} textAlign="center" color="fg.muted" py={6}>
                   {isFiltering
                     ? t("test_cases.sheet_view.filter.no_matches", "No test cases match the filters.")
                     : t("test_cases.sheet_view.empty", "No test cases found.")}
@@ -712,7 +668,7 @@ export function SheetView({
 
             {isFetchingNextPage && (
               <Table.Row>
-                <Table.Cell colSpan={11} textAlign="center" py={3} color="fg.muted" fontSize="xs">
+                <Table.Cell colSpan={9} textAlign="center" py={3} color="fg.muted" fontSize="xs">
                   {t("test_cases.sheet_view.loading_more", "Loading more test cases...")}
                 </Table.Cell>
               </Table.Row>
@@ -1047,14 +1003,6 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
               ? environmentMap[tc.environment_id]
               : t("test_cases.sheet_view.not_specified", "Not specified")}
           </Badge>
-        </Table.Cell>
-
-        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
-          <PriorityBadge value={tc.priority} />
-        </Table.Cell>
-
-        <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
-          <PriorityBadge value={tc.urgency} />
         </Table.Cell>
 
         {/* Last Result Column */}
