@@ -27,7 +27,7 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
-	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
+	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey), api.UserService, api.logger)
 
 	authV1 := router.Group("/v1/auth", authenticationMiddleware)
 	{

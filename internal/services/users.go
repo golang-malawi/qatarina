@@ -35,8 +35,10 @@ type UserService interface {
 	Search(ctx context.Context, keyword string) ([]dbsqlc.User, error)
 	//Update updates the user
 	Update(context.Context, schema.UpdateUserRequest) (bool, error)
-	//Delete used to delete user from the system
+	//Delete deactivates (soft deletes) a user
 	Delete(ctx context.Context, id int32) error
+	// IsActive reports whether the user exists and has not been deactivated
+	IsActive(ctx context.Context, id int32) (bool, error)
 	// Invite used to invite a user
 	// SignIn allows user to access the system with given credentials
 	// Invite used to invite user by email
@@ -180,12 +182,20 @@ func (u *userServiceImpl) Update(ctx context.Context, request schema.UpdateUserR
 }
 
 func (u *userServiceImpl) Delete(ctx context.Context, id int32) error {
-	_, err := u.queries.DeleteUser(ctx, id)
+	rows, err := u.queries.DeleteUser(ctx, id)
 	if err != nil {
 		u.logger.Error("failed to delete user", "error", err)
 		return err
 	}
+	if rows == 0 {
+		// No active user with this ID: it doesn't exist or is already deactivated.
+		return ErrNotFound
+	}
 	return nil
+}
+
+func (u *userServiceImpl) IsActive(ctx context.Context, id int32) (bool, error) {
+	return u.queries.IsUserActive(ctx, id)
 }
 
 func (u *userServiceImpl) Invite(ctx context.Context, senderEmail, receiverEmail string) error {

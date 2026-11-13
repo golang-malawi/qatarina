@@ -1,19 +1,26 @@
 -- name: ListUsers :many
 SELECT * FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: SearchUsers :many
 SELECT * FROM users
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%';
+WHERE deleted_at IS NULL
+AND (
+    first_name ILIKE '%' || $1 || '%'
+    OR last_name ILIKE '%' || $1 || '%'
+    OR display_name ILIKE '%' || $1 || '%'
+    OR email ILIKE '%' || $1 || '%'
+);
 
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 
 -- name: UserExists :one
 SELECT EXISTS(SELECT id FROM users WHERE id = $1);
+
+-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL);
 
 -- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL;
@@ -52,7 +59,11 @@ VALUES(
 RETURNING id;
 
 -- name: DeleteUser :execrows
-DELETE FROM users WHERE id=$1;
+-- Soft delete: users are referenced by projects, test runs, comments, etc.,
+-- so a hard DELETE would violate foreign keys and erase history.
+UPDATE users
+SET is_activated = FALSE, deleted_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;

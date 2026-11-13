@@ -224,14 +224,16 @@ func InviteUser(userSevice services.UserService) fiber.Handler {
 // DeleteUser godoc
 //
 //	@ID				DeleteUser
-//	@Summary		Delete a user
-//	@Description	Delete a user
+//	@Summary		Deactivate a user
+//	@Description	Deactivate (soft delete) a user. The user can no longer log in and is hidden from user lists.
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
 //	@Param			userID	path		string	true	"User ID"
 //	@Success		200		{object}	interface{}
 //	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		403		{object}	problemdetail.ProblemDetail
+//	@Failure		404		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/users/{userID} [delete]
 func DeleteUser(userService services.UserService, logger logging.Logger) fiber.Handler {
@@ -243,8 +245,24 @@ func DeleteUser(userService services.UserService, logger logging.Logger) fiber.H
 			return problemdetail.BadRequest(c, "failed to process request id")
 		}
 
+		// Only the account owner or a super admin may deactivate an account.
+		callerID := authutil.GetAuthUserID(c)
+		if callerID != int64(userID) {
+			caller, err := userService.GetOne(c.Context(), int32(callerID))
+			if err != nil {
+				logger.Error("apiv1:users", "failed to load calling user", "callerID", callerID, "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to verify permissions")
+			}
+			if !caller.IsSuperAdmin {
+				return problemdetail.Forbidden(c, "only the account owner or a super admin can deactivate this user")
+			}
+		}
+
 		err = userService.Delete(c.Context(), int32(userID))
 		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "user not found or already deactivated")
+			}
 			logger.Error("apiv1:users", "failed to delete user", "error", err)
 			return problemdetail.BadRequest(c, "failed to delete user")
 		}

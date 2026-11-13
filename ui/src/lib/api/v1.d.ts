@@ -2432,8 +2432,8 @@ export interface paths {
          */
         post: operations["UpdateUser"];
         /**
-         * Delete a user
-         * @description Delete a user
+         * Deactivate a user
+         * @description Deactivate (soft delete) a user. The user can no longer log in and is hidden from user lists.
          */
         delete: operations["DeleteUser"];
         options?: never;
@@ -8571,6 +8571,24 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
