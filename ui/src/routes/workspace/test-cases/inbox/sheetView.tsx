@@ -516,7 +516,17 @@ export function SheetView({
       </Flex>
 
       <Box flex="1" overflowY="auto" borderTop="1px solid" borderBottom="1px solid" borderColor="border" bg="bg.surface" w="full">
-        <Table.Root size="sm" variant="outline" css={{ borderCollapse: "collapse", tableLayout: "fixed", width: "100%" }}>
+        <Table.Root
+          size="sm"
+          variant="outline"
+          css={{
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+            width: "100%",
+            // Long words break onto a new line instead of spilling into the next cell
+            "& td": { overflowWrap: "anywhere", wordBreak: "break-word" },
+          }}
+        >
           <Table.Header
             position="sticky"
             top={0}
@@ -531,9 +541,9 @@ export function SheetView({
                 fontWeight: "semibold",
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
+                verticalAlign: "bottom",
               },
             }}
           >
@@ -932,7 +942,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
       >
         {/* Code Column */}
         <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
-          <Text fontWeight="medium" fontSize="xs" fontFamily="mono" truncate title={tc.code || `#${tc.id}`}>
+          <Text fontWeight="medium" fontSize="xs" fontFamily="mono" whiteSpace="normal">
             {tc.code || `#${tc.id}`}
           </Text>
         </Table.Cell>
@@ -998,7 +1008,15 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         </Table.Cell>
 
         <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
-          <Badge variant="subtle" colorPalette="info" size="xs">
+          <Badge
+            variant="subtle"
+            colorPalette="info"
+            size="xs"
+            whiteSpace="normal"
+            h="auto"
+            py={0.5}
+            maxW="full"
+          >
             {tc.environment_id && environmentMap[tc.environment_id]
               ? environmentMap[tc.environment_id]
               : t("test_cases.sheet_view.not_specified", "Not specified")}
@@ -1010,6 +1028,9 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
           <Badge
             variant="solid"
             size="xs"
+            whiteSpace="normal"
+            h="auto"
+            maxW="full"
             colorPalette={
               lastResultState?.toLowerCase().includes("pass")
                 ? "green"
