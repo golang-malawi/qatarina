@@ -36,6 +36,16 @@ export const Route = createFileRoute("/(project)/projects/$projectId/reports/")(
   component: ReportsPage,
 });
 
+// Builds a download file name from the report name, keeping it safe to use
+// as a file name on any operating system.
+function reportFileName(name?: string) {
+  const safe = (name ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/\s+/g, "-");
+  return safe || "report";
+}
+
 function ReportsPage() {
   const { t } = useTranslation();
   const projectId = Route.useParams().projectId as string;
@@ -70,12 +80,12 @@ function ReportsPage() {
     );
   };
 
-  const handleDownload = async (reportID: string) => {
+  const handleDownload = async (reportID: string, reportName?: string) => {
     const blob = await downloadReport(projectId, reportID);
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report-${reportID}.pdf`;
+    a.download = `${reportFileName(reportName)}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -208,7 +218,7 @@ function ReportsPage() {
 
                       <IconButton
                         aria-label={t("reports.download")}
-                        onClick={() => report.id && handleDownload(report.id)}
+                        onClick={() => report.id && handleDownload(report.id, report.name)}
                         colorPalette="success"
                         size="sm"
                       >
