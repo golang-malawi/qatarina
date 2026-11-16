@@ -12,6 +12,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGetUserQuery, deleteUserByID } from "@/services/UserService";
 import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/workspace/users/view/$userID")({
@@ -34,13 +36,32 @@ function ViewUserProfile() {
   const canDeactivate = isOwnProfile || loggedInUserProfile?.is_super_admin === true;
 
   const handleDeactivate = async () => {
-    const confirm = window.confirm(t("users.view.deactivate_confirm"));
-    if (!confirm) return;
     try {
-      await deleteUserByID(userID);
+      // openapi-fetch does not throw on 4xx/5xx; it returns { error } instead.
+      const { error: deactivateError } = await deleteUserByID(userID);
+      if (deactivateError) {
+        toaster.error({
+          title: t("users.view.deactivate_failed"),
+          description:
+            (deactivateError as { detail?: string })?.detail ||
+            t("common.unknown_error"),
+        });
+        return;
+      }
+
+      toaster.success({ title: t("users.view.deactivate_success") });
+
+      if (isOwnProfile) {
+        // The account is gone; end this session instead of leaving it usable.
+        await navigate({ to: "/logout", replace: true });
+        return;
+      }
       await navigate({ to: "/workspace/users" });
     } catch (err) {
-      console.log("Failed to deactivate user:", err);
+      toaster.error({
+        title: t("users.view.deactivate_failed"),
+        description: (err as Error)?.message || t("common.unknown_error"),
+      });
     }
   };
 
@@ -124,13 +145,18 @@ function ViewUserProfile() {
             </Button>
           )}
           {canDeactivate && (
-            <Button
-              colorPalette="danger"
-              variant="outline"
-              onClick={handleDeactivate}
-            >
-              {t("users.view.deactivate_button")}
-            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button colorPalette="danger" variant="outline">
+                  {t("users.view.deactivate_button")}
+                </Button>
+              }
+              title={t("users.view.deactivate_confirm_title")}
+              description={t("users.view.deactivate_confirm")}
+              confirmLabel={t("users.view.deactivate_button")}
+              cancelLabel={t("common.cancel")}
+              onConfirm={handleDeactivate}
+            />
           )}
         </Stack>
       </Flex>
