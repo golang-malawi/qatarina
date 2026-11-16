@@ -12,6 +12,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGetUserQuery, deleteUserByID } from "@/services/UserService";
 import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toaster } from "@/components/ui/toaster";
 import { useTranslation } from "react-i18next";
 
@@ -35,8 +36,6 @@ function ViewUserProfile() {
   const canDeactivate = isOwnProfile || loggedInUserProfile?.is_super_admin === true;
 
   const handleDeactivate = async () => {
-    const confirm = window.confirm(t("users.view.deactivate_confirm"));
-    if (!confirm) return;
     try {
       // openapi-fetch does not throw on 4xx/5xx; it returns { error } instead.
       const { error: deactivateError } = await deleteUserByID(userID);
@@ -146,13 +145,18 @@ function ViewUserProfile() {
             </Button>
           )}
           {canDeactivate && (
-            <Button
-              colorPalette="danger"
-              variant="outline"
-              onClick={handleDeactivate}
-            >
-              {t("users.view.deactivate_button")}
-            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button colorPalette="danger" variant="outline">
+                  {t("users.view.deactivate_button")}
+                </Button>
+              }
+              title={t("users.view.deactivate_confirm_title")}
+              description={t("users.view.deactivate_confirm")}
+              confirmLabel={t("users.view.deactivate_button")}
+              cancelLabel={t("common.cancel")}
+              onConfirm={handleDeactivate}
+            />
           )}
         </Stack>
       </Flex>
