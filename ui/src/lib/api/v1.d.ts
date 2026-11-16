@@ -757,6 +757,189 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects/{projectID}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all documents for a project */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    projectID: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upload/Create a document for a project */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    projectID: number;
+                };
+                cookie?: never;
+            };
+            /** @description Document File */
+            requestBody: {
+                content: {
+                    "multipart/form-data": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/documents/{documentID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a project document */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Document ID (UUID) */
+                    documentID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: string;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/projects/{projectID}/environments": {
         parameters: {
             query?: never;
@@ -2010,6 +2193,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-runs/{resultID}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List attachments for a Test Run Result
+         * @description List all file attachments linked to a Test Run Result
+         */
+        get: operations["ListAttachments"];
+        put?: never;
+        /**
+         * Upload an attachment for a Test Run Result
+         * @description Upload a file attachment linked to a Test Run Result
+         */
+        post: operations["UploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-runs/{testRunID}": {
         parameters: {
             query?: never;
@@ -2352,7 +2559,9 @@ export interface components {
             test_case_template: string;
         };
         "schema.AssignTestsToPlanRequest": {
-            planned_tests: components["schemas"]["schema.TestCaseAssignment"][];
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
+            /** @description Required unless all_test_cases is set */
+            planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
             test_plan_id: number;
         };
@@ -2382,6 +2591,13 @@ export interface components {
         "schema.AssignedTestCaseListResponse": {
             pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
+        };
+        "schema.AttachmentResponse": {
+            file_name?: string;
+            file_size?: number;
+            file_type?: string;
+            id?: string;
+            storage_url?: string;
         };
         "schema.BulkAssignTesters": {
             project_id?: number;
@@ -2425,6 +2641,26 @@ export interface components {
             updated_at?: string;
             user_id?: number;
             user_name?: string;
+        };
+        "schema.CommitTestRunResponse": {
+            actual_result?: string;
+            attachment_count?: number;
+            code?: string;
+            environment_id?: number;
+            executed_by?: string;
+            expected_result?: string;
+            id?: string;
+            is_closed?: boolean;
+            latest_result_id?: string;
+            notes?: string;
+            project_id?: number;
+            result_id?: string;
+            result_state?: string;
+            test_case_id?: string;
+            test_case_title?: string;
+            test_plan_id?: number;
+            tested_by_id?: number;
+            tested_on?: string;
         };
         "schema.CommitTestRunResult": {
             actual_result: string;
@@ -2520,6 +2756,7 @@ export interface components {
             title: string;
         };
         "schema.CreateTestPlan": {
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
             assigned_to_id?: number;
             closed_at?: string;
             created_by_id?: number;
@@ -2644,7 +2881,7 @@ export interface components {
             project_owner_id?: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.NewUserRequest": {
             display_name: string;
@@ -2697,6 +2934,14 @@ export interface components {
             updated_at?: string;
             version?: string;
             website_url?: string;
+        };
+        "schema.ProjectTestCaseSelection": {
+            /** @description Test cases the user deselected */
+            excluded_test_case_ids?: string[];
+            /** @description Same filter as the project test case list (matches title or code) */
+            search?: string;
+            /** @description Testers assigned to each of the selected test cases */
+            user_ids: number[];
         };
         "schema.ProjectTestCaseSummaryResponse": {
             blocked?: number;
@@ -2887,12 +3132,14 @@ export interface components {
         };
         "schema.TestRunResponse": {
             actual_result?: string;
+            attachment_count?: number;
             code?: string;
             environment_id?: number;
             executed_by?: string;
             expected_result?: string;
             id?: string;
             is_closed?: boolean;
+            latest_result_id?: string;
             notes?: string;
             project_id?: number;
             result_state?: string;
@@ -2960,7 +3207,7 @@ export interface components {
             project_owner_id: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.UpdateTestCaseRequest": {
             code?: string;
@@ -7630,6 +7877,97 @@ export interface operations {
             };
         };
     };
+    ListAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Attachment files(multiple allowed) */
+        requestBody: {
+            content: {
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetOneTestRun: {
         parameters: {
             query?: never;
@@ -7834,7 +8172,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.CommitTestRunResponse"];
                 };
             };
             /** @description Bad Request */

@@ -485,7 +485,100 @@ You can then interact with Qatarina through Claude Code. For example, try asking
 
 ### Production Environment
 
-- To be documented.
+Use these steps to connect Claude Code to a Qatarina instance that is already deployed, such as a shared staging server, instead of one running on your machine. Only the HTTP transport is used, because STDIO needs the Qatarina binary and direct database access on your machine.
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Code is installed on your machine.
+- You have an account on the deployed Qatarina instance.
+
+**Staging deployment URLs**
+
+The commands below use the shared staging deployment:
+
+| What | URL |
+| --- | --- |
+| Qatarina URL (web app, where you log in and get a token) | `https://qatarina.6g.nndi.cloud` |
+| MCP URL (the MCP server) | `https://mcp.qatarina.6g.nndi.cloud/mcp` |
+
+To connect to a different deployment, replace both URLs in the commands with that deployment's URLs.
+
+The MCP server is served on its own host name (`mcp.qatarina...`), not under the web app's address, so don't use the Qatarina URL with `/mcp` added. `https://qatarina.6g.nndi.cloud/mcp` is the web app and returns `404 Cannot POST /mcp`.
+
+You can check that the MCP URL is reachable before configuring anything. A request without a token should return `401` with the body `missing bearer token`:
+
+```bash
+curl -s -X POST https://mcp.qatarina.6g.nndi.cloud/mcp -w "\n%{http_code}\n"
+```
+
+On Windows, use `curl.exe` instead of `curl` in PowerShell.
+
+---
+
+#### Linux, macOS and WSL
+
+**Step 1: Obtain an authorization token**
+
+Log in to the deployed instance, replacing the email and password with your login on the deployment:
+
+```bash
+TOKEN=$(curl -s -X POST https://qatarina.6g.nndi.cloud/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token)
+```
+
+Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
+
+**Step 2: Register the MCP server**
+
+If `claude mcp get qatarina` shows an existing configuration, for example your local one, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
+
+```bash
+claude mcp add --scope user --transport http qatarina https://mcp.qatarina.6g.nndi.cloud/mcp --header "Authorization: Bearer $TOKEN"
+```
+
+**Step 3: Verify the configuration**
+
+```bash
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+---
+
+#### Windows
+
+**Step 1: Obtain an authorization token**
+
+Run the following in a local PowerShell window, replacing the email and password with your login on the deployment:
+
+```powershell
+$AuthorizationToken = (Invoke-RestMethod -Method Post -Uri "https://qatarina.6g.nndi.cloud/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+Get the token from the same deployment as the MCP server. A token issued by a different Qatarina instance, including your local one, is rejected with `401 invalid or expired token`.
+
+**Step 2: Register the MCP server**
+
+If `claude mcp get qatarina` shows an existing configuration, remove it first with `claude mcp remove qatarina --scope user`. Then register the deployed server:
+
+```powershell
+claude mcp add --scope user --transport http qatarina https://mcp.qatarina.6g.nndi.cloud/mcp --header "Authorization: Bearer $AuthorizationToken"
+```
+
+**Step 3: Verify the configuration**
+
+```powershell
+claude mcp list
+```
+
+Confirm that `qatarina` appears in the list and that its connection status is `Connected`.
+
+---
+
+**When the token expires**
+
+Tokens expire after the period set by `auth.jwt_expiry_timeout` on the server. When Qatarina tools start failing with authorization errors, obtain a new token, remove the server with `claude mcp remove qatarina --scope user`, and register it again.
 
 ## 5. Claude Desktop
 
@@ -761,7 +854,126 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 
 ### Production Environment
 
-- To be documented.
+Use these steps to connect Claude Desktop to a Qatarina instance that is already deployed, such as a shared staging server. As with local development, Claude Desktop reaches the HTTP endpoint through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote).
+
+**Prerequisites**
+
+Before proceeding, ensure that:
+- Claude Desktop and Node.js are installed on your machine.
+- You have an account on the deployed Qatarina instance.
+
+**Staging deployment URLs**
+
+| What | URL |
+| --- | --- |
+| Qatarina URL (web app, where you log in and get a token) | `https://qatarina.6g.nndi.cloud` |
+| MCP URL (the MCP server, used in the Claude Desktop config) | `https://mcp.qatarina.6g.nndi.cloud/mcp` |
+
+The steps below use these URLs. See the [Claude Code production section](#production-environment) for how to check the MCP URL and how to connect to a different deployment.
+
+---
+
+#### macOS
+
+**Step 1: Obtain an authorization token**
+
+Replace the email and password with your login on the deployment:
+
+```bash
+curl -s -X POST https://qatarina.6g.nndi.cloud/v1/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' | jq -r .token
+```
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing `<token>`:
+
+```json
+{
+  "mcpServers": {
+    "qatarina": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.qatarina.6g.nndi.cloud/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+If the file already contains other MCP servers, add the `qatarina` entry alongside them instead of replacing the file.
+
+**Step 3: Restart Claude Desktop**
+
+Fully quit Claude Desktop (choose **Claude → Quit Claude** from the menu bar, or press `Cmd+Q`), then reopen it.
+
+---
+
+#### Windows
+
+**Step 1: Obtain an authorization token**
+
+Run the following in a local PowerShell window, replacing the email and password with your login on the deployment:
+
+```powershell
+(Invoke-RestMethod -Method Post -Uri "https://qatarina.6g.nndi.cloud/v1/auth/login" -ContentType "application/json" -Body '{"email":"you@example.com","password":"your-password"}').token
+```
+
+If you are connected to a server over SSH, run this in a separate local PowerShell window. It fails with a syntax error in a Linux shell.
+
+Copy the returned token for use in the next step.
+
+**Step 2: Configure the MCP server**
+
+Open **Settings → Developer → Edit Config** and set the `qatarina` entry, replacing `<token>`. Opening the file from Settings is the most reliable way to find it, because its location depends on how Claude Desktop was installed.
+
+```json
+{
+  "mcpServers": {
+    "qatarina": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.qatarina.6g.nndi.cloud/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <token>"
+      }
+    }
+  }
+}
+```
+
+Keep `Authorization:${AUTH_HEADER}` without a space after the colon. On Windows, a space inside that argument is mangled when `npx` passes it on, so the space goes in the `AUTH_HEADER` value instead.
+
+**Step 3: Restart Claude Desktop**
+
+Fully quit Claude Desktop (right-click its icon in the system tray and choose **Quit**), then reopen it.
+
+---
+
+**Troubleshooting**
+
+Claude Desktop writes a log for each MCP server, named `mcp-server-qatarina.log`. Open it from **Settings → Developer**, or find it in `~/Library/Logs/Claude/` on macOS and `%APPDATA%\Claude\logs\` on Windows (Microsoft Store installs keep it under `%LOCALAPPDATA%`).
+
+| Log message | Cause | Fix |
+| --- | --- | --- |
+| `Dynamic Client Registration rejected (HTTP 404)` | The MCP server answered `401`, so `mcp-remote` tried to sign in with OAuth, which Qatarina does not support. The token was rejected. | Obtain a new token from the same deployment as the MCP URL, update `AUTH_HEADER` and restart. |
+| `Cannot POST /mcp` or `Invalid content type, expected "text/event-stream"` | The URL points at the web app, not the MCP server. | Use the MCP URL. |
+| `Connected to remote server` followed by `tools/list` | Working. | Nothing to do. |
+
+Tokens expire after the period set by `auth.jwt_expiry_timeout` on the server. When Qatarina tools stop working, repeat Steps 1 to 3 with a new token.
 
 ## 6. VS Code MCP Copilot Extension
 
@@ -773,13 +985,59 @@ Once Claude Desktop restarts, look for Qatarina in the tools or connectors menu 
 
 ## Available tools
 
-| Tool | What it does |
-| --- | --- |
-| `whoami` | Returns the profile of the user the server runs as. |
-| `list_users` | Lists all users on the platform. |
-| `list_projects` | Lists all projects. |
-| `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
-| `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
+Tools marked *read* only look at data. The others change it, and are recorded
+as done by the user the server runs as.
+
+### Users and projects
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `whoami` | read | Returns the profile of the user the server runs as. |
+| `list_users` | read | Lists all users on the platform. |
+| `list_projects` | read | Lists all projects. |
+| `get_project` | read | Returns a project with a summary of its test cases and results. |
+| `search_projects` | read | Finds projects by title, code or description. |
+| `list_project_testers` | read | Lists the testers assigned to a project, with their roles. |
+| `list_modules` | read | Lists a project's modules, including which module each one sits under. |
+| `list_project_environments` | read | Lists a project's environments, such as staging and production, with their base URLs. |
+| `create_project_environment` | | Creates an environment in a project. |
+| `project_list_documents` | read | Lists the documents uploaded to a project, with download links. |
+| `project_search_documents` | read | Finds a project's documents by name or file type. Document contents are not searched. |
+
+### Test cases
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_project_test_cases` | read | Lists a project's test cases one page at a time, with optional search. |
+| `get_test_case` | read | Returns a test case with its steps, preconditions and 10 most recent test runs. |
+| `search_test_cases` | read | Finds test cases in one project by code, title, description or module, or in every project by code or title. |
+| `list_untested_cases` | read | Lists the test cases with no result yet, optionally within one test plan. |
+| `list_failed_test_cases` | read | Lists the test cases whose latest result is a failure, with that result. |
+| `add_test_case` | | Adds one test case to a project. |
+| `add_test_cases` | | Adds up to 100 test cases to a project in one batch. |
+| `update_test_case` | | Changes the given fields of a test case. |
+
+### Test plans
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_project_test_plans` | read | Lists a project's test plans with their progress and whether they are complete or locked. |
+| `get_test_plan` | read | Returns a test plan with its progress, assigned test cases and comments. |
+| `search_test_plans` | read | Finds a project's test plans by description or kind, optionally only open or closed ones. |
+| `add_test_plan` | | Creates a test plan in a project. |
+| `update_test_plan` | | Changes the given details of an open test plan. |
+| `assign_test_cases` | | Assigns up to 100 test cases to testers within a test plan. |
+| `add_test_plan_comment` | | Comments on a test plan, or replies to a comment. |
+
+### Test runs
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_test_runs` | read | Lists a project's test runs, optionally for one test plan, test case or result. |
+| `list_failed_test_runs` | read | Lists a project's failed test runs, including failures that were later fixed. |
+| `get_test_run` | read | Returns a test run with every result recorded against it and its comments. |
+| `record_test_result` | | Records a pass or fail for a test case assigned to you in a test plan. |
+| `record_test_comment` | | Comments on a test run. |
 
 ### Adding test cases
 
@@ -800,6 +1058,86 @@ example:
   whose code already exists in the project is skipped and counted in `skipped`.
 - The batch is all or nothing. If one test case is invalid, none of them are
   added and the error names the one at fault.
+
+### Assigning test cases to testers
+
+Test cases are assigned to testers within a test plan, and show up in each
+tester's inbox. `assign_test_cases` takes a `project_id`, a `test_plan_id` and
+a list of `planned_tests`. Each entry has a `test_case_id`, the `user_ids` of
+the testers to assign and an optional `urgency` (`low`, `medium`, `high` or
+`urgent`). For example:
+
+> Assign all the login test cases in the Sunga project to Jane in the
+> Release 2.0 test plan, with high urgency.
+
+The agent finds the IDs with `list_project_test_plans`,
+`list_project_test_cases` and `list_project_testers`, then assigns them in one
+call.
+
+- Create the test plan with `add_test_plan` or in the web UI. The plan must not
+  be complete or locked.
+- Every test case must belong to the project, and every user must be a tester
+  on it. Assign people to the project in the web UI first.
+- A test case can be assigned to several testers. Assigning a test case to a
+  tester who already has it has no effect.
+- The batch is checked as a whole before anything is assigned. If one entry is
+  invalid, nothing is assigned and the error names the one at fault.
+
+### Creating project environments
+
+Environments are where a project is tested, such as development, staging and
+production. `create_project_environment` takes a `project_id` and a `name`, and
+optionally a `description` and a `base_url`. For example:
+
+> Add a staging environment at https://staging.sunga.example.com to the Sunga
+> project on Qatarina.
+
+- Names are unique within a project, ignoring case. Creating an environment
+  whose name already exists is rejected, and the error gives the existing ID.
+- `base_url` must be an absolute URL, such as `https://staging.example.com`.
+
+### Updating test cases
+
+`update_test_case` takes a `test_case_id` and only the fields to change:
+`title`, `description`, `feature_or_module`, `kind`, `priority`,
+`preconditions`, `tags` and `is_draft`. Fields that are left out keep their
+current values. `tags` replaces the existing tags, and an empty
+`preconditions` removes them. A test case's code cannot be changed.
+
+### Creating and updating test plans
+
+`add_test_plan` takes a `project_id`, a `description`, a `start_at` and a
+`scheduled_end_at`, and optionally a `kind` (defaults to `general`) and an
+`environment_id`. Dates can be given as `2026-11-20` or
+`2026-11-20T09:00:00Z`. For example:
+
+> Create a regression test plan for release 2.4 on the Sunga project, running
+> from next Monday to Friday against staging, and assign the login test cases
+> to Jane.
+
+- The end date must not be before the start date.
+- The environment must belong to the project.
+- `update_test_plan` changes only the fields given. Complete or locked plans
+  cannot be changed, and a plan's assignments and results are kept.
+
+### Recording results
+
+`record_test_result` records a result the same way a tester does from their
+inbox. It takes a `test_plan_id`, a `test_case_id`, a `result` (`passed` or
+`failed`) and an `actual_result` describing what happened, and optionally an
+`expected_result` and `notes`. For example:
+
+> Record SNG028 in the Release 2.4 plan as failed: the reset email never
+> arrived.
+
+- The test case must be assigned to the user the server runs as in that plan,
+  the plan must be open, and the test case must not be a draft.
+- Every call records a new test run, as the inbox does, so the plan's history
+  keeps every attempt.
+- `record_test_comment` adds a comment to a test run, for example to add
+  findings later. Comments are returned by `get_test_run`.
+
+Running automated tests through the MCP server is not supported.
 
 ## Security notes
 

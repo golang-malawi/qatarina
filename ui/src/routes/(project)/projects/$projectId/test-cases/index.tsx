@@ -20,13 +20,18 @@ import {
   Select,
   Input,
   createListCollection,
+  Stack,
 } from "@chakra-ui/react";
 import { IconList, IconListDetails } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { components } from "@/lib/api/v1";
 import { Toaster, toaster } from "@/components/ui/toaster";
-import { AppDataTable, AppTableColumn } from "@/components/ui/app-data-table";
+import {
+  AllRowsSelection,
+  AppDataTable,
+  AppTableColumn,
+} from "@/components/ui/app-data-table";
 import { AppDialog } from "@/components/ui/app-dialog";
 import SelectFeatureModule from "@/components/form/SelectFeatureModule";
 import {
@@ -53,6 +58,7 @@ import {
 } from "@/services/TestCaseService";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
+import { useProjectTestersQuery } from "@/services/TesterService";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjectsQuery } from "@/services/ProjectService";
@@ -68,6 +74,9 @@ type TestCase = components["schemas"]["schema.TestCaseResponse"];
 type TestCaseListResponse =
   components["schemas"]["schema.TestCaseListResponse"];
 
+// Stable reference: an inline getRowId re-creates selection on every render
+const getTestCaseRowId = (row: TestCase) => String(row.id);
+
 export default function ListProjectTestCases() {
   const { projectId } = Route.useParams();
   const { t } = useTranslation();
@@ -77,6 +86,11 @@ export default function ListProjectTestCases() {
   const [moduleFilter, setModuleFilter] = useState<string>("");
   const [selectedRows, setSelectedRows] = useState<TestCase[]>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  // Set when "Select all" is used: the backend resolves which test cases that covers
+  const [allSelection, setAllSelection] = useState<AllRowsSelection | null>(null);
+  const selectedCount = allSelection
+    ? allSelection.total - allSelection.excludedIds.length
+    : selectedRows.length;
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
   const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
@@ -86,6 +100,8 @@ export default function ListProjectTestCases() {
   const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
   const [testCaseToTransfer, setTestCaseToTransfer] = useState<TestCase | null>(null);
   const [projectSearchQuery, setProjectSearchQuery] = useState<string>("");
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFileName, setExportFileName] = useState<string>("");
   const [exportFileFormat, setExportFileFormat] = useState<ExportFileFormat>("XLSX");
@@ -112,6 +128,9 @@ export default function ListProjectTestCases() {
   );
 
   const { data: usersData } = useUsersQuery();
+  // Only testers assigned to this project can be assigned its test cases
+  const { data: projectTestersData } = useProjectTestersQuery(Number(projectId));
+  const projectTesters = projectTestersData?.testers ?? [];
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
   const { data: projectsData } = useProjectsQuery();
 
@@ -227,7 +246,7 @@ export default function ListProjectTestCases() {
   };
 
   const handleBulkUseInTestSession = () => {
-    if (selectedRows.length === 0) return;
+    if (selectedCount === 0) return;
     setBulkAssignOpen(true);
     setBulkAssignStep("plan");
     setSelectedTestPlans([]);
@@ -253,6 +272,7 @@ export default function ListProjectTestCases() {
 
   const handleBulkDelete = async () => {
     if (selectedRows.length === 0) return;
+    setBulkDeleting(true);
     try {
       await Promise.all(
         selectedRows.map((row) => {
@@ -266,11 +286,15 @@ export default function ListProjectTestCases() {
       });
       setSelectedRows([]);
       setRowSelection({});
+      setAllSelection(null);
+      setBulkDeleteOpen(false);
     } catch (err: any) {
       toaster.error({
         title: t("test_cases.delete.error"),
         description: err?.message,
       });
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -404,6 +428,9 @@ export default function ListProjectTestCases() {
               showGlobalFilter
               filterPlaceholder={t("test_cases.search_placeholder")}
               enableRowSelection={true}
+              getRowId={getTestCaseRowId}
+              allRowsSelection={allSelection}
+              onAllRowsSelectionChange={setAllSelection}
               rowSelection={rowSelection}
               onRowSelectionChange={(newSelection) => {
                 setRowSelection(newSelection);
@@ -423,13 +450,18 @@ export default function ListProjectTestCases() {
                       <Menu.Item value="use-session" onClick={handleBulkUseInTestSession}>
                         {t("test_cases.use_in_test_session")}
                       </Menu.Item>
-                      <Menu.Item value="export" onClick={handleExportClick}>
+                      {allSelection && (
+                        <Text px="2" py="1" fontSize="xs" color="fg.muted" maxW="64">
+                          {t("test_cases.all_selected_actions_hint")}
+                        </Text>
+                      )}
+                      <Menu.Item value="export" disabled={!!allSelection} onClick={handleExportClick}>
                         Export
                       </Menu.Item>
-                      <Menu.Item value="transfer" onClick={handleBulkTransferClick}>
+                      <Menu.Item value="transfer" disabled={!!allSelection} onClick={handleBulkTransferClick}>
                         {t("test_cases.transfer")}
                       </Menu.Item>
-                      <Menu.Item value="delete" color="fg.error" onClick={handleBulkDelete}>
+                      <Menu.Item value="delete" color="fg.error" disabled={!!allSelection} onClick={() => setBulkDeleteOpen(true)}>
                         {t("test_cases.delete")}
                       </Menu.Item>
                     </Menu.Content>
@@ -583,6 +615,31 @@ export default function ListProjectTestCases() {
         </Tabs.Content>
       </Tabs.Root>
 
+      {/* Bulk delete confirmation */}
+      <AppDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(event) => !bulkDeleting && setBulkDeleteOpen(event.open)}
+        title={t("test_cases.bulk_delete.title", { count: selectedRows.length })}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDeleteOpen(false)}
+              disabled={bulkDeleting}
+            >
+              {t("test_plans.cancel")}
+            </Button>
+            <Button colorPalette="red" onClick={handleBulkDelete} loading={bulkDeleting}>
+              {t("test_cases.delete")}
+            </Button>
+          </>
+        }
+      >
+        <Text color="fg.subtle">
+          {t("test_cases.bulk_delete.description", { count: selectedRows.length })}
+        </Text>
+      </AppDialog>
+
       {/* Bulk assign modal - Step 1: Select Test Plans with Checkboxes */}
       {bulkAssignStep === "plan" && (
         <AppDialog
@@ -613,7 +670,7 @@ export default function ListProjectTestCases() {
           }
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
-            Select test plan(s) to add {selectedRows.length} test case(s)
+            Select test plan(s) to add {selectedCount} test case(s)
           </Box>
           <Box maxH="300px" overflowY="auto" pr={2}>
             {projectTestPlans.length === 0 ? (
@@ -701,17 +758,28 @@ export default function ListProjectTestCases() {
                         assignTestersToTestPlan(planId, {
                           project_id: Number(projectId),
                           test_plan_id: Number(planId),
-                          planned_tests: selectedRows.map((row) => ({
-                            test_case_id: String(row.id),
-                            user_ids: bulkSelectedUsers.map(Number),
-                          })),
+                          ...(allSelection
+                            ? {
+                                all_test_cases: {
+                                  user_ids: bulkSelectedUsers.map(Number),
+                                  // Same filter the list was showing when "Select all" was used
+                                  search: moduleFilter || allSelection.search,
+                                  excluded_test_case_ids: allSelection.excludedIds,
+                                },
+                              }
+                            : {
+                                planned_tests: selectedRows.map((row) => ({
+                                  test_case_id: String(row.id),
+                                  user_ids: bulkSelectedUsers.map(Number),
+                                })),
+                              }),
                         })
                       )
                     );
 
                     toaster.create({
                       title: "Success",
-                      description: `Successfully assigned ${selectedRows.length} test case(s) to test plan(s)`,
+                      description: `Successfully assigned ${selectedCount} test case(s) to test plan(s)`,
                       type: "success",
                     });
 
@@ -725,6 +793,7 @@ export default function ListProjectTestCases() {
                     setSelectedTestPlans([]);
                     setSelectedRows([]);
                     setRowSelection({});
+                    setAllSelection(null);
                   } catch (err: any) {
                     toaster.create({
                       title: "Assignment failed",
@@ -741,27 +810,45 @@ export default function ListProjectTestCases() {
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
             {t("test_plans.bulk_assign_description", {
-              count: selectedRows.length,
+              count: selectedCount,
             })}
           </Box>
-          <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
-            <Fieldset.Root>
-              <Fieldset.Legend fontSize="sm">
-                {t("test_plans.select_testers")}
-              </Fieldset.Legend>
-              <Fieldset.Content>
-                <For each={userMap ? Object.entries(userMap) : []}>
-                  {([userId, userName]) => (
-                    <Checkbox.Root key={userId} value={userId}>
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                      <Checkbox.Label>{String(userName)}</Checkbox.Label>
-                    </Checkbox.Root>
-                  )}
-                </For>
-              </Fieldset.Content>
-            </Fieldset.Root>
-          </CheckboxGroup>
+          {projectTesters.length === 0 ? (
+            <Stack gap={2}>
+              <Text color="fg.error">{t("testers.none_assigned")}</Text>
+              <Button
+                size="sm"
+                colorPalette="brand"
+                onClick={() =>
+                  navigate({
+                    to: "/projects/$projectId/testers/new",
+                    params: { projectId },
+                  })
+                }
+              >
+                {t("testers.add_button")}
+              </Button>
+            </Stack>
+          ) : (
+            <CheckboxGroup value={bulkSelectedUsers} onValueChange={setBulkSelectedUsers}>
+              <Fieldset.Root>
+                <Fieldset.Legend fontSize="sm">
+                  {t("test_plans.select_testers")}
+                </Fieldset.Legend>
+                <Fieldset.Content>
+                  <For each={projectTesters}>
+                    {(tester) => (
+                      <Checkbox.Root key={tester.user_id} value={String(tester.user_id)}>
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                        <Checkbox.Label>{tester.name}</Checkbox.Label>
+                      </Checkbox.Root>
+                    )}
+                  </For>
+                </Fieldset.Content>
+              </Fieldset.Root>
+            </CheckboxGroup>
+          )}
         </AppDialog>
       )}
 
@@ -907,6 +994,7 @@ export default function ListProjectTestCases() {
                   setProjectSearchQuery("");
                   setSelectedRows([]);
                   setRowSelection({});
+                  setAllSelection(null);
                 } catch (err: any) {
                   toaster.error({
                     title: "Transfer failed",

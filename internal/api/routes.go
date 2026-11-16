@@ -176,6 +176,8 @@ func (api *API) routes() {
 		testRunsV1.Get("/:testRunID/stream", apiv1.StreamTestRunLogs(api.TestRunsService, api.logger))
 		testRunsV1.Delete("/:testRunID", apiv1.DeleteTestRun(api.TestRunsService, api.logger))
 		testRunsV1.Post("/:testRunID/close", apiv1.CloseTestRun(api.TestRunsService, api.logger))
+		testRunsV1.Post("/:resultID/attachments", apiv1.UploadAttachment(api.TestRunsService, api.logger))
+		testRunsV1.Get("/:resultID/attachments", apiv1.ListAttachments(api.TestRunsService, api.logger))
 	}
 
 	testersV1 := router.Group("/v1/testers", authenticationMiddleware)
@@ -224,8 +226,17 @@ func (api *API) routes() {
 		reportsV1.Post("", apiv1.CreateReport(api.ReportService, api.logger))
 		reportsV1.Delete("/:reportID", apiv1.DeleteReport(api.ReportService, api.logger))
 		reportsV1.Get("/:reportID/download", apiv1.DownloadReport(api.ReportService, api.logger))
-		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger)) // ✅ new inline view route
+		reportsV1.Get("/:reportID/view", apiv1.ViewReport(api.ReportService, api.logger))
 	}
+
+	documentsV1 := projectsV1.Group("/:projectID/documents")
+	{
+		documentsV1.Get("", apiv1.ListProjectDocuments(api.DocumentService, api.logger))
+		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
+		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
+	}
+	// Serve uploaded files from the configured storage (local or S3)
+	router.Get("/uploads/*", api.serveStoredFile)
 
 	// Serves the app at the root path  "/"
 	router.Use(filesystem.New(filesystem.Config{

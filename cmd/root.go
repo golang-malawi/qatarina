@@ -92,5 +92,6 @@ func initConfig() {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
+
 	// TODO: configure logging to file here..
 }

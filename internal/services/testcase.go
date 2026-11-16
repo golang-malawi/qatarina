@@ -101,6 +101,13 @@ type TestCaseService interface {
 
 	// GetSummary is used to get the summary of test cases in a project
 	GetSummary(ctx context.Context, projectID int64) (*schema.ProjectTestCaseSummaryResponse, error)
+
+	// FindUntested lists a project's test cases that have no recorded result yet.
+	// A non-zero testPlanID narrows it to the plan's test cases and results.
+	FindUntested(ctx context.Context, projectID, testPlanID int64) ([]dbsqlc.TestCase, error)
+	// FindLatestFailed lists a project's test cases whose most recent result is a failure.
+	// A non-zero testPlanID only counts results recorded in that plan.
+	FindLatestFailed(ctx context.Context, projectID, testPlanID int64) ([]schema.FailedTestCase, error)
 }
 
 type TestCaseQueryParams struct {
@@ -345,27 +352,7 @@ func (t *testCaseServiceImpl) FindAllPaged(ctx context.Context, params TestCaseQ
 		pageSize = 100
 	}
 
-	sortKey := strings.ToLower(strings.TrimSpace(params.SortBy))
-	sortMap := map[string]string{
-		"created_at": "created_at",
-		"createdat":  "created_at",
-		"updated_at": "updated_at",
-		"updatedat":  "updated_at",
-		"code":       "code",
-		"title":      "title",
-		"kind":       "kind",
-		"is_draft":   "is_draft",
-		"isdraft":    "is_draft",
-		"priority":   "priority",
-	}
-	sortColumn, ok := sortMap[sortKey]
-	if !ok || sortColumn == "" {
-		sortColumn = "created_at"
-	}
-	sortOrder := strings.ToLower(strings.TrimSpace(params.SortOrder))
-	if sortOrder != "asc" {
-		sortOrder = "desc"
-	}
+	sortColumn, sortOrder := resolveTestCaseSort(params)
 
 	conditions := []string{"1=1"}
 	args := []interface{}{}
@@ -488,13 +475,56 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 	}
 
 	search := strings.TrimSpace(params.Search)
-	rows, err := t.queries.TestCaseListByProjectPaged(ctx, dbsqlc.TestCaseListByProjectPagedParams{
-		ProjectID: sql.NullInt32{Int32: int32(projectID), Valid: true},
-		Search:    search,
-		RowLimit:  int32(pageSize),
-		RowOffset: int32((page - 1) * pageSize),
-	})
+	sortColumn, sortOrder := resolveTestCaseSort(params)
+
+	// The ORDER BY column and direction come from the whitelist in
+	// resolveTestCaseSort, so it is safe to interpolate them. id is a
+	// tie-breaker so pagination stays stable when sorting on non-unique columns.
+	query := fmt.Sprintf(`SELECT id, kind, code, feature_or_module, title, description, is_draft, tags,
+	created_by_id, created_at, updated_at, project_id, suggested, runner, script_path,
+	parent_test_case_id, preconditions, priority, external_id
+FROM test_cases
+WHERE project_id = $1
+  AND (suggested IS NULL OR suggested = false)
+  AND ($2::text = '' OR title ILIKE '%%' || $2::text || '%%' OR code ILIKE '%%' || $2::text || '%%')
+ORDER BY %s %s, id ASC
+LIMIT $3 OFFSET $4`, sortColumn, sortOrder)
+
+	sqlRows, err := t.db.QueryContext(ctx, query, projectID, search, pageSize, (page-1)*pageSize)
 	if err != nil {
+		return nil, 0, err
+	}
+	defer sqlRows.Close()
+
+	rows := []dbsqlc.TestCase{}
+	for sqlRows.Next() {
+		var i dbsqlc.TestCase
+		if err := sqlRows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Code,
+			&i.FeatureOrModule,
+			&i.Title,
+			&i.Description,
+			&i.IsDraft,
+			pq.Array(&i.Tags),
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProjectID,
+			&i.Suggested,
+			&i.Runner,
+			&i.ScriptPath,
+			&i.ParentTestCaseID,
+			&i.Preconditions,
+			&i.Priority,
+			&i.ExternalID,
+		); err != nil {
+			return nil, 0, err
+		}
+		rows = append(rows, i)
+	}
+	if err := sqlRows.Err(); err != nil {
 		return nil, 0, err
 	}
 
@@ -507,6 +537,32 @@ func (t *testCaseServiceImpl) FindAllByProjectIDPaged(ctx context.Context, proje
 	}
 
 	return rows, total, nil
+}
+
+// resolveTestCaseSort maps the user-supplied sortBy/sortOrder onto a
+// whitelisted column and direction, defaulting to created_at desc.
+func resolveTestCaseSort(params TestCaseQueryParams) (column, order string) {
+	sortMap := map[string]string{
+		"created_at": "created_at",
+		"createdat":  "created_at",
+		"updated_at": "updated_at",
+		"updatedat":  "updated_at",
+		"code":       "code",
+		"title":      "title",
+		"kind":       "kind",
+		"is_draft":   "is_draft",
+		"isdraft":    "is_draft",
+		"priority":   "priority",
+	}
+	column, ok := sortMap[strings.ToLower(strings.TrimSpace(params.SortBy))]
+	if !ok {
+		column = "created_at"
+	}
+	order = strings.ToLower(strings.TrimSpace(params.SortOrder))
+	if order != "asc" {
+		order = "desc"
+	}
+	return column, order
 }
 
 // FindAllByProjectID implements TestCaseService.
@@ -1082,4 +1138,39 @@ func (t *testCaseServiceImpl) GetSummary(ctx context.Context, projectID int64) (
 		Pending:    int(pending),
 		Blocked:    int(blocked),
 	}, nil
+}
+
+func (t *testCaseServiceImpl) FindUntested(ctx context.Context, projectID, testPlanID int64) ([]dbsqlc.TestCase, error) {
+	return t.queries.ListUntestedTestCasesByProject(ctx, dbsqlc.ListUntestedTestCasesByProjectParams{
+		ProjectID:  int32(projectID),
+		TestPlanID: common.NewNullInt64(testPlanID),
+	})
+}
+
+func (t *testCaseServiceImpl) FindLatestFailed(ctx context.Context, projectID, testPlanID int64) ([]schema.FailedTestCase, error) {
+	rows, err := t.queries.ListFailedTestCasesByProject(ctx, dbsqlc.ListFailedTestCasesByProjectParams{
+		ProjectID:  int32(projectID),
+		TestPlanID: common.NewNullInt64(testPlanID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	failed := make([]schema.FailedTestCase, 0, len(rows))
+	for _, row := range rows {
+		failed = append(failed, schema.FailedTestCase{
+			ID:              row.ID.String(),
+			Code:            row.Code,
+			Title:           row.Title,
+			FeatureOrModule: row.FeatureOrModule.String,
+			Priority:        string(row.Priority),
+			TestRunID:       row.TestRunID.String(),
+			TestPlanID:      int64(row.TestPlanID.Int32),
+			TestedByID:      int64(row.TestedByID.Int32),
+			TestedBy:        row.TestedBy,
+			ActualResult:    row.ActualResult.String,
+			Notes:           row.Notes,
+			FailedAt:        common.FormatNullTime(row.FailedAt),
+		})
+	}
+	return failed, nil
 }

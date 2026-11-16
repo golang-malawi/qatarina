@@ -8,6 +8,7 @@ import (
 	"github.com/golang-malawi/qatarina/internal/services"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
+	"github.com/spf13/afero"
 )
 
 type API struct {
@@ -31,9 +32,11 @@ type API struct {
 	EnvironmentService      services.EnvironmentService
 	ReportService           services.ReportService
 	LinkPreviewService      services.LinkPreviewService
+	DocumentService         services.DocumentService
+	Storage                 afero.Fs
 }
 
-func NewAPI(config *config.Config) *API {
+func NewAPI(config *config.Config, fs afero.Fs) *API {
 
 	rawDB := config.OpenDB()
 	dbConn := dbsqlc.New(rawDB)
@@ -56,7 +59,7 @@ func NewAPI(config *config.Config) *API {
 		TestCasesService:        services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestCaseRelationService: services.NewTestCaseRelationService(dbConn, logger),
 		TestPlansService:        services.NewTestPlanService(dbConn, logger),
-		TestRunsService:         services.NewTestRunService(rawDB.DB, dbConn, logger),
+		TestRunsService:         services.NewTestRunService(rawDB.DB, dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
 		UserService:             services.NewUserService(dbConn, logger, config.SMTP),
 		TesterService:           services.NewTesterService(dbConn, logger),
 		ModuleService:           moduleService,
@@ -66,6 +69,8 @@ func NewAPI(config *config.Config) *API {
 		EnvironmentService:      environmentService,
 		ReportService:           reportService,
 		LinkPreviewService:      services.NewLinkPreviewService(),
+		DocumentService:         services.NewDocumentService(dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
+		Storage:                 fs,
 	}
 }
 

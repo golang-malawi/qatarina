@@ -15,11 +15,7 @@ export type CommentListResponse = components["schemas"]["schema.CommentListRespo
 export type CommentAttachment = components["schemas"]["schema.CommentAttachment"];
 export type LinkPreview = components["schemas"]["schema.LinkPreview"];
 
-type AssignTestsToPlanPayload = {
-  planned_tests: { test_case_id?: string; user_ids?: number[] }[];
-  project_id: number;
-  test_plan_id: number;
-};
+type AssignTestsToPlanPayload = components["schemas"]["schema.AssignTestsToPlanRequest"];
 
 export function useProjectTestPlansQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-plans", {

@@ -42,11 +42,13 @@ components:
       type: object
     schema.AssignTestsToPlanRequest:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         planned_tests:
+          description: Required unless all_test_cases is set
           items:
             $ref: '#/components/schemas/schema.TestCaseAssignment'
           maxItems: 100
-          minItems: 1
           type: array
           uniqueItems: false
         project_id:
@@ -54,7 +56,6 @@ components:
         test_plan_id:
           type: integer
       required:
-      - planned_tests
       - project_id
       - test_plan_id
       type: object
@@ -115,6 +116,19 @@ components:
             $ref: '#/components/schemas/schema.AssignedTestCase'
           type: array
           uniqueItems: false
+      type: object
+    schema.AttachmentResponse:
+      properties:
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        file_type:
+          type: string
+        id:
+          type: string
+        storage_url:
+          type: string
       type: object
     schema.BulkAssignTesters:
       properties:
@@ -219,6 +233,45 @@ components:
         user_id:
           type: integer
         user_name:
+          type: string
+      type: object
+    schema.CommitTestRunResponse:
+      properties:
+        actual_result:
+          type: string
+        attachment_count:
+          type: integer
+        code:
+          type: string
+        environment_id:
+          type: integer
+        executed_by:
+          type: string
+        expected_result:
+          type: string
+        id:
+          type: string
+        is_closed:
+          type: boolean
+        latest_result_id:
+          type: string
+        notes:
+          type: string
+        project_id:
+          type: integer
+        result_id:
+          type: string
+        result_state:
+          type: string
+        test_case_id:
+          type: string
+        test_case_title:
+          type: string
+        test_plan_id:
+          type: integer
+        tested_by_id:
+          type: integer
+        tested_on:
           type: string
       type: object
     schema.CommitTestRunResult:
@@ -450,6 +503,8 @@ components:
       type: object
     schema.CreateTestPlan:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         assigned_to_id:
           type: integer
         closed_at:
@@ -727,7 +782,6 @@ components:
       - description
       - name
       - version
-      - website_url
       type: object
     schema.NewUserRequest:
       properties:
@@ -841,6 +895,29 @@ components:
           type: string
         website_url:
           type: string
+      type: object
+    schema.ProjectTestCaseSelection:
+      properties:
+        excluded_test_case_ids:
+          description: Test cases the user deselected
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        search:
+          description: Same filter as the project test case list (matches title or
+            code)
+          type: string
+        user_ids:
+          description: Testers assigned to each of the selected test cases
+          items:
+            type: integer
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - user_ids
       type: object
     schema.ProjectTestCaseSummaryResponse:
       properties:
@@ -1238,6 +1315,8 @@ components:
       properties:
         actual_result:
           type: string
+        attachment_count:
+          type: integer
         code:
           type: string
         environment_id:
@@ -1250,6 +1329,8 @@ components:
           type: string
         is_closed:
           type: boolean
+        latest_result_id:
+          type: string
         notes:
           type: string
         project_id:
@@ -1414,7 +1495,6 @@ components:
       - name
       - project_owner_id
       - version
-      - website_url
       type: object
     schema.UpdateTestCaseRequest:
       properties:
@@ -2866,6 +2946,125 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Update project automated testing setting
+      tags:
+      - projects
+  /v1/projects/{projectID}/documents:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get all documents for a project
+      tags:
+      - projects
+    post:
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Document File
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload/Create a document for a project
+      tags:
+      - projects
+  /v1/projects/{projectID}/documents/{documentID}:
+    delete:
+      parameters:
+      - description: Document ID (UUID)
+        in: path
+        name: documentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a project document
       tags:
       - projects
   /v1/projects/{projectID}/environments:
@@ -5674,6 +5873,85 @@ paths:
       summary: Create a new Test Run
       tags:
       - test-runs
+  /v1/test-runs/{resultID}/attachments:
+    get:
+      description: List all file attachments linked to a Test Run Result
+      operationId: ListAttachments
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/schema.AttachmentResponse'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List attachments for a Test Run Result
+      tags:
+      - test-runs
+    post:
+      description: Upload a file attachment linked to a Test Run Result
+      operationId: UploadAttachment
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Attachment files(multiple allowed)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AttachmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload an attachment for a Test Run Result
+      tags:
+      - test-runs
   /v1/test-runs/{testRunID}:
     delete:
       description: Delete a Test Run
@@ -5849,7 +6127,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CommitTestRunResponse'
           description: OK
         "400":
           content:
