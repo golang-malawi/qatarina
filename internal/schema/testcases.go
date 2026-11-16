@@ -227,6 +227,49 @@ type TransferTestCaseRequest struct {
 	FeatureOrModule string `json:"feature_or_module" validate:"required"`
 }
 
+// TestCaseSelection picks test cases of a project in its test case list: either the
+// ticked TestCaseIDs, or with SelectAll every test case matching Search except the
+// ExcludedTestCaseIDs. "Select all" is resolved on the server so the client does
+// not have to load every test case.
+type TestCaseSelection struct {
+	ProjectID int64 `json:"project_id" validate:"required"`
+	// Test cases ticked individually, used when select_all is false
+	TestCaseIDs []string `json:"test_case_ids,omitempty" validate:"omitempty,dive,uuid"`
+	// Select every test case in the project matching search
+	SelectAll bool `json:"select_all,omitempty"`
+	// Same filter as the project test case list (matches title or code), used with select_all
+	Search string `json:"search,omitempty"`
+	// Test cases deselected after select_all
+	ExcludedTestCaseIDs []string `json:"excluded_test_case_ids,omitempty" validate:"omitempty,dive,uuid"`
+}
+
+// IsEmpty reports whether the selection cannot pick any test case
+func (s TestCaseSelection) IsEmpty() bool {
+	return !s.SelectAll && len(s.TestCaseIDs) == 0
+}
+
+// BulkDeleteTestCasesRequest deletes the selected test cases
+type BulkDeleteTestCasesRequest struct {
+	Selection TestCaseSelection `json:"selection" validate:"required"`
+}
+
+// BulkDeleteTestCasesResponse reports how many test cases were deleted
+type BulkDeleteTestCasesResponse struct {
+	Deleted int64 `json:"deleted"`
+}
+
+// BulkTransferTestCasesRequest moves the selected test cases to another project
+type BulkTransferTestCasesRequest struct {
+	Selection       TestCaseSelection `json:"selection" validate:"required"`
+	TargetProjectID int64             `json:"target_project_id" validate:"required"`
+	FeatureOrModule string            `json:"feature_or_module" validate:"required"`
+}
+
+// BulkTransferTestCasesResponse reports how many test cases were transferred
+type BulkTransferTestCasesResponse struct {
+	Transferred int64 `json:"transferred"`
+}
+
 // ParsePriorityLevel converts a priority/urgency value from a request into its
 // database representation, falling back to medium when
 // the value is blank or unknown
