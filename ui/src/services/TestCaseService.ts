@@ -259,10 +259,45 @@ const exportFileExtensions: Record<ExportFileFormat, string> = {
   JSON: ".json",
 };
 
-export interface ExportTestCasesPayload {
+export type TestCaseSelection = components["schemas"]["schema.TestCaseSelection"];
+
+/** Either the test cases to export, or a selection the server loads them from */
+export type ExportTestCasesPayload = {
   filename: string;
   fileformat: ExportFileFormat;
-  testcases: ExportedTestCasePayload[];
+} & (
+  | { testcases: ExportedTestCasePayload[]; selection?: never }
+  | { selection: TestCaseSelection; testcases?: never }
+);
+
+function problemDetail(error: unknown, fallback: string) {
+  return typeof error === "object" && (error as any)?.detail
+    ? String((error as any).detail)
+    : fallback;
+}
+
+/** Deletes the selected test cases of a project, all or none */
+export async function bulkDeleteTestCases(selection: TestCaseSelection) {
+  const res = await apiClient.request("post", "/v1/test-cases/bulk-delete", {
+    body: { selection },
+  });
+  if (res.error) {
+    throw new Error(problemDetail(res.error, "Failed to delete test cases"));
+  }
+  return res.data;
+}
+
+/** Moves the selected test cases of a project to another project, all or none */
+export async function bulkTransferTestCases(
+  body: components["schemas"]["schema.BulkTransferTestCasesRequest"],
+) {
+  const res = await apiClient.request("post", "/v1/test-cases/bulk-transfer", {
+    body,
+  });
+  if (res.error) {
+    throw new Error(problemDetail(res.error, "Failed to transfer test cases"));
+  }
+  return res.data;
 }
 
 /**

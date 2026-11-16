@@ -1741,6 +1741,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the selected test cases of a project
+         * @description Delete the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones
+         */
+        post: operations["BulkDeleteTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/bulk-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer the selected test cases of a project to another project
+         * @description Move the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones, to another project and feature/module
+         */
+        post: operations["BulkTransferTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/export-file": {
         parameters: {
             query?: never;
@@ -1752,7 +1792,7 @@ export interface paths {
         put?: never;
         /**
          * Export test cases to a CSV, XLSX or JSON file
-         * @description Export test cases to a CSV, XLSX or JSON file
+         * @description Export test cases to a CSV, XLSX or JSON file. Send either the testcases to export, or a selection of a project's test cases (which may select all of them) for the server to load.
          */
         post: operations["ExportFileFromTestCases"];
         delete?: never;
@@ -2550,6 +2590,20 @@ export interface components {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
         };
+        "schema.BulkDeleteTestCasesRequest": {
+            selection: components["schemas"]["schema.TestCaseSelection"];
+        };
+        "schema.BulkDeleteTestCasesResponse": {
+            deleted?: number;
+        };
+        "schema.BulkTransferTestCasesRequest": {
+            feature_or_module: string;
+            selection: components["schemas"]["schema.TestCaseSelection"];
+            target_project_id: number;
+        };
+        "schema.BulkTransferTestCasesResponse": {
+            transferred?: number;
+        };
         "schema.ChangeEnvironmentRequest": {
             environment_id: number;
         };
@@ -2744,7 +2798,8 @@ export interface components {
         "schema.ExportTestCasesRequest": {
             fileformat?: string;
             filename?: string;
-            testcases: components["schemas"]["schema.ExportedTestCase"][];
+            selection?: components["schemas"]["schema.TestCaseSelection"];
+            testcases?: components["schemas"]["schema.ExportedTestCase"][];
         };
         "schema.ExportedTestCase": {
             code?: string;
@@ -2993,6 +3048,17 @@ export interface components {
             test_plan?: components["schemas"]["schema.TestPlanSummary"];
             title?: string;
             urgency?: string;
+        };
+        "schema.TestCaseSelection": {
+            /** @description Test cases deselected after select_all */
+            excluded_test_case_ids?: string[];
+            project_id: number;
+            /** @description Same filter as the project test case list (matches title or code), used with select_all */
+            search?: string;
+            /** @description Select every test case in the project matching search */
+            select_all?: boolean;
+            /** @description Test cases ticked individually, used when select_all is false */
+            test_case_ids?: string[];
         };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
@@ -6513,6 +6579,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    BulkDeleteTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Test cases to delete */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.BulkDeleteTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.BulkDeleteTestCasesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    BulkTransferTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Test cases to transfer and where to */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.BulkTransferTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.BulkTransferTestCasesResponse"];
                 };
             };
             /** @description Bad Request */
