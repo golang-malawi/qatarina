@@ -114,12 +114,18 @@ func (s *Server) getTestPlan(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	comments, err := s.testPlanService.ListComments(ctx, testPlanID)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("failed to load comments for test plan %d: %v", testPlanID, err)), nil
-	}
-	if comments == nil {
-		comments = []schema.CommentResponseItem{}
+	// ListComments is paginated by top-level comment; page through to return the full thread list.
+	const commentPageSize = 50
+	comments := []schema.CommentResponseItem{}
+	for {
+		page, total, err := s.testPlanService.ListComments(ctx, testPlanID, commentPageSize, int32(len(comments)))
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("failed to load comments for test plan %d: %v", testPlanID, err)), nil
+		}
+		comments = append(comments, page...)
+		if len(page) == 0 || int64(len(comments)) >= total {
+			break
+		}
 	}
 	return jsonResult(testPlanDetails{TestPlan: *plan, Comments: comments})
 }
