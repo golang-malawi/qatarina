@@ -10,6 +10,10 @@ export const userCreationFields: FieldConfig[] = [
     placeholder: 'Enter last name',
     helperText: 'Last name of the user',
   }),
+  createFieldConfig('display_name', 'Display Name', 'text', {
+    placeholder: 'Enter display name (optional)',
+    helperText: 'Defaults to first and last name if left blank',
+  }),
   createFieldConfig('email', 'Email', 'email', {
     placeholder: 'Enter email address',
     helperText: 'Email of the user',

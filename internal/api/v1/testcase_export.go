@@ -17,7 +17,7 @@ import (
 //
 //	@ID				ExportFileFromTestCases
 //	@Summary		Export test cases to a CSV, XLSX or JSON file
-//	@Description	Export test cases to a CSV, XLSX or JSON file
+//	@Description	Export test cases to a CSV, XLSX or JSON file. Send either the testcases to export, or a selection of a project's test cases (which may select all of them) for the server to load.
 //	@Tags			test-cases
 //	@Accept			json
 //	@Produce		application/octet-stream
@@ -26,7 +26,7 @@ import (
 //	@Failure		400		{object}	problemdetail.ProblemDetail
 //	@Failure		500		{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-cases/export-file [post]
-func ExportFileFromTestCases(logger logging.Logger) fiber.Handler {
+func ExportFileFromTestCases(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		request := new(schema.ExportTestCasesRequest)
 		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
@@ -37,18 +37,46 @@ func ExportFileFromTestCases(logger logging.Logger) fiber.Handler {
 			return problemdetail.BadRequest(c, "failed to parse export data")
 		}
 
-		testCases := make([]services.TestCase, 0, len(request.TestCases))
-		for _, tc := range request.TestCases {
-			testCases = append(testCases, services.TestCase{
-				Title:           tc.Title,
-				Description:     tc.Description,
-				Kind:            tc.Kind,
-				Code:            tc.Code,
-				FeatureOrModule: tc.FeatureOrModule,
-				Tags:            tc.Tags,
-				IsDraft:         tc.IsDraft,
-				Priority:        tc.Priority,
-			})
+		var testCases []services.TestCase
+		if request.Selection != nil {
+			if request.Selection.IsEmpty() {
+				return problemdetail.BadRequest(c, services.ErrEmptyTestCaseSelection.Error())
+			}
+			rows, err := testCaseService.FindBySelection(c.Context(), *request.Selection)
+			if err != nil {
+				logger.Error(loggedmodule.ApiTestCases, "failed to load test cases to export", "error", err)
+				return problemdetail.ServerErrorProblem(c, "failed to load test cases to export")
+			}
+			testCases = make([]services.TestCase, 0, len(rows))
+			for _, tc := range rows {
+				testCases = append(testCases, services.TestCase{
+					Title:           tc.Title,
+					Description:     tc.Description,
+					Kind:            string(tc.Kind),
+					Code:            tc.Code,
+					FeatureOrModule: tc.FeatureOrModule.String,
+					Tags:            tc.Tags,
+					IsDraft:         tc.IsDraft.Bool,
+					Priority:        string(tc.Priority),
+				})
+			}
+		} else {
+			testCases = make([]services.TestCase, 0, len(request.TestCases))
+			for _, tc := range request.TestCases {
+				testCases = append(testCases, services.TestCase{
+					Title:           tc.Title,
+					Description:     tc.Description,
+					Kind:            tc.Kind,
+					Code:            tc.Code,
+					FeatureOrModule: tc.FeatureOrModule,
+					Tags:            tc.Tags,
+					IsDraft:         tc.IsDraft,
+					Priority:        tc.Priority,
+				})
+			}
+		}
+		if len(testCases) == 0 {
+			return problemdetail.BadRequest(c, "no test cases to export")
 		}
 
 		exportService := services.ExportFileService{

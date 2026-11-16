@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	_ "github.com/golang-malawi/qatarina/docs"
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/internal/graphqlapi"
 	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
 )
@@ -27,7 +28,7 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
-	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
+	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey), api.UserService, api.logger)
 
 	authV1 := router.Group("/v1/auth", authenticationMiddleware)
 	{
@@ -112,8 +113,10 @@ func (api *API) routes() {
 		testCasesV1.Post("", apiv1.CreateTestCase(api.TestCasesService, api.ProjectsService, api.logger, api.Config))
 		testCasesV1.Post("/validate-script", apiv1.ValidateTestCaseScript(api.logger, api.Config))
 		testCasesV1.Post("/import-file", apiv1.ImportTestCasesFromFile(api.TestCasesService, api.TestCaseImportService, api.logger))
-		testCasesV1.Post("/export-file", apiv1.ExportFileFromTestCases(api.logger))
+		testCasesV1.Post("/export-file", apiv1.ExportFileFromTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
+		testCasesV1.Post("/bulk-delete", apiv1.BulkDeleteTestCases(api.TestCasesService, api.logger))
+		testCasesV1.Post("/bulk-transfer", apiv1.BulkTransferTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
 		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))
@@ -232,6 +235,20 @@ func (api *API) routes() {
 		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
+	// Read-only GraphQL API, alongside the REST API. See docs/graphql.md.
+	gqlSchema, err := graphqlapi.NewSchema(graphqlapi.Services{
+		Projects:  api.ProjectsService,
+		TestPlans: api.TestPlansService,
+		TestCases: api.TestCasesService,
+		TestRuns:  api.TestRunsService,
+		Testers:   api.TesterService,
+	}, api.logger)
+	if err != nil {
+		// The schema is embedded at build time, so this is a programming error.
+		panic(fmt.Sprintf("failed to parse GraphQL schema: %v", err))
+	}
+	router.Post("/graphql", authenticationMiddleware, graphqlapi.Handler(gqlSchema))
+
 	// Serve uploaded files from the configured storage (local or S3)
 	router.Get("/uploads/*", api.serveStoredFile)
 

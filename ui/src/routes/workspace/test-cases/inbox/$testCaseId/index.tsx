@@ -47,7 +47,10 @@ import {
   applyChecklistState,
   useChecklistState,
 } from "@/lib/markdown-checklist";
-import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
+import {
+  descriptionChecklistKey,
+  preconditionsChecklistKey,
+} from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -146,7 +149,7 @@ function InboxTestCaseView() {
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const checklist = useChecklistState(
-    `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
+    descriptionChecklistKey(currentUser?.user_id, testCaseId),
     tc.description ?? "",
   );
   const preconditionsChecklist = useChecklistState(

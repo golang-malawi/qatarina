@@ -985,18 +985,59 @@ Tokens expire after the period set by `auth.jwt_expiry_timeout` on the server. W
 
 ## Available tools
 
-| Tool | What it does |
-| --- | --- |
-| `whoami` | Returns the profile of the user the server runs as. |
-| `list_users` | Lists all users on the platform. |
-| `list_projects` | Lists all projects. |
-| `list_project_test_cases` | Lists a project's test cases one page at a time, with optional search. |
-| `list_project_test_plans` | Lists a project's test plans with their progress and whether they are complete or locked. |
-| `list_project_testers` | Lists the testers assigned to a project, with their roles. |
-| `add_test_cases` | Adds up to 100 test cases to a project in one batch. |
-| `assign_test_cases` | Assigns up to 100 test cases to testers within a test plan. |
-| `list_project_environments` | Lists a project's environments, such as staging and production, with their base URLs. |
-| `create_project_environment` | Creates an environment in a project. |
+Tools marked *read* only look at data. The others change it, and are recorded
+as done by the user the server runs as.
+
+### Users and projects
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `whoami` | read | Returns the profile of the user the server runs as. |
+| `list_users` | read | Lists all users on the platform. |
+| `list_projects` | read | Lists all projects. |
+| `get_project` | read | Returns a project with a summary of its test cases and results. |
+| `search_projects` | read | Finds projects by title, code or description. |
+| `list_project_testers` | read | Lists the testers assigned to a project, with their roles. |
+| `list_modules` | read | Lists a project's modules, including which module each one sits under. |
+| `list_project_environments` | read | Lists a project's environments, such as staging and production, with their base URLs. |
+| `create_project_environment` | | Creates an environment in a project. |
+| `project_list_documents` | read | Lists the documents uploaded to a project, with download links. |
+| `project_search_documents` | read | Finds a project's documents by name or file type. Document contents are not searched. |
+
+### Test cases
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_project_test_cases` | read | Lists a project's test cases one page at a time, with optional search. |
+| `get_test_case` | read | Returns a test case with its steps, preconditions and 10 most recent test runs. |
+| `search_test_cases` | read | Finds test cases in one project by code, title, description or module, or in every project by code or title. |
+| `list_untested_cases` | read | Lists the test cases with no result yet, optionally within one test plan. |
+| `list_failed_test_cases` | read | Lists the test cases whose latest result is a failure, with that result. |
+| `add_test_case` | | Adds one test case to a project. |
+| `add_test_cases` | | Adds up to 100 test cases to a project in one batch. |
+| `update_test_case` | | Changes the given fields of a test case. |
+
+### Test plans
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_project_test_plans` | read | Lists a project's test plans with their progress and whether they are complete or locked. |
+| `get_test_plan` | read | Returns a test plan with its progress, assigned test cases and comments. |
+| `search_test_plans` | read | Finds a project's test plans by description or kind, optionally only open or closed ones. |
+| `add_test_plan` | | Creates a test plan in a project. |
+| `update_test_plan` | | Changes the given details of an open test plan. |
+| `assign_test_cases` | | Assigns up to 100 test cases to testers within a test plan. |
+| `add_test_plan_comment` | | Comments on a test plan, or replies to a comment. |
+
+### Test runs
+
+| Tool | | What it does |
+| --- | --- | --- |
+| `list_test_runs` | read | Lists a project's test runs, optionally for one test plan, test case or result. |
+| `list_failed_test_runs` | read | Lists a project's failed test runs, including failures that were later fixed. |
+| `get_test_run` | read | Returns a test run with every result recorded against it and its comments. |
+| `record_test_result` | | Records a pass or fail for a test case assigned to you in a test plan. |
+| `record_test_comment` | | Comments on a test run. |
 
 ### Adding test cases
 
@@ -1033,7 +1074,8 @@ The agent finds the IDs with `list_project_test_plans`,
 `list_project_test_cases` and `list_project_testers`, then assigns them in one
 call.
 
-- Test plans are created in the web UI. The plan must not be complete or locked.
+- Create the test plan with `add_test_plan` or in the web UI. The plan must not
+  be complete or locked.
 - Every test case must belong to the project, and every user must be a tester
   on it. Assign people to the project in the web UI first.
 - A test case can be assigned to several testers. Assigning a test case to a
@@ -1053,6 +1095,49 @@ optionally a `description` and a `base_url`. For example:
 - Names are unique within a project, ignoring case. Creating an environment
   whose name already exists is rejected, and the error gives the existing ID.
 - `base_url` must be an absolute URL, such as `https://staging.example.com`.
+
+### Updating test cases
+
+`update_test_case` takes a `test_case_id` and only the fields to change:
+`title`, `description`, `feature_or_module`, `kind`, `priority`,
+`preconditions`, `tags` and `is_draft`. Fields that are left out keep their
+current values. `tags` replaces the existing tags, and an empty
+`preconditions` removes them. A test case's code cannot be changed.
+
+### Creating and updating test plans
+
+`add_test_plan` takes a `project_id`, a `description`, a `start_at` and a
+`scheduled_end_at`, and optionally a `kind` (defaults to `general`) and an
+`environment_id`. Dates can be given as `2026-11-20` or
+`2026-11-20T09:00:00Z`. For example:
+
+> Create a regression test plan for release 2.4 on the Sunga project, running
+> from next Monday to Friday against staging, and assign the login test cases
+> to Jane.
+
+- The end date must not be before the start date.
+- The environment must belong to the project.
+- `update_test_plan` changes only the fields given. Complete or locked plans
+  cannot be changed, and a plan's assignments and results are kept.
+
+### Recording results
+
+`record_test_result` records a result the same way a tester does from their
+inbox. It takes a `test_plan_id`, a `test_case_id`, a `result` (`passed` or
+`failed`) and an `actual_result` describing what happened, and optionally an
+`expected_result` and `notes`. For example:
+
+> Record SNG028 in the Release 2.4 plan as failed: the reset email never
+> arrived.
+
+- The test case must be assigned to the user the server runs as in that plan,
+  the plan must be open, and the test case must not be a draft.
+- Every call records a new test run, as the inbox does, so the plan's history
+  keeps every attempt.
+- `record_test_comment` adds a comment to a test run, for example to add
+  findings later. Comments are returned by `get_test_run`.
+
+Running automated tests through the MCP server is not supported.
 
 ## Security notes
 
