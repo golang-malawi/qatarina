@@ -176,7 +176,6 @@ function ReportsPage() {
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>{t("reports.column.id")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.type")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.status")}</Table.ColumnHeader>
@@ -188,7 +187,6 @@ function ReportsPage() {
             <Table.Body>
               {reports.map((report) => (
                 <Table.Row key={report.id ?? Math.random()}>
-                  <Table.Cell>{report.id ?? "-"}</Table.Cell>
                   <Table.Cell>{report.name ?? "-"}</Table.Cell>
                   <Table.Cell>{report.type ?? "-"}</Table.Cell>
                   <Table.Cell>{report.status ?? "-"}</Table.Cell>
