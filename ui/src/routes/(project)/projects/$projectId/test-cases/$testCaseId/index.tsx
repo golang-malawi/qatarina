@@ -33,7 +33,6 @@ import { TestCaseRelations } from "@/components/TestCaseRelations";
 import { useState } from "react";
 import { useFrozenModules } from "@/services/ModuleService";
 import { IconSnowflake } from "@tabler/icons-react";
-import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",

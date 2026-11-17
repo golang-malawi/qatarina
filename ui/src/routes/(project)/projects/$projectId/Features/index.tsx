@@ -37,7 +37,6 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import SelectParentModule from "@/components/form/SelectParentModule";
-import { IconDotsVertical, IconPencil, IconTrash } from "@tabler/icons-react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/Features/"

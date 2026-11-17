@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/config"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
@@ -32,7 +33,7 @@ func newFreezeFixture(t *testing.T) freezeFixture {
 
 	queries := dbsqlc.New(db)
 	f.plans = services.NewTestPlanService(queries, logging.NewForTest())
-	f.runs = services.NewTestRunService(db, queries, logging.NewForTest())
+	f.runs = services.NewTestRunService(db, queries, logging.NewForTest(), nil, config.DefaultMaxFileSize)
 
 	// runs before the module fixture cleanup removes the project
 	t.Cleanup(func() {

@@ -109,12 +109,6 @@ function CreateNewTestPlan() {
   // Test cases from frozen modules cannot be added to a test plan
   const frozenCount =
     testCases?.test_cases?.filter((tc) => isFrozen(tc.feature_or_module)).length ?? 0;
-  const testCaseIds =
-    testCases?.test_cases
-      ?.filter((tc) => !isFrozen(tc.feature_or_module))
-      .map((tc) => tc.id!.toString()) ?? [];
-  const allSelected =
-    testCaseIds.length > 0 && selectedTestCases.length === testCaseIds.length;
   const totalTestCases = testCases?.pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
 
