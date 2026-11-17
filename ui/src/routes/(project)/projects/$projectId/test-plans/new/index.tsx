@@ -109,6 +109,8 @@ function CreateNewTestPlan() {
   // Test cases from frozen modules cannot be added to a test plan
   const frozenCount =
     testCases?.test_cases?.filter((tc) => isFrozen(tc.feature_or_module)).length ?? 0;
+  // Draft test cases cannot be assigned to testers
+  const draftCount = testCases?.test_cases?.filter((tc) => tc.is_draft).length ?? 0;
   const totalTestCases = testCases?.pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
 
@@ -341,6 +343,17 @@ function CreateNewTestPlan() {
           </Alert.Root>
         )}
 
+        {draftCount > 0 && (
+          <Alert.Root status="info" mb={4}>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Description>
+                {t("test_plans.draft_cases_notice", { count: draftCount })}
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+
         <Box
           mb={4}
           p={4}
@@ -363,6 +376,13 @@ function CreateNewTestPlan() {
 
         {testCases?.test_cases?.map((testCase) => {
           const frozen = isFrozen(testCase.feature_or_module);
+          const draft = !frozen && Boolean(testCase.is_draft);
+          const unusableHint = frozen
+            ? t("test_cases.frozen_module_hint")
+            : draft
+              ? t("test_cases.draft_hint")
+              : undefined;
+          const selected = isTestCaseSelected(testCase.id!.toString());
           return (
             <Box
               key={testCase.id}
@@ -372,13 +392,14 @@ function CreateNewTestPlan() {
               bg="bg.surface"
               p={4}
               mb={3}
-              opacity={frozen ? 0.6 : 1}
-              title={frozen ? t("test_cases.frozen_module_hint") : undefined}
+              opacity={unusableHint ? 0.6 : 1}
+              title={unusableHint}
             >
               <Flex justify="space-between" align="center">
                 <Checkbox.Root
-                  disabled={frozen}
-                  checked={isTestCaseSelected(testCase.id!.toString())}
+                  // A draft ticked by "select all" can still be unticked
+                  disabled={frozen || (draft && !selected)}
+                  checked={selected}
                   onCheckedChange={(e) =>
                     setTestCaseSelected(testCase.id!.toString(), e.checked === true)
                   }
@@ -393,6 +414,11 @@ function CreateNewTestPlan() {
                         {t("test_cases.frozen_module")}
                       </Badge>
                     )}
+                    {draft && (
+                      <Badge colorPalette="yellow" variant="outline" ml={2}>
+                        {t("test_cases.draft")}
+                      </Badge>
+                    )}
                   </Checkbox.Label>
                 </Checkbox.Root>
 
@@ -400,16 +426,16 @@ function CreateNewTestPlan() {
                   size="sm"
                   colorPalette="brand"
                   variant="outline"
-                  disabled={frozen}
+                  disabled={frozen || draft}
                   onClick={() => openAssignModal(testCase.id!.toString())}
                 >
                   {t("test_plans.assign_tester")}
                 </Button>
               </Flex>
 
-              {frozen ? (
+              {unusableHint ? (
                 <Box mt={2} fontSize="sm" color="fg.subtle">
-                  {t("test_cases.frozen_module_hint")}
+                  {unusableHint}
                 </Box>
               ) : testerIdsFor(testCase.id!.toString()).length ? (
                 <Flex mt={2} gap={2} wrap="wrap">
