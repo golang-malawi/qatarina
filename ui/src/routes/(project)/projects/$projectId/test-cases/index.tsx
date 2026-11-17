@@ -302,6 +302,19 @@ export default function ListProjectTestCases() {
       });
       return;
     }
+    // Drafts cannot be assigned to testers; with "Select all" the backend also checks
+    // the test cases that are not loaded
+    const draftRows = selectedRows.filter((row) => row.is_draft);
+    if (draftRows.length > 0) {
+      toaster.error({
+        title: t("test_cases.draft_selection_title"),
+        description: t("test_cases.draft_selection_description", {
+          codes: draftRows.map((row) => row.code).join(", "),
+        }),
+        duration: 6000,
+      });
+      return;
+    }
     if (selectedCount === 0) return;
     setBulkAssignOpen(true);
     setBulkAssignStep("plan");
@@ -606,8 +619,10 @@ export default function ListProjectTestCases() {
                   label: (row) =>
                     isFrozen(row.feature_or_module)
                       ? t("test_cases.use_in_test_session_frozen")
-                      : t("test_cases.use_in_test_session"),
-                  disabled: (row) => isFrozen(row.feature_or_module),
+                      : row.is_draft
+                        ? t("test_cases.use_in_test_session_draft")
+                        : t("test_cases.use_in_test_session"),
+                  disabled: (row) => isFrozen(row.feature_or_module) || Boolean(row.is_draft),
                   link: (row) =>
                     `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
                 },
