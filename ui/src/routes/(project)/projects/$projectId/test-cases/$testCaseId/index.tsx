@@ -31,6 +31,8 @@ import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { TestCaseRelations } from "@/components/TestCaseRelations";
 import { useState } from "react";
+import { useFrozenModules } from "@/services/ModuleService";
+import { IconSnowflake } from "@tabler/icons-react";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-cases/$testCaseId/",
@@ -49,6 +51,7 @@ function ViewTestCase() {
   const { data: testCase, isLoading, error } = useTestCaseQuery(testCaseId);
   const testPlansQuery = useProjectTestPlansQuery(projectId);
   const testersQuery = useProjectTestersQuery(Number(projectId));
+  const { isFrozen } = useFrozenModules(projectId);
   const { user } = useAuth();
   
   const preconditionsChecklist = useChecklistState(
@@ -83,6 +86,7 @@ function ViewTestCase() {
   }
 
   const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
+  const moduleFrozen = isFrozen(testCase.feature_or_module);
   const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
 
   const handleTabChange = (details: { value: string }) => {
@@ -116,6 +120,12 @@ function ViewTestCase() {
             <Text fontSize="sm" color="fg.subtle" mt={1}>
               Code: <strong>{testCase.code}</strong> • Feature:{" "}
               <strong>{testCase.feature_or_module}</strong>
+              {moduleFrozen && (
+                <Badge colorPalette="blue" variant="outline" ml={2}>
+                  <IconSnowflake size={12} />
+                  {t("test_cases.frozen_module")}
+                </Badge>
+              )}
             </Text>
             <Text fontSize="sm" color="fg.subtle">
               Project ID: {projectId}
@@ -312,14 +322,24 @@ function ViewTestCase() {
               Assign to Test Plan
             </Heading>
 
-            <Alert.Root status="info">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Description>
-                  A test case can belong to more than one test plan.
-                </Alert.Description>
-              </Alert.Content>
-            </Alert.Root>
+            {moduleFrozen ? (
+              <Alert.Root status="warning">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>{t("test_cases.frozen_module")}</Alert.Title>
+                  <Alert.Description>{t("test_cases.frozen_module_hint")}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            ) : (
+              <Alert.Root status="info">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Description>
+                    A test case can belong to more than one test plan.
+                  </Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
+            )}
 
             {/* Test Plans Checkbox Group */}
             {testPlansQuery.data?.test_plans?.length ? (
@@ -339,7 +359,10 @@ function ViewTestCase() {
                       <Checkbox.Root
                         key={plan.id}
                         value={plan.id.toString()}
-                        disabled={isLockedToPlan && plan.id.toString() !== effectivePlanId}
+                        disabled={
+                          moduleFrozen ||
+                          (isLockedToPlan && plan.id.toString() !== effectivePlanId)
+                        }
                       >
                         <Checkbox.HiddenInput />
                         <Checkbox.Control />
@@ -361,7 +384,7 @@ function ViewTestCase() {
                 mt={2}
                 size="sm"
                 colorPalette="brand"
-                disabled={!effectivePlanId}
+                disabled={!effectivePlanId || moduleFrozen}
                 onClick={() => setAssignOpen(true)}
               >
                 Assign testers
