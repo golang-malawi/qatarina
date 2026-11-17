@@ -294,7 +294,7 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 
 		createdRun, err := testRunService.Create(c.Context(), testRunReq)
 		if err != nil {
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)

@@ -71,6 +71,14 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
 		return nil, err
 	}
+	if err := ensureNotDrafts(ctx, t.queries, testCaseIDs); err != nil {
+		return nil, err
+	}
+	if request.AllTestCases != nil {
+		if err := t.ensureSelectionHasNoDrafts(ctx, request.ProjectID, request.AllTestCases, request.PlannedTests); err != nil {
+			return nil, err
+		}
+	}
 
 	testPlanParams := dbsqlc.CreateTestPlanParams{
 		ProjectID:     int32(request.ProjectID),
@@ -129,23 +137,12 @@ var ErrTestPlanProjectMismatch = errors.New("test plan does not belong to the pr
 // to the plan in a single statement. Test cases in plannedTests are skipped so they
 // keep the testers explicitly assigned to them.
 func (t *testPlanService) addAllProjectTestCases(ctx context.Context, planID, projectID int64, selection *schema.ProjectTestCaseSelection, plannedTests []schema.TestCaseAssignment) error {
-	excluded := make([]uuid.UUID, 0, len(selection.ExcludedTestCaseIDs)+len(plannedTests))
-	for _, id := range selection.ExcludedTestCaseIDs {
-		tcID, err := uuid.Parse(id)
-		if err != nil {
-			return fmt.Errorf("invalid excluded test case id %q: %w", id, err)
-		}
-		excluded = append(excluded, tcID)
-	}
-	for _, pt := range plannedTests {
-		tcID, err := uuid.Parse(pt.TestCaseID)
-		if err != nil {
-			return fmt.Errorf("invalid test case id %q: %w", pt.TestCaseID, err)
-		}
-		excluded = append(excluded, tcID)
+	excluded, err := selectionExcludedIDs(selection, plannedTests)
+	if err != nil {
+		return err
 	}
 
-	_, err := t.queries.AddProjectTestCasesToPlan(ctx, dbsqlc.AddProjectTestCasesToPlanParams{
+	_, err = t.queries.AddProjectTestCasesToPlan(ctx, dbsqlc.AddProjectTestCasesToPlanParams{
 		TestPlanID:          planID,
 		UserIds:             selection.UserIDs,
 		ProjectID:           int32(projectID),
@@ -156,6 +153,49 @@ func (t *testPlanService) addAllProjectTestCases(ctx context.Context, planID, pr
 		return fmt.Errorf("failed to add project test cases to plan %d: %w", planID, err)
 	}
 	return nil
+}
+
+// selectionExcludedIDs returns the test cases a "select all" selection leaves out: the
+// ones explicitly excluded and the ones in plannedTests, which keep their own testers
+func selectionExcludedIDs(selection *schema.ProjectTestCaseSelection, plannedTests []schema.TestCaseAssignment) ([]uuid.UUID, error) {
+	excluded := make([]uuid.UUID, 0, len(selection.ExcludedTestCaseIDs)+len(plannedTests))
+	for _, id := range selection.ExcludedTestCaseIDs {
+		tcID, err := uuid.Parse(id)
+		if err != nil {
+			return nil, fmt.Errorf("invalid excluded test case id %q: %w", id, err)
+		}
+		excluded = append(excluded, tcID)
+	}
+	for _, pt := range plannedTests {
+		tcID, err := uuid.Parse(pt.TestCaseID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid test case id %q: %w", pt.TestCaseID, err)
+		}
+		excluded = append(excluded, tcID)
+	}
+	return excluded, nil
+}
+
+// ensureSelectionHasNoDrafts returns ErrTestCaseDraft, naming the offending test cases,
+// if a "select all" selection of the project's test cases would include drafts
+func (t *testPlanService) ensureSelectionHasNoDrafts(ctx context.Context, projectID int64, selection *schema.ProjectTestCaseSelection, plannedTests []schema.TestCaseAssignment) error {
+	excluded, err := selectionExcludedIDs(selection, plannedTests)
+	if err != nil {
+		return err
+	}
+	drafts, err := t.queries.ListDraftTestCasesInProjectSelection(ctx, dbsqlc.ListDraftTestCasesInProjectSelectionParams{
+		ProjectID:           int32(projectID),
+		Search:              strings.TrimSpace(selection.Search),
+		ExcludedTestCaseIds: excluded,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check for draft test cases: %w", err)
+	}
+	codes := make([]string, 0, len(drafts))
+	for _, tc := range drafts {
+		codes = append(codes, tc.Code)
+	}
+	return draftTestCasesError(codes)
 }
 
 // FindAll implements TestPlanService.
@@ -282,6 +322,14 @@ func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, ass
 	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
 		return nil, err
 	}
+	// Unlike frozen modules, a draft cannot be assigned to testers even if it is already in the plan
+	assignedIDs := make([]uuid.UUID, 0, len(assignments))
+	for _, a := range assignments {
+		assignedIDs = append(assignedIDs, a.TestCaseID)
+	}
+	if err := ensureNotDrafts(ctx, t.queries, assignedIDs); err != nil {
+		return nil, err
+	}
 
 	for _, a := range assignments {
 		urgency := newNullUrgency(a.Urgency)
@@ -315,6 +363,12 @@ func (t *testPlanService) AddTestCaseToPlan(ctx context.Context, request *schema
 		tcID := uuid.MustParse(pt.TestCaseID)
 		for _, uid := range pt.UserIDs {
 			assignments = append(assignments, testCaseAssignment{TestCaseID: tcID, AssignedToID: uid, Urgency: pt.Urgency})
+		}
+	}
+	// Check before assigning anything so that a rejected request leaves the plan unchanged
+	if request.AllTestCases != nil {
+		if err := t.ensureSelectionHasNoDrafts(ctx, request.ProjectID, request.AllTestCases, request.PlannedTests); err != nil {
+			return nil, err
 		}
 	}
 	testPlan, err := t.assignTestCases(ctx, request.PlanID, assignments)
