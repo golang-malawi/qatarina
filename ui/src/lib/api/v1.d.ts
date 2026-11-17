@@ -429,6 +429,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/inbox/{testCaseID}/navigation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the previous and next Test Cases in the current user's inbox
+         * @description Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+         */
+        get: operations["GetInboxNavigation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox/{testCaseID}/view": {
         parameters: {
             query?: never;
@@ -2472,8 +2492,8 @@ export interface paths {
          */
         post: operations["UpdateUser"];
         /**
-         * Delete a user
-         * @description Delete a user
+         * Deactivate a user
+         * @description Deactivate (soft delete) a user. The user can no longer log in and is hidden from user lists.
          */
         delete: operations["DeleteUser"];
         options?: never;
@@ -2823,6 +2843,12 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxNavigationResponse": {
+            next_id?: string;
+            position?: number;
+            previous_id?: string;
+            total?: number;
+        };
         "schema.InboxUnseenCountResponse": {
             unseen_count?: number;
         };
@@ -3527,6 +3553,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.AssignedTestCase"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxNavigation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxNavigationResponse"];
                 };
             };
             /** @description Bad Request */
@@ -8741,6 +8821,24 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

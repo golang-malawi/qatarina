@@ -1,19 +1,26 @@
 -- name: ListUsers :many
 SELECT * FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: SearchUsers :many
 SELECT * FROM users
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%';
+WHERE deleted_at IS NULL
+AND (
+    first_name ILIKE '%' || $1 || '%'
+    OR last_name ILIKE '%' || $1 || '%'
+    OR display_name ILIKE '%' || $1 || '%'
+    OR email ILIKE '%' || $1 || '%'
+);
 
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 
 -- name: UserExists :one
 SELECT EXISTS(SELECT id FROM users WHERE id = $1);
+
+-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL);
 
 -- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL;
@@ -52,7 +59,11 @@ VALUES(
 RETURNING id;
 
 -- name: DeleteUser :execrows
-DELETE FROM users WHERE id=$1;
+-- Soft delete: users are referenced by projects, test runs, comments, etc.,
+-- so a hard DELETE would violate foreign keys and erase history.
+UPDATE users
+SET is_activated = FALSE, deleted_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;
@@ -345,7 +356,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
   AND (sqlc.arg(projects)::int[] IS NULL OR tr.project_id = ANY(sqlc.arg(projects)::int[]))
 GROUP BY tc.id
-ORDER BY tc.created_at DESC
+ORDER BY tc.created_at DESC, tc.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: TestCaseGetByAssignedUser :one
@@ -378,6 +389,38 @@ LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND tc.id = sqlc.arg(test_case_id)
 GROUP BY tc.id;
+
+-- Neighbours of a test case in the user's inbox, in the same order and with the
+-- same open-only filter as TestCaseListByAssignedUser. The current test case is
+-- always included so navigation still works when it is closed.
+-- name: TestCaseInboxNavigation :one
+WITH inbox AS (
+  SELECT tc.id, tc.created_at
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = sqlc.arg(user_id)::bigint
+    AND (COALESCE(tr.is_closed, false) = false OR tc.id = sqlc.arg(test_case_id)::uuid)
+  GROUP BY tc.id
+),
+ordered AS (
+  SELECT
+    id,
+    LAG(id) OVER w AS previous_id,
+    LEAD(id) OVER w AS next_id,
+    ROW_NUMBER() OVER w AS position,
+    COUNT(*) OVER () AS total
+  FROM inbox
+  WINDOW w AS (ORDER BY created_at DESC, id DESC)
+)
+SELECT
+  COALESCE(previous_id::text, '')::text AS previous_id,
+  COALESCE(next_id::text, '')::text AS next_id,
+  position,
+  total
+FROM ordered
+WHERE id = sqlc.arg(test_case_id)::uuid;
 
 -- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)

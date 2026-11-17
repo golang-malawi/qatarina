@@ -1,0 +1,146 @@
+schema {
+  query: Query
+}
+
+"RFC 3339 timestamp"
+scalar Time
+
+"Read-only queries over qatarina's core data model."
+type Query {
+  "All projects."
+  projects: [Project!]!
+  "A single project, or null if it does not exist."
+  project(id: ID!): Project
+  "Projects whose title matches the keyword."
+  searchProjects(keyword: String!): [Project!]!
+
+  "Test plans, optionally limited to one project."
+  testPlans(projectId: ID): [TestPlan!]!
+  testPlan(id: ID!): TestPlan
+
+  "Test cases, optionally limited to one project."
+  testCases(projectId: ID): [TestCase!]!
+  testCase(id: ID!): TestCase
+
+  "Test runs, optionally limited to one project."
+  testRuns(projectId: ID): [TestRun!]!
+  testRun(id: ID!): TestRun
+
+  "Testers, optionally limited to one project."
+  testers(projectId: ID): [Tester!]!
+  "A tester looked up by their user ID."
+  tester(userId: ID!): Tester
+}
+
+type Project {
+  id: ID!
+  title: String!
+  description: String!
+  code: String!
+  version: String
+  isActive: Boolean!
+  isPublic: Boolean!
+  websiteUrl: String
+  githubUrl: String
+  ownerUserId: ID!
+  parentProjectId: ID
+  automatedTestingEnabled: Boolean!
+  createdAt: Time!
+  updatedAt: Time!
+
+  testPlans: [TestPlan!]!
+  testCases: [TestCase!]!
+  testRuns: [TestRun!]!
+  testers: [Tester!]!
+}
+
+type TestPlan {
+  id: ID!
+  projectId: ID!
+  project: Project
+  kind: String!
+  description: String!
+  startAt: String!
+  closedAt: String!
+  scheduledEndAt: String!
+  isComplete: Boolean!
+  isLocked: Boolean!
+  numTestCases: Int!
+  passedCount: Int!
+  failedCount: Int!
+  pendingCount: Int!
+  assignedTesters: Int!
+  createdAt: String!
+  updatedAt: String!
+
+  "Test cases assigned to this plan, with plan-specific details such as urgency."
+  testCases: [TestPlanTestCase!]!
+  testRuns: [TestRun!]!
+}
+
+"A test case as it appears inside a test plan."
+type TestPlanTestCase {
+  id: ID!
+  code: String!
+  title: String!
+  priority: String!
+  urgency: String!
+  assignedTesterIds: [ID!]!
+  "The full test case record."
+  testCase: TestCase
+}
+
+type TestCase {
+  id: ID!
+  code: String!
+  kind: String!
+  title: String!
+  description: String!
+  featureOrModule: String
+  preconditions: String
+  priority: String!
+  isDraft: Boolean!
+  tags: [String!]!
+  projectId: ID
+  project: Project
+  createdById: ID!
+  createdAt: Time
+  updatedAt: Time
+}
+
+type TestRun {
+  id: ID!
+  code: String!
+  projectId: ID!
+  project: Project
+  testPlanId: ID
+  testPlan: TestPlan
+  testCaseId: ID!
+  testCase: TestCase
+  "One of: pending, passed, failed, blocked."
+  resultState: String!
+  isClosed: Boolean!
+  notes: String!
+  actualResult: String
+  expectedResult: String
+  ownerId: ID!
+  testedById: ID
+  assignedToId: ID
+  environmentId: ID
+  testedOn: Time!
+  createdAt: Time
+  updatedAt: Time
+}
+
+type Tester {
+  userId: ID!
+  name: String!
+  email: String!
+  role: String!
+  projectId: ID!
+  projectName: String!
+  project: Project
+  lastLoginAt: String!
+  createdAt: String!
+  updatedAt: String!
+}

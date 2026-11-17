@@ -55,6 +55,19 @@ func (s *Server) requireAuthentication(next http.Handler) http.Handler {
 			http.Error(w, "invalid or expired token", http.StatusUnauthorized)
 			return
 		}
+		// A valid signature isn't enough: the user may have been deactivated
+		// after the token was issued.
+		active, err := s.userService.IsActive(r.Context(), int32(identity.UserID))
+		if err != nil {
+			s.logger.Error("mcp", "failed to check if user is active", "userID", identity.UserID, "error", err)
+			http.Error(w, "failed to verify user", http.StatusInternalServerError)
+			return
+		}
+		if !active {
+			s.logger.Debug("mcp", "rejected MCP request from deactivated user", "userID", identity.UserID)
+			http.Error(w, "user account is deactivated", http.StatusUnauthorized)
+			return
+		}
 		next.ServeHTTP(w, r.WithContext(withIdentity(r.Context(), identity)))
 	})
 }
