@@ -17,9 +17,14 @@ import {
 } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
 import { findProjectsQueryOptions } from "@/data/queries/projects";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SheetView } from "./sheetView";
 import $api from "@/lib/api/query";
 
@@ -32,6 +37,14 @@ export const Route = createFileRoute("/workspace/test-cases/inbox")({
 });
 
 function TestCasePageInbox() {
+  // The content pane scrolls on its own, so the router's scroll reset doesn't reach it.
+  // Jump back to the top whenever a different test case opens (list click, Next/Previous, after recording).
+  const contentPaneRef = useRef<HTMLDivElement | null>(null);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    contentPaneRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
   const [includeClosed, setIncludeClosed] = React.useState(false);
   const [filterType, setFilterType] = React.useState<string>("");
   const [filterValue, setFilterValue] = React.useState<string>("");
@@ -516,7 +529,13 @@ function TestCasePageInbox() {
       )}
 
       {/* Right Pane / Content Area */}
-      <Box flex="1" p={isSheetView ? 0 : 6} bg="bg.canvas" overflowY="auto">
+      <Box
+        ref={contentPaneRef}
+        flex="1"
+        p={isSheetView ? 0 : 6}
+        bg="bg.canvas"
+        overflowY="auto"
+      >
         {isSheetView ? (
           <SheetView
             includeClosed={includeClosed}

@@ -4,6 +4,7 @@ import {
   getInboxTestCases,
   getInboxTestCaseById,
   getInboxUnseenCount,
+  getInboxNavigation,
 } from "@/services/TestCaseService";
 import { queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
@@ -11,6 +12,8 @@ import { components } from "@/lib/api/v1";
 type AssignedTestCaseListResponse =
   components["schemas"]["schema.AssignedTestCaseListResponse"];
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+type InboxNavigationResponse =
+  components["schemas"]["schema.InboxNavigationResponse"];
 
 export type TestCaseListQueryParams = {
   page?: number;
@@ -62,6 +65,17 @@ export const findTestCaseInboxByIdQueryOptions =(id: string) =>
         throw new Error(`Inbox test case ${id} not found`);
       }
       return match;
+    },
+  });
+
+// Previous/next test cases and position in the inbox, in inbox order.
+// Shares the ["testCases", "inbox"] prefix so it refreshes along with the inbox.
+export const findInboxNavigationQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", id, "navigation"],
+    queryFn: async (): Promise<InboxNavigationResponse> => {
+      const res = await getInboxNavigation(id);
+      return (res?.data ?? res) as InboxNavigationResponse;
     },
   });
 
