@@ -31,6 +31,7 @@ type API struct {
 	OrgService              services.OrgService
 	EnvironmentService      services.EnvironmentService
 	ReportService           services.ReportService
+	LinkPreviewService      services.LinkPreviewService
 	DocumentService         services.DocumentService
 	Storage                 afero.Fs
 }
@@ -48,7 +49,10 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 
 	return &API{
 		logger:                  logger,
-		app:                     fiber.New(),
+		app: fiber.New(fiber.Config{
+			// Leaves room for 10MB comment screenshots plus multipart overhead
+			BodyLimit: 12 * 1024 * 1024,
+		}),
 		Config:                  config,
 		AuthService:             services.NewAuthService(&config.Auth, dbConn, logger),
 		ProjectsService:         projectService,
@@ -64,6 +68,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 		OrgService:              services.NewOrgService(dbConn, logger),
 		EnvironmentService:      environmentService,
 		ReportService:           reportService,
+		LinkPreviewService:      services.NewLinkPreviewService(),
 		DocumentService:         services.NewDocumentService(dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
 		Storage:                 fs,
 	}
