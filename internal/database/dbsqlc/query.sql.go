@@ -896,7 +896,7 @@ type CreateTestCaseParams struct {
 	FeatureOrModule  sql.NullString
 	Title            string
 	Description      string
-	ParentTestCaseID sql.NullUUID
+	ParentTestCaseID uuid.NullUUID
 	IsDraft          sql.NullBool
 	Tags             []string
 	CreatedByID      int32
