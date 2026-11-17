@@ -21,7 +21,9 @@ var ErrUserAlreadyExists = errors.New("user with given email already exists")
 type AuthService interface {
 	SignIn(*schema.LoginRequest) (*schema.LoginResponse, error)
 	SignUp(*schema.SignUpRequest) (*schema.LoginResponse, error)
-	ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error
+	// ResetPassword sets a user's password without the old one. Only super
+	// admins may do this; actorID is the authenticated user making the request.
+	ResetPassword(ctx context.Context, actorID int64, request *schema.ResetPasswordRequest) error
 	ChangePassword(ctx context.Context, request *schema.ChangePasswordRequest) error
 }
 
@@ -140,7 +142,26 @@ func (a *authServiceImpl) SignUp(request *schema.SignUpRequest) (*schema.LoginRe
 	return res, nil
 }
 
-func (a *authServiceImpl) ResetPassword(ctx context.Context, request *schema.ResetPasswordRequest) error {
+func (a *authServiceImpl) ResetPassword(ctx context.Context, actorID int64, request *schema.ResetPasswordRequest) error {
+	// Authorization is read from the database (not the JWT) so revoked
+	// super admin rights take effect immediately.
+	actor, err := a.queries.GetUser(ctx, int32(actorID))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrForbidden
+		}
+		return fmt.Errorf("failed to fetch acting user: %d: %w", actorID, err)
+	}
+	if !actor.IsSuperAdmin.Bool {
+		a.logger.Info("auth-service", "unauthorized password reset attempt", "actor_id", actorID, "target_user_id", request.UserID)
+		return ErrForbidden
+	}
+
+	// Own password must go through ChangePassword, which verifies the old one.
+	if actorID == request.UserID {
+		return ErrCannotResetOwnPassword
+	}
+
 	// Confirm the target user exists
 	if _, err := a.queries.GetUser(ctx, int32(request.UserID)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -153,7 +174,7 @@ func (a *authServiceImpl) ResetPassword(ctx context.Context, request *schema.Res
 		return errors.New("new password and confirmation do not match")
 	}
 
-	err := a.queries.ChangeUserPassword(ctx, dbsqlc.ChangeUserPasswordParams{
+	err = a.queries.ChangeUserPassword(ctx, dbsqlc.ChangeUserPasswordParams{
 		ID:        int32(request.UserID),
 		Password:  common.MustHashPassword(request.NewPassword),
 		UpdatedAt: common.NewNullTime(time.Now()),
@@ -162,7 +183,7 @@ func (a *authServiceImpl) ResetPassword(ctx context.Context, request *schema.Res
 		return fmt.Errorf("failed to reset password: %w", err)
 	}
 
-	a.logger.Info("auth-service", "password reset", "target_user_id", request.UserID)
+	a.logger.Info("auth-service", "password reset", "actor_id", actorID, "target_user_id", request.UserID)
 	return nil
 }
 
