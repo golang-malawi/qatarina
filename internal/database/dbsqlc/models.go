@@ -181,6 +181,10 @@ type Module struct {
 	UpdatedAt   sql.NullTime
 	// Parent module in the module hierarchy, NULL for top-level modules
 	ParentModuleID sql.NullInt32
+	// Frozen modules, and the modules below them, have test cases that cannot be used in new test plans or test runs
+	IsFrozen bool
+	// When the module was last frozen, NULL while it is not frozen
+	FrozenAt sql.NullTime
 }
 
 type Org struct {

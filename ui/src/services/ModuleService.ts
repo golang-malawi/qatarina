@@ -1,4 +1,5 @@
-import { apiClient } from "@/lib/api/query";
+import { useMemo } from "react";
+import $api, { apiClient } from "@/lib/api/query";
 import type { operations } from "@/lib/api/v1";
 
 export type Module = {
@@ -12,6 +13,8 @@ export type Module = {
   description: string;
   project_id: number;
   parent_module_id: string | null;
+  /** Test cases in a frozen module, or in a module below it, cannot be used in tests */
+  is_frozen: boolean;
 };
 
 export type ModuleNode = Module & {
@@ -33,6 +36,7 @@ function toModule(mod: any): Module {
     parent_module_id: mod.ParentModuleID?.Valid
       ? String(mod.ParentModuleID.Int32)
       : null,
+    is_frozen: Boolean(mod.IsFrozen),
     created_at: mod.CreatedAt?.Time || "",
     updated_at: mod.UpdatedAt?.Time || "",
   };
@@ -82,6 +86,45 @@ export function moduleSubtreeIds(tree: ModuleNode[], moduleId: string): Set<stri
     flattenModuleTree([node]).forEach((n) => ids.add(n.id));
   }
   return ids;
+}
+
+/**
+ * Lowercased names and codes of the modules that are frozen, either themselves or through a module
+ * above them. Test cases refer to their module by name or code in feature_or_module
+ */
+export function frozenModuleKeys(modules: Module[]): Set<string> {
+  const byId = new Map(modules.map((m) => [m.id, m]));
+  const keys = new Set<string>();
+  for (const m of modules) {
+    const seen = new Set<string>();
+    let current: Module | undefined = m;
+    while (current && !seen.has(current.id)) {
+      if (current.is_frozen) {
+        keys.add(m.name.trim().toLowerCase());
+        keys.add(m.code.trim().toLowerCase());
+        break;
+      }
+      seen.add(current.id);
+      current = current.parent_module_id ? byId.get(current.parent_module_id) : undefined;
+    }
+  }
+  return keys;
+}
+
+/** Tells whether a test case's feature_or_module points at a frozen module of the project */
+export function useFrozenModules(projectId: string) {
+  const query = $api.useQuery("get", "/v1/projects/{projectID}/modules", {
+    params: { path: { projectID: projectId } },
+  });
+  const keys = useMemo(() => {
+    const data = query.data as unknown;
+    return frozenModuleKeys(Array.isArray(data) ? data.map(toModule) : []);
+  }, [query.data]);
+
+  return {
+    isFrozen: (featureOrModule?: string | null) =>
+      !!featureOrModule && keys.has(featureOrModule.trim().toLowerCase()),
+  };
 }
 
 /** Extracts the problem detail message from a failed API response */
@@ -147,7 +190,20 @@ export default class ModuleService {
     return res.data as unknown;
   }
 
-  async getModulesByProjectId(projectId: string): Promise<Module[]> {
+  async setModuleFrozen(id: string, frozen: boolean) {
+    const res = await apiClient.request(
+      "post",
+      frozen ? "/v1/modules/{moduleID}/freeze" : "/v1/modules/{moduleID}/unfreeze",
+      { params: { path: { moduleID: id } } },
+    );
+    const message = errorMessage(res);
+    if (message) {
+      throw new Error(message);
+    }
+    return res.data as unknown;
+  }
+
+    async getModulesByProjectId(projectId: string): Promise<Module[]> {
     const res = await apiClient.request(
       "get",
       "/v1/projects/{projectID}/modules",

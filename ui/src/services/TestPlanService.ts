@@ -82,7 +82,7 @@ export async function assignTestersToTestPlan(
   testPlanID: string,
   payload: AssignTestsToPlanPayload
 ) {
-  return apiClient.request(
+  const response = await apiClient.request(
     "post",
     "/v1/test-plans/{testPlanID}/test-cases",
     {
@@ -90,6 +90,14 @@ export async function assignTestersToTestPlan(
       body: payload,
     }
   );
+
+  // Check if the request failed, e.g. test cases from frozen modules are rejected
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to assign test cases to test plan");
+  }
+
+  return response.data;
 }
 
 export async function closeTestPlan(testPlanID: number) {
