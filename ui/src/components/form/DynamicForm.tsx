@@ -14,6 +14,7 @@ import {
   Tabs,
   IconButton,
 } from "@chakra-ui/react";
+import { PasswordInput } from "@/components/ui/password-input";
 import SelectTestKind from "./SelectTestKind";
 import SelectFeatureModuleType from "./SelectFeatureModuleType";
 import SelectRunner from "./SelectRunner";
@@ -578,10 +579,18 @@ export function DynamicForm<T extends z.ZodTypeAny>({
                 />
               )}
 
+              {type === "password" && (
+                <PasswordInput
+                  value={(field.state.value as string) || ""}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder={placeholder}
+                />
+              )}
+
               {[
                 "text",
                 "email",
-                "password",
                 "number",
                 "url",
                 "tel",
