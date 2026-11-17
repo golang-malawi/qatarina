@@ -1,23 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Box,
   Button,
   Badge,
   Container,
   Heading,
+  Input,
   Menu,
   Flex,
   Text,
   Textarea,
 } from "@chakra-ui/react";
-import { IconChevronDown } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  findInboxNavigationQueryOptions,
   findTestCaseInboxByIdQueryOptions,
   findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
+  useQuery,
   useSuspenseQuery,
   useMutation,
   useQueryClient,
@@ -27,15 +34,23 @@ import {
   markTestCaseAsDraft,
   unMarkTestCaseAsDraft,  
 } from "@/services/TestCaseService";
-import { createTestRun, executeTestRun } from "@/services/TestRunService"; 
+import {
+  createTestRun,
+  executeTestRun,
+  uploadTestRunAttachment,
+} from "@/services/TestRunService";
 import { toaster } from "@/components/ui/toaster";
 import $api from "@/lib/api/query";
+import { components } from "@/lib/api/v1";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import {
   applyChecklistState,
   useChecklistState,
 } from "@/lib/markdown-checklist";
-import { preconditionsChecklistKey } from "@/lib/preconditions-checklist";
+import {
+  descriptionChecklistKey,
+  preconditionsChecklistKey,
+} from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 export const Route = createFileRoute(
@@ -47,6 +62,58 @@ export const Route = createFileRoute(
 });
 
 function TestCaseInboxItem() {
+  const { testCaseId } = Route.useParams();
+  // Keyed so typed results, notes and attachments don't carry over between test cases
+  return <InboxTestCaseView key={testCaseId} />;
+}
+
+type InboxNavigationData =
+  components["schemas"]["schema.InboxNavigationResponse"];
+
+// Steps through the inbox in list order (newest first), one test case at a time
+function InboxNavigation({
+  nav,
+  isPending,
+  onGoTo,
+}: {
+  nav?: InboxNavigationData;
+  isPending: boolean;
+  onGoTo: (id: string) => void;
+}) {
+  return (
+    <Flex justify="space-between" align="center" mb={4} gap={2}>
+      <Button
+        size="sm"
+        variant="outline"
+        colorPalette="brand"
+        disabled={isPending || !nav?.previous_id}
+        onClick={() => nav?.previous_id && onGoTo(nav.previous_id)}
+        title="Previous test case in your inbox"
+      >
+        <IconChevronLeft />
+        Previous
+      </Button>
+      {nav?.position && nav?.total ? (
+        <Text fontSize="sm" color="fg.muted">
+          {nav.position} of {nav.total}
+        </Text>
+      ) : null}
+      <Button
+        size="sm"
+        variant="outline"
+        colorPalette="brand"
+        disabled={isPending || !nav?.next_id}
+        onClick={() => nav?.next_id && onGoTo(nav.next_id)}
+        title="Next test case in your inbox"
+      >
+        Next
+        <IconChevronRight />
+      </Button>
+    </Flex>
+  );
+}
+
+function InboxTestCaseView() {
   const { testCaseId } = Route.useParams();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -60,11 +127,29 @@ function TestCaseInboxItem() {
   const tc = testCase;
   const isDraft = tc.is_draft;
 
+  const { data: nav, isPending: isPendingNav } = useQuery(
+    findInboxNavigationQueryOptions(testCaseId),
+  );
+  const goToTestCase = (id: string) =>
+    navigate({
+      to: "/workspace/test-cases/inbox/$testCaseId",
+      params: { testCaseId: id },
+    });
+  const navigation = (
+    <InboxNavigation
+      nav={nav}
+      isPending={isPendingNav}
+      onGoTo={goToTestCase}
+    />
+  );
+
   const [resultText, setResultText] = useState("");
   const [notesText, setNotesText] = useState("");
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const checklist = useChecklistState(
-    `qatarina.checklist.${currentUser?.user_id ?? "anon"}.${testCaseId}`,
+    descriptionChecklistKey(currentUser?.user_id, testCaseId),
     tc.description ?? "",
   );
   const preconditionsChecklist = useChecklistState(
@@ -117,7 +202,7 @@ function TestCaseInboxItem() {
       if (!run?.id) throw new Error("Run ID is missing.");
 
       // Step 2: record the result immediately
-      return executeTestRun(run.id, {
+      const response = await executeTestRun(run.id, {
         test_run_id: run.id,
         result_state: status,
         actual_result: resultText,
@@ -130,16 +215,35 @@ function TestCaseInboxItem() {
         tested_on: new Date().toISOString(),
         is_closed: false,
       });
+
+      const resultId = response.data?.result_id;
+
+      if (attachmentFiles.length > 0) {
+        if (!resultId) {
+          throw new Error("Attachment upload failed because execution response did not return a result_id.");
+        }
+        for (const file of attachmentFiles) {
+          await uploadTestRunAttachment(resultId, file);
+  }
+      }
     },
     onSuccess: () => {
+      // Move on to the next test case so testers can keep going without the list
+      const nextId = nav?.next_id;
       toaster.create({
         title: "Success",
-        description: "Test result recorded",
+        description: nextId
+          ? "Test result recorded. Moved to the next test case."
+          : "Test result recorded. That was the last test case in your inbox.",
         type: "success",
       });
       setResultText("");
       setNotesText("");
       checklist.reset();
+      setAttachmentFiles([]);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -148,7 +252,11 @@ function TestCaseInboxItem() {
       // Optional: force refetch for instant UI update
       queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
       queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
-        },
+
+      if (nextId) {
+        goToTestCase(nextId);
+      }
+    },
     onError: () => {
       toaster.create({
         title: "Error",
@@ -190,6 +298,7 @@ function TestCaseInboxItem() {
   if (tc.is_closed) {
     return (
       <Box>
+        {navigation}
         <Heading size="lg" color="fg.heading">
           {tc.title}
         </Heading>
@@ -218,6 +327,7 @@ function TestCaseInboxItem() {
 
   return (
     <Box>
+      {navigation}
       <Flex alignItems="center" justifyContent="space-between">
         <Heading size="lg" color="fg.heading">
           {tc.title}
@@ -308,6 +418,25 @@ function TestCaseInboxItem() {
           onChange={(e) => setNotesText(e.target.value)}
           mb="4"
         />
+        <Box mb="4">
+          <Text mb="2" fontSize="sm" fontWeight="semibold">
+            Attach files (optional)
+          </Text>
+          <Input
+            id="attachmentFile"
+            type="file"
+            multiple
+            accept=".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg"
+            ref={attachmentInputRef}
+            onChange={(e) => setAttachmentFiles(Array.from(e.currentTarget.files || []))}
+          />
+          {attachmentFiles.length > 0 && (
+            <Text mt="2" fontSize="sm" color="fg.muted">
+              Selected files: {attachmentFiles.map(f => f.name).join(", ")}
+            </Text>
+          )}
+        </Box>
+
         <Button
           type="button"
           variant="outline"

@@ -10,26 +10,36 @@ import {
   HStack,
   Input,
   InputGroup,
+  Link,
   Separator,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
+import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
-import { closeTestRun, getTestRunsByPlan } from "@/services/TestRunService";
+import {
+  closeTestRun,
+  getTestRunAttachments,
+  getTestRunsByPlan,
+} from "@/services/TestRunService";
+import { formatFileSize, getStoredFileUrl } from "@/lib/files";
 import $api from "@/lib/api/query";
 import { useTranslation } from "react-i18next";
 
-type TestRunItem = components["schemas"]["schema.TestRunResponse"];
+type TestRunItem = components["schemas"]["schema.TestRunResponse"] & {
+  latest_result_id?: string;
+  attachment_count?: number;
+};
 type ResultFilter = "all" | "passed" | "failed" | "pending";
 
 export const Route = createFileRoute(
@@ -255,6 +265,15 @@ function TestPlanTestRunsPage() {
                         >
                           {run.is_closed ? t("test_plans.runs.closed") : t("test_plans.runs.open")}
                         </Badge>
+                        {run.attachment_count ? (
+                          <Badge colorPalette="blue" variant="subtle">
+                            <Flex align="center" gap={1}>
+                              <IconPaperclip size={14} />
+                              {run.attachment_count} attachment
+                              {run.attachment_count > 1 ? "s" : ""}
+                            </Flex>
+                          </Badge>
+                        ) : null}
                         {runId && (
                           <Badge colorPalette="blue" variant="outline">
                             ID: {runId}
@@ -280,10 +299,12 @@ function TestPlanTestRunsPage() {
                       <DetailItem
                         label={t("test_plans.detail.expected_result")}
                         value={run.expected_result}
+                        markdown
                       />
                       <DetailItem
                         label={t("test_plans.detail.actual_result")}
                         value={run.actual_result}
+                        markdown
                       />
                       <DetailItem
                         label={t("test_plans.detail.environment")}
@@ -300,10 +321,17 @@ function TestPlanTestRunsPage() {
                       <Text fontSize="xs" color="fg.subtle">
                         {t("test_plans.detail.notes")}
                       </Text>
-                      <Text color="fg.default">
-                        {run.notes?.trim() || t("test_plans.no_notes")}
-                      </Text>
+                      {run.notes?.trim() ? (
+                        <MarkdownChecklist markdown={run.notes.trim()} />
+                      ) : (
+                        <Text color="fg.default">{t("test_plans.no_notes")}</Text>
+                      )}
                     </Stack>
+
+                    <AttachmentSection
+                      latestResultId={run.latest_result_id}
+                      attachmentCount={run.attachment_count}
+                    />
 
                     {!run.is_closed && runId && (
                       <Button
@@ -329,6 +357,93 @@ function TestPlanTestRunsPage() {
   );
 }
 
+function AttachmentSection({
+  latestResultId,
+  attachmentCount,
+}: {
+  latestResultId?: string;
+  attachmentCount?: number;
+}) {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const {
+    data: attachments = [],
+    isLoading,
+  } = useQuery({
+    queryKey: ["testRunAttachments", latestResultId],
+    queryFn: () =>
+      latestResultId ? getTestRunAttachments(latestResultId) : Promise.resolve([]),
+    enabled: isOpen && Boolean(latestResultId),
+  });
+
+  if (!latestResultId) {
+    return null;
+  }
+
+  return (
+    <Box>
+      <Flex align="center" gap={3}>
+        <Badge colorPalette="blue" variant="subtle">
+          <Flex align="center" gap={1}>
+            <IconPaperclip size={14} />
+            {attachmentCount ?? 0} attachment{(attachmentCount ?? 0) === 1 ? "" : "s"}
+          </Flex>
+        </Badge>
+        <Button
+          size="xs"
+          variant="outline"
+          colorPalette="brand"
+          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={attachmentCount === 0}
+        >
+          {isOpen ? "Hide attachments" : "View attachments"}
+        </Button>
+      </Flex>
+      {isOpen && (
+        <Box mt={3} pl={2}>
+          {isLoading ? (
+            <Text fontSize="sm" color="fg.subtle">
+              Loading attachments...
+            </Text>
+          ) : attachments.length === 0 ? (
+            <Text fontSize="sm" color="fg.subtle">
+              No attachments available.
+            </Text>
+          ) : (
+            <Stack gap={2}>
+              {attachments.map((attachment) => (
+                <Flex key={attachment.id} align="center" gap={2}>
+                  <IconPaperclip size={16} />
+                  <Link
+                    href={getStoredFileUrl(attachment.storage_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    fontWeight="medium"
+                  >
+                    {attachment.file_name}
+                  </Link>
+                  <Text fontSize="xs" color="fg.subtle">
+                    {formatFileSize(attachment.file_size)}
+                  </Text>
+                  <Button asChild size="xs" variant="ghost" colorPalette="brand">
+                    <a
+                      href={getStoredFileUrl(attachment.storage_url, attachment.file_name)}
+                      download={attachment.file_name}
+                    >
+                      <IconDownload size={14} />
+                      {t("test_plans.runs.download_attachment")}
+                    </a>
+                  </Button>
+                </Flex>
+              ))}
+            </Stack>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 function getResultState(resultState?: string): ResultFilter {
   const normalized = (resultState ?? "").toLowerCase();
   if (normalized.includes("pass")) return "passed";
@@ -348,14 +463,28 @@ function getResultColor(state: ResultFilter) {
   }
 }
 
-function DetailItem({ label, value }: { label: string; value?: string }) {
+function DetailItem({
+  label,
+  value,
+  markdown = false,
+}: {
+  label: string;
+  value?: string;
+  /** Render the value as GitHub-flavoured markdown (read-only checklists) */
+  markdown?: boolean;
+}) {
   const { t } = useTranslation();
+  const content = value?.trim();
   return (
-    <Stack gap={1}>
+    <Stack gap={1} minW={0}>
       <Text fontSize="xs" color="fg.subtle">
         {label}
       </Text>
-      <Text color="fg.default">{value?.trim() || t("test_plans.not_available")}</Text>
+      {markdown && content ? (
+        <MarkdownChecklist markdown={content} />
+      ) : (
+        <Text color="fg.default">{content || t("test_plans.not_available")}</Text>
+      )}
     </Stack>
   );
 }

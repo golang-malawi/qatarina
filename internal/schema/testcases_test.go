@@ -45,3 +45,33 @@ func TestValidatePriorityAndUrgency(t *testing.T) {
 	})
 	assert.ErrorContains(t, err, "oneof")
 }
+
+func TestValidateAssignAllTestCasesToPlan(t *testing.T) {
+	// all_test_cases replaces planned_tests
+	err := validation.ValidateStruct(AssignTestsToPlanRequest{
+		ProjectID:    1,
+		PlanID:       1,
+		AllTestCases: &ProjectTestCaseSelection{UserIDs: []int64{1}},
+	})
+	assert.Nil(t, err)
+
+	err = validation.ValidateStruct(AssignTestsToPlanRequest{ProjectID: 1, PlanID: 1})
+	assert.ErrorContains(t, err, "required_without")
+
+	err = validation.ValidateStruct(AssignTestsToPlanRequest{
+		ProjectID:    1,
+		PlanID:       1,
+		AllTestCases: &ProjectTestCaseSelection{},
+	})
+	assert.ErrorContains(t, err, "UserIDs")
+
+	err = validation.ValidateStruct(AssignTestsToPlanRequest{
+		ProjectID: 1,
+		PlanID:    1,
+		AllTestCases: &ProjectTestCaseSelection{
+			UserIDs:             []int64{1},
+			ExcludedTestCaseIDs: []string{"not-a-uuid"},
+		},
+	})
+	assert.ErrorContains(t, err, "uuid")
+}

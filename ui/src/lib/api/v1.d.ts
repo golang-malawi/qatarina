@@ -429,6 +429,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/test-cases/inbox/{testCaseID}/navigation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the previous and next Test Cases in the current user's inbox
+         * @description Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+         */
+        get: operations["GetInboxNavigation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/test-cases/inbox/{testCaseID}/view": {
         parameters: {
             query?: never;
@@ -772,6 +792,189 @@ export interface paths {
          */
         post: operations["UpdateAutomatedTesting"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all documents for a project */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    projectID: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Upload/Create a document for a project */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    projectID: number;
+                };
+                cookie?: never;
+            };
+            /** @description Document File */
+            requestBody: {
+                content: {
+                    "multipart/form-data": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{projectID}/documents/{documentID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a project document */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Document ID (UUID) */
+                    documentID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: string;
+                        };
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1598,6 +1801,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the selected test cases of a project
+         * @description Delete the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones
+         */
+        post: operations["BulkDeleteTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-cases/bulk-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer the selected test cases of a project to another project
+         * @description Move the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones, to another project and feature/module
+         */
+        post: operations["BulkTransferTestCases"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/export-file": {
         parameters: {
             query?: never;
@@ -1609,7 +1852,7 @@ export interface paths {
         put?: never;
         /**
          * Export test cases to a CSV, XLSX or JSON file
-         * @description Export test cases to a CSV, XLSX or JSON file
+         * @description Export test cases to a CSV, XLSX or JSON file. Send either the testcases to export, or a selection of a project's test cases (which may select all of them) for the server to load.
          */
         post: operations["ExportFileFromTestCases"];
         delete?: never;
@@ -1990,6 +2233,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-runs/{resultID}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List attachments for a Test Run Result
+         * @description List all file attachments linked to a Test Run Result
+         */
+        get: operations["ListAttachments"];
+        put?: never;
+        /**
+         * Upload an attachment for a Test Run Result
+         * @description Upload a file attachment linked to a Test Run Result
+         */
+        post: operations["UploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-runs/{testRunID}": {
         parameters: {
             query?: never;
@@ -2265,8 +2532,8 @@ export interface paths {
          */
         post: operations["UpdateUser"];
         /**
-         * Delete a user
-         * @description Delete a user
+         * Deactivate a user
+         * @description Deactivate (soft delete) a user. The user can no longer log in and is hidden from user lists.
          */
         delete: operations["DeleteUser"];
         options?: never;
@@ -2332,7 +2599,9 @@ export interface components {
             test_case_template: string;
         };
         "schema.AssignTestsToPlanRequest": {
-            planned_tests: components["schemas"]["schema.TestCaseAssignment"][];
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
+            /** @description Required unless all_test_cases is set */
+            planned_tests?: components["schemas"]["schema.TestCaseAssignment"][];
             project_id: number;
             test_plan_id: number;
         };
@@ -2363,6 +2632,13 @@ export interface components {
             pagination?: components["schemas"]["schema.Pagination"];
             test_cases?: components["schemas"]["schema.AssignedTestCase"][];
         };
+        "schema.AttachmentResponse": {
+            file_name?: string;
+            file_size?: number;
+            file_type?: string;
+            id?: string;
+            storage_url?: string;
+        };
         "schema.BulkAssignTesters": {
             project_id?: number;
             testers?: {
@@ -2373,6 +2649,20 @@ export interface components {
         "schema.BulkCreateTestCases": {
             project_id: number;
             test_cases: components["schemas"]["schema.CreateTestCaseRequest"][];
+        };
+        "schema.BulkDeleteTestCasesRequest": {
+            selection: components["schemas"]["schema.TestCaseSelection"];
+        };
+        "schema.BulkDeleteTestCasesResponse": {
+            deleted?: number;
+        };
+        "schema.BulkTransferTestCasesRequest": {
+            feature_or_module: string;
+            selection: components["schemas"]["schema.TestCaseSelection"];
+            target_project_id: number;
+        };
+        "schema.BulkTransferTestCasesResponse": {
+            transferred?: number;
         };
         "schema.ChangeEnvironmentRequest": {
             environment_id: number;
@@ -2396,6 +2686,26 @@ export interface components {
             updated_at?: string;
             user_id?: number;
             user_name?: string;
+        };
+        "schema.CommitTestRunResponse": {
+            actual_result?: string;
+            attachment_count?: number;
+            code?: string;
+            environment_id?: number;
+            executed_by?: string;
+            expected_result?: string;
+            id?: string;
+            is_closed?: boolean;
+            latest_result_id?: string;
+            notes?: string;
+            project_id?: number;
+            result_id?: string;
+            result_state?: string;
+            test_case_id?: string;
+            test_case_title?: string;
+            test_plan_id?: number;
+            tested_by_id?: number;
+            tested_on?: string;
         };
         "schema.CommitTestRunResult": {
             actual_result: string;
@@ -2489,6 +2799,7 @@ export interface components {
             title: string;
         };
         "schema.CreateTestPlan": {
+            all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
             assigned_to_id?: number;
             closed_at?: string;
             created_by_id?: number;
@@ -2547,7 +2858,8 @@ export interface components {
         "schema.ExportTestCasesRequest": {
             fileformat?: string;
             filename?: string;
-            testcases: components["schemas"]["schema.ExportedTestCase"][];
+            selection?: components["schemas"]["schema.TestCaseSelection"];
+            testcases?: components["schemas"]["schema.ExportedTestCase"][];
         };
         "schema.ExportedTestCase": {
             code?: string;
@@ -2571,6 +2883,12 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxNavigationResponse": {
+            next_id?: string;
+            position?: number;
+            previous_id?: string;
+            total?: number;
+        };
         "schema.InboxUnseenCountResponse": {
             unseen_count?: number;
         };
@@ -2605,7 +2923,7 @@ export interface components {
             project_owner_id?: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.NewUserRequest": {
             display_name: string;
@@ -2658,6 +2976,14 @@ export interface components {
             updated_at?: string;
             version?: string;
             website_url?: string;
+        };
+        "schema.ProjectTestCaseSelection": {
+            /** @description Test cases the user deselected */
+            excluded_test_case_ids?: string[];
+            /** @description Same filter as the project test case list (matches title or code) */
+            search?: string;
+            /** @description Testers assigned to each of the selected test cases */
+            user_ids: number[];
         };
         "schema.ProjectTestCaseSummaryResponse": {
             blocked?: number;
@@ -2789,6 +3115,17 @@ export interface components {
             title?: string;
             urgency?: string;
         };
+        "schema.TestCaseSelection": {
+            /** @description Test cases deselected after select_all */
+            excluded_test_case_ids?: string[];
+            project_id: number;
+            /** @description Same filter as the project test case list (matches title or code), used with select_all */
+            search?: string;
+            /** @description Select every test case in the project matching search */
+            select_all?: boolean;
+            /** @description Test cases ticked individually, used when select_all is false */
+            test_case_ids?: string[];
+        };
         "schema.TestPlanListResponse": {
             test_plans?: components["schemas"]["schema.TestPlanResponseItem"][];
         };
@@ -2848,12 +3185,14 @@ export interface components {
         };
         "schema.TestRunResponse": {
             actual_result?: string;
+            attachment_count?: number;
             code?: string;
             environment_id?: number;
             executed_by?: string;
             expected_result?: string;
             id?: string;
             is_closed?: boolean;
+            latest_result_id?: string;
             notes?: string;
             project_id?: number;
             result_state?: string;
@@ -2921,7 +3260,7 @@ export interface components {
             project_owner_id: number;
             supported_runners?: string[];
             version: string;
-            website_url: string;
+            website_url?: string;
         };
         "schema.UpdateTestCaseRequest": {
             code?: string;
@@ -3245,6 +3584,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.AssignedTestCase"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxNavigation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Case ID */
+                testCaseID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxNavigationResponse"];
                 };
             };
             /** @description Bad Request */
@@ -6436,6 +6829,101 @@ export interface operations {
             };
         };
     };
+    BulkDeleteTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Test cases to delete */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.BulkDeleteTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.BulkDeleteTestCasesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    BulkTransferTestCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Test cases to transfer and where to */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.BulkTransferTestCasesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.BulkTransferTestCasesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     ExportFileFromTestCases: {
         parameters: {
             query?: never;
@@ -7551,6 +8039,97 @@ export interface operations {
             };
         };
     };
+    ListAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Run Result ID */
+                resultID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Attachment files(multiple allowed) */
+        requestBody: {
+            content: {
+                "multipart/form-data": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.AttachmentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
     GetOneTestRun: {
         parameters: {
             query?: never;
@@ -7755,7 +8334,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.CommitTestRunResponse"];
                 };
             };
             /** @description Bad Request */
@@ -8381,6 +8960,24 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

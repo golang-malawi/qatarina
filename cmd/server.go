@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"os"
 
 	"github.com/golang-malawi/qatarina/internal/api"
+	"github.com/golang-malawi/qatarina/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +23,17 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
-		apiServer := api.NewAPI(qatarinaConfig)
+		storageConfig := qatarinaConfig.Storage
+		if storageConfig.Driver == storage.DriverS3 && storageConfig.S3Bucket == "" {
+			fmt.Println("Storage driver is s3 but no s3_bucket is configured, falling back to local storage")
+		}
+		fs, err := storage.New(context.Background(), storageConfig)
+		if err != nil {
+			return fmt.Errorf("failed to initialise storage: %w", err)
+		}
+		fmt.Println("Using", storage.ResolveDriver(storageConfig), "storage for uploaded files")
+
+		apiServer := api.NewAPI(qatarinaConfig, fs)
 		// var err error
 		// apiServer.RiverClient, err = worker.StartRiverWorker(qatarinaConfig)
 		// if err != nil {

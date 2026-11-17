@@ -10,16 +10,17 @@ import (
 )
 
 type Config struct {
-	Server     HTTPServerConfiguration `mapstructure:"server"`
-	Auth       AuthConfiguration       `mapstructure:"auth"`
-	Database   DatabaseConfiguration   `mapstructure:"db"`
-	SMTP       SMTPConfiguration       `mapstructure:"smtp"`
-	Logging    LoggingConfiguration    `mapstructure:"logging"`
-	Platform   PlatformConfiguration   `mapstructure:"platform"`
-	ImportFile ImportFileConfiguration `mapstructure:"import_file"`
-	Runner     RunnerConfiguration     `mapstructure:"runner"`
-	Storage    StorageConfiguration    `mapstructure:"storage"`
-	MCP        MCPConfiguration        `mapstructure:"mcp"`
+	Server      HTTPServerConfiguration `mapstructure:"server"`
+	Auth        AuthConfiguration       `mapstructure:"auth"`
+	Database    DatabaseConfiguration   `mapstructure:"db"`
+	SMTP        SMTPConfiguration       `mapstructure:"smtp"`
+	Logging     LoggingConfiguration    `mapstructure:"logging"`
+	Platform    PlatformConfiguration   `mapstructure:"platform"`
+	ImportFile  ImportFileConfiguration `mapstructure:"import_file"`
+	Runner      RunnerConfiguration     `mapstructure:"runner"`
+	Storage     StorageConfiguration    `mapstructure:"storage"`
+	Attachments AttachmentConfiguration `mapstructure:"attachments"`
+	MCP         MCPConfiguration        `mapstructure:"mcp"`
 }
 
 type DatabaseConfiguration struct {
@@ -110,11 +111,30 @@ type RunnerConfiguration struct {
 	BrowserUseWSURL string `mapstructure:"browseruse_ws_url" envconfig:"QATARINA_RUNNER_BROWSERUSE_WS_URL"`
 }
 
+// StorageConfiguration selects where uploaded files are kept. S3 is used when
+// driver is "s3" and s3_bucket is set; otherwise files are stored under local_path.
 type StorageConfiguration struct {
 	Driver    string `mapstructure:"driver" envconfig:"QATARINA_STORAGE_DRIVER"`
 	LocalPath string `mapstructure:"local_path" envconfig:"QATARINA_STORAGE_LOCAL_PATH"`
 	S3Bucket  string `mapstructure:"s3_bucket" envconfig:"QATARINA_STORAGE_S3_BUCKET"`
 	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
+	// S3Endpoint is optional and only needed for S3-compatible services such as MinIO
+	S3Endpoint string `mapstructure:"s3_endpoint" envconfig:"QATARINA_STORAGE_S3_ENDPOINT"`
+}
+
+const DefaultMaxFileSize int64 = 10 * 1024 * 1024 // 10 MB
+
+type AttachmentConfiguration struct {
+	MaxFileSize int64 `mapstructure:"max_file_size" envconfig:"QATARINA_ATTACHMENTS_MAX_FILE_SIZE"`
+}
+
+// GetMaxFileSize returns the configured maximum upload size, falling back to
+// DefaultMaxFileSize when unset
+func (a *AttachmentConfiguration) GetMaxFileSize() int64 {
+	if a == nil || a.MaxFileSize <= 0 {
+		return DefaultMaxFileSize
+	}
+	return a.MaxFileSize
 }
 
 const (
@@ -200,7 +220,10 @@ var DefaultConfig = Config{
 		Driver:    "local",
 		LocalPath: "./storage",
 		S3Bucket:  "",
-		S3Region:  "",
+		S3Region:  "us-east-1",
+	},
+	Attachments: AttachmentConfiguration{
+		MaxFileSize: DefaultMaxFileSize,
 	},
 	MCP: MCPConfiguration{
 		Transport: MCPTransportHTTP,

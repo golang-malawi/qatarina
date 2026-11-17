@@ -42,11 +42,13 @@ components:
       type: object
     schema.AssignTestsToPlanRequest:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         planned_tests:
+          description: Required unless all_test_cases is set
           items:
             $ref: '#/components/schemas/schema.TestCaseAssignment'
           maxItems: 100
-          minItems: 1
           type: array
           uniqueItems: false
         project_id:
@@ -54,7 +56,6 @@ components:
         test_plan_id:
           type: integer
       required:
-      - planned_tests
       - project_id
       - test_plan_id
       type: object
@@ -116,6 +117,19 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.AttachmentResponse:
+      properties:
+        file_name:
+          type: string
+        file_size:
+          type: integer
+        file_type:
+          type: string
+        id:
+          type: string
+        storage_url:
+          type: string
+      type: object
     schema.BulkAssignTesters:
       properties:
         project_id:
@@ -145,6 +159,36 @@ components:
       required:
       - project_id
       - test_cases
+      type: object
+    schema.BulkDeleteTestCasesRequest:
+      properties:
+        selection:
+          $ref: '#/components/schemas/schema.TestCaseSelection'
+      required:
+      - selection
+      type: object
+    schema.BulkDeleteTestCasesResponse:
+      properties:
+        deleted:
+          type: integer
+      type: object
+    schema.BulkTransferTestCasesRequest:
+      properties:
+        feature_or_module:
+          type: string
+        selection:
+          $ref: '#/components/schemas/schema.TestCaseSelection'
+        target_project_id:
+          type: integer
+      required:
+      - feature_or_module
+      - selection
+      - target_project_id
+      type: object
+    schema.BulkTransferTestCasesResponse:
+      properties:
+        transferred:
+          type: integer
       type: object
     schema.ChangeEnvironmentRequest:
       properties:
@@ -199,6 +243,45 @@ components:
         user_id:
           type: integer
         user_name:
+          type: string
+      type: object
+    schema.CommitTestRunResponse:
+      properties:
+        actual_result:
+          type: string
+        attachment_count:
+          type: integer
+        code:
+          type: string
+        environment_id:
+          type: integer
+        executed_by:
+          type: string
+        expected_result:
+          type: string
+        id:
+          type: string
+        is_closed:
+          type: boolean
+        latest_result_id:
+          type: string
+        notes:
+          type: string
+        project_id:
+          type: integer
+        result_id:
+          type: string
+        result_state:
+          type: string
+        test_case_id:
+          type: string
+        test_case_title:
+          type: string
+        test_plan_id:
+          type: integer
+        tested_by_id:
+          type: integer
+        tested_on:
           type: string
       type: object
     schema.CommitTestRunResult:
@@ -424,6 +507,8 @@ components:
       type: object
     schema.CreateTestPlan:
       properties:
+        all_test_cases:
+          $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         assigned_to_id:
           type: integer
         closed_at:
@@ -552,14 +637,13 @@ components:
           type: string
         filename:
           type: string
+        selection:
+          $ref: '#/components/schemas/schema.TestCaseSelection'
         testcases:
           items:
             $ref: '#/components/schemas/schema.ExportedTestCase'
-          minItems: 1
           type: array
           uniqueItems: false
-      required:
-      - testcases
       type: object
     schema.ExportedTestCase:
       properties:
@@ -604,6 +688,17 @@ components:
           type: string
       type: object
     schema.ImportProjectRequest:
+      type: object
+    schema.InboxNavigationResponse:
+      properties:
+        next_id:
+          type: string
+        position:
+          type: integer
+        previous_id:
+          type: string
+        total:
+          type: integer
       type: object
     schema.InboxUnseenCountResponse:
       properties:
@@ -686,7 +781,6 @@ components:
       - description
       - name
       - version
-      - website_url
       type: object
     schema.NewUserRequest:
       properties:
@@ -800,6 +894,29 @@ components:
           type: string
         website_url:
           type: string
+      type: object
+    schema.ProjectTestCaseSelection:
+      properties:
+        excluded_test_case_ids:
+          description: Test cases the user deselected
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        search:
+          description: Same filter as the project test case list (matches title or
+            code)
+          type: string
+        user_ids:
+          description: Testers assigned to each of the selected test cases
+          items:
+            type: integer
+          maxItems: 100
+          minItems: 1
+          type: array
+          uniqueItems: false
+      required:
+      - user_ids
       type: object
     schema.ProjectTestCaseSummaryResponse:
       properties:
@@ -1071,6 +1188,32 @@ components:
         urgency:
           type: string
       type: object
+    schema.TestCaseSelection:
+      properties:
+        excluded_test_case_ids:
+          description: Test cases deselected after select_all
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        project_id:
+          type: integer
+        search:
+          description: Same filter as the project test case list (matches title or
+            code), used with select_all
+          type: string
+        select_all:
+          description: Select every test case in the project matching search
+          type: boolean
+        test_case_ids:
+          description: Test cases ticked individually, used when select_all is false
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      required:
+      - project_id
+      type: object
     schema.TestPlanListResponse:
       properties:
         test_plans:
@@ -1197,6 +1340,8 @@ components:
       properties:
         actual_result:
           type: string
+        attachment_count:
+          type: integer
         code:
           type: string
         environment_id:
@@ -1209,6 +1354,8 @@ components:
           type: string
         is_closed:
           type: boolean
+        latest_result_id:
+          type: string
         notes:
           type: string
         project_id:
@@ -1373,7 +1520,6 @@ components:
       - name
       - project_owner_id
       - version
-      - website_url
       type: object
     schema.UpdateTestCaseRequest:
       properties:
@@ -1888,6 +2034,51 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Get a single Test Case from the current user's inbox
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/{testCaseID}/navigation:
+    get:
+      description: Get the neighbouring open Test Cases around a Test Case, following
+        the inbox order, with its position. Empty IDs mean there is none in that direction.
+      operationId: GetInboxNavigation
+      parameters:
+      - description: Test Case ID
+        in: path
+        name: testCaseID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxNavigationResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get the previous and next Test Cases in the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
@@ -2881,6 +3072,125 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Update project automated testing setting
+      tags:
+      - projects
+  /v1/projects/{projectID}/documents:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get all documents for a project
+      tags:
+      - projects
+    post:
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Document File
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload/Create a document for a project
+      tags:
+      - projects
+  /v1/projects/{projectID}/documents/{documentID}:
+    delete:
+      parameters:
+      - description: Document ID (UUID)
+        in: path
+        name: documentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a project document
       tags:
       - projects
   /v1/projects/{projectID}/environments:
@@ -4653,9 +4963,86 @@ paths:
       summary: Create multiple Test Cases at once
       tags:
       - test-cases
+  /v1/test-cases/bulk-delete:
+    post:
+      description: Delete the test cases ticked in a project's test case list, or
+        with select_all every test case matching the search except the excluded ones
+      operationId: BulkDeleteTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.BulkDeleteTestCasesRequest'
+        description: Test cases to delete
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.BulkDeleteTestCasesResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Conflict
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Delete the selected test cases of a project
+      tags:
+      - test-cases
+  /v1/test-cases/bulk-transfer:
+    post:
+      description: Move the test cases ticked in a project's test case list, or with
+        select_all every test case matching the search except the excluded ones, to
+        another project and feature/module
+      operationId: BulkTransferTestCases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.BulkTransferTestCasesRequest'
+        description: Test cases to transfer and where to
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.BulkTransferTestCasesResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Transfer the selected test cases of a project to another project
+      tags:
+      - test-cases
   /v1/test-cases/export-file:
     post:
-      description: Export test cases to a CSV, XLSX or JSON file
+      description: Export test cases to a CSV, XLSX or JSON file. Send either the
+        testcases to export, or a selection of a project's test cases (which may select
+        all of them) for the server to load.
       operationId: ExportFileFromTestCases
       requestBody:
         content:
@@ -5575,6 +5962,85 @@ paths:
       summary: Create a new Test Run
       tags:
       - test-runs
+  /v1/test-runs/{resultID}/attachments:
+    get:
+      description: List all file attachments linked to a Test Run Result
+      operationId: ListAttachments
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/schema.AttachmentResponse'
+                type: array
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List attachments for a Test Run Result
+      tags:
+      - test-runs
+    post:
+      description: Upload a file attachment linked to a Test Run Result
+      operationId: UploadAttachment
+      parameters:
+      - description: Test Run Result ID
+        in: path
+        name: resultID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        description: Attachment files(multiple allowed)
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.AttachmentResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Upload an attachment for a Test Run Result
+      tags:
+      - test-runs
   /v1/test-runs/{testRunID}:
     delete:
       description: Delete a Test Run
@@ -5750,7 +6216,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CommitTestRunResponse'
           description: OK
         "400":
           content:
@@ -6162,7 +6628,8 @@ paths:
       - users
   /v1/users/{userID}:
     delete:
-      description: Delete a user
+      description: Deactivate (soft delete) a user. The user can no longer log in
+        and is hidden from user lists.
       operationId: DeleteUser
       parameters:
       - description: User ID
@@ -6189,13 +6656,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
-      summary: Delete a user
+      summary: Deactivate a user
       tags:
       - users
     get:

@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -107,24 +108,48 @@ type ExecuteTestRunRequest struct {
 }
 
 type TestRunResponse struct {
-	ID             string `json:"id"`
-	ProjectID      int64  `json:"project_id"`
-	TestPlanID     int64  `json:"test_plan_id"`
-	TestCaseID     string `json:"test_case_id"`
-	TestedByID     int32  `json:"tested_by_id"`
-	Code           string `json:"code"`
-	ResultState    string `json:"result_state"`
-	IsClosed       bool   `json:"is_closed"`
-	Notes          string `json:"notes"`
-	ActualResult   string `json:"actual_result"`
-	ExpectedResult string `json:"expected_result"`
-	TestedOn       string `json:"tested_on"`
-	TestCaseTitle  string `json:"test_case_title"`
-	ExecutedBy     string `json:"executed_by"`
-	EnvironmentID  int32  `json:"environment_id"`
+	ID              string `json:"id"`
+	ProjectID       int64  `json:"project_id"`
+	TestPlanID      int64  `json:"test_plan_id"`
+	TestCaseID      string `json:"test_case_id"`
+	TestedByID      int32  `json:"tested_by_id"`
+	Code            string `json:"code"`
+	ResultState     string `json:"result_state"`
+	IsClosed        bool   `json:"is_closed"`
+	Notes           string `json:"notes"`
+	ActualResult    string `json:"actual_result"`
+	ExpectedResult  string `json:"expected_result"`
+	TestedOn        string `json:"tested_on"`
+	TestCaseTitle   string `json:"test_case_title"`
+	ExecutedBy      string `json:"executed_by"`
+	EnvironmentID   int32  `json:"environment_id"`
+	LatestResultID  string `json:"latest_result_id,omitempty"`
+	AttachmentCount int32  `json:"attachment_count,omitempty"`
 }
 
 func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse {
+	return TestRunResponse{
+		ID:              tr.ID.String(),
+		ProjectID:       int64(tr.ProjectID),
+		TestPlanID:      int64(tr.TestPlanID.Int32),
+		TestCaseID:      tr.TestCaseID.String(),
+		TestedByID:      tr.TestedByID.Int32,
+		Code:            tr.Code,
+		ResultState:     string(tr.ResultState),
+		IsClosed:        tr.IsClosed.Valid && tr.IsClosed.Bool,
+		Notes:           tr.Notes,
+		ActualResult:    tr.ActualResult.String,
+		ExpectedResult:  tr.ExpectedResult.String,
+		TestedOn:        tr.TestedOn.Format(time.DateTime),
+		TestCaseTitle:   tr.TestCaseTitle,
+		ExecutedBy:      tr.ExecutedBy.String,
+		EnvironmentID:   tr.EnvironmentID.Int32,
+		LatestResultID:  tr.LatestResultID.String(),
+		AttachmentCount: int32(tr.AttachmentCount),
+	}
+}
+
+func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
 	return TestRunResponse{
 		ID:             tr.ID.String(),
 		ProjectID:      int64(tr.ProjectID),
@@ -138,27 +163,84 @@ func NewTestRunResponseFromRow(tr dbsqlc.ListTestRunsByPlanRow) TestRunResponse 
 		ActualResult:   tr.ActualResult.String,
 		ExpectedResult: tr.ExpectedResult.String,
 		TestedOn:       tr.TestedOn.Format(time.DateTime),
-		TestCaseTitle:  tr.TestCaseTitle,
-		ExecutedBy:     tr.ExecutedBy.String,
-		EnvironmentID:  tr.EnvironmentID.Int32,
-	}
-}
-
-func NewTestRunResponseFromEntity(tr *dbsqlc.TestRun) TestRunResponse {
-	return TestRunResponse{
-		ID:             tr.ID.String(),
-		ProjectID:      int64(tr.ProjectID),
-		TestPlanID:     int64(tr.TestPlanID.Int32),
-		TestCaseID:     tr.TestCaseID.String(),
-		Code:           tr.Code,
-		ResultState:    string(tr.ResultState),
-		IsClosed:       tr.IsClosed.Valid && tr.IsClosed.Bool,
-		Notes:          tr.Notes,
-		ActualResult:   tr.ActualResult.String,
-		ExpectedResult: tr.ExpectedResult.String,
-		TestedOn:       tr.TestedOn.Format(time.DateTime),
 		TestCaseTitle:  "",
 		ExecutedBy:     "",
 		EnvironmentID:  tr.EnvironmentID.Int32,
 	}
+}
+
+// CommitTestRunResponse is a TestRunResponse plus the ID of the result row
+// created by the commit, which attachments are uploaded against.
+type CommitTestRunResponse struct {
+	TestRunResponse
+	ResultID string `json:"result_id"`
+}
+
+type AttachmentRequest struct {
+	FileName    string    `json:"file_name"`
+	ContentType string    `json:"content_type"`
+	Size        int64     `json:"size"`
+	Content     io.Reader `json:"content"`
+	UploadedBy  int64     `json:"-"`
+}
+
+type AttachmentResponse struct {
+	ID         string `json:"id"`
+	FileName   string `json:"file_name"`
+	FileType   string `json:"file_type"`
+	FileSize   int64  `json:"file_size"`
+	StorageUrl string `json:"storage_url"`
+}
+
+// TestRunFilter narrows a project's test runs. Zero values do not filter.
+type TestRunFilter struct {
+	ProjectID   int64
+	TestPlanID  int64
+	TestCaseID  string
+	ResultState string
+	Limit       int
+	Offset      int
+}
+
+// TestRunListItem is a test run together with the test case and tester it belongs to
+type TestRunListItem struct {
+	ID             string `json:"id"`
+	ProjectID      int64  `json:"project_id"`
+	TestPlanID     int64  `json:"test_plan_id"`
+	TestCaseID     string `json:"test_case_id"`
+	TestCaseCode   string `json:"test_case_code"`
+	TestCaseTitle  string `json:"test_case_title"`
+	TestedByID     int64  `json:"tested_by_id"`
+	TestedBy       string `json:"tested_by"`
+	AssignedToID   int64  `json:"assigned_to_id"`
+	ResultState    string `json:"result_state"`
+	IsClosed       bool   `json:"is_closed"`
+	Notes          string `json:"notes"`
+	ActualResult   string `json:"actual_result"`
+	ExpectedResult string `json:"expected_result"`
+	TestedOn       string `json:"tested_on"`
+	EnvironmentID  int64  `json:"environment_id"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+}
+
+// TestRunResultItem is one result recorded against a test run
+type TestRunResultItem struct {
+	ID             string `json:"id"`
+	Status         string `json:"status"`
+	Result         string `json:"result"`
+	Notes          string `json:"notes"`
+	ExecutedByID   int64  `json:"executed_by_id"`
+	ExecutedByName string `json:"executed_by_name"`
+	ExecutedAt     string `json:"executed_at"`
+}
+
+// TestRunComment is a comment left on a test run
+type TestRunComment struct {
+	ID         int64  `json:"id"`
+	TestRunID  string `json:"test_run_id"`
+	AuthorID   int64  `json:"author_id"`
+	AuthorName string `json:"author_name,omitempty"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
 }

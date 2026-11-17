@@ -1,19 +1,26 @@
 -- name: ListUsers :many
 SELECT * FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC;
 
 -- name: SearchUsers :many
 SELECT * FROM users
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%';
+WHERE deleted_at IS NULL
+AND (
+    first_name ILIKE '%' || $1 || '%'
+    OR last_name ILIKE '%' || $1 || '%'
+    OR display_name ILIKE '%' || $1 || '%'
+    OR email ILIKE '%' || $1 || '%'
+);
 
 -- name: GetUser :one
 SELECT * FROM users WHERE id = $1;
 
 -- name: UserExists :one
 SELECT EXISTS(SELECT id FROM users WHERE id = $1);
+
+-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL);
 
 -- name: FindUserLoginByEmail :one
 SELECT id, display_name, email, password, last_login_at FROM users WHERE email = $1 AND is_activated AND deleted_at IS NULL;
@@ -52,7 +59,11 @@ VALUES(
 RETURNING id;
 
 -- name: DeleteUser :execrows
-DELETE FROM users WHERE id=$1;
+-- Soft delete: users are referenced by projects, test runs, comments, etc.,
+-- so a hard DELETE would violate foreign keys and erase history.
+UPDATE users
+SET is_activated = FALSE, deleted_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListProjects :many
 SELECT * FROM projects ORDER BY created_at DESC;
@@ -345,7 +356,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
   AND (sqlc.arg(projects)::int[] IS NULL OR tr.project_id = ANY(sqlc.arg(projects)::int[]))
 GROUP BY tc.id
-ORDER BY tc.created_at DESC
+ORDER BY tc.created_at DESC, tc.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: TestCaseGetByAssignedUser :one
@@ -378,6 +389,38 @@ LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND tc.id = sqlc.arg(test_case_id)
 GROUP BY tc.id;
+
+-- Neighbours of a test case in the user's inbox, in the same order and with the
+-- same open-only filter as TestCaseListByAssignedUser. The current test case is
+-- always included so navigation still works when it is closed.
+-- name: TestCaseInboxNavigation :one
+WITH inbox AS (
+  SELECT tc.id, tc.created_at
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = sqlc.arg(user_id)::bigint
+    AND (COALESCE(tr.is_closed, false) = false OR tc.id = sqlc.arg(test_case_id)::uuid)
+  GROUP BY tc.id
+),
+ordered AS (
+  SELECT
+    id,
+    LAG(id) OVER w AS previous_id,
+    LEAD(id) OVER w AS next_id,
+    ROW_NUMBER() OVER w AS position,
+    COUNT(*) OVER () AS total
+  FROM inbox
+  WINDOW w AS (ORDER BY created_at DESC, id DESC)
+)
+SELECT
+  COALESCE(previous_id::text, '')::text AS previous_id,
+  COALESCE(next_id::text, '')::text AS next_id,
+  position,
+  total
+FROM ordered
+WHERE id = sqlc.arg(test_case_id)::uuid;
 
 -- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)
@@ -419,6 +462,24 @@ WHERE project_id = sqlc.arg(project_id)
   AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%')
 ORDER BY created_at DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
+-- name: ListTestCasesBySelection :many
+-- Test cases picked in a project's test case list: the given test_case_ids, or with
+-- select_all every test case the list shows for the search, minus the excluded ones
+SELECT *
+FROM test_cases
+WHERE project_id = sqlc.arg(project_id)::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    (sqlc.arg(select_all)::bool
+      AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%')
+      AND NOT (id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[])))
+    OR (NOT sqlc.arg(select_all)::bool AND id = ANY(sqlc.arg(test_case_ids)::uuid[]))
+  )
+ORDER BY created_at ASC, id ASC;
+
+-- name: DeleteTestCasesByIDs :execrows
+DELETE FROM test_cases WHERE id = ANY(sqlc.arg(ids)::uuid[]);
 
 -- name: GetLatestCodeByPrefix :one
 SELECT code FROM test_cases
@@ -531,6 +592,28 @@ VALUES (
 )
 ON CONFLICT DO NOTHING;
 
+-- name: AddProjectTestCasesToPlan :execrows
+-- Adds every (non-suggested) test case in a project matching the search filter to a
+-- test plan, assigning each one to all the given testers, without loading the cases
+INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
+SELECT
+    sqlc.arg(test_plan_id)::bigint,
+    tc.id,
+    u.user_id,
+    COALESCE(
+        (SELECT pc.urgency FROM test_plan_cases pc
+         WHERE pc.test_plan_id = sqlc.arg(test_plan_id)::bigint AND pc.test_case_id = tc.id
+         LIMIT 1),
+        'medium'
+    )
+FROM test_cases tc
+CROSS JOIN unnest(sqlc.arg(user_ids)::bigint[]) AS u(user_id)
+WHERE tc.project_id = sqlc.arg(project_id)::int
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND (sqlc.arg(search)::text = '' OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%' OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%')
+  AND NOT (tc.id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[]))
+ON CONFLICT DO NOTHING;
+
 -- name: UpdateTestPlanCaseUrgency :execrows
 UPDATE test_plan_cases
 SET urgency = sqlc.arg(urgency)
@@ -581,8 +664,21 @@ SELECT
     tr.created_at,
     tr.updated_at,
     tr.environment_id,
-    tc.title AS test_case_title,
-    u.display_name AS executed_by
+    u.display_name AS executed_by,
+    (
+      SELECT id
+      FROM test_run_results trr
+      WHERE trr.test_run_id = tr.id
+      ORDER BY trr.created_at DESC
+      LIMIT 1
+    ) AS latest_result_id,
+    (
+      SELECT COUNT(*)
+      FROM test_run_attachments tra
+      JOIN test_run_results trr ON tra.test_run_result_id = trr.id
+      WHERE trr.test_run_id = tr.id
+    ) AS attachment_count,
+    tc.title AS test_case_title
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id
@@ -639,6 +735,25 @@ INSERT INTO test_run_results (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
 RETURNING id;
+
+-- name: InsertTestRunAttachment :execrows
+-- project_id is taken from the result's test run; no row is inserted if the result does not exist
+INSERT INTO test_run_attachments (
+    id, test_run_result_id, project_id, uploaded_by, file_name, file_type, file_size, storage_key, storage_url, created_at
+)
+SELECT
+    sqlc.arg(id)::uuid, trr.id, tr.project_id, sqlc.arg(uploaded_by)::int,
+    sqlc.arg(file_name)::text, sqlc.arg(file_type)::text, sqlc.arg(file_size)::bigint,
+    sqlc.arg(storage_key)::text, sqlc.arg(storage_url)::text, sqlc.arg(created_at)::timestamp
+FROM test_run_results trr
+JOIN test_runs tr ON tr.id = trr.test_run_id
+WHERE trr.id = sqlc.arg(test_run_result_id)::uuid;
+
+-- name: ListTestRunAttachments :many
+SELECT id, test_run_result_id, file_name, file_type, file_size, storage_key, storage_url, created_at
+FROM test_run_attachments
+WHERE test_run_result_id = $1
+ORDER BY created_at DESC;
 
 -- name: AssignTesterToProject :execrows
 INSERT INTO project_testers (
@@ -1062,3 +1177,152 @@ ORDER BY r.created_at, r.id;
 DELETE FROM test_case_relations
 WHERE id = sqlc.arg(id)
   AND (test_case_id = sqlc.arg(test_case_id) OR related_test_case_id = sqlc.arg(test_case_id));
+
+-- name: ListDocumentsByProject :many
+SELECT * FROM project_documents 
+WHERE project_id = $1 
+ORDER BY created_at DESC;
+
+-- name: GetProjectDocument :one
+SELECT * FROM project_documents 
+WHERE id = $1;
+
+-- name: CreateProjectDocument :one
+INSERT INTO project_documents (
+    id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW()
+)
+RETURNING *;
+
+-- name: DeleteProjectDocument :execrows
+DELETE FROM project_documents WHERE id = $1;
+-- name: ListUntestedTestCasesByProject :many
+-- Test cases with no recorded result (passed or failed) yet. With a test plan,
+-- only the plan's test cases are listed and only results in that plan count.
+SELECT * FROM test_cases
+WHERE project_id = sqlc.arg(project_id)::int
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    sqlc.narg(test_plan_id)::bigint IS NULL
+    OR EXISTS (
+      SELECT 1 FROM test_plan_cases tpc
+      WHERE tpc.test_case_id = test_cases.id
+        AND tpc.test_plan_id = sqlc.narg(test_plan_id)::bigint
+    )
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = test_cases.id
+      AND tr.result_state <> 'pending'
+      AND (sqlc.narg(test_plan_id)::bigint IS NULL OR tr.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  )
+ORDER BY created_at DESC, id DESC;
+
+-- name: ListFailedTestCasesByProject :many
+-- Test cases whose most recently recorded result is a failure, with that result.
+-- With a test plan, only results recorded in that plan count.
+SELECT
+  tc.id,
+  tc.code,
+  tc.title,
+  tc.feature_or_module,
+  tc.priority,
+  tr.id AS test_run_id,
+  tr.test_plan_id,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.actual_result,
+  tr.notes,
+  tr.updated_at AS failed_at
+FROM test_cases tc
+JOIN LATERAL (
+  SELECT r.id, r.test_plan_id, r.tested_by_id, r.result_state, r.actual_result, r.notes, r.updated_at
+  FROM test_runs r
+  WHERE r.test_case_id = tc.id
+    AND r.result_state <> 'pending'
+    AND (sqlc.narg(test_plan_id)::bigint IS NULL OR r.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  ORDER BY r.updated_at DESC NULLS LAST, r.id DESC
+  LIMIT 1
+) tr ON true
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tc.project_id = sqlc.arg(project_id)::int
+  AND tr.result_state = 'failed'
+ORDER BY tr.updated_at DESC NULLS LAST, tc.id DESC;
+
+-- name: ListProjectTestRuns :many
+-- A project's test runs, most recently updated first, optionally narrowed to a
+-- test plan, a test case or a result state.
+SELECT
+  tr.id,
+  tr.project_id,
+  tr.test_plan_id,
+  tr.test_case_id,
+  tc.code AS test_case_code,
+  tc.title AS test_case_title,
+  tr.tested_by_id,
+  COALESCE(u.display_name, '')::text AS tested_by,
+  tr.assigned_to_id,
+  tr.result_state,
+  tr.is_closed,
+  tr.notes,
+  tr.actual_result,
+  tr.expected_result,
+  tr.tested_on,
+  tr.environment_id,
+  tr.created_at,
+  tr.updated_at
+FROM test_runs tr
+JOIN test_cases tc ON tc.id = tr.test_case_id
+LEFT JOIN users u ON u.id = tr.tested_by_id
+WHERE tr.project_id = sqlc.arg(project_id)::int
+  AND (sqlc.narg(test_plan_id)::bigint IS NULL OR tr.test_plan_id = sqlc.narg(test_plan_id)::bigint)
+  AND (sqlc.narg(test_case_id)::uuid IS NULL OR tr.test_case_id = sqlc.narg(test_case_id)::uuid)
+  AND (sqlc.narg(result_state)::test_run_state IS NULL OR tr.result_state = sqlc.narg(result_state)::test_run_state)
+ORDER BY tr.updated_at DESC NULLS LAST, tr.id DESC
+LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::int;
+
+-- name: ListTestRunResults :many
+-- Every result recorded against a test run, newest first
+SELECT
+  trr.id,
+  trr.status,
+  trr.result,
+  trr.notes,
+  trr.executed_by,
+  COALESCE(u.display_name, '')::text AS executed_by_name,
+  trr.executed_at
+FROM test_run_results trr
+LEFT JOIN users u ON u.id = trr.executed_by
+WHERE trr.test_run_id = $1
+ORDER BY trr.executed_at DESC, trr.id DESC;
+
+-- name: CreateTestRunComment :one
+INSERT INTO test_runs_comments (test_run_id, author_id, content, created_at)
+VALUES (sqlc.arg(test_run_id), sqlc.arg(author_id), sqlc.arg(content), NOW())
+RETURNING id, created_at;
+
+-- name: ListTestRunComments :many
+SELECT
+  c.id,
+  c.author_id,
+  COALESCE(u.display_name, '')::text AS author_name,
+  c.content,
+  c.created_at
+FROM test_runs_comments c
+LEFT JOIN users u ON u.id = c.author_id
+WHERE c.test_run_id = $1
+ORDER BY c.created_at, c.id;
+
+-- name: UpdateTestPlanDetails :execrows
+-- Updates the editable details of a test plan, leaving its counters, status and
+-- assignments untouched
+UPDATE test_plans SET
+  kind = sqlc.arg(kind),
+  description = sqlc.arg(description),
+  environment_id = sqlc.narg(environment_id),
+  start_at = sqlc.arg(start_at),
+  scheduled_end_at = sqlc.arg(scheduled_end_at),
+  updated_by_id = sqlc.arg(updated_by_id),
+  updated_at = NOW()
+WHERE id = sqlc.arg(id);

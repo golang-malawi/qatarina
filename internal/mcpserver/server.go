@@ -27,6 +27,13 @@ type Server struct {
 	userService     services.UserService
 	projectService  services.ProjectService
 	testCaseService services.TestCaseService
+	testPlanService services.TestPlanService
+	testerService   services.TesterService
+	testRunService  services.TestRunService
+	moduleService   services.ModuleService
+	documentService services.DocumentService
+
+	environmentService services.EnvironmentService
 }
 
 func New(cfg *config.Config, logger logging.Logger) *Server {
@@ -41,6 +48,14 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		userService:     services.NewUserService(dbConn, logger, cfg.SMTP),
 		projectService:  services.NewProjectService(dbConn, logger, moduleService),
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
+		testPlanService: services.NewTestPlanService(dbConn, logger),
+		testerService:   services.NewTesterService(dbConn, logger),
+		// No tool uploads or reads files, so the services get no storage backend
+		testRunService:  services.NewTestRunService(rawDB.DB, dbConn, logger, nil, cfg.Attachments.GetMaxFileSize()),
+		moduleService:   moduleService,
+		documentService: services.NewDocumentService(dbConn, logger, nil, cfg.Attachments.GetMaxFileSize()),
+
+		environmentService: services.NewEnvironmentService(dbConn),
 		mcp: server.NewMCPServer(
 			"qatarina",
 			version.Version,
@@ -116,7 +131,61 @@ func (s *Server) registerTools() {
 		s.listProjectTestCases,
 	)
 
+	s.mcp.AddTool(
+		mcp.NewTool("list_project_test_plans",
+			mcp.WithDescription("List a project's test plans with their progress. Test cases are assigned to testers "+
+				"within a test plan, so use this to find the plan to assign work in. Plans that are complete or locked "+
+				"should not receive new assignments."),
+			mcp.WithNumber("project_id", mcp.Required(), mcp.Description("ID of the project, as returned by list_projects.")),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjectTestPlans,
+	)
+
+	s.mcp.AddTool(
+		mcp.NewTool("list_project_testers",
+			mcp.WithDescription("List the testers assigned to a project, with their roles. Use their user IDs to assign test cases."),
+			mcp.WithNumber("project_id", mcp.Required(), mcp.Description("ID of the project, as returned by list_projects.")),
+			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithDestructiveHintAnnotation(false),
+		),
+		s.listProjectTesters,
+	)
+
 	s.mcp.AddTool(addTestCasesTool(), s.addTestCases)
+	s.mcp.AddTool(assignTestCasesTool(), s.assignTestCases)
+	s.mcp.AddTool(listProjectEnvironmentsTool(), s.listProjectEnvironments)
+	s.mcp.AddTool(createProjectEnvironmentTool(), s.createProjectEnvironment)
+
+	// Projects
+	s.mcp.AddTool(getProjectTool(), s.getProject)
+	s.mcp.AddTool(searchProjectsTool(), s.searchProjects)
+	s.mcp.AddTool(listModulesTool(), s.listModules)
+	s.mcp.AddTool(projectListDocumentsTool(), s.projectListDocuments)
+	s.mcp.AddTool(projectSearchDocumentsTool(), s.projectSearchDocuments)
+
+	// Test cases
+	s.mcp.AddTool(getTestCaseTool(), s.getTestCase)
+	s.mcp.AddTool(searchTestCasesTool(), s.searchTestCases)
+	s.mcp.AddTool(listUntestedCasesTool(), s.listUntestedCases)
+	s.mcp.AddTool(listFailedTestCasesTool(), s.listFailedTestCases)
+	s.mcp.AddTool(addTestCaseTool(), s.addTestCase)
+	s.mcp.AddTool(updateTestCaseTool(), s.updateTestCase)
+
+	// Test plans
+	s.mcp.AddTool(getTestPlanTool(), s.getTestPlan)
+	s.mcp.AddTool(searchTestPlansTool(), s.searchTestPlans)
+	s.mcp.AddTool(addTestPlanTool(), s.addTestPlan)
+	s.mcp.AddTool(updateTestPlanTool(), s.updateTestPlan)
+	s.mcp.AddTool(addTestPlanCommentTool(), s.addTestPlanComment)
+
+	// Test runs
+	s.mcp.AddTool(listTestRunsTool(), s.listTestRuns)
+	s.mcp.AddTool(getTestRunTool(), s.getTestRun)
+	s.mcp.AddTool(listFailedTestRunsTool(), s.listFailedTestRuns)
+	s.mcp.AddTool(recordTestResultTool(), s.recordTestResult)
+	s.mcp.AddTool(recordTestCommentTool(), s.recordTestComment)
 }
 
 func (s *Server) whoami(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
