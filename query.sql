@@ -893,6 +893,25 @@ INNER JOIN frozen f ON f.project_id = tc.project_id
 WHERE tc.id = ANY(sqlc.arg(test_case_ids)::uuid[])
 ORDER BY tc.code;
 
+-- name: ListDraftTestCases :many
+-- Returns the test cases among the given IDs that are still drafts
+SELECT id, code
+FROM test_cases
+WHERE id = ANY(sqlc.arg(test_case_ids)::uuid[])
+  AND is_draft = true
+ORDER BY code;
+
+-- name: ListDraftTestCasesInProjectSelection :many
+-- Returns the draft test cases that AddProjectTestCasesToPlan would add for the same filter
+SELECT tc.id, tc.code
+FROM test_cases tc
+WHERE tc.project_id = sqlc.arg(project_id)::int
+  AND tc.is_draft = true
+  AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND (sqlc.arg(search)::text = '' OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%' OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%')
+  AND NOT (tc.id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[]))
+ORDER BY tc.code;
+
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at
 ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now(), now()) RETURNING *;
