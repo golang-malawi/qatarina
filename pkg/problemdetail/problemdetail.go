@@ -52,19 +52,19 @@ func BadRequest(ctx *fiber.Ctx, message string) error {
 	return ctx.Status(http.StatusBadRequest).JSON(BadRequestProblemDetail(message))
 }
 
-func NotFound(ctx *fiber.Ctx, message string) error {
-	return ctx.Status(http.StatusNotFound).JSON(ProblemDetail{
-		Type:    "problemdetail.example.com/http/types/NotFound",
-		Title:   "Not Found",
+func Forbidden(ctx *fiber.Ctx, message string) error {
+	return ctx.Status(http.StatusForbidden).JSON(ProblemDetail{
+		Type:    "problemdetail.example.com/http/types/Forbidden",
+		Title:   "Forbidden",
 		Detail:  message,
 		Context: nil,
 	})
 }
 
-func Forbidden(ctx *fiber.Ctx, message string) error {
-	return ctx.Status(http.StatusForbidden).JSON(ProblemDetail{
-		Type:    "problemdetail.example.com/http/types/Forbidden",
-		Title:   "Forbidden",
+func NotFound(ctx *fiber.Ctx, message string) error {
+	return ctx.Status(http.StatusNotFound).JSON(ProblemDetail{
+		Type:    "problemdetail.example.com/http/types/NotFound",
+		Title:   "Not Found",
 		Detail:  message,
 		Context: nil,
 	})

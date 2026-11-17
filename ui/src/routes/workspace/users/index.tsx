@@ -10,14 +10,19 @@ import {
   Spinner,
   Menu,
   IconButton,
-  Input,
   Fieldset,
 } from "@chakra-ui/react";
 import { IconUser, IconDotsVertical } from "@tabler/icons-react";
-import { useUsersQuery, resetUserPassword } from "@/services/UserService";
+import {
+  useUsersQuery,
+  useGetUserQuery,
+  resetUserPassword,
+} from "@/services/UserService";
+import { useAuth } from "@/hooks/isLoggedIn";
 import ErrorAlert from "@/components/ui/error-alert";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { AppDialog } from "@/components/ui/app-dialog";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
@@ -28,6 +33,13 @@ export const Route = createFileRoute("/workspace/users/")({
 function RouteComponent() {
   const { t } = useTranslation();
   const { data, isPending, isError, error } = useUsersQuery();
+  const { user: loggedInUser } = useAuth();
+  const { data: loggedInUserProfile } = useGetUserQuery(
+    loggedInUser?.user_id?.toString() || "",
+    { enabled: !!loggedInUser?.user_id },
+  );
+  // Only super admins may reset other users' passwords (enforced by the API too).
+  const isSuperAdmin = loggedInUserProfile?.is_super_admin === true;
 
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [userToReset, setUserToReset] = useState<any | null>(null);
@@ -114,66 +126,87 @@ function RouteComponent() {
       </Flex>
 
       <Stack gap={4}>
-        {users.map((user: any) => (
-          <Box
-            key={user.id}
-            p={4}
-            border="sm"
-            borderColor="border.subtle"
-            borderRadius="lg"
-            bg="bg.surface"
-            _hover={{ bg: "bg.subtle", shadow: "sm" }}
-            transition="all 0.2s"
-          >
-            <Flex align="center" gap={3}>
-              <Icon as={IconUser} boxSize={6} color="fg.accent" />
-              <Box flex="1">
-                <Link
-                  to={`/workspace/users/view/$userID`}
-                  params={{ userID: user.id }}
-                >
-                  <Heading size="md" color="fg.heading">
-                    {user.displayName}
-                  </Heading>
-                </Link>
-                <Text fontSize="sm" color="fg.muted">
-                  {t("users.username")}: {user.username}
-                </Text>
-                <Text fontSize="xs" color="fg.subtle">
-                  {t("users.registered_at")}: {user.createdAt}
-                </Text>
-              </Box>
+        {users.map((user: any) => {
+          const isOwnAccount = loggedInUser?.user_id === Number(user.id);
+          // Super admins reset *other* users' passwords (no old password).
+          // Everyone, super admins included, changes their own password via
+          // the settings form, which requires the old password.
+          const canResetPassword = isSuperAdmin && !isOwnAccount;
+          const canChangeOwnPassword = isOwnAccount;
+          const hasActions = canResetPassword || canChangeOwnPassword;
 
-              {/* Three-dot actions menu */}
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    aria-label="User actions"
+          return (
+            <Box
+              key={user.id}
+              p={4}
+              border="sm"
+              borderColor="border.subtle"
+              borderRadius="lg"
+              bg="bg.surface"
+              _hover={{ bg: "bg.subtle", shadow: "sm" }}
+              transition="all 0.2s"
+            >
+              <Flex align="center" gap={3}>
+                <Icon as={IconUser} boxSize={6} color="fg.accent" />
+                <Box flex="1">
+                  <Link
+                    to={`/workspace/users/view/$userID`}
+                    params={{ userID: user.id }}
                   >
-                    <IconDotsVertical />
-                  </IconButton>
-                </Menu.Trigger>
-                <Menu.Positioner>
-                  <Menu.Content
-                    bg="bg.surface"
-                    border="1px solid"
-                    borderColor="border.subtle"
-                    shadow="md"
-                  >
-                    <Menu.Item
-                      value="reset-password"
-                      onClick={() => openResetDialog(user)}
-                    >
-                      Reset password
-                    </Menu.Item>
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Menu.Root>
-            </Flex>
-          </Box>
-        ))}
+                    <Heading size="md" color="fg.heading">
+                      {user.displayName}
+                    </Heading>
+                  </Link>
+                  <Text fontSize="sm" color="fg.muted">
+                    {t("users.username")}: {user.username}
+                  </Text>
+                  <Text fontSize="xs" color="fg.subtle">
+                    {t("users.registered_at")}: {user.createdAt}
+                  </Text>
+                </Box>
+
+                {/* Three-dot actions menu */}
+                {hasActions && (
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        aria-label="User actions"
+                      >
+                        <IconDotsVertical />
+                      </IconButton>
+                    </Menu.Trigger>
+                    <Menu.Positioner>
+                      <Menu.Content
+                        bg="bg.surface"
+                        border="1px solid"
+                        borderColor="border.subtle"
+                        shadow="md"
+                      >
+                        {canResetPassword && (
+                          <Menu.Item
+                            value="reset-password"
+                            onClick={() => openResetDialog(user)}
+                          >
+                            Reset password
+                          </Menu.Item>
+                        )}
+                        {canChangeOwnPassword && (
+                          <Menu.Item value="change-password" asChild>
+                            <Link to="/workspace/settings">
+                              {t("workspace.settings.change_password")}
+                            </Link>
+                          </Menu.Item>
+                        )}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
+                )}
+              </Flex>
+            </Box>
+          );
+        })}
       </Stack>
 
       {/* Reset Password Dialog */}
@@ -214,8 +247,7 @@ function RouteComponent() {
               <Text fontSize="xs" fontWeight="medium" mb={1}>
                 New password
               </Text>
-              <Input
-                type="password"
+              <PasswordInput
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
@@ -225,8 +257,7 @@ function RouteComponent() {
               <Text fontSize="xs" fontWeight="medium" mb={1}>
                 Confirm password
               </Text>
-              <Input
-                type="password"
+              <PasswordInput
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
