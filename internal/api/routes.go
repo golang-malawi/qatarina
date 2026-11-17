@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	_ "github.com/golang-malawi/qatarina/docs"
 	apiv1 "github.com/golang-malawi/qatarina/internal/api/v1"
+	"github.com/golang-malawi/qatarina/internal/graphqlapi"
 	"github.com/golang-malawi/qatarina/pkg/swagger"
 	"github.com/golang-malawi/qatarina/ui"
 )
@@ -27,7 +28,7 @@ func (api *API) routes() {
 		router.Post("/v1/auth/signup", apiv1.Signup(api.AuthService))
 	}
 
-	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey))
+	authenticationMiddleware := RequireAuthentication([]byte(api.Config.Auth.JwtSecretKey), api.UserService, api.logger)
 
 	authV1 := router.Group("/v1/auth", authenticationMiddleware)
 	{
@@ -102,6 +103,7 @@ func (api *API) routes() {
 	{
 		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/inbox/unseen-count", apiv1.GetInboxUnseenCount(api.TestCasesService, api.logger))
+		meV1.Get("/test-cases/inbox/:testCaseID/navigation", apiv1.GetInboxNavigation(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/inbox/:testCaseID", apiv1.GetAssignedTestCase(api.TestCasesService, api.logger))
 		meV1.Post("/test-cases/inbox/:testCaseID/view", apiv1.MarkInboxTestCaseViewed(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/summary", apiv1.GetExecutionSummary(api.TestCasesService, api.logger))
@@ -237,6 +239,20 @@ func (api *API) routes() {
 		documentsV1.Post("", apiv1.CreateProjectDocument(api.DocumentService, api.logger))
 		documentsV1.Delete("/:documentID", apiv1.DeleteProjectDocument(api.DocumentService, api.logger))
 	}
+	// Read-only GraphQL API, alongside the REST API. See docs/graphql.md.
+	gqlSchema, err := graphqlapi.NewSchema(graphqlapi.Services{
+		Projects:  api.ProjectsService,
+		TestPlans: api.TestPlansService,
+		TestCases: api.TestCasesService,
+		TestRuns:  api.TestRunsService,
+		Testers:   api.TesterService,
+	}, api.logger)
+	if err != nil {
+		// The schema is embedded at build time, so this is a programming error.
+		panic(fmt.Sprintf("failed to parse GraphQL schema: %v", err))
+	}
+	router.Post("/graphql", authenticationMiddleware, graphqlapi.Handler(gqlSchema))
+
 	// Serve uploaded files from the configured storage (local or S3)
 	router.Get("/uploads/*", api.serveStoredFile)
 

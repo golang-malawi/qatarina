@@ -896,7 +896,7 @@ type CreateTestCaseParams struct {
 	FeatureOrModule  sql.NullString
 	Title            string
 	Description      string
-	ParentTestCaseID uuid.NullUUID
+	ParentTestCaseID sql.NullUUID
 	IsDraft          sql.NullBool
 	Tags             []string
 	CreatedByID      int32
@@ -1317,9 +1317,13 @@ func (q *Queries) DeleteTestRun(ctx context.Context, id uuid.UUID) (int64, error
 }
 
 const deleteUser = `-- name: DeleteUser :execrows
-DELETE FROM users WHERE id=$1
+UPDATE users
+SET is_activated = FALSE, deleted_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
 `
 
+// Soft delete: users are referenced by projects, test runs, comments, etc.,
+// so a hard DELETE would violate foreign keys and erase history.
 func (q *Queries) DeleteUser(ctx context.Context, id int32) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteUser, id)
 	if err != nil {
@@ -2984,6 +2988,17 @@ func (q *Queries) IsTestPlanActive(ctx context.Context, id int64) (IsTestPlanAct
 	return i, err
 }
 
+const isUserActive = `-- name: IsUserActive :one
+SELECT EXISTS(SELECT id FROM users WHERE id = $1 AND is_activated AND deleted_at IS NULL)
+`
+
+func (q *Queries) IsUserActive(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isUserActive, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const linkCommentAttachments = `-- name: LinkCommentAttachments :execrows
 UPDATE test_plan_comment_attachments
 SET comment_id = $1
@@ -3138,6 +3153,65 @@ func (q *Queries) ListCommentThreadsPage(ctx context.Context, arg ListCommentThr
 	var items []ListCommentThreadsPageRow
 	for rows.Next() {
 		var i ListCommentThreadsPageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TestPlanID,
+			&i.ParentCommentID,
+			&i.UserID,
+			&i.DisplayName,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCommentsByTestPlan = `-- name: ListCommentsByTestPlan :many
+SELECT
+    c.id,
+    c.test_plan_id,
+    c.parent_comment_id,
+    c.user_id,
+    u.display_name,
+    c.content,
+    c.created_at,
+    c.updated_at
+FROM test_plan_comments c
+JOIN users u ON u.id = c.user_id
+WHERE c.test_plan_id = $1
+ORDER BY c.created_at ASC
+`
+
+type ListCommentsByTestPlanRow struct {
+	ID              uuid.UUID
+	TestPlanID      int64
+	ParentCommentID uuid.NullUUID
+	UserID          int64
+	DisplayName     sql.NullString
+	Content         string
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+}
+
+func (q *Queries) ListCommentsByTestPlan(ctx context.Context, testPlanID int64) ([]ListCommentsByTestPlanRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentsByTestPlan, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCommentsByTestPlanRow
+	for rows.Next() {
+		var i ListCommentsByTestPlanRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TestPlanID,
@@ -4680,6 +4754,7 @@ func (q *Queries) ListUntestedTestCasesByProject(ctx context.Context, arg ListUn
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
@@ -4897,10 +4972,13 @@ func (q *Queries) SearchTestCases(ctx context.Context, dollar_1 sql.NullString) 
 
 const searchUsers = `-- name: SearchUsers :many
 SELECT id, first_name, last_name, display_name, email, password, phone, org_id, country_iso, city, address, is_activated, is_reviewed, is_super_admin, is_verified, last_login_at, email_confirmed_at, created_at, updated_at, deleted_at FROM users
-WHERE first_name ILIKE '%' || $1 || '%'
-OR last_name ILIKE '%' || $1 || '%'
-OR display_name ILIKE '%' || $1 || '%'
-OR email ILIKE '%' || $1 || '%'
+WHERE deleted_at IS NULL
+AND (
+    first_name ILIKE '%' || $1 || '%'
+    OR last_name ILIKE '%' || $1 || '%'
+    OR display_name ILIKE '%' || $1 || '%'
+    OR email ILIKE '%' || $1 || '%'
+)
 `
 
 func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]User, error) {
@@ -5119,6 +5197,63 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 	return i, err
 }
 
+const testCaseInboxNavigation = `-- name: TestCaseInboxNavigation :one
+WITH inbox AS (
+  SELECT tc.id, tc.created_at
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = $2::bigint
+    AND (COALESCE(tr.is_closed, false) = false OR tc.id = $1::uuid)
+  GROUP BY tc.id
+),
+ordered AS (
+  SELECT
+    id,
+    LAG(id) OVER w AS previous_id,
+    LEAD(id) OVER w AS next_id,
+    ROW_NUMBER() OVER w AS position,
+    COUNT(*) OVER () AS total
+  FROM inbox
+  WINDOW w AS (ORDER BY created_at DESC, id DESC)
+)
+SELECT
+  COALESCE(previous_id::text, '')::text AS previous_id,
+  COALESCE(next_id::text, '')::text AS next_id,
+  position,
+  total
+FROM ordered
+WHERE id = $1::uuid
+`
+
+type TestCaseInboxNavigationParams struct {
+	TestCaseID uuid.UUID
+	UserID     int64
+}
+
+type TestCaseInboxNavigationRow struct {
+	PreviousID string
+	NextID     string
+	Position   int64
+	Total      int64
+}
+
+// Neighbours of a test case in the user's inbox, in the same order and with the
+// same open-only filter as TestCaseListByAssignedUser. The current test case is
+// always included so navigation still works when it is closed.
+func (q *Queries) TestCaseInboxNavigation(ctx context.Context, arg TestCaseInboxNavigationParams) (TestCaseInboxNavigationRow, error) {
+	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation, arg.TestCaseID, arg.UserID)
+	var i TestCaseInboxNavigationRow
+	err := row.Scan(
+		&i.PreviousID,
+		&i.NextID,
+		&i.Position,
+		&i.Total,
+	)
+	return i, err
+}
+
 const testCaseListByAssignedUser = `-- name: TestCaseListByAssignedUser :many
 SELECT
   tc.id,
@@ -5150,7 +5285,7 @@ WHERE pc.assigned_to_id = $1
   AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
   AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
 GROUP BY tc.id
-ORDER BY tc.created_at DESC
+ORDER BY tc.created_at DESC, tc.id DESC
 LIMIT $5::int OFFSET $4::int
 `
 

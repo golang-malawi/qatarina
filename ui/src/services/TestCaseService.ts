@@ -71,6 +71,12 @@ export async function getInboxTestCaseById(testCaseID: string) {
   });
 }
 
+export async function getInboxNavigation(testCaseID: string) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}/navigation", {
+    params: { path: { testCaseID } },
+  });
+}
+
 export async function getInboxUnseenCount() {
   return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
 }
