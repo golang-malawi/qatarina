@@ -5,6 +5,7 @@ import {
   useMatchRoute,
 } from "@tanstack/react-router";
 import {
+  Alert,
   Badge,
   Box,
   Button,
@@ -23,14 +24,24 @@ import {
 import {
   IconCheck,
   IconClock,
+  IconDownload,
+  IconFileText,
   IconListCheck,
   IconLock,
+  IconLockOpen,
   IconPlayerPlay,
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import { useState, useEffect } from "react";
-import { closeTestPlan, useTestPlanQuery, changeTestPlanEnvironment } from "@/services/TestPlanService";
+import {
+  closeTestPlan,
+  reopenTestPlan,
+  useTestPlanQuery,
+  changeTestPlanEnvironment,
+} from "@/services/TestPlanService";
+import { openReportInNewTab, saveReportFile } from "@/services/ReportService";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetricCard } from "@/components/ui/metric-card";
 import { toaster } from "@/components/ui/toaster";
 import { ErrorState, LoadingState } from "@/components/ui/page-states";
@@ -127,16 +138,48 @@ function ViewTestPlan() {
     if (!testPlan.id) return;
     try {
       setIsClosing(true);
-      await closeTestPlan(testPlan.id);
+      const result = await closeTestPlan(testPlan.id);
       await refetch();
-      toaster.success({ title: t("test_plans.close.success") });
-    } catch (closeError) {
+      if (result?.report) {
+        toaster.success({ title: t("test_plans.close.success") });
+      } else {
+        // The plan is closed, only its report failed
+        toaster.warning({ title: t("test_plans.close.report_failed"), duration: 8000 });
+      }
+    } catch (closeError: any) {
       console.error("Failed to close test plan:", closeError);
-      toaster.error({ title: t("test_plans.close.error") });
+      toaster.error({ title: t("test_plans.close.error"), description: closeError?.message });
     } finally {
       setIsClosing(false);
     }
   };
+
+  const handleReopen = async () => {
+    if (!testPlan.id) return;
+    try {
+      await reopenTestPlan(testPlan.id);
+      await refetch();
+      toaster.success({ title: t("test_plans.reopen.success") });
+    } catch (reopenError: any) {
+      toaster.error({ title: t("test_plans.reopen.error"), description: reopenError?.message });
+    }
+  };
+
+  const reportId = testPlan.report_id;
+  const handleReportAction = async (action: "view" | "download") => {
+    if (!reportId) return;
+    try {
+      if (action === "view") {
+        await openReportInNewTab(projectId, reportId);
+      } else {
+        await saveReportFile(projectId, reportId);
+      }
+    } catch (reportError) {
+      console.error("Failed to open report:", reportError);
+      toaster.error({ title: t("test_plans.report.error") });
+    }
+  };
+  const isLocked = Boolean(testPlan.is_locked);
 
   const kindLabel = testPlan.kind
     ? t(`test_cases.kind.${testPlan.kind}`)
@@ -163,9 +206,11 @@ function ViewTestPlan() {
               <Icon as={IconLock} />
               {testPlan.is_locked ? t("test_plans.status.locked") : t("test_plans.status.open")}
             </Badge>
-            <Badge colorPalette={testPlan.has_report ? "blue" : "gray"} variant="subtle">
-              {testPlan.has_report ? t("test_plans.report.available") : t("test_plans.report.none")}
-            </Badge>
+            {!reportId && (
+              <Badge colorPalette="gray" variant="subtle">
+                {t("test_plans.report.none")}
+              </Badge>
+            )}
           </>
         }
         actions={
@@ -176,24 +221,62 @@ function ViewTestPlan() {
                 {t("test_plans.execute")}
               </Button>
             </Link>
-            {testPlan.is_complete ? (
-              <Button colorPalette="green" variant="subtle" disabled>
-                <IconCheck />
-                {t("test_plans.close.closed")}
-              </Button>
+            {reportId && (
+              <>
+                <Button colorPalette="blue" variant="outline" onClick={() => handleReportAction("view")}>
+                  <IconFileText />
+                  {t("test_plans.report.view")}
+                </Button>
+                <Button colorPalette="blue" variant="ghost" onClick={() => handleReportAction("download")}>
+                  <IconDownload />
+                  {t("test_plans.report.download")}
+                </Button>
+              </>
+            )}
+            {testPlan.is_complete || isLocked ? (
+              <ConfirmDialog
+                title={t("test_plans.reopen.confirm_title")}
+                description={t("test_plans.reopen.confirm_description")}
+                confirmLabel={t("test_plans.reopen")}
+                cancelLabel={t("test_plans.cancel")}
+                confirmColorPalette="orange"
+                onConfirm={handleReopen}
+                trigger={
+                  <Button colorPalette="orange" variant="outline">
+                    <IconLockOpen />
+                    {t("test_plans.reopen")}
+                  </Button>
+                }
+              />
             ) : (
-              <Button
-                colorPalette="green"
-                loading={isClosing}
-                disabled={isClosing}
-                onClick={handleMarkComplete}
-              >
-                {t("test_plans.close.mark_complete")}
-              </Button>
+              <ConfirmDialog
+                title={t("test_plans.close.confirm_title")}
+                description={t("test_plans.close.confirm_description")}
+                confirmLabel={t("test_plans.close.confirm")}
+                cancelLabel={t("test_plans.cancel")}
+                confirmColorPalette="green"
+                onConfirm={handleMarkComplete}
+                trigger={
+                  <Button colorPalette="green" loading={isClosing} disabled={isClosing}>
+                    {t("test_plans.close.mark_complete")}
+                  </Button>
+                }
+              />
             )}
           </HStack>
         }
       />
+
+      {isLocked && (
+        <Alert.Root status="info" mb={6}>
+          <Alert.Indicator>
+            <IconLock />
+          </Alert.Indicator>
+          <Alert.Content>
+            <Alert.Description>{t("test_plans.locked_notice")}</Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
 
       <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", lg: "repeat(5, minmax(0, 1fr))" }} gap={3} mb={6}>
         <MetricCard label={t("test_plans.metric.total")} value={totalCases} icon={IconListCheck} tone="brand" variant="emphasis" helperText={t("test_plans.metric.total_helper")} />
@@ -210,6 +293,7 @@ function ViewTestPlan() {
             <Field.Label>{t("test_plans.active_env")}</Field.Label>
             <Select.Root
               collection={envOptions}
+              disabled={isLocked}
               value={activeEnv ? [String(activeEnv)] : []}
               onValueChange={(e) => handleEnvChange(Number(e.value[0]))}
             >

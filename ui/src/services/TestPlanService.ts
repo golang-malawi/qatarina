@@ -118,6 +118,24 @@ export async function closeTestPlan(testPlanID: number) {
   return response.data;
 }
 
+// Reopens a closed test plan, only allowed for its creator, the project owner or super admins
+export async function reopenTestPlan(testPlanID: number) {
+  const response = await apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/reopen",
+    {
+      params: { path: { testPlanID } },
+    }
+  );
+
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to reopen test plan");
+  }
+
+  return response.data;
+}
+
 export function useUpdateTestPlanCaseUrgencyMutation() {
   return $api.useMutation(
     "post",
