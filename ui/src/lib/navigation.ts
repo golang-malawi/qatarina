@@ -11,7 +11,6 @@ import {
   FiList,
 } from "react-icons/fi";
 import { IconType } from "react-icons";
-import { Route as ProjectOverviewRoute } from "@/routes/(project)/projects/$projectId/overview";
 
 export interface NavItem {
   name: string;
@@ -40,7 +39,9 @@ export const MainLinkItems: NavItem[] = [
 
 // Project‑level links
 export const ProjectLinkItems: NavItem[] = [
-  { path: ProjectOverviewRoute.to, name: "Overview", icon: FiHome }, 
+  // A plain path, not ProjectOverviewRoute.to: a route's `to` is only set once the router
+  // initialises, so reading it while this module loads can give undefined and crash the sidebar
+  { path: "/projects/$projectId/overview", name: "Overview", icon: FiHome },
   { path: "/projects/$projectId/test-cases", name: "Test Cases", icon: FiFileText },
   { path: "/projects/$projectId/test-plans", name: "Test Plans", icon: FiList },
   { path: "/projects/$projectId/features", name: "Features/Modules", icon: FiDatabase },
