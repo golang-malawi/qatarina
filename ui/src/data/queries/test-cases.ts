@@ -123,13 +123,16 @@ export const findTestCaseInboxByIdQueryOptions =(id: string) =>
     },
   });
 
-// Previous/next test cases and position in the inbox, in inbox order.
-// Shares the ["testCases", "inbox"] prefix so it refreshes along with the inbox.
-export const findInboxNavigationQueryOptions = (id: string) =>
+// Previous/next test cases and position in the inbox, in inbox order and limited by the
+// same filters as the list. Shares the ["testCases", "inbox"] prefix so it refreshes along with the inbox.
+export const findInboxNavigationQueryOptions = (
+  id: string,
+  filters: InboxFilters = emptyInboxFilters,
+) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", id, "navigation"],
+    queryKey: ["testCases", "inbox", id, "navigation", filters],
     queryFn: async (): Promise<InboxNavigationResponse> => {
-      const res = await getInboxNavigation(id);
+      const res = await getInboxNavigation(id, filters);
       return (res?.data ?? res) as InboxNavigationResponse;
     },
   });

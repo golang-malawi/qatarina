@@ -68,8 +68,9 @@ type TestCaseService interface {
 	FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error)
 	// FindAssignedToUserByID fetches a single test case from the user's inbox, regardless of which page it is on
 	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error)
-	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox, in inbox order
-	FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error)
+	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox,
+	// in inbox order and limited by the same filters as the inbox list (paging fields are ignored)
+	FindInboxNavigation(ctx context.Context, params *schema.InboxFilterParams, testCaseID string) (*schema.InboxNavigationResponse, error)
 	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
 	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
 	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
@@ -776,15 +777,20 @@ func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID
 	return res, nil
 }
 
-func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error) {
+func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, params *schema.InboxFilterParams, testCaseID string) (*schema.InboxNavigationResponse, error) {
 	id, err := uuid.Parse(testCaseID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid test case id: %w", err)
 	}
 
 	row, err := t.queries.TestCaseInboxNavigation(ctx, dbsqlc.TestCaseInboxNavigationParams{
-		UserID:     userID,
-		TestCaseID: id,
+		UserID:        params.UserID,
+		TestCaseID:    id,
+		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
+		EnvironmentID: params.EnvironmentID,
+		Module:        params.Module,
+		Search:        params.Search,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

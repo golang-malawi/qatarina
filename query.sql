@@ -427,8 +427,9 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
 GROUP BY tc.id;
 
 -- Neighbours of a test case in the user's inbox, in the same order and with the
--- same open-only filter as TestCaseListByAssignedUser. The current test case is
--- always included so navigation still works when it is closed.
+-- same filters as TestCaseListByAssignedUser, so Previous/Next follow the list the
+-- user is looking at. The current test case is always included so navigation still
+-- works when it is closed or no longer matches the filters.
 -- name: TestCaseInboxNavigation :one
 WITH inbox AS (
   SELECT tc.id, tc.created_at
@@ -437,7 +438,21 @@ WITH inbox AS (
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
   LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = sqlc.arg(user_id)::bigint
-    AND (COALESCE(tr.is_closed, false) = false OR tc.id = sqlc.arg(test_case_id)::uuid)
+    AND (
+      tc.id = sqlc.arg(test_case_id)::uuid
+      OR (
+        (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
+        AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+        AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+        AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+        AND (
+          sqlc.arg(search)::text = ''
+          OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+          OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+          OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+        )
+      )
+    )
   GROUP BY tc.id
 ),
 ordered AS (

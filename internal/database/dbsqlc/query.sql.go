@@ -5301,7 +5301,21 @@ WITH inbox AS (
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
   LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = $2::bigint
-    AND (COALESCE(tr.is_closed, false) = false OR tc.id = $1::uuid)
+    AND (
+      tc.id = $1::uuid
+      OR (
+        ($3::bool = true OR COALESCE(tr.is_closed, false) = false)
+        AND ($4::int[] IS NULL OR tc.project_id = ANY($4::int[]))
+        AND ($5::int = 0 OR tp.environment_id = $5::int)
+        AND ($6::text = '' OR tc.feature_or_module = $6::text)
+        AND (
+          $7::text = ''
+          OR tc.title ILIKE '%' || $7::text || '%'
+          OR tc.code ILIKE '%' || $7::text || '%'
+          OR tc.feature_or_module ILIKE '%' || $7::text || '%'
+        )
+      )
+    )
   GROUP BY tc.id
 ),
 ordered AS (
@@ -5324,8 +5338,13 @@ WHERE id = $1::uuid
 `
 
 type TestCaseInboxNavigationParams struct {
-	TestCaseID uuid.UUID
-	UserID     int64
+	TestCaseID    uuid.UUID
+	UserID        int64
+	IncludeClosed bool
+	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 }
 
 type TestCaseInboxNavigationRow struct {
@@ -5336,10 +5355,19 @@ type TestCaseInboxNavigationRow struct {
 }
 
 // Neighbours of a test case in the user's inbox, in the same order and with the
-// same open-only filter as TestCaseListByAssignedUser. The current test case is
-// always included so navigation still works when it is closed.
+// same filters as TestCaseListByAssignedUser, so Previous/Next follow the list the
+// user is looking at. The current test case is always included so navigation still
+// works when it is closed or no longer matches the filters.
 func (q *Queries) TestCaseInboxNavigation(ctx context.Context, arg TestCaseInboxNavigationParams) (TestCaseInboxNavigationRow, error) {
-	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation, arg.TestCaseID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation,
+		arg.TestCaseID,
+		arg.UserID,
+		arg.IncludeClosed,
+		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
+	)
 	var i TestCaseInboxNavigationRow
 	err := row.Scan(
 		&i.PreviousID,

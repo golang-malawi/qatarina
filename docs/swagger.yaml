@@ -2169,14 +2169,40 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/navigation:
     get:
-      description: Get the neighbouring open Test Cases around a Test Case, following
-        the inbox order, with its position. Empty IDs mean there is none in that direction.
+      description: Get the neighbouring Test Cases around a Test Case, following the
+        inbox order and the same filters as the inbox list, with its position. Empty
+        IDs mean there is none in that direction.
       operationId: GetInboxNavigation
       parameters:
       - description: Test Case ID
         in: path
         name: testCaseID
         required: true
+        schema:
+          type: string
+      - description: Include closed test cases
+        in: query
+        name: includeClosed
+        schema:
+          type: boolean
+      - description: Comma-separated project IDs to filter by
+        in: query
+        name: projects
+        schema:
+          type: string
+      - description: Environment ID to filter by
+        in: query
+        name: environmentID
+        schema:
+          type: integer
+      - description: Feature or module name to filter by
+        in: query
+        name: module
+        schema:
+          type: string
+      - description: Search title, code or feature/module
+        in: query
+        name: search
         schema:
           type: string
       requestBody:

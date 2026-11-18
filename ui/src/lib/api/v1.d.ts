@@ -458,7 +458,7 @@ export interface paths {
         };
         /**
          * Get the previous and next Test Cases in the current user's inbox
-         * @description Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+         * @description Get the neighbouring Test Cases around a Test Case, following the inbox order and the same filters as the inbox list, with its position. Empty IDs mean there is none in that direction.
          */
         get: operations["GetInboxNavigation"];
         put?: never;
@@ -3785,7 +3785,18 @@ export interface operations {
     };
     GetInboxNavigation: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include closed test cases */
+                includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Environment ID to filter by */
+                environmentID?: number;
+                /** @description Feature or module name to filter by */
+                module?: string;
+                /** @description Search title, code or feature/module */
+                search?: string;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */

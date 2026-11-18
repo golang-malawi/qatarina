@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SheetView } from "./sheetView";
 import { InboxToolbar, type InboxView } from "@/components/inbox/InboxToolbar";
 import { InboxList } from "@/components/inbox/InboxList";
+import { InboxFiltersContext } from "@/lib/inbox-filters-context";
 
 export const Route = createFileRoute("/workspace/test-cases/inbox")({
   loader: ({ context: { queryClient } }) => {
@@ -130,7 +131,9 @@ function TestCasePageInbox() {
           </Box>
 
           <Box ref={contentPaneRef} flex="1" minW={0} p={{ base: 4, md: 6 }} bg="bg.canvas" overflowY="auto">
-            <Outlet />
+            <InboxFiltersContext.Provider value={filters}>
+              <Outlet />
+            </InboxFiltersContext.Provider>
           </Box>
         </Flex>
       )}

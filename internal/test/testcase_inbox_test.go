@@ -72,6 +72,41 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 		})
 	}
 
+	// Previous/Next follow the filtered list. Inbox order is newest first, so with no
+	// module filter the order is [gamma, beta, alpha]; filtered to "Inbox Alpha" it is [gamma, alpha].
+	gamma := f.newTestCase(t, "Inbox Alpha")
+	if _, err := f.createPlan(gamma); err != nil {
+		t.Fatalf("createPlan failed: %v", err)
+	}
+
+	unfiltered := base
+	nav, err := svc.FindInboxNavigation(ctx, &unfiltered, alpha)
+	if err != nil {
+		t.Fatalf("FindInboxNavigation failed: %v", err)
+	}
+	if nav.PreviousID != beta || nav.NextID != "" || nav.Total != 3 {
+		t.Errorf("unfiltered navigation = %+v, want previous %s, no next, total 3", nav, beta)
+	}
+
+	byModule := base
+	byModule.Module = "Inbox Alpha"
+	nav, err = svc.FindInboxNavigation(ctx, &byModule, alpha)
+	if err != nil {
+		t.Fatalf("FindInboxNavigation (module) failed: %v", err)
+	}
+	if nav.PreviousID != gamma || nav.NextID != "" || nav.Total != 2 {
+		t.Errorf("module navigation = %+v, want previous %s (skipping beta), no next, total 2", nav, gamma)
+	}
+
+	// A test case that doesn't match the filters still gets a position, so the page doesn't break
+	nav, err = svc.FindInboxNavigation(ctx, &byModule, beta)
+	if err != nil {
+		t.Fatalf("FindInboxNavigation (non-matching current) failed: %v", err)
+	}
+	if nav.Total != 3 {
+		t.Errorf("non-matching current navigation total = %d, want 3 (2 matches + the current one)", nav.Total)
+	}
+
 	options, err := svc.FindInboxFilterOptions(ctx, f.ownerID, false)
 	if err != nil {
 		t.Fatalf("FindInboxFilterOptions failed: %v", err)

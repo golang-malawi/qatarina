@@ -21,7 +21,9 @@ import {
   findInboxNavigationQueryOptions,
   findTestCaseInboxByIdQueryOptions,
   findTestCaseSummaryQueryOptions,
+  hasActiveInboxFilters,
 } from "@/data/queries/test-cases";
+import { useInboxFilters } from "@/lib/inbox-filters-context";
 import {
   useQuery,
   useSuspenseQuery,
@@ -87,7 +89,7 @@ function InboxNavigation({
         colorPalette="brand"
         disabled={isPending || !nav?.previous_id}
         onClick={() => nav?.previous_id && onGoTo(nav.previous_id)}
-        title="Previous test case in your inbox"
+        title="Previous test case in the list"
       >
         <IconChevronLeft />
         Previous
@@ -103,7 +105,7 @@ function InboxNavigation({
         colorPalette="brand"
         disabled={isPending || !nav?.next_id}
         onClick={() => nav?.next_id && onGoTo(nav.next_id)}
-        title="Next test case in your inbox"
+        title="Next test case in the list"
       >
         Next
         <IconChevronRight />
@@ -126,8 +128,11 @@ function InboxTestCaseView() {
   const tc = testCase;
   const isDraft = tc.is_draft;
 
+  // Previous/Next follow the list as filtered in the inbox toolbar
+  const inboxFilters = useInboxFilters();
+  const isFiltered = hasActiveInboxFilters(inboxFilters);
   const { data: nav, isPending: isPendingNav } = useQuery(
-    findInboxNavigationQueryOptions(testCaseId),
+    findInboxNavigationQueryOptions(testCaseId, inboxFilters),
   );
   const goToTestCase = (id: string) =>
     navigate({
@@ -233,7 +238,9 @@ function InboxTestCaseView() {
         title: "Success",
         description: nextId
           ? "Test result recorded. Moved to the next test case."
-          : "Test result recorded. That was the last test case in your inbox.",
+          : isFiltered
+            ? "Test result recorded. That was the last test case matching your filters."
+            : "Test result recorded. That was the last test case in your inbox.",
         type: "success",
       });
       setResultText("");
