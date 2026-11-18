@@ -646,7 +646,8 @@ SELECT
       JOIN test_run_results trr ON tra.test_run_result_id = trr.id
       WHERE trr.test_run_id = tr.id
     ) AS attachment_count,
-    tc.title AS test_case_title
+    tc.title AS test_case_title,
+    tc.code AS test_case_code
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id

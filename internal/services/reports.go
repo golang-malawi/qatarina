@@ -142,7 +142,7 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 			testedOn = run.TestedOn.Format(time.DateOnly)
 		}
 
-		pdf.CellFormat(codeWidth, 7, fitText(pdf, run.Code, codeWidth), "1", 0, "", false, 0, "")
+		pdf.CellFormat(codeWidth, 7, fitText(pdf, run.TestCaseCode, codeWidth), "1", 0, "", false, 0, "")
 		pdf.CellFormat(testCaseWidth, 7, fitText(pdf, run.TestCaseTitle, testCaseWidth), "1", 0, "", false, 0, "")
 		pdf.CellFormat(executedByWidth, 7, fitText(pdf, executedBy, executedByWidth), "1", 0, "", false, 0, "")
 		pdf.CellFormat(resultWidth, 7, string(run.ResultState), "1", 0, "", false, 0, "")
