@@ -572,11 +572,57 @@ has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1;
 
 -- name: CloseTestPlan :execrows
+-- Closing a test plan also locks it
 UPDATE test_plans
 SET is_complete = TRUE,
+is_locked = TRUE,
 closed_at = $2,
 updated_at = $2
 WHERE id = $1;
+
+-- name: ReopenTestPlan :execrows
+UPDATE test_plans
+SET is_complete = FALSE,
+is_locked = FALSE,
+closed_at = NULL,
+updated_at = NOW()
+WHERE id = $1;
+
+-- name: IsTestPlanLocked :one
+SELECT COALESCE(is_locked, FALSE)::bool AS is_locked
+FROM test_plans
+WHERE id = $1;
+
+-- name: IsTestRunPlanLocked :one
+-- Whether the test run belongs to a locked test plan, false for test runs outside a plan
+SELECT COALESCE(tp.is_locked, FALSE)::bool AS is_locked
+FROM test_runs tr
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE tr.id = $1;
+
+-- name: IsTestRunResultPlanLocked :one
+-- Whether the test run result belongs to a locked test plan
+SELECT COALESCE(tp.is_locked, FALSE)::bool AS is_locked
+FROM test_run_results r
+INNER JOIN test_runs tr ON tr.id = r.test_run_id
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE r.id = $1;
+
+-- name: CanReopenTestPlan :one
+-- The plan creator, the project owner and super admins may reopen a test plan
+SELECT (
+    EXISTS (
+        SELECT 1
+        FROM test_plans tp
+        INNER JOIN projects p ON p.id = tp.project_id
+        WHERE tp.id = sqlc.arg(test_plan_id)::bigint
+          AND (tp.created_by_id = sqlc.arg(user_id)::int OR p.owner_user_id = sqlc.arg(user_id)::int)
+    )
+    OR EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = sqlc.arg(user_id)::int AND COALESCE(u.is_super_admin, FALSE)
+    )
+)::bool AS can_reopen;
 
 -- name: AddTestCaseToPlan :exec
 INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
@@ -1057,9 +1103,21 @@ SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
 SELECT * FROM reports WHERE id = $1;
 
 -- name: CreateReport :one
-INSERT INTO reports (id, project_id, name, type, status, created_at, file_path)
-VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+INSERT INTO reports (id, project_id, test_plan_id, name, type, status, created_at, file_path)
+VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
 RETURNING *;
+
+-- name: GetLatestTestPlanReport :one
+SELECT * FROM reports
+WHERE test_plan_id = $1
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: RefreshTestPlanHasReport :exec
+-- Sets has_report from whether any report is linked to the test plan
+UPDATE test_plans tp
+SET has_report = EXISTS (SELECT 1 FROM reports r WHERE r.test_plan_id = sqlc.arg(test_plan_id)::bigint)
+WHERE tp.id = sqlc.arg(test_plan_id)::bigint;
 
 -- name: DeleteReport :execrows
 DELETE FROM reports WHERE id = $1;
