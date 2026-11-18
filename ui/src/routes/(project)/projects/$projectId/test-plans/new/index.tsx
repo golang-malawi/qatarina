@@ -193,7 +193,6 @@ function CreateNewTestPlan() {
           description: data.description,
           start_at: data.start_at ? toISODate(data.start_at) : new Date().toISOString(),
           scheduled_end_at: toISODate(data.scheduled_end_at),
-          closed_at: data.closed_at ? toISODate(data.closed_at) : undefined,
           planned_tests: selectedTestCases
             .filter((tc) => !allSelection || tc.user_ids.length > 0)
             .map((tc) => ({

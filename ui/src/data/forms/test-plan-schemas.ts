@@ -6,7 +6,6 @@ export const testPlanCreationSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   start_at: z.string().date(),
   environment_id: z.string().optional(),
-  closed_at: z.string().date().optional(),
   scheduled_end_at: z.string().date(),
 });
 
@@ -18,7 +17,6 @@ export const testPlanUpdateSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   start_at: z.string().date(),
   environment_id: z.string().optional(),
-  closed_at: z.string().date().optional(),
   scheduled_end_at: z.string().date(),
 });
 

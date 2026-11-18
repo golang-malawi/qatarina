@@ -54,7 +54,8 @@ function ProjectOverview() {
   const testCaseCount =
     testCases?.pagination?.total ?? testCases?.test_cases?.length ?? 0;
   const plans = testPlansData?.test_plans ?? [];
-  const activePlans = plans.filter((p) => !p.is_complete && !p.closed_at);
+  // Same rule as the Test Plans page ("In Progress"), so the two pages always agree
+  const activePlans = plans.filter((p) => !p.is_complete);
   const passed = summary?.passed ?? 0;
   const failed = summary?.failed ?? 0;
 
