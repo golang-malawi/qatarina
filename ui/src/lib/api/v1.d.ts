@@ -2040,7 +2040,7 @@ export interface paths {
         put?: never;
         /**
          * Update a Test Plan
-         * @description Update a Test Plan
+         * @description Update a Test Plan's kind, description, environment and dates. Fields left out keep their current value. Complete or locked plans can't be changed.
          */
         post: operations["UpdateTestPlan"];
         /**
@@ -3393,6 +3393,13 @@ export interface components {
             script_path?: string;
             tags?: string[];
             title: string;
+        };
+        "schema.UpdateTestPlan": {
+            description?: string;
+            environment_id?: number;
+            kind?: string;
+            scheduled_end_at?: string;
+            start_at?: string;
         };
         "schema.UpdateTestPlanCaseUrgencyRequest": {
             /** @enum {string} */
@@ -7537,14 +7544,14 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testPlanID: string;
+                testPlanID: number;
             };
             cookie?: never;
         };
-        /** @description Test Plan data */
+        /** @description Fields to change */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.UpdateTestPlan"];
             };
         };
         responses: {
@@ -7554,11 +7561,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TestPlanResponseItem"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

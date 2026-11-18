@@ -1640,6 +1640,19 @@ components:
       - project_id
       - title
       type: object
+    schema.UpdateTestPlan:
+      properties:
+        description:
+          type: string
+        environment_id:
+          type: integer
+        kind:
+          type: string
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+      type: object
     schema.UpdateTestPlanCaseUrgencyRequest:
       properties:
         urgency:
@@ -5573,7 +5586,9 @@ paths:
       tags:
       - test-plans
     post:
-      description: Update a Test Plan
+      description: Update a Test Plan's kind, description, environment and dates.
+        Fields left out keep their current value. Complete or locked plans can't be
+        changed.
       operationId: UpdateTestPlan
       parameters:
       - description: Test Plan ID
@@ -5581,20 +5596,20 @@ paths:
         name: testPlanID
         required: true
         schema:
-          type: string
+          type: integer
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-        description: Test Plan data
+              $ref: '#/components/schemas/schema.UpdateTestPlan'
+        description: Fields to change
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestPlanResponseItem'
           description: OK
         "400":
           content:
@@ -5602,6 +5617,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Conflict
         "500":
           content:
             application/json:

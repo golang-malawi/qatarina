@@ -5954,60 +5954,6 @@ func (q *Queries) UpdateTestCase(ctx context.Context, arg UpdateTestCaseParams) 
 	return err
 }
 
-const updateTestPlan = `-- name: UpdateTestPlan :exec
-UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
-updated_by_id = $5, kind = $6, description = $7, start_at = $8,
-closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
-num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
-WHERE id = $1
-`
-
-type UpdateTestPlanParams struct {
-	ID             int64
-	ProjectID      int32
-	AssignedToID   int32
-	CreatedByID    int32
-	UpdatedByID    int32
-	Kind           TestKind
-	Description    sql.NullString
-	StartAt        sql.NullTime
-	ClosedAt       sql.NullTime
-	ScheduledEndAt sql.NullTime
-	NumTestCases   int32
-	NumFailures    int32
-	IsComplete     sql.NullBool
-	IsLocked       sql.NullBool
-	HasReport      sql.NullBool
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
-	EnvironmentID  sql.NullInt32
-}
-
-func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
-	_, err := q.db.ExecContext(ctx, updateTestPlan,
-		arg.ID,
-		arg.ProjectID,
-		arg.AssignedToID,
-		arg.CreatedByID,
-		arg.UpdatedByID,
-		arg.Kind,
-		arg.Description,
-		arg.StartAt,
-		arg.ClosedAt,
-		arg.ScheduledEndAt,
-		arg.NumTestCases,
-		arg.NumFailures,
-		arg.IsComplete,
-		arg.IsLocked,
-		arg.HasReport,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-		arg.EnvironmentID,
-	)
-	return err
-}
-
 const updateTestPlanCaseUrgency = `-- name: UpdateTestPlanCaseUrgency :execrows
 UPDATE test_plan_cases
 SET urgency = $1
