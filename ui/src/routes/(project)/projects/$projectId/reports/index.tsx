@@ -18,8 +18,8 @@ import {
   useReportsQuery,
   useCreateReportMutation,
   useDeleteReportMutation,
-  downloadReport,
-  viewReportBlob,
+  openReportInNewTab,
+  saveReportFile,
   Report,
 } from "@/services/ReportService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
@@ -46,7 +46,10 @@ function ReportsPage() {
   const deleteMutation = useDeleteReportMutation();
 
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
-  const testPlans = (testPlansData?.test_plans ?? []).map((tp: any) => ({
+  // Reports can only be generated for closed test plans
+  const testPlans = (testPlansData?.test_plans ?? [])
+    .filter((tp: any) => tp.is_complete || tp.closed_at)
+    .map((tp: any) => ({
     id: tp.id,
     title: tp.description ?? tp.name ?? t("reports.untitled_plan"),
   }));
@@ -70,35 +73,30 @@ function ReportsPage() {
     );
   };
 
-  const handleDownload = async (reportID: string) => {
-    const blob = await downloadReport(projectId, reportID);
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report-${reportID}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  };
+  const handleDownload = (reportID: string) => saveReportFile(projectId, reportID);
 
-  const handleView = async (reportID: string) => {
-    const blob = await viewReportBlob(projectId, reportID);
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-  };
+  const handleView = (reportID: string) => openReportInNewTab(projectId, reportID);
 
   async function handleCreate(values: ReportCreationFormData) {
-    await createMutation.mutateAsync({
-      params: { path: { projectID: projectId } },
-      body: {
-        project_id: Number(projectId),
-        test_plan_id: Number(values.test_plan_id),
-        name: values.name,
-        type: values.type,
-        status: values.status,
-      },
-    });
+    try {
+      await createMutation.mutateAsync({
+        params: { path: { projectID: projectId } },
+        body: {
+          project_id: Number(projectId),
+          test_plan_id: Number(values.test_plan_id),
+          name: values.name,
+          type: values.type,
+          status: values.status,
+        },
+      });
+    } catch (err: any) {
+      toaster.create({
+        title: t("reports.create.error"),
+        description: err?.detail || err?.message,
+        type: "error",
+      });
+      return;
+    }
 
     toaster.create({ title: t("reports.create.success"), type: "success" });
     refetch();

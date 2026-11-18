@@ -74,3 +74,23 @@ export function viewReportUrl(projectID: string, reportID: string): string {
     path: { projectID, reportID },
   });
 }
+
+// Opens a report PDF in a new browser tab
+export async function openReportInNewTab(projectID: string, reportID: string): Promise<void> {
+  const blob = await viewReportBlob(projectID, reportID);
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
+
+// Saves a report PDF to the user's device
+export async function saveReportFile(projectID: string, reportID: string): Promise<void> {
+  const blob = await downloadReport(projectID, reportID);
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `report-${reportID}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
