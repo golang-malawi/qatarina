@@ -1,4 +1,5 @@
 import {
+  Badge,
   Box,
   BoxProps,
   Button,
@@ -29,7 +30,12 @@ import { Avatar } from "./ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { THEME_OPTIONS, useColorMode } from "./ui/color-mode";
 import { Route as ProjectOverviewRoute } from "@/routes/(project)/projects/$projectId/overview";
-import { MainLinkItems, ProjectLinkItems } from "@/lib/navigation";
+import {
+  InboxLinkItem,
+  MainLinkItems,
+  ProjectLinkItems,
+} from "@/lib/navigation";
+import { findInboxUnseenCountQueryOptions } from "@/data/queries/test-cases";
 
 interface NavLinkProps {
   item: NavItem;
@@ -392,7 +398,13 @@ const NavLink: React.FC<NavLinkProps> = ({ item, expanded }) => {
   );
 };
 
-const NavLinkItem = ({ item }: { item: NavItem }) => {
+const NavLinkItem = ({
+  item,
+  badgeCount = 0,
+}: {
+  item: NavItem;
+  badgeCount?: number;
+}) => {
   const { isCollapsed } = useSidebar();
   const location = useLocation();
   const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/);
@@ -423,21 +435,47 @@ const NavLinkItem = ({ item }: { item: NavItem }) => {
     >
       <Link to={item.path} params={projectId ? { projectId } : undefined}>
         {item.icon && (
-          <Icon
-            fontSize="16"
-            as={item.icon}
-            mr={isCollapsed ? "0" : "3"}
-            _groupHover={{ color: isActive ? "brand.fg" : "fg" }}
-          />
+          <Box position="relative" display="inline-flex">
+            <Icon
+              fontSize="16"
+              as={item.icon}
+              mr={isCollapsed ? "0" : "3"}
+              _groupHover={{ color: isActive ? "brand.fg" : "fg" }}
+            />
+            {isCollapsed && badgeCount > 0 && (
+              <Box
+                position="absolute"
+                top="-1"
+                right="-1"
+                w="2"
+                h="2"
+                rounded="full"
+                bg="danger.solid"
+              />
+            )}
+          </Box>
         )}
         {!isCollapsed && <Text fontSize="sm">{item.name}</Text>}
+        {!isCollapsed && badgeCount > 0 && (
+          <Badge
+            ms="auto"
+            colorPalette="danger"
+            variant="solid"
+            rounded="full"
+            size="sm"
+          >
+            {badgeCount > 99 ? "99+" : badgeCount}
+          </Badge>
+        )}
       </Link>
     </Flex>
   );
 
   if (isCollapsed) {
+    const tooltip =
+      badgeCount > 0 ? `${item.name} (${badgeCount} new)` : item.name;
     return (
-      <Tooltip content={item.name} positioning={{ placement: "right" }}>
+      <Tooltip content={tooltip} positioning={{ placement: "right" }}>
         {content}
       </Tooltip>
     );
@@ -493,6 +531,8 @@ const SidebarContent = ({ header, ...rest }: SidebarProps) => {
   }, [visibleItems]);
   // Projects list intentionally removed from sidebar navigation
 
+  const { data: unseenCount = 0 } = useQuery(findInboxUnseenCountQueryOptions);
+
   return (
     <Box
       w="full"
@@ -516,6 +556,8 @@ const SidebarContent = ({ header, ...rest }: SidebarProps) => {
 
       <Box flex="1" overflowY="auto" px={isCollapsed ? "1" : "2"}>
         <Stack gap="4" mt="2">
+          <NavLinkItem item={InboxLinkItem} badgeCount={unseenCount} />
+
           {groupedItems.platform.length > 0 && (
             <SidebarSection label="Platform" collapsed={isCollapsed}>
               {groupedItems.platform.map((link) =>

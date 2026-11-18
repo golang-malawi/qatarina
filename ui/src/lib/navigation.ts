@@ -20,8 +20,15 @@ export interface NavItem {
   children?: NavItem[];
 }
 
+// The Inbox is a tester's main place of work, so the sidebar pins it at the top
+// in every context (workspace and project) instead of listing it with the other links.
+export const InboxLinkItem: NavItem = {
+  path: "/workspace/test-cases/inbox",
+  name: "Inbox",
+  icon: FiInbox,
+};
+
 export const MainLinkItems: NavItem[] = [
-  { path: "/workspace/test-cases/inbox", name: "Inbox", icon: FiInbox },
   { path: "/workspace/dashboard", name: "Dashboard", icon: FiHome },
   { path: "/workspace/projects", name: "Projects", icon: FiFolder },
   { path: "/workspace/organizations", name: "Organizations", icon: FiDatabase },
