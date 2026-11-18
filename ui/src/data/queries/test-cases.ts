@@ -5,8 +5,9 @@ import {
   getInboxTestCaseById,
   getInboxUnseenCount,
   getInboxNavigation,
+  getInboxFilterOptions,
 } from "@/services/TestCaseService";
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
 
 type AssignedTestCaseListResponse =
@@ -14,6 +15,8 @@ type AssignedTestCaseListResponse =
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 type InboxNavigationResponse =
   components["schemas"]["schema.InboxNavigationResponse"];
+type InboxFilterOptionsResponse =
+  components["schemas"]["schema.InboxFilterOptionsResponse"];
 
 export type TestCaseListQueryParams = {
   page?: number;
@@ -41,6 +44,58 @@ export const findTestCaseInboxQueryOptions = (
     queryFn: async (): Promise<AssignedTestCaseListResponse> => {
       const res = await getInboxTestCases({ includeClosed, page, pageSize });
       return (res?.data ?? res) as AssignedTestCaseListResponse;
+    },
+  });
+
+// Filters for the inbox list, applied by the server so they cover the whole inbox
+export type InboxFilters = {
+  includeClosed: boolean;
+  search: string;
+  projectId: string;
+  environmentId: string;
+  module: string;
+};
+
+export const emptyInboxFilters: InboxFilters = {
+  includeClosed: false,
+  search: "",
+  projectId: "",
+  environmentId: "",
+  module: "",
+};
+
+export function hasActiveInboxFilters(filters: InboxFilters) {
+  return Boolean(
+    filters.search || filters.projectId || filters.environmentId || filters.module || filters.includeClosed,
+  );
+}
+
+export const INBOX_PAGE_SIZE = 50;
+
+// The inbox list loads page by page as you scroll. Used by both the list and grid views
+// (same key, so they share the cache). Keeps the ["testCases", "inbox"] prefix so
+// invalidating the inbox refreshes it.
+export const inboxListInfiniteQueryOptions = (filters: InboxFilters) =>
+  infiniteQueryOptions({
+    queryKey: ["testCases", "inbox", "list", filters],
+    queryFn: async ({ pageParam }): Promise<AssignedTestCaseListResponse> => {
+      const res = await getInboxTestCases({ ...filters, page: pageParam, pageSize: INBOX_PAGE_SIZE });
+      return (res?.data ?? res) as AssignedTestCaseListResponse;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const total = lastPage?.pagination?.total ?? 0;
+      const loaded = allPages.reduce((acc, page) => acc + (page?.test_cases?.length ?? 0), 0);
+      return loaded < total ? allPages.length + 1 : undefined;
+    },
+  });
+
+export const findInboxFilterOptionsQueryOptions = (includeClosed: boolean) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", "filter-options", includeClosed],
+    queryFn: async (): Promise<InboxFilterOptionsResponse> => {
+      const res = await getInboxFilterOptions(includeClosed);
+      return (res?.data ?? { projects: [], environments: [], modules: [] }) as InboxFilterOptionsResponse;
     },
   });
 

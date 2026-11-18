@@ -20,7 +20,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   findInboxNavigationQueryOptions,
   findTestCaseInboxByIdQueryOptions,
-  findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
 } from "@/data/queries/test-cases";
 import {
@@ -245,13 +244,10 @@ function InboxTestCaseView() {
         attachmentInputRef.current.value = "";
       }
 
-      queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
+      // Refreshes the inbox list (whatever filters are applied), this item, the counts
+      // and the filter options
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
-      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId));
-
-      // Optional: force refetch for instant UI update
-      queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
-      queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
 
       if (nextId) {
         goToTestCase(nextId);

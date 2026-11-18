@@ -53,6 +53,10 @@ export async function getInboxTestCases(params?: {
   includeClosed?: boolean;
   page?: number;
   pageSize?: number;
+  search?: string;
+  projectId?: string;
+  environmentId?: string;
+  module?: string;
 }) {
   return apiClient.request("get", "/v1/me/test-cases/inbox", {
     params: {
@@ -60,8 +64,18 @@ export async function getInboxTestCases(params?: {
         includeClosed: params?.includeClosed ?? false,
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 10,
+        search: params?.search || undefined,
+        projects: params?.projectId || undefined,
+        environmentID: params?.environmentId ? Number(params.environmentId) : undefined,
+        module: params?.module || undefined,
       },
     },
+  });
+}
+
+export async function getInboxFilterOptions(includeClosed: boolean) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/filter-options", {
+    params: { query: { includeClosed } },
   });
 }
 
