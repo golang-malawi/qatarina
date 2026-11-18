@@ -96,6 +96,9 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 
 	var planID sql.NullInt32
 	if request.TestPlanID > 0 {
+		if err := ensureTestPlanNotLocked(ctx, t.queries, int64(request.TestPlanID)); err != nil {
+			return nil, err
+		}
 		planID = sql.NullInt32{Int32: request.TestPlanID, Valid: true}
 	} else {
 		planID = sql.NullInt32{Valid: false}
@@ -190,6 +193,11 @@ func (t *testRunService) CommitWithResultID(ctx context.Context, request *schema
 	if err != nil {
 		return nil, "", err
 	}
+	if testRun.TestPlanID.Valid {
+		if err := ensureTestPlanNotLocked(ctx, t.queries, int64(testRun.TestPlanID.Int32)); err != nil {
+			return nil, "", err
+		}
+	}
 
 	_, err = t.queries.CommitTestRunResult(ctx, dbsqlc.CommitTestRunResultParams{
 		ID:             uuid.MustParse(request.TestRunID),
@@ -233,6 +241,16 @@ func (t *testRunService) CommitWithResultID(ctx context.Context, request *schema
 
 // CommitBulk implements TestRunService.
 func (t *testRunService) CommitBulk(ctx context.Context, bulkRequest *schema.BulkCommitTestResults) (bool, error) {
+	// Check every test run first so results are not saved for only part of the batch
+	for _, request := range bulkRequest.TestResults {
+		runID, err := uuid.Parse(request.TestRunID)
+		if err != nil {
+			return false, fmt.Errorf("invalid test run id %q: %w", request.TestRunID, err)
+		}
+		if err := t.ensureTestRunNotLocked(ctx, runID); err != nil {
+			return false, err
+		}
+	}
 	for _, request := range bulkRequest.TestResults {
 		request.UserID = bulkRequest.UserID
 		_, err := t.Commit(ctx, &request)
@@ -241,6 +259,21 @@ func (t *testRunService) CommitBulk(ctx context.Context, bulkRequest *schema.Bul
 		}
 	}
 	return true, nil
+}
+
+// ensureTestRunNotLocked returns ErrTestPlanLocked if the test run belongs to a locked test plan
+func (t *testRunService) ensureTestRunNotLocked(ctx context.Context, testRunID uuid.UUID) error {
+	locked, err := t.queries.IsTestRunPlanLocked(ctx, testRunID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check whether the test plan is locked: %w", err)
+	}
+	if locked {
+		return ErrTestPlanLocked
+	}
+	return nil
 }
 
 // GetOneTestRun implements TestRunService
@@ -255,7 +288,14 @@ func (t *testRunService) GetOneTestRun(ctx context.Context, testRunID string) (*
 
 // DeleteByID implements TestRunService.
 func (t *testRunService) DeleteByID(ctx context.Context, testRunID string) error {
-	_, err := t.queries.DeleteTestRun(ctx, uuid.MustParse(testRunID))
+	runID, err := uuid.Parse(testRunID)
+	if err != nil {
+		return fmt.Errorf("invalid test run id: %w", err)
+	}
+	if err := t.ensureTestRunNotLocked(ctx, runID); err != nil {
+		return err
+	}
+	_, err = t.queries.DeleteTestRun(ctx, runID)
 	return err
 }
 
@@ -268,6 +308,9 @@ func (t *testRunService) Execute(ctx context.Context, request *schema.ExecuteTes
 	runUUID, err := uuid.Parse(request.ID)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid test run ID: %w", err)
+	}
+	if err := t.ensureTestRunNotLocked(ctx, runUUID); err != nil {
+		return nil, "", err
 	}
 
 	sqlTx, err := t.db.BeginTx(ctx, nil)
@@ -390,6 +433,13 @@ func (t *testRunService) SaveAttachment(ctx context.Context, resultID string, up
 	resultUUID, err := uuid.Parse(resultID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid test run result ID: %w", err)
+	}
+	locked, err := t.queries.IsTestRunResultPlanLocked(ctx, resultUUID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to check whether the test plan is locked: %w", err)
+	}
+	if locked {
+		return nil, ErrTestPlanLocked
 	}
 
 	_, err = common.ValidateAttachment(file.FileName, file.ContentType, file.Size, t.maxFileSize)

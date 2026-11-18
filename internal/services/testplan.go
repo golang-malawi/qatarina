@@ -24,7 +24,11 @@ type TestPlanService interface {
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
 	Update(context.Context, schema.UpdateTestPlan) (bool, error)
-	CloseTestPlan(context.Context, int32) error
+	// CloseTestPlan closes and locks a test plan and generates its report. The plan stays
+	// closed if the report fails, in which case the error wraps ErrTestPlanReportFailed
+	CloseTestPlan(context.Context, int32) (*dbsqlc.Report, error)
+	// ReopenTestPlan unlocks a closed test plan, only for its creator, the project owner or super admins
+	ReopenTestPlan(ctx context.Context, testPlanID int64, userID int64) error
 	ChangeEnvironment(ctx context.Context, projectID, envID int64) error
 	// ListComments returns a page of top-level comments (newest first) with their replies, and the total number of top-level comments
 	ListComments(ctx context.Context, testPlanID int64, limit, offset int32) ([]schema.CommentResponseItem, int64, error)
@@ -262,6 +266,9 @@ func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, ass
 	if err != nil {
 		return nil, err
 	}
+	if testPlan.IsLocked.Bool {
+		return nil, ErrTestPlanLocked
+	}
 
 	// Test cases already in the plan stay usable there (e.g. to change their testers),
 	// only test cases newly added to the plan must not come from frozen modules
@@ -352,6 +359,9 @@ func (t *testPlanService) UpdateTestCaseUrgency(ctx context.Context, testPlanID 
 	if err != nil {
 		return fmt.Errorf("invalid test case id: %w", err)
 	}
+	if err := ensureTestPlanNotLocked(ctx, t.queries, testPlanID); err != nil {
+		return err
+	}
 
 	affected, err := t.queries.UpdateTestPlanCaseUrgency(ctx, dbsqlc.UpdateTestPlanCaseUrgencyParams{
 		TestPlanID: testPlanID,
@@ -420,6 +430,13 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 		TestCases:       []schema.TestCaseResponseItem{},
 	}
 
+	report, err := t.queries.GetLatestTestPlanReport(ctx, sql.NullInt64{Int64: id, Valid: true})
+	if err == nil {
+		response.ReportID = report.ID.String()
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to load the report of plan %d: %w", id, err)
+	}
+
 	for _, tc := range cases {
 		response.TestCases = append(response.TestCases, schema.TestCaseResponseItem{
 			ID:                   tc.ID.String(),
@@ -456,35 +473,118 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 	return true, nil
 }
 
-func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) error {
+var (
+	// ErrTestPlanLocked is returned when changing a test plan that was closed
+	ErrTestPlanLocked = errors.New("test plan is closed and locked, reopen it to make changes")
+	// ErrTestPlanHasPendingRuns is returned when closing a test plan with test runs still open
+	ErrTestPlanHasPendingRuns = errors.New("test plan cannot be closed while some of its test runs are pending")
+	// ErrTestPlanAlreadyClosed is returned when closing a test plan twice
+	ErrTestPlanAlreadyClosed = errors.New("test plan is already closed")
+	// ErrTestPlanNotClosedYet is returned when reopening a test plan that is open
+	ErrTestPlanNotClosedYet = errors.New("test plan is not closed")
+	// ErrTestPlanReopenForbidden is returned when someone other than the plan creator,
+	// the project owner or a super admin reopens a test plan
+	ErrTestPlanReopenForbidden = errors.New("only the test plan creator, the project owner or a super admin can reopen a test plan")
+	// ErrTestPlanReportFailed is returned when a test plan was closed but its report could not be generated
+	ErrTestPlanReportFailed = errors.New("test plan was closed but its report could not be generated")
+)
+
+// ensureTestPlanNotLocked returns ErrTestPlanLocked if the test plan is locked
+func ensureTestPlanNotLocked(ctx context.Context, queries *dbsqlc.Queries, testPlanID int64) error {
+	locked, err := queries.IsTestPlanLocked(ctx, testPlanID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check whether test plan %d is locked: %w", testPlanID, err)
+	}
+	if locked {
+		return ErrTestPlanLocked
+	}
+	return nil
+}
+
+func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (*dbsqlc.Report, error) {
+	plan, err := t.queries.GetTestPlan(ctx, int64(testPlanID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to load test plan: %w", err)
+	}
+	if plan.IsComplete.Bool || plan.ClosedAt.Valid {
+		return nil, ErrTestPlanAlreadyClosed
+	}
+
 	testRuns, err := t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
 	if err != nil {
 		t.logger.Error("error listing test runs", "error", err)
-		return err
+		return nil, err
 	}
-
 	for _, testRun := range testRuns {
-		if testRun.ResultState == "pending" || !testRun.IsClosed.Bool {
-			t.logger.Error("failed to close test plan", "error", err)
-			return fmt.Errorf("cannot close: some test run %v is still pending", testRun.ID)
+		if testRun.ResultState == dbsqlc.TestRunStatePending || !testRun.IsClosed.Bool {
+			return nil, ErrTestPlanHasPendingRuns
 		}
 	}
 
+	closedAt := time.Now()
 	rowsAffected, err := t.queries.CloseTestPlan(ctx, dbsqlc.CloseTestPlanParams{
 		ID:       int64(testPlanID),
-		ClosedAt: common.NullTime(time.Now()),
+		ClosedAt: common.NullTime(closedAt),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("test plan %d not found", testPlanID)
+		return nil, ErrNotFound
 	}
 
+	plan.IsComplete = sql.NullBool{Bool: true, Valid: true}
+	plan.IsLocked = sql.NullBool{Bool: true, Valid: true}
+	plan.ClosedAt = common.NullTime(closedAt)
+	name := strings.TrimSpace(plan.Description.String)
+	if name == "" {
+		name = fmt.Sprintf("Test plan %d", plan.ID)
+	}
+	report, err := createTestPlanReport(ctx, t.queries, t.logger, plan, name+" report", "Summary", "Completed")
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrTestPlanReportFailed, err)
+	}
+	return report, nil
+}
+
+func (t *testPlanService) ReopenTestPlan(ctx context.Context, testPlanID int64, userID int64) error {
+	plan, err := t.queries.GetTestPlan(ctx, testPlanID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("failed to load test plan: %w", err)
+	}
+	canReopen, err := t.queries.CanReopenTestPlan(ctx, dbsqlc.CanReopenTestPlanParams{
+		TestPlanID: testPlanID,
+		UserID:     int32(userID),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to check who can reopen test plan %d: %w", testPlanID, err)
+	}
+	if !canReopen {
+		return ErrTestPlanReopenForbidden
+	}
+	if !plan.IsComplete.Bool && !plan.ClosedAt.Valid && !plan.IsLocked.Bool {
+		return ErrTestPlanNotClosedYet
+	}
+	// Reports generated for the plan stay linked to it
+	if _, err := t.queries.ReopenTestPlan(ctx, testPlanID); err != nil {
+		return fmt.Errorf("failed to reopen test plan %d: %w", testPlanID, err)
+	}
 	return nil
 }
 
 func (t *testPlanService) ChangeEnvironment(ctx context.Context, testPlanID, envID int64) error {
+	if err := ensureTestPlanNotLocked(ctx, t.queries, testPlanID); err != nil {
+		return err
+	}
 	params := dbsqlc.ChangeEnvironmentParams{
 		ID:            testPlanID,
 		EnvironmentID: common.NewNullInt32(int32(envID)),
@@ -697,6 +797,9 @@ func (t *testPlanService) UpdateDetails(ctx context.Context, request schema.Upda
 			return ErrNotFound
 		}
 		return fmt.Errorf("failed to load test plan: %w", err)
+	}
+	if plan.IsLocked.Bool {
+		return ErrTestPlanLocked
 	}
 
 	params := dbsqlc.UpdateTestPlanDetailsParams{
