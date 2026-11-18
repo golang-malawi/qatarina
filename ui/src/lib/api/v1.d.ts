@@ -2044,7 +2044,7 @@ export interface paths {
         put?: never;
         /**
          * Close a Test Plan
-         * @description Close a Test Plan
+         * @description Closes and locks a Test Plan and generates its report. The plan stays closed if the report fails, then report is empty and the report can be generated from the project reports
          */
         post: operations["CloseTestPlan"];
         delete?: never;
@@ -2159,6 +2159,26 @@ export interface paths {
          * @description Change environment of a Test Plan
          */
         post: operations["ChangeEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a closed Test Plan
+         * @description Unlocks a closed Test Plan so it can be changed again. Only the plan creator, the project owner or a super admin can reopen it. Its reports are kept
+         */
+        post: operations["ReopenTestPlan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2733,6 +2753,10 @@ export interface components {
             old_password: string;
             user_id: number;
         };
+        "schema.CloseTestPlanResponse": {
+            message?: string;
+            report?: components["schemas"]["schema.ReportResponse"];
+        };
         "schema.CommentAttachment": {
             content_type?: string;
             created_at?: string;
@@ -3095,6 +3119,8 @@ export interface components {
             name?: string;
             project_id?: number;
             status?: string;
+            /** @description The test plan the report was generated for, 0 for older reports not linked to a plan */
+            test_plan_id?: number;
             type?: string;
         };
         "schema.ResetPasswordRequest": {
@@ -3227,6 +3253,8 @@ export interface components {
             passed_count?: number;
             pending_count?: number;
             project_id?: number;
+            /** @description The latest report generated for the test plan, only set when fetching one test plan */
+            report_id?: string;
             scheduled_end_at?: string;
             start_at?: string;
             test_cases?: components["schemas"]["schema.TestCaseResponseItem"][];
@@ -5347,6 +5375,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7558,11 +7595,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.CloseTestPlanResponse"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7889,6 +7935,65 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ReopenTestPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

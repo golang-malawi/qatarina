@@ -213,6 +213,13 @@ components:
       - old_password
       - user_id
       type: object
+    schema.CloseTestPlanResponse:
+      properties:
+        message:
+          type: string
+        report:
+          $ref: '#/components/schemas/schema.ReportResponse'
+      type: object
     schema.CommentAttachment:
       properties:
         content_type:
@@ -1020,6 +1027,10 @@ components:
           type: integer
         status:
           type: string
+        test_plan_id:
+          description: The test plan the report was generated for, 0 for older reports
+            not linked to a plan
+          type: integer
         type:
           type: string
       type: object
@@ -1301,6 +1312,10 @@ components:
           type: integer
         project_id:
           type: integer
+        report_id:
+          description: The latest report generated for the test plan, only set when
+            fetching one test plan
+          type: string
         scheduled_end_at:
           type: string
         start_at:
@@ -3561,6 +3576,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -5506,7 +5527,9 @@ paths:
       - test-plans
   /v1/test-plans/{testPlanID}/close:
     post:
-      description: Close a Test Plan
+      description: Closes and locks a Test Plan and generates its report. The plan
+        stays closed if the report fails, then report is empty and the report can
+        be generated from the project reports
       operationId: CloseTestPlan
       parameters:
       - description: Test Plan ID
@@ -5525,7 +5548,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CloseTestPlanResponse'
           description: OK
         "400":
           content:
@@ -5533,6 +5556,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -5845,6 +5874,53 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Change environment of a Test Plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/reopen:
+    post:
+      description: Unlocks a closed Test Plan so it can be changed again. Only the
+        plan creator, the project owner or a super admin can reopen it. Its reports
+        are kept
+      operationId: ReopenTestPlan
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Reopen a closed Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/script-test-cases:
