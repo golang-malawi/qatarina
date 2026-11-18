@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,43 +37,48 @@ func (s *reportServiceImpl) ListByProject(ctx context.Context, projectID int64) 
 	return s.queries.ListReportsByProject(ctx, int32(projectID))
 }
 
-func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReportRequest) (*dbsqlc.Report, error) {
-	id := uuid.New()
-	r, err := s.queries.CreateReport(ctx, dbsqlc.CreateReportParams{
-		ID:        id,
-		ProjectID: int32(req.ProjectID),
-		Name:      req.Name,
-		Type:      req.Type,
-		Status:    req.Status,
-		FilePath:  sql.NullString{},
-	})
-	if err != nil {
-		s.logger.Error("reports-service", "failed to insert report", "error", err)
-		return nil, fmt.Errorf("failed to create report: %w", err)
-	}
+// ErrTestPlanNotClosed is returned when a report is requested for a test plan that is still open
+var ErrTestPlanNotClosed = errors.New("reports can only be generated for closed test plans")
 
+func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReportRequest) (*dbsqlc.Report, error) {
 	plan, err := s.queries.GetTestPlan(ctx, req.TestPlanID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		s.logger.Error("reports-service", "failed to fetch test plan", "testPlanID", req.TestPlanID, "error", err)
 		return nil, fmt.Errorf("failed to fetch test plan: %w", err)
 	}
+	if int64(plan.ProjectID) != req.ProjectID {
+		return nil, ErrTestPlanProjectMismatch
+	}
+	if !plan.IsComplete.Bool && !plan.ClosedAt.Valid {
+		return nil, ErrTestPlanNotClosed
+	}
+	return createTestPlanReport(ctx, s.queries, s.logger, plan, req.Name, req.Type, req.Status)
+}
 
-	stats, err := s.queries.GetTestPlanRunStats(ctx, common.NewNullInt32(int32(req.TestPlanID)))
+// createTestPlanReport generates the PDF report of a test plan, stores it linked to
+// the plan and marks the plan as having a report
+func createTestPlanReport(ctx context.Context, queries *dbsqlc.Queries, logger logging.Logger, plan dbsqlc.GetTestPlanRow, name, reportType, status string) (*dbsqlc.Report, error) {
+	stats, err := queries.GetTestPlanRunStats(ctx, common.NewNullInt32(int32(plan.ID)))
 	if err != nil {
-		s.logger.Error("reports-service", "failed to fetch plan stats", "testPlanID", req.TestPlanID, "error", err)
+		logger.Error("reports-service", "failed to fetch plan stats", "testPlanID", plan.ID, "error", err)
 		return nil, fmt.Errorf("failed to fetch test plan stats: %w", err)
 	}
 
-	runs, err := s.queries.ListTestRunsByPlan(ctx, common.NewNullInt32(int32(req.TestPlanID)))
+	runs, err := queries.ListTestRunsByPlan(ctx, common.NewNullInt32(int32(plan.ID)))
 	if err != nil {
-		s.logger.Error("reports-service", "failed to fetch test runs", "testPlanID", req.TestPlanID, "error", err)
+		logger.Error("reports-service", "failed to fetch test runs", "testPlanID", plan.ID, "error", err)
 		return nil, fmt.Errorf("failed to fetch test runs: %w", err)
 	}
+
+	id := uuid.New()
 
 	// Ensure storage/reports directory exists
 	reportDir := "storage/reports"
 	if err := os.MkdirAll(reportDir, os.ModePerm); err != nil {
-		s.logger.Error("reports-service", "failed to create reports directory", "dir", reportDir, "error", err)
+		logger.Error("reports-service", "failed to create reports directory", "dir", reportDir, "error", err)
 		return nil, fmt.Errorf("failed to prepare reports directory: %w", err)
 	}
 
@@ -82,7 +88,7 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
 	pdf.SetFont("Arial", "B", 16)
-	pdf.Cell(0, 10, fmt.Sprintf("Report: %s", req.Name))
+	pdf.Cell(0, 10, fmt.Sprintf("Report: %s", name))
 	pdf.Ln(12)
 
 	// Plan summary
@@ -134,27 +140,43 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 		pdf.Ln(-1)
 	}
 
-	// Save PDF
+	// Save the PDF before storing the report, so no report is left without its file
 	if err := pdf.OutputFileAndClose(filePath); err != nil {
-		s.logger.Error("reports-service", "failed to write PDF", "filePath", filePath, "error", err)
+		logger.Error("reports-service", "failed to write PDF", "filePath", filePath, "error", err)
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
 
-	err = s.queries.UpdateReportFilePath(ctx, dbsqlc.UpdateReportFilePathParams{
-		ID:       id,
-		FilePath: sql.NullString{String: filePath, Valid: true},
+	r, err := queries.CreateReport(ctx, dbsqlc.CreateReportParams{
+		ID:         id,
+		ProjectID:  plan.ProjectID,
+		TestPlanID: sql.NullInt64{Int64: plan.ID, Valid: true},
+		Name:       name,
+		Type:       reportType,
+		Status:     status,
+		FilePath:   sql.NullString{String: filePath, Valid: true},
 	})
 	if err != nil {
-		s.logger.Error("reports-service", "failed to update report file path", "error", err)
-		return nil, fmt.Errorf("failed to update report file path: %w", err)
+		os.Remove(filePath)
+		logger.Error("reports-service", "failed to insert report", "error", err)
+		return nil, fmt.Errorf("failed to create report: %w", err)
 	}
 
-	r.FilePath = sql.NullString{String: filePath, Valid: true}
+	if err := queries.RefreshTestPlanHasReport(ctx, plan.ID); err != nil {
+		logger.Error("reports-service", "failed to mark test plan as having a report", "testPlanID", plan.ID, "error", err)
+		return nil, fmt.Errorf("failed to mark test plan as having a report: %w", err)
+	}
 	return &r, nil
 }
 
 func (s *reportServiceImpl) GetByID(ctx context.Context, id string) (*dbsqlc.Report, error) {
-	r, err := s.queries.GetReport(ctx, uuid.MustParse(id))
+	reportID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	r, err := s.queries.GetReport(ctx, reportID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -162,6 +184,23 @@ func (s *reportServiceImpl) GetByID(ctx context.Context, id string) (*dbsqlc.Rep
 }
 
 func (s *reportServiceImpl) DeleteByID(ctx context.Context, id string) error {
-	_, err := s.queries.DeleteReport(ctx, uuid.MustParse(id))
-	return err
+	report, err := s.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if _, err := s.queries.DeleteReport(ctx, report.ID); err != nil {
+		return err
+	}
+	if report.FilePath.Valid {
+		if err := os.Remove(report.FilePath.String); err != nil && !errors.Is(err, os.ErrNotExist) {
+			s.logger.Error("reports-service", "failed to remove report file", "filePath", report.FilePath.String, "error", err)
+		}
+	}
+	// The plan keeps has_report only while another report is linked to it
+	if report.TestPlanID.Valid {
+		if err := s.queries.RefreshTestPlanHasReport(ctx, report.TestPlanID.Int64); err != nil {
+			return fmt.Errorf("failed to update test plan report flag: %w", err)
+		}
+	}
+	return nil
 }
