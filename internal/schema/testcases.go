@@ -184,6 +184,8 @@ type AssignedTestCase struct {
 	IsViewed        bool            `json:"is_viewed"`
 	Priority        string          `json:"priority"`
 	Urgency         string          `json:"urgency"`
+	ProjectTitle    string          `json:"project_title,omitempty"`
+	EnvironmentName string          `json:"environment_name,omitempty"`
 }
 
 type TestCaseExecutionSummary struct {

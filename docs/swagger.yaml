@@ -73,6 +73,8 @@ components:
           type: string
         environment_id:
           type: integer
+        environment_name:
+          type: string
         external_id:
           type: string
         feature_or_module:
@@ -93,6 +95,8 @@ components:
           type: string
         project_id:
           type: integer
+        project_title:
+          type: string
         tags:
           items:
             type: string
@@ -714,6 +718,31 @@ components:
           type: string
       type: object
     schema.ImportProjectRequest:
+      type: object
+    schema.InboxFilterOption:
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+      type: object
+    schema.InboxFilterOptionsResponse:
+      properties:
+        environments:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
+        modules:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
+        projects:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
       type: object
     schema.InboxNavigationResponse:
       properties:
@@ -2046,6 +2075,26 @@ paths:
         name: includeClosed
         schema:
           type: boolean
+      - description: Comma-separated project IDs to filter by
+        in: query
+        name: projects
+        schema:
+          type: string
+      - description: Environment ID to filter by
+        in: query
+        name: environmentID
+        schema:
+          type: integer
+      - description: Feature or module name to filter by
+        in: query
+        name: module
+        schema:
+          type: string
+      - description: Search title, code or feature/module
+        in: query
+        name: search
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -2195,6 +2244,38 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Mark a Test Case in the current user's inbox as viewed
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/filter-options:
+    get:
+      description: List the distinct projects, environments and modules found in the
+        current user's inbox
+      operationId: GetInboxFilterOptions
+      parameters:
+      - description: Include closed test cases
+        in: query
+        name: includeClosed
+        schema:
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxFilterOptionsResponse'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List the filter options for the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/inbox/unseen-count:

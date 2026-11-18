@@ -26,6 +26,10 @@ import (
 //	@Param          page        query       int     false   "Page number (1-based)"
 //	@Param          pageSize    query       int     false   "Page size"
 //	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Param          projects        query   string  false   "Comma-separated project IDs to filter by"
+//	@Param          environmentID   query   int     false   "Environment ID to filter by"
+//	@Param          module          query   string  false   "Feature or module name to filter by"
+//	@Param          search          query   string  false   "Search title, code or feature/module"
 //	@Success        200         {object}    schema.AssignedTestCaseListResponse
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        500         {object}    problemdetail.ProblemDetail
@@ -54,6 +58,9 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 			Page:          offset,
 			IncludeClosed: includeClosed,
 			Projects:      filteredProjects,
+			EnvironmentID: int32(ctx.QueryInt("environmentID", 0)),
+			Module:        strings.TrimSpace(ctx.Query("module", "")),
+			Search:        strings.TrimSpace(ctx.Query("search", "")),
 		}
 
 		testCases, totalCount, err := testCasesService.FindAllAssignedToUser(ctx.Context(), params)
@@ -71,6 +78,33 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 			},
 		})
 
+	}
+}
+
+// GetInboxFilterOptions godoc
+//
+//	@ID             GetInboxFilterOptions
+//	@Summary        List the filter options for the current user's inbox
+//	@Description    List the distinct projects, environments and modules found in the current user's inbox
+//	@Tags           test-cases
+//	@Accept         json
+//	@Produce        json
+//	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Success        200         {object}    schema.InboxFilterOptionsResponse
+//	@Failure        500         {object}    problemdetail.ProblemDetail
+//	@Router         /v1/me/test-cases/inbox/filter-options [get]
+func GetInboxFilterOptions(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		userID := authutil.GetAuthUserID(ctx)
+		includeClosed := ctx.QueryBool("includeClosed", false)
+
+		options, err := testCasesService.FindInboxFilterOptions(ctx.Context(), userID, includeClosed)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to fetch inbox filter options", "error", err)
+			return problemdetail.ServerErrorProblem(ctx, "failed to fetch inbox filter options")
+		}
+
+		return ctx.JSON(options)
 	}
 }
 

@@ -3184,65 +3184,6 @@ func (q *Queries) ListCommentThreadsPage(ctx context.Context, arg ListCommentThr
 	return items, nil
 }
 
-const listCommentsByTestPlan = `-- name: ListCommentsByTestPlan :many
-SELECT
-    c.id,
-    c.test_plan_id,
-    c.parent_comment_id,
-    c.user_id,
-    u.display_name,
-    c.content,
-    c.created_at,
-    c.updated_at
-FROM test_plan_comments c
-JOIN users u ON u.id = c.user_id
-WHERE c.test_plan_id = $1
-ORDER BY c.created_at ASC
-`
-
-type ListCommentsByTestPlanRow struct {
-	ID              uuid.UUID
-	TestPlanID      int64
-	ParentCommentID uuid.NullUUID
-	UserID          int64
-	DisplayName     sql.NullString
-	Content         string
-	CreatedAt       sql.NullTime
-	UpdatedAt       sql.NullTime
-}
-
-func (q *Queries) ListCommentsByTestPlan(ctx context.Context, testPlanID int64) ([]ListCommentsByTestPlanRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCommentsByTestPlan, testPlanID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCommentsByTestPlanRow
-	for rows.Next() {
-		var i ListCommentsByTestPlanRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.TestPlanID,
-			&i.ParentCommentID,
-			&i.UserID,
-			&i.DisplayName,
-			&i.Content,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listDocumentsByProject = `-- name: ListDocumentsByProject :many
 SELECT id, project_id, uploader_id, name, file_path, file_size, mime_type, created_at, updated_at FROM project_documents 
 WHERE project_id = $1 
@@ -4065,55 +4006,6 @@ func (q *Queries) ListTestCasesByProject(ctx context.Context, projectID sql.Null
 	return items, nil
 }
 
-const listTestCasesInFrozenModules = `-- name: ListTestCasesInFrozenModules :many
-WITH RECURSIVE frozen AS (
-    SELECT m.id, m.project_id, m.name, m.code, 1 AS level
-    FROM modules m
-    WHERE m.is_frozen
-    UNION ALL
-    SELECT c.id, c.project_id, c.name, c.code, f.level + 1
-    FROM modules c
-    INNER JOIN frozen f ON c.parent_module_id = f.id
-    WHERE f.level < 100
-)
-SELECT DISTINCT tc.id, tc.code
-FROM test_cases tc
-INNER JOIN frozen f ON f.project_id = tc.project_id
-    AND lower(trim(tc.feature_or_module)) IN (lower(f.name), lower(f.code))
-WHERE tc.id = ANY($1::uuid[])
-ORDER BY tc.code
-`
-
-type ListTestCasesInFrozenModulesRow struct {
-	ID   uuid.UUID
-	Code string
-}
-
-// Returns the test cases among the given IDs whose module is frozen or sits below a frozen module.
-// Test cases refer to their module by name or code in feature_or_module
-func (q *Queries) ListTestCasesInFrozenModules(ctx context.Context, testCaseIds []uuid.UUID) ([]ListTestCasesInFrozenModulesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTestCasesInFrozenModules, pq.Array(testCaseIds))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListTestCasesInFrozenModulesRow
-	for rows.Next() {
-		var i ListTestCasesInFrozenModulesRow
-		if err := rows.Scan(&i.ID, &i.Code); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listTestCasesBySelection = `-- name: ListTestCasesBySelection :many
 SELECT id, kind, code, feature_or_module, title, description, is_draft, tags, created_by_id, created_at, updated_at, project_id, suggested, runner, script_path, parent_test_case_id, preconditions, priority, external_id
 FROM test_cases
@@ -4174,6 +4066,55 @@ func (q *Queries) ListTestCasesBySelection(ctx context.Context, arg ListTestCase
 			&i.Priority,
 			&i.ExternalID,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTestCasesInFrozenModules = `-- name: ListTestCasesInFrozenModules :many
+WITH RECURSIVE frozen AS (
+    SELECT m.id, m.project_id, m.name, m.code, 1 AS level
+    FROM modules m
+    WHERE m.is_frozen
+    UNION ALL
+    SELECT c.id, c.project_id, c.name, c.code, f.level + 1
+    FROM modules c
+    INNER JOIN frozen f ON c.parent_module_id = f.id
+    WHERE f.level < 100
+)
+SELECT DISTINCT tc.id, tc.code
+FROM test_cases tc
+INNER JOIN frozen f ON f.project_id = tc.project_id
+    AND lower(trim(tc.feature_or_module)) IN (lower(f.name), lower(f.code))
+WHERE tc.id = ANY($1::uuid[])
+ORDER BY tc.code
+`
+
+type ListTestCasesInFrozenModulesRow struct {
+	ID   uuid.UUID
+	Code string
+}
+
+// Returns the test cases among the given IDs whose module is frozen or sits below a frozen module.
+// Test cases refer to their module by name or code in feature_or_module
+func (q *Queries) ListTestCasesInFrozenModules(ctx context.Context, testCaseIds []uuid.UUID) ([]ListTestCasesInFrozenModulesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTestCasesInFrozenModules, pq.Array(testCaseIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTestCasesInFrozenModulesRow
+	for rows.Next() {
+		var i ListTestCasesInFrozenModulesRow
+		if err := rows.Scan(&i.ID, &i.Code); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -5120,25 +5061,43 @@ func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDra
 }
 
 const testCaseCountByAssignedUser = `-- name: TestCaseCountByAssignedUser :one
-SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = $1
-  GROUP BY tc.id
-  HAVING $2::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-) sub
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
+  AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
+  AND ($4::int = 0 OR tp.environment_id = $4::int)
+  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND (
+    $6::text = ''
+    OR tc.title ILIKE '%' || $6::text || '%'
+    OR tc.code ILIKE '%' || $6::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+  )
 `
 
 type TestCaseCountByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
+	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 }
 
+// Must use the same filters as TestCaseListByAssignedUser so pagination totals match the rows.
 func (q *Queries) TestCaseCountByAssignedUser(ctx context.Context, arg TestCaseCountByAssignedUserParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser, arg.UserID, arg.IncludeClosed)
+	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser,
+		arg.UserID,
+		arg.IncludeClosed,
+		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -5275,6 +5234,65 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 	return i, err
 }
 
+const testCaseInboxFilterOptions = `-- name: TestCaseInboxFilterOptions :many
+WITH inbox AS (
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = $1
+    AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
+)
+SELECT kind, value, label FROM (
+  SELECT 'project'::text AS kind, p.id::text AS value, p.title::text AS label
+  FROM inbox i INNER JOIN projects p ON p.id = i.project_id
+  UNION
+  SELECT 'environment'::text, e.id::text, e.name::text
+  FROM inbox i INNER JOIN environments e ON e.id = i.environment_id
+  UNION
+  SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
+  FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+) options
+ORDER BY kind, label
+`
+
+type TestCaseInboxFilterOptionsParams struct {
+	UserID        int64
+	IncludeClosed bool
+}
+
+type TestCaseInboxFilterOptionsRow struct {
+	Kind  string
+	Value string
+	Label string
+}
+
+// Distinct projects, environments and modules found in the user's inbox,
+// used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+func (q *Queries) TestCaseInboxFilterOptions(ctx context.Context, arg TestCaseInboxFilterOptionsParams) ([]TestCaseInboxFilterOptionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, testCaseInboxFilterOptions, arg.UserID, arg.IncludeClosed)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCaseInboxFilterOptionsRow
+	for rows.Next() {
+		var i TestCaseInboxFilterOptionsRow
+		if err := rows.Scan(&i.Kind, &i.Value, &i.Label); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const testCaseInboxNavigation = `-- name: TestCaseInboxNavigation :one
 WITH inbox AS (
   SELECT tc.id, tc.created_at
@@ -5354,23 +5372,38 @@ SELECT
   COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
   BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
+  MAX(pc.urgency)::priority_level AS urgency,
+  COALESCE(MAX(p.title), '')::text AS project_title,
+  COALESCE(MAX(e.name), '')::text AS environment_name
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN projects p ON p.id = tc.project_id
+LEFT JOIN environments e ON e.id = tp.environment_id
 WHERE pc.assigned_to_id = $1
   AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
+  AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
+  AND ($4::int = 0 OR tp.environment_id = $4::int)
+  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND (
+    $6::text = ''
+    OR tc.title ILIKE '%' || $6::text || '%'
+    OR tc.code ILIKE '%' || $6::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+  )
 GROUP BY tc.id
 ORDER BY tc.created_at DESC, tc.id DESC
-LIMIT $5::int OFFSET $4::int
+LIMIT $8::int OFFSET $7::int
 `
 
 type TestCaseListByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
 	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 	RowOffset     int32
 	RowLimit      int32
 }
@@ -5397,6 +5430,8 @@ type TestCaseListByAssignedUserRow struct {
 	IsViewed        bool
 	Priority        PriorityLevel
 	Urgency         PriorityLevel
+	ProjectTitle    string
+	EnvironmentName string
 }
 
 func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseListByAssignedUserParams) ([]TestCaseListByAssignedUserRow, error) {
@@ -5404,6 +5439,9 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 		arg.UserID,
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -5436,6 +5474,8 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 			&i.IsViewed,
 			&i.Priority,
 			&i.Urgency,
+			&i.ProjectTitle,
+			&i.EnvironmentName,
 		); err != nil {
 			return nil, err
 		}

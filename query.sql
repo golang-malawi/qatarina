@@ -347,17 +347,53 @@ SELECT
   COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
   BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
+  MAX(pc.urgency)::priority_level AS urgency,
+  COALESCE(MAX(p.title), '')::text AS project_title,
+  COALESCE(MAX(e.name), '')::text AS environment_name
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN projects p ON p.id = tc.project_id
+LEFT JOIN environments e ON e.id = tp.environment_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
   AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND (sqlc.arg(projects)::int[] IS NULL OR tr.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+  AND (
+    sqlc.arg(search)::text = ''
+    OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+  )
 GROUP BY tc.id
 ORDER BY tc.created_at DESC, tc.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+
+-- Distinct projects, environments and modules found in the user's inbox,
+-- used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+-- name: TestCaseInboxFilterOptions :many
+WITH inbox AS (
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = sqlc.arg(user_id)
+    AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
+)
+SELECT kind, value, label FROM (
+  SELECT 'project'::text AS kind, p.id::text AS value, p.title::text AS label
+  FROM inbox i INNER JOIN projects p ON p.id = i.project_id
+  UNION
+  SELECT 'environment'::text, e.id::text, e.name::text
+  FROM inbox i INNER JOIN environments e ON e.id = i.environment_id
+  UNION
+  SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
+  FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+) options
+ORDER BY kind, label;
 
 -- name: TestCaseGetByAssignedUser :one
 SELECT
@@ -422,17 +458,24 @@ SELECT
 FROM ordered
 WHERE id = sqlc.arg(test_case_id)::uuid;
 
+-- Must use the same filters as TestCaseListByAssignedUser so pagination totals match the rows.
 -- name: TestCaseCountByAssignedUser :one
-SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  GROUP BY tc.id
-  HAVING sqlc.arg(include_closed)::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-) sub;
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
+  AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+  AND (
+    sqlc.arg(search)::text = ''
+    OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+  );
 
 -- name: TestCaseCountUnseenByAssignedUser :one
 SELECT COUNT(*)
