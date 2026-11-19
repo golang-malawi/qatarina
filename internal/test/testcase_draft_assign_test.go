@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
@@ -73,26 +74,44 @@ func TestTestCases_DraftsCannotBeAssignedToTesters(t *testing.T) {
 		t.Errorf("draft was added to the plan %d time(s)", n)
 	}
 
-	// "select all" with the draft included is rejected without changing the plan
-	selectAll := func(excluded ...string) error {
-		_, err := f.plans.AddTestCaseToPlan(ctx, &schema.AssignTestsToPlanRequest{
-			ProjectID: int64(f.projectID),
-			PlanID:    plan.ID,
-			AllTestCases: &schema.ProjectTestCaseSelection{
-				UserIDs:             []int64{f.ownerID},
-				ExcludedTestCaseIDs: excluded,
-			},
-		})
-		return err
-	}
-	if err := selectAll(); !errors.Is(err, services.ErrTestCaseDraft) {
-		t.Errorf("select all including a draft: err = %v, want ErrTestCaseDraft", err)
+	// "select all" skips the draft and adds the rest
+	another := f.newTestCase(t, "")
+	if _, err := f.plans.AddTestCaseToPlan(ctx, &schema.AssignTestsToPlanRequest{
+		ProjectID: int64(f.projectID),
+		PlanID:    plan.ID,
+		AllTestCases: &schema.ProjectTestCaseSelection{
+			UserIDs: []int64{f.ownerID},
+		},
+	}); err != nil {
+		t.Errorf("select all including a draft: unexpected error %v", err)
 	}
 	if n := f.countPlanCases(t, plan.ID, draft); n != 0 {
 		t.Errorf("draft was added to the plan %d time(s) by select all", n)
 	}
-	if err := selectAll(draft); err != nil {
-		t.Errorf("select all with the draft excluded: unexpected error %v", err)
+	if n := f.countPlanCases(t, plan.ID, another); n != 1 {
+		t.Errorf("select all added the published test case %d time(s), want 1", n)
+	}
+
+	// creating a plan with "select all" also skips the draft
+	allPlan, err := f.plans.Create(ctx, &schema.CreateTestPlan{
+		ProjectID:      int64(f.projectID),
+		Kind:           "general",
+		Description:    "select all with a draft",
+		StartAt:        time.Now(),
+		ScheduledEndAt: time.Now().Add(24 * time.Hour),
+		AssignedToID:   f.ownerID,
+		CreatedByID:    f.ownerID,
+		UpdatedByID:    f.ownerID,
+		AllTestCases:   &schema.ProjectTestCaseSelection{UserIDs: []int64{f.ownerID}},
+	})
+	if err != nil {
+		t.Fatalf("create plan with select all including a draft: %v", err)
+	}
+	if n := f.countPlanCases(t, allPlan.ID, draft); n != 0 {
+		t.Errorf("draft was added to the new plan %d time(s) by select all", n)
+	}
+	if n := f.countPlanCases(t, allPlan.ID, published); n != 1 {
+		t.Errorf("select all added the published test case to the new plan %d time(s), want 1", n)
 	}
 
 	if _, err := f.runs.Create(ctx, &schema.TestRunRequest{
@@ -112,3 +131,4 @@ func TestTestCases_DraftsCannotBeAssignedToTesters(t *testing.T) {
 		t.Errorf("assign published test case: unexpected error %v", err)
 	}
 }
+

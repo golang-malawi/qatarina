@@ -47,6 +47,7 @@ FROM test_cases tc
 CROSS JOIN unnest($2::bigint[]) AS u(user_id)
 WHERE tc.project_id = $3::int
   AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND tc.is_draft IS NOT TRUE
   AND ($4::text = '' OR tc.title ILIKE '%' || $4::text || '%' OR tc.code ILIKE '%' || $4::text || '%')
   AND NOT (tc.id = ANY($5::uuid[]))
 ON CONFLICT DO NOTHING
@@ -61,7 +62,8 @@ type AddProjectTestCasesToPlanParams struct {
 }
 
 // Adds every (non-suggested) test case in a project matching the search filter to a
-// test plan, assigning each one to all the given testers, without loading the cases
+// test plan, assigning each one to all the given testers, without loading the cases.
+// Drafts are skipped because they cannot be assigned to testers
 func (q *Queries) AddProjectTestCasesToPlan(ctx context.Context, arg AddProjectTestCasesToPlanParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, addProjectTestCasesToPlan,
 		arg.TestPlanID,
@@ -3260,38 +3262,51 @@ func (q *Queries) ListDraftTestCases(ctx context.Context, testCaseIds []uuid.UUI
 	return items, nil
 }
 
-const listDraftTestCasesInProjectSelection = `-- name: ListDraftTestCasesInProjectSelection :many
-SELECT tc.id, tc.code
-FROM test_cases tc
-WHERE tc.project_id = $1::int
-  AND tc.is_draft = true
-  AND (tc.suggested IS NULL OR tc.suggested = false)
-  AND ($2::text = '' OR tc.title ILIKE '%' || $2::text || '%' OR tc.code ILIKE '%' || $2::text || '%')
-  AND NOT (tc.id = ANY($3::uuid[]))
-ORDER BY tc.code
+const listDraftTestCasesBySelection = `-- name: ListDraftTestCasesBySelection :many
+SELECT id, code
+FROM test_cases
+WHERE project_id = $1::int
+  AND is_draft = true
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    ($2::bool
+      AND ($3::text = '' OR title ILIKE '%' || $3::text || '%' OR code ILIKE '%' || $3::text || '%')
+      AND NOT (id = ANY($4::uuid[])))
+    OR (NOT $2::bool AND id = ANY($5::uuid[]))
+  )
+ORDER BY code
 `
 
-type ListDraftTestCasesInProjectSelectionParams struct {
+type ListDraftTestCasesBySelectionParams struct {
 	ProjectID           int32
+	SelectAll           bool
 	Search              string
 	ExcludedTestCaseIds []uuid.UUID
+	TestCaseIds         []uuid.UUID
 }
 
-type ListDraftTestCasesInProjectSelectionRow struct {
+type ListDraftTestCasesBySelectionRow struct {
 	ID   uuid.UUID
 	Code string
 }
 
-// Returns the draft test cases that AddProjectTestCasesToPlan would add for the same filter
-func (q *Queries) ListDraftTestCasesInProjectSelection(ctx context.Context, arg ListDraftTestCasesInProjectSelectionParams) ([]ListDraftTestCasesInProjectSelectionRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDraftTestCasesInProjectSelection, arg.ProjectID, arg.Search, pq.Array(arg.ExcludedTestCaseIds))
+// Returns the drafts among the test cases picked in a project's test case list, using
+// the same selection as ListTestCasesBySelection
+func (q *Queries) ListDraftTestCasesBySelection(ctx context.Context, arg ListDraftTestCasesBySelectionParams) ([]ListDraftTestCasesBySelectionRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDraftTestCasesBySelection,
+		arg.ProjectID,
+		arg.SelectAll,
+		arg.Search,
+		pq.Array(arg.ExcludedTestCaseIds),
+		pq.Array(arg.TestCaseIds),
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListDraftTestCasesInProjectSelectionRow
+	var items []ListDraftTestCasesBySelectionRow
 	for rows.Next() {
-		var i ListDraftTestCasesInProjectSelectionRow
+		var i ListDraftTestCasesBySelectionRow
 		if err := rows.Scan(&i.ID, &i.Code); err != nil {
 			return nil, err
 		}
