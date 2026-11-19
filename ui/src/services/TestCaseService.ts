@@ -293,6 +293,23 @@ export async function bulkDeleteTestCases(selection: TestCaseSelection) {
   return res.data;
 }
 
+export type SelectionDrafts = components["schemas"]["schema.SelectionDraftsResponse"];
+
+/**
+ * Lists the drafts in a selection, including "select all" across pages that are not
+ * loaded. Drafts cannot be assigned to testers, so they are skipped when the
+ * selection is used in a test plan.
+ */
+export async function findSelectionDrafts(selection: TestCaseSelection): Promise<SelectionDrafts> {
+  const res = await apiClient.request("post", "/v1/test-cases/selection-drafts", {
+    body: { selection },
+  });
+  if (res.error || !res.data) {
+    throw new Error(problemDetail(res.error, "Failed to check the selection for drafts"));
+  }
+  return res.data;
+}
+
 /** Moves the selected test cases of a project to another project, all or none */
 export async function bulkTransferTestCases(
   body: components["schemas"]["schema.BulkTransferTestCasesRequest"],
