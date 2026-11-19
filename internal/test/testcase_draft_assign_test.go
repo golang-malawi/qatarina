@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
+	"github.com/golang-malawi/qatarina/internal/logging"
 	"github.com/golang-malawi/qatarina/internal/schema"
 	"github.com/golang-malawi/qatarina/internal/services"
 )
@@ -132,3 +134,45 @@ func TestTestCases_DraftsCannotBeAssignedToTesters(t *testing.T) {
 	}
 }
 
+func TestTestCases_FindDraftsBySelection(t *testing.T) {
+	f := newFreezeFixture(t)
+	ctx := context.Background()
+	svc := services.NewTestCaseService(f.db, dbsqlc.New(f.db), logging.NewForTest())
+
+	published := f.newTestCase(t, "")
+	draft := f.newDraftTestCase(t)
+	otherDraft := f.newDraftTestCase(t)
+
+	ids := func(selection schema.TestCaseSelection) map[string]bool {
+		t.Helper()
+		rows, err := svc.FindDraftsBySelection(ctx, selection)
+		if err != nil {
+			t.Fatalf("FindDraftsBySelection failed: %v", err)
+		}
+		found := make(map[string]bool, len(rows))
+		for _, r := range rows {
+			found[r.ID.String()] = true
+		}
+		return found
+	}
+
+	// ticked test cases: only the ticked drafts
+	got := ids(schema.TestCaseSelection{ProjectID: int64(f.projectID), TestCaseIDs: []string{published, draft}})
+	if len(got) != 1 || !got[draft] {
+		t.Errorf("ticked selection drafts = %v, want only %s", got, draft)
+	}
+
+	// select all: every draft except the excluded ones, including ones never loaded
+	got = ids(schema.TestCaseSelection{ProjectID: int64(f.projectID), SelectAll: true})
+	if len(got) != 2 || !got[draft] || !got[otherDraft] {
+		t.Errorf("select all drafts = %v, want %s and %s", got, draft, otherDraft)
+	}
+	got = ids(schema.TestCaseSelection{ProjectID: int64(f.projectID), SelectAll: true, ExcludedTestCaseIDs: []string{otherDraft}})
+	if len(got) != 1 || !got[draft] {
+		t.Errorf("select all drafts with one excluded = %v, want only %s", got, draft)
+	}
+
+	if _, err := svc.FindDraftsBySelection(ctx, schema.TestCaseSelection{ProjectID: int64(f.projectID)}); !errors.Is(err, services.ErrEmptyTestCaseSelection) {
+		t.Errorf("empty selection: err = %v, want ErrEmptyTestCaseSelection", err)
+	}
+}
