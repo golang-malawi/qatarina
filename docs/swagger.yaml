@@ -1036,6 +1036,31 @@ components:
       - new_password
       - user_id
       type: object
+    schema.SelectionDraftsRequest:
+      properties:
+        selection:
+          $ref: '#/components/schemas/schema.TestCaseSelection'
+      required:
+      - selection
+      type: object
+    schema.SelectionDraftsResponse:
+      properties:
+        codes:
+          description: Codes of the first drafts, for display
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+        count:
+          description: Number of drafts in the selection
+          type: integer
+        test_case_ids:
+          description: IDs of every draft in the selection
+          items:
+            type: string
+          type: array
+          uniqueItems: false
+      type: object
     schema.SignUpRequest:
       properties:
         display_name:
@@ -5257,6 +5282,42 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Search for Test Cases
+      tags:
+      - test-cases
+  /v1/test-cases/selection-drafts:
+    post:
+      description: List the drafts among the test cases ticked in a project's test
+        case list, or with select_all every test case matching the search except the
+        excluded ones. Drafts cannot be assigned to testers, so they are skipped when
+        the selection is used in a test plan.
+      operationId: ListSelectionDrafts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.SelectionDraftsRequest'
+        description: Selected test cases
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.SelectionDraftsResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List the drafts among the selected test cases of a project
       tags:
       - test-cases
   /v1/test-cases/suggest:
