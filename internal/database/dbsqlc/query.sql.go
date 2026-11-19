@@ -4658,7 +4658,8 @@ SELECT
       JOIN test_run_results trr ON tra.test_run_result_id = trr.id
       WHERE trr.test_run_id = tr.id
     ) AS attachment_count,
-    tc.title AS test_case_title
+    tc.title AS test_case_title,
+    tc.code AS test_case_code
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id
@@ -4688,6 +4689,7 @@ type ListTestRunsByPlanRow struct {
 	LatestResultID  uuid.UUID
 	AttachmentCount int64
 	TestCaseTitle   string
+	TestCaseCode    string
 }
 
 func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID sql.NullInt32) ([]ListTestRunsByPlanRow, error) {
@@ -4721,6 +4723,7 @@ func (q *Queries) ListTestRunsByPlan(ctx context.Context, testPlanID sql.NullInt
 			&i.LatestResultID,
 			&i.AttachmentCount,
 			&i.TestCaseTitle,
+			&i.TestCaseCode,
 		); err != nil {
 			return nil, err
 		}

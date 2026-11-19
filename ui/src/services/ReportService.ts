@@ -82,13 +82,27 @@ export async function openReportInNewTab(projectID: string, reportID: string): P
   window.open(url, "_blank");
 }
 
-// Saves a report PDF to the user's device
-export async function saveReportFile(projectID: string, reportID: string): Promise<void> {
+// Builds a download file name from the report name, keeping it safe to use
+// as a file name on any operating system.
+function reportFileName(name?: string) {
+  const safe = (name ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/\s+/g, "-");
+  return safe || "report";
+}
+
+// Saves a report PDF to the user's device, named after the report
+export async function saveReportFile(
+  projectID: string,
+  reportID: string,
+  reportName?: string,
+): Promise<void> {
   const blob = await downloadReport(projectID, reportID);
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `report-${reportID}.pdf`;
+  a.download = `${reportFileName(reportName)}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();

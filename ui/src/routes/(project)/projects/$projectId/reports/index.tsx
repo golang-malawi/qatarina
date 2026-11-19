@@ -73,7 +73,8 @@ function ReportsPage() {
     );
   };
 
-  const handleDownload = (reportID: string) => saveReportFile(projectId, reportID);
+  const handleDownload = (reportID: string, reportName?: string) =>
+    saveReportFile(projectId, reportID, reportName);
 
   const handleView = (reportID: string) => openReportInNewTab(projectId, reportID);
 
@@ -174,7 +175,6 @@ function ReportsPage() {
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>{t("reports.column.id")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.type")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.status")}</Table.ColumnHeader>
@@ -186,7 +186,6 @@ function ReportsPage() {
             <Table.Body>
               {reports.map((report) => (
                 <Table.Row key={report.id ?? Math.random()}>
-                  <Table.Cell>{report.id ?? "-"}</Table.Cell>
                   <Table.Cell>{report.name ?? "-"}</Table.Cell>
                   <Table.Cell>{report.type ?? "-"}</Table.Cell>
                   <Table.Cell>{report.status ?? "-"}</Table.Cell>
@@ -208,7 +207,7 @@ function ReportsPage() {
 
                       <IconButton
                         aria-label={t("reports.download")}
-                        onClick={() => report.id && handleDownload(report.id)}
+                        onClick={() => report.id && handleDownload(report.id, report.name)}
                         colorPalette="success"
                         size="sm"
                       >
