@@ -32,6 +32,8 @@ import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environmen
 import { useTranslation } from "react-i18next";
 import { useFrozenModules } from "@/services/ModuleService";
 import { IconSnowflake } from "@tabler/icons-react";
+import { findSelectionDrafts, type SelectionDrafts } from "@/services/TestCaseService";
+import { DraftsSkippedDialog } from "@/components/DraftsSkippedDialog";
 
 const TEST_CASES_PAGE_SIZE = 10;
 
@@ -81,6 +83,11 @@ function CreateNewTestPlan() {
 
   const [page, setPage] = useState(1);
   const [allSelection, setAllSelection] = useState<AllTestCasesSelection | null>(null);
+  // A plan waiting for the user to confirm that the drafts "select all" covers are skipped
+  const [pendingPlan, setPendingPlan] = useState<{
+    data: CreateTestPlanForm;
+    drafts: SelectionDrafts;
+  } | null>(null);
   const {
     data: testCases,
     isPending,
@@ -159,9 +166,41 @@ function CreateNewTestPlan() {
   }
 
   async function handleSubmit(data: CreateTestPlanForm) {
+    // "Select all" skips drafts, since they cannot be assigned to testers. The backend
+    // also finds the drafts on pages that are not loaded.
+    let drafts: SelectionDrafts | null = null;
+    if (allSelection) {
+      try {
+        drafts = await findSelectionDrafts({
+          project_id: Number(projectId),
+          select_all: true,
+          excluded_test_case_ids: Array.from(allSelection.excludedIds),
+        });
+      } catch (err: any) {
+        toaster.create({
+          title: t("test_cases.drafts_skipped.check_error"),
+          description: err?.message,
+          type: "error",
+        });
+        return;
+      }
+      if (drafts.count >= selectedCount) {
+        toaster.create({
+          title: t("test_cases.drafts_only.title"),
+          description: t("test_cases.drafts_only.description"),
+          type: "error",
+          duration: 6000,
+        });
+        return;
+      }
+    }
+    const draftCount = drafts?.count ?? 0;
+
     const unassignedCount = allSelection
       ? allSelection.userIds.length === 0
-        ? selectedCount - selectedTestCases.filter((tc) => tc.user_ids.length > 0).length
+        ? selectedCount -
+          draftCount -
+          selectedTestCases.filter((tc) => tc.user_ids.length > 0).length
         : 0
       : validateTestCaseAssignments(selectedTestCases).unassigned.length;
     if (unassignedCount > 0) {
@@ -174,6 +213,14 @@ function CreateNewTestPlan() {
       return;
     }
 
+    if (drafts && draftCount > 0) {
+      setPendingPlan({ data, drafts });
+      return;
+    }
+    await createPlan(data);
+  }
+
+  async function createPlan(data: CreateTestPlanForm) {
     if (!data.environment_id) {
       redirect({
         to: "/projects/$projectId/environments/new",
@@ -382,7 +429,8 @@ function CreateNewTestPlan() {
             : draft
               ? t("test_cases.draft_hint")
               : undefined;
-          const selected = isTestCaseSelected(testCase.id!.toString());
+          // "Select all" skips drafts, so they never show as selected
+          const selected = !draft && isTestCaseSelected(testCase.id!.toString());
           return (
             <Box
               key={testCase.id}
@@ -397,8 +445,7 @@ function CreateNewTestPlan() {
             >
               <Flex justify="space-between" align="center">
                 <Checkbox.Root
-                  // A draft ticked by "select all" can still be unticked
-                  disabled={frozen || (draft && !selected)}
+                  disabled={frozen || draft}
                   checked={selected}
                   onCheckedChange={(e) =>
                     setTestCaseSelected(testCase.id!.toString(), e.checked === true)
@@ -657,6 +704,16 @@ function CreateNewTestPlan() {
           </>
         )}
       </AppDialog>
+
+      <DraftsSkippedDialog
+        drafts={pendingPlan?.drafts ?? null}
+        onCancel={() => setPendingPlan(null)}
+        onConfirm={() => {
+          const data = pendingPlan?.data;
+          setPendingPlan(null);
+          if (data) void createPlan(data);
+        }}
+      />
     </div>
   );
 }

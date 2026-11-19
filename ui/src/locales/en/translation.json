@@ -180,7 +180,7 @@
   "test_plans.create.error": "Could not create the test plan",
   "test_plans.create.error_description": "Something went wrong while creating the test plan.",
   "test_plans.frozen_cases_notice": "{{count}} test case(s) belong to frozen modules and cannot be added to a test plan. Unfreeze the module to use them.",
-  "test_plans.draft_cases_notice": "{{count}} test case(s) on this page are drafts and cannot be assigned to testers. Publish them to use them.",
+  "test_plans.draft_cases_notice": "{{count}} test case(s) on this page are drafts and cannot be assigned to testers. \"Select all\" skips them; publish them to use them.",
   "test_plans.create_env": "Create Environment",
   "test_plans.start": "Start Date",
   "test_plans.end": "Scheduled End",
