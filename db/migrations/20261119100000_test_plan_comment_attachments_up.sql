@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE test_plan_comment_attachments (
+CREATE TABLE IF NOT EXISTS test_plan_comment_attachments (
     id UUID PRIMARY KEY NOT NULL,
     test_plan_id BIGINT NOT NULL REFERENCES test_plans(id) ON DELETE CASCADE,
     -- NULL until the comment the attachment was uploaded for is posted
@@ -12,8 +12,8 @@ CREATE TABLE test_plan_comment_attachments (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_test_plan_comment_attachments_comment ON test_plan_comment_attachments(comment_id);
-CREATE INDEX idx_test_plan_comment_attachments_test_plan ON test_plan_comment_attachments(test_plan_id);
+CREATE INDEX IF NOT EXISTS idx_test_plan_comment_attachments_comment ON test_plan_comment_attachments(comment_id);
+CREATE INDEX IF NOT EXISTS idx_test_plan_comment_attachments_test_plan ON test_plan_comment_attachments(test_plan_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS test_plan_comment_attachments;
