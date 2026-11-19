@@ -36,6 +36,16 @@ export const Route = createFileRoute("/(project)/projects/$projectId/reports/")(
   component: ReportsPage,
 });
 
+// Builds a download file name from the report name, keeping it safe to use
+// as a file name on any operating system.
+function reportFileName(name?: string) {
+  const safe = (name ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/\s+/g, "-");
+  return safe || "report";
+}
+
 function ReportsPage() {
   const { t } = useTranslation();
   const projectId = Route.useParams().projectId as string;
@@ -70,12 +80,12 @@ function ReportsPage() {
     );
   };
 
-  const handleDownload = async (reportID: string) => {
+  const handleDownload = async (reportID: string, reportName?: string) => {
     const blob = await downloadReport(projectId, reportID);
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report-${reportID}.pdf`;
+    a.download = `${reportFileName(reportName)}.pdf`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -176,7 +186,6 @@ function ReportsPage() {
           <Table.Root size="md">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>{t("reports.column.id")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.name")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.type")}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t("reports.column.status")}</Table.ColumnHeader>
@@ -188,7 +197,6 @@ function ReportsPage() {
             <Table.Body>
               {reports.map((report) => (
                 <Table.Row key={report.id ?? Math.random()}>
-                  <Table.Cell>{report.id ?? "-"}</Table.Cell>
                   <Table.Cell>{report.name ?? "-"}</Table.Cell>
                   <Table.Cell>{report.type ?? "-"}</Table.Cell>
                   <Table.Cell>{report.status ?? "-"}</Table.Cell>
@@ -210,7 +218,7 @@ function ReportsPage() {
 
                       <IconButton
                         aria-label={t("reports.download")}
-                        onClick={() => report.id && handleDownload(report.id)}
+                        onClick={() => report.id && handleDownload(report.id, report.name)}
                         colorPalette="success"
                         size="sm"
                       >
