@@ -132,7 +132,7 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		testRun, err := testRunService.Create(c.Context(), request)
 		if err != nil {
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to process request", "error", err)

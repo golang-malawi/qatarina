@@ -294,7 +294,7 @@ func ExecuteTestCase(testCaseService services.TestCaseService, testRunService se
 
 		createdRun, err := testRunService.Create(c.Context(), testRunReq)
 		if err != nil {
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to create test run", "error", err)
@@ -1125,6 +1125,56 @@ func BulkDeleteTestCases(testCaseService services.TestCaseService, logger loggin
 		}
 
 		return c.JSON(schema.BulkDeleteTestCasesResponse{Deleted: deleted})
+	}
+}
+
+// maxListedSelectionDrafts caps how many draft codes are returned for display
+const maxListedSelectionDrafts = 10
+
+// ListSelectionDrafts godoc
+//
+//	@ID				ListSelectionDrafts
+//	@Summary		List the drafts among the selected test cases of a project
+//	@Description	List the drafts among the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones. Drafts cannot be assigned to testers, so they are skipped when the selection is used in a test plan.
+//	@Tags			test-cases
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		schema.SelectionDraftsRequest	true	"Selected test cases"
+//	@Success		200		{object}	schema.SelectionDraftsResponse
+//	@Failure		400		{object}	problemdetail.ProblemDetail
+//	@Failure		500		{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-cases/selection-drafts [post]
+func ListSelectionDrafts(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		request := new(schema.SelectionDraftsRequest)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse data in request")
+		}
+		if request.Selection.IsEmpty() {
+			return problemdetail.BadRequest(c, services.ErrEmptyTestCaseSelection.Error())
+		}
+
+		drafts, err := testCaseService.FindDraftsBySelection(c.Context(), request.Selection)
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestCases, "failed to find drafts in selection", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to find drafts in selection")
+		}
+
+		response := schema.SelectionDraftsResponse{
+			Count:       len(drafts),
+			TestCaseIDs: make([]string, 0, len(drafts)),
+			Codes:       make([]string, 0, min(len(drafts), maxListedSelectionDrafts)),
+		}
+		for i, d := range drafts {
+			response.TestCaseIDs = append(response.TestCaseIDs, d.ID.String())
+			if i < maxListedSelectionDrafts {
+				response.Codes = append(response.Codes, d.Code)
+			}
+		}
+		return c.JSON(response)
 	}
 }
 
