@@ -17,6 +17,7 @@ import { gapCursor } from "@tiptap/pm/gapcursor";
 import { dropCursor } from "@tiptap/pm/dropcursor";
 import { attachmentToken, attachmentTokenPattern } from "@/components/comments/attachmentTokens";
 import { CommentAttachment, useCommentAttachmentImage } from "@/services/TestPlanService";
+import { EmojiPickerButton } from "@/components/comments/EmojiPickerButton";
 import {
   ACCEPTED_IMAGE_TYPES,
   useAttachmentUploads,
@@ -434,6 +435,10 @@ export function CommentComposer({
           >
             <LuImagePlus />
           </IconButton>
+          <EmojiPickerButton
+            onSelect={(emoji) => editor?.chain().focus().insertContent(emoji).run()}
+            onPicked={() => editor?.commands.focus()}
+          />
           <input
             ref={fileInputRef}
             type="file"
