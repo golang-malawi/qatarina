@@ -17,6 +17,7 @@ import {
   LuChevronUp,
   LuFilePlus,
   LuMessageSquare,
+  LuPencil,
   LuReply,
   LuTrash2,
 } from "react-icons/lu";
@@ -24,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   useTestPlanCommentsInfiniteQuery,
   useCreateCommentMutation,
+  useUpdateCommentMutation,
   useDeleteCommentMutation,
   Comment,
 } from "@/services/TestPlanService";
@@ -115,10 +117,32 @@ function CommentItem({
   const navigate = useNavigate();
 
   const [isReplying, setIsReplying] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showReplies, setShowReplies] = useState(true);
 
   const createMutation = useCreateCommentMutation();
+  const updateMutation = useUpdateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
+
+  const handleEdit = async (content: string, attachmentIds: string[]) => {
+    if (!comment.id) return false;
+    try {
+      await updateMutation.mutateAsync({
+        params: { path: { testPlanID: numericTestPlanId, commentID: comment.id } },
+        body: { content, attachment_ids: attachmentIds },
+      });
+      setIsEditing(false);
+      toaster.success({ title: t("test_plans.comments.edit_success", "Comment updated") });
+      refetch();
+      return true;
+    } catch (err: any) {
+      toaster.error({
+        title: t("test_plans.comments.edit_error", "Failed to update comment"),
+        description: err?.detail || err?.message,
+      });
+      return false;
+    }
+  };
 
   const handleReply = async (content: string, attachmentIds: string[]) => {
     if (!user?.user_id || !comment.id) return false;
@@ -174,6 +198,8 @@ function CommentItem({
   const hasReplies = repliesArray.length > 0;
   const formattedDate = formatCommentDate(comment.created_at);
   const isOwn = !!user?.user_id && comment.user_id === user.user_id;
+  const isEdited =
+    !!comment.created_at && !!comment.updated_at && comment.updated_at !== comment.created_at;
 
   return (
     <Flex gap={3} align="flex-start">
@@ -199,16 +225,35 @@ function CommentItem({
               {formattedDate}
             </Text>
           )}
+          {isEdited && (
+            <Text fontSize="xs" color="fg.subtle" title={formatCommentDate(comment.updated_at)}>
+              {t("test_plans.comments.edited", "(edited)")}
+            </Text>
+          )}
         </HStack>
 
-        <CommentBody
-          testPlanId={numericTestPlanId}
-          content={comment.content}
-          attachments={comment.attachments}
-          isOwn={isOwn}
-        />
+        {isEditing ? (
+          <CommentComposer
+            testPlanId={numericTestPlanId}
+            onSubmit={handleEdit}
+            isSubmitting={updateMutation.isPending}
+            placeholder={t("test_plans.comments.edit_placeholder", "Edit your comment...")}
+            initialContent={comment.content ?? ""}
+            initialAttachments={comment.attachments}
+            autoFocus
+            compact={isReply}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <CommentBody
+            testPlanId={numericTestPlanId}
+            content={comment.content}
+            attachments={comment.attachments}
+            isOwn={isOwn}
+          />
+        )}
 
-        <HStack gap={2} mt={2} wrap="wrap">
+        <HStack gap={2} mt={2} wrap="wrap" hidden={isEditing}>
           <Button
             size="2xs"
             variant="subtle"
@@ -230,10 +275,20 @@ function CommentItem({
           >
             <LuFilePlus />
             {t("test_plans.comments.convert", "Convert to Test Case")}
-            {showReplies
-              ? t("test_plans.comments.hide_replies", "Hide replies")
-              : t("test_plans.comments.view_replies", { total: repliesArray.length, defaultValue: "View replies ({{total}})" })}
           </Button>
+          {isOwn && (
+            <Button
+              size="2xs"
+              variant="subtle"
+              colorPalette="gray"
+              borderRadius="full"
+              px={2.5}
+              onClick={() => setIsEditing(true)}
+            >
+              <LuPencil />
+              {t("test_plans.comments.edit", "Edit")}
+            </Button>
+          )}
           <ConfirmDialog
             trigger={
               <Button size="2xs" variant="subtle" colorPalette="red" borderRadius="full" px={2.5}>

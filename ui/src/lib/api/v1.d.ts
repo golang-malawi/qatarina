@@ -2102,7 +2102,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /**
+         * Edit a comment on a test plan
+         * @description Only the author can edit a comment. attachment_ids lists every attachment the comment keeps: existing ones left out are deleted, newly uploaded ones are added.
+         */
+        put: operations["UpdateTestPlanComment"];
         post?: never;
         /** Delete a comment from a test plan */
         delete: operations["DeleteTestPlanComment"];
@@ -3334,6 +3338,11 @@ export interface components {
             automated_testing_enabled?: boolean;
             project_id: number;
             supported_runners?: string[];
+        };
+        "schema.UpdateComment": {
+            attachment_ids?: string[];
+            /** @description Content may be empty when the comment only carries attachments */
+            content?: string;
         };
         "schema.UpdateEnvironmentRequest": {
             base_url?: string;
@@ -7729,6 +7738,72 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    UpdateTestPlanComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Comment ID */
+                commentID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Comment payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.UpdateComment"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentResponseItem"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

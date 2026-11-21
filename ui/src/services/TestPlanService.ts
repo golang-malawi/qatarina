@@ -190,6 +190,10 @@ export function useCreateCommentMutation() {
   return $api.useMutation("post", "/v1/test-plans/{testPlanID}/comments");
 }
 
+export function useUpdateCommentMutation() {
+  return $api.useMutation("put", "/v1/test-plans/{testPlanID}/comments/{commentID}");
+}
+
 export function useDeleteCommentMutation() {
   return $api.useMutation("delete", "/v1/test-plans/{testPlanID}/comments/{commentID}");
 }

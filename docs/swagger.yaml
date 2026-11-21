@@ -1492,6 +1492,18 @@ components:
       required:
       - project_id
       type: object
+    schema.UpdateComment:
+      properties:
+        attachment_ids:
+          items:
+            type: string
+          maxItems: 10
+          type: array
+          uniqueItems: false
+        content:
+          description: Content may be empty when the comment only carries attachments
+          type: string
+      type: object
     schema.UpdateEnvironmentRequest:
       properties:
         base_url:
@@ -5723,6 +5735,66 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Delete a comment from a test plan
+      tags:
+      - test-plans
+      - comments
+    put:
+      description: 'Only the author can edit a comment. attachment_ids lists every
+        attachment the comment keeps: existing ones left out are deleted, newly uploaded
+        ones are added.'
+      operationId: UpdateTestPlanComment
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Comment ID
+        in: path
+        name: commentID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/schema.UpdateComment'
+        description: Comment payload
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.CommentResponseItem'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Edit a comment on a test plan
       tags:
       - test-plans
       - comments

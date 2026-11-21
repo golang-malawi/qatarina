@@ -167,6 +167,18 @@ type CreateComment struct {
 	AttachmentIDs []string `json:"attachment_ids,omitempty" validate:"max=10,dive,uuid"`
 }
 
+// UpdateComment replaces the content of a comment. AttachmentIDs lists every attachment the
+// comment should keep: existing ones left out are deleted and newly uploaded ones are linked.
+type UpdateComment struct {
+	// Content may be empty when the comment only carries attachments
+	Content       string   `json:"content"`
+	AttachmentIDs []string `json:"attachment_ids" validate:"max=10,dive,uuid"`
+
+	CommentID  string `json:"-"`
+	TestPlanID int64  `json:"-"`
+	UserID     int64  `json:"-"`
+}
+
 type CommentAttachment struct {
 	ID          string `json:"id"`
 	FileName    string `json:"file_name"`

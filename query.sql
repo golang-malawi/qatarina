@@ -1164,6 +1164,18 @@ RETURNING
 -- name: DeleteComment :execrows
 DELETE FROM test_plan_comments WHERE id = $1;
 
+-- name: UpdateCommentContent :execrows
+UPDATE test_plan_comments
+SET content = sqlc.arg(content), updated_at = NOW()
+WHERE id = sqlc.arg(id);
+
+-- name: DeleteCommentAttachmentsExcept :many
+-- Removes the attachments of a comment that are not in keep_ids, returning their file paths
+DELETE FROM test_plan_comment_attachments
+WHERE comment_id = sqlc.arg(comment_id)
+  AND NOT (id = ANY(sqlc.arg(keep_ids)::uuid[]))
+RETURNING storage_path;
+
 -- name: CreateCommentAttachment :one
 INSERT INTO test_plan_comment_attachments (
     id, test_plan_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at

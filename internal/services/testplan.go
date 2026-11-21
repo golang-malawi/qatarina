@@ -29,6 +29,10 @@ type TestPlanService interface {
 	// ListComments returns a page of top-level comments (newest first) with their replies, and the total number of top-level comments
 	ListComments(ctx context.Context, testPlanID int64, limit, offset int32) ([]schema.CommentResponseItem, int64, error)
 	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
+	// UpdateComment changes a comment written by req.UserID, returning the storage paths of the
+	// attachments that were removed from it. It returns ErrNotFound when the comment is not on
+	// the test plan and ErrForbidden when someone else wrote it.
+	UpdateComment(ctx context.Context, req *schema.UpdateComment) (*schema.CommentResponseItem, []string, error)
 	// DeleteComment deletes a comment and its replies, returning the storage paths of their attachments
 	DeleteComment(ctx context.Context, commentID string) ([]string, error)
 	CreateCommentAttachment(ctx context.Context, params dbsqlc.CreateCommentAttachmentParams) (*schema.CommentAttachment, error)
@@ -646,6 +650,93 @@ func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateC
 		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
 	}, nil
+}
+
+func (t *testPlanService) UpdateComment(ctx context.Context, req *schema.UpdateComment) (*schema.CommentResponseItem, []string, error) {
+	id, err := uuid.Parse(req.CommentID)
+	if err != nil {
+		return nil, nil, ErrNotFound
+	}
+	existing, err := t.queries.GetComment(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, ErrNotFound
+		}
+		return nil, nil, err
+	}
+	if existing.TestPlanID != req.TestPlanID {
+		return nil, nil, ErrNotFound
+	}
+	if existing.UserID != req.UserID {
+		return nil, nil, ErrForbidden
+	}
+
+	keepIDs := make([]uuid.UUID, 0, len(req.AttachmentIDs))
+	for _, raw := range req.AttachmentIDs {
+		attachmentID, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid attachment ID: %w", err)
+		}
+		keepIDs = append(keepIDs, attachmentID)
+	}
+
+	if _, err := t.queries.UpdateCommentContent(ctx, dbsqlc.UpdateCommentContentParams{
+		ID:      id,
+		Content: req.Content,
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	commentRef := uuid.NullUUID{UUID: id, Valid: true}
+	if len(keepIDs) > 0 {
+		// Only unclaimed attachments the author uploaded to this test plan are linked,
+		// the ones already on the comment are left as they are
+		if _, err := t.queries.LinkCommentAttachments(ctx, dbsqlc.LinkCommentAttachmentsParams{
+			CommentID:     commentRef,
+			AttachmentIds: keepIDs,
+			TestPlanID:    req.TestPlanID,
+			UploadedByID:  req.UserID,
+		}); err != nil {
+			return nil, nil, fmt.Errorf("failed to link attachments: %w", err)
+		}
+	}
+	removedPaths, err := t.queries.DeleteCommentAttachmentsExcept(ctx, dbsqlc.DeleteCommentAttachmentsExceptParams{
+		CommentID: commentRef,
+		KeepIds:   keepIDs,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to remove attachments: %w", err)
+	}
+
+	row, err := t.queries.GetComment(ctx, id)
+	if err != nil {
+		return nil, removedPaths, err
+	}
+	attachmentRows, err := t.queries.ListCommentAttachmentsByComments(ctx, []uuid.UUID{id})
+	if err != nil {
+		return nil, removedPaths, err
+	}
+	attachments := make([]schema.CommentAttachment, 0, len(attachmentRows))
+	for _, a := range attachmentRows {
+		attachments = append(attachments, toCommentAttachment(a))
+	}
+
+	var parentStr *string
+	if row.ParentCommentID.Valid {
+		s := row.ParentCommentID.UUID.String()
+		parentStr = &s
+	}
+	return &schema.CommentResponseItem{
+		ID:              row.ID.String(),
+		TestPlanID:      row.TestPlanID,
+		ParentCommentID: parentStr,
+		UserID:          row.UserID,
+		UserName:        row.DisplayName.String,
+		Content:         row.Content,
+		Attachments:     attachments,
+		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
+	}, removedPaths, nil
 }
 
 func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) ([]string, error) {

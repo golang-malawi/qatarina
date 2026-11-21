@@ -1155,6 +1155,42 @@ func (q *Queries) DeleteComment(ctx context.Context, id uuid.UUID) (int64, error
 	return result.RowsAffected()
 }
 
+const deleteCommentAttachmentsExcept = `-- name: DeleteCommentAttachmentsExcept :many
+DELETE FROM test_plan_comment_attachments
+WHERE comment_id = $1
+  AND NOT (id = ANY($2::uuid[]))
+RETURNING storage_path
+`
+
+type DeleteCommentAttachmentsExceptParams struct {
+	CommentID uuid.NullUUID
+	KeepIds   []uuid.UUID
+}
+
+// Removes the attachments of a comment that are not in keep_ids, returning their file paths
+func (q *Queries) DeleteCommentAttachmentsExcept(ctx context.Context, arg DeleteCommentAttachmentsExceptParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, deleteCommentAttachmentsExcept, arg.CommentID, pq.Array(arg.KeepIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var storage_path string
+		if err := rows.Scan(&storage_path); err != nil {
+			return nil, err
+		}
+		items = append(items, storage_path)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteEnvironment = `-- name: DeleteEnvironment :execrows
 DELETE FROM environments WHERE id = $1 AND project_id = $2
 `
@@ -5636,6 +5672,25 @@ type UpdateAutomatedTestingParams struct {
 func (q *Queries) UpdateAutomatedTesting(ctx context.Context, arg UpdateAutomatedTestingParams) error {
 	_, err := q.db.ExecContext(ctx, updateAutomatedTesting, arg.ID, arg.AutomatedTestingEnabled, pq.Array(arg.SupportedRunners))
 	return err
+}
+
+const updateCommentContent = `-- name: UpdateCommentContent :execrows
+UPDATE test_plan_comments
+SET content = $1, updated_at = NOW()
+WHERE id = $2
+`
+
+type UpdateCommentContentParams struct {
+	Content string
+	ID      uuid.UUID
+}
+
+func (q *Queries) UpdateCommentContent(ctx context.Context, arg UpdateCommentContentParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateCommentContent, arg.Content, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateEnvironment = `-- name: UpdateEnvironment :execrows
