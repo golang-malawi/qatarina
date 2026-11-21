@@ -135,7 +135,7 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 			if errors.Is(err, services.ErrTestPlanLocked) {
 				return problemdetail.Conflict(c, err.Error())
 			}
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to process request", "error", err)

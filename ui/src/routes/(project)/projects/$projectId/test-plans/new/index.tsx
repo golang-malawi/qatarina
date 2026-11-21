@@ -32,6 +32,8 @@ import { findEnvironmentsByProjectQueryOptions } from "@/data/queries/environmen
 import { useTranslation } from "react-i18next";
 import { useFrozenModules } from "@/services/ModuleService";
 import { IconSnowflake } from "@tabler/icons-react";
+import { findSelectionDrafts, type SelectionDrafts } from "@/services/TestCaseService";
+import { DraftsSkippedDialog } from "@/components/DraftsSkippedDialog";
 
 const TEST_CASES_PAGE_SIZE = 10;
 
@@ -81,6 +83,11 @@ function CreateNewTestPlan() {
 
   const [page, setPage] = useState(1);
   const [allSelection, setAllSelection] = useState<AllTestCasesSelection | null>(null);
+  // A plan waiting for the user to confirm that the drafts "select all" covers are skipped
+  const [pendingPlan, setPendingPlan] = useState<{
+    data: CreateTestPlanForm;
+    drafts: SelectionDrafts;
+  } | null>(null);
   const {
     data: testCases,
     isPending,
@@ -109,6 +116,8 @@ function CreateNewTestPlan() {
   // Test cases from frozen modules cannot be added to a test plan
   const frozenCount =
     testCases?.test_cases?.filter((tc) => isFrozen(tc.feature_or_module)).length ?? 0;
+  // Draft test cases cannot be assigned to testers
+  const draftCount = testCases?.test_cases?.filter((tc) => tc.is_draft).length ?? 0;
   const totalTestCases = testCases?.pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalTestCases / TEST_CASES_PAGE_SIZE));
 
@@ -157,9 +166,41 @@ function CreateNewTestPlan() {
   }
 
   async function handleSubmit(data: CreateTestPlanForm) {
+    // "Select all" skips drafts, since they cannot be assigned to testers. The backend
+    // also finds the drafts on pages that are not loaded.
+    let drafts: SelectionDrafts | null = null;
+    if (allSelection) {
+      try {
+        drafts = await findSelectionDrafts({
+          project_id: Number(projectId),
+          select_all: true,
+          excluded_test_case_ids: Array.from(allSelection.excludedIds),
+        });
+      } catch (err: any) {
+        toaster.create({
+          title: t("test_cases.drafts_skipped.check_error"),
+          description: err?.message,
+          type: "error",
+        });
+        return;
+      }
+      if (drafts.count >= selectedCount) {
+        toaster.create({
+          title: t("test_cases.drafts_only.title"),
+          description: t("test_cases.drafts_only.description"),
+          type: "error",
+          duration: 6000,
+        });
+        return;
+      }
+    }
+    const draftCount = drafts?.count ?? 0;
+
     const unassignedCount = allSelection
       ? allSelection.userIds.length === 0
-        ? selectedCount - selectedTestCases.filter((tc) => tc.user_ids.length > 0).length
+        ? selectedCount -
+          draftCount -
+          selectedTestCases.filter((tc) => tc.user_ids.length > 0).length
         : 0
       : validateTestCaseAssignments(selectedTestCases).unassigned.length;
     if (unassignedCount > 0) {
@@ -172,6 +213,14 @@ function CreateNewTestPlan() {
       return;
     }
 
+    if (drafts && draftCount > 0) {
+      setPendingPlan({ data, drafts });
+      return;
+    }
+    await createPlan(data);
+  }
+
+  async function createPlan(data: CreateTestPlanForm) {
     if (!data.environment_id) {
       redirect({
         to: "/projects/$projectId/environments/new",
@@ -341,6 +390,17 @@ function CreateNewTestPlan() {
           </Alert.Root>
         )}
 
+        {draftCount > 0 && (
+          <Alert.Root status="info" mb={4}>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Description>
+                {t("test_plans.draft_cases_notice", { count: draftCount })}
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
+        )}
+
         <Box
           mb={4}
           p={4}
@@ -363,6 +423,14 @@ function CreateNewTestPlan() {
 
         {testCases?.test_cases?.map((testCase) => {
           const frozen = isFrozen(testCase.feature_or_module);
+          const draft = !frozen && Boolean(testCase.is_draft);
+          const unusableHint = frozen
+            ? t("test_cases.frozen_module_hint")
+            : draft
+              ? t("test_cases.draft_hint")
+              : undefined;
+          // "Select all" skips drafts, so they never show as selected
+          const selected = !draft && isTestCaseSelected(testCase.id!.toString());
           return (
             <Box
               key={testCase.id}
@@ -372,13 +440,13 @@ function CreateNewTestPlan() {
               bg="bg.surface"
               p={4}
               mb={3}
-              opacity={frozen ? 0.6 : 1}
-              title={frozen ? t("test_cases.frozen_module_hint") : undefined}
+              opacity={unusableHint ? 0.6 : 1}
+              title={unusableHint}
             >
               <Flex justify="space-between" align="center">
                 <Checkbox.Root
-                  disabled={frozen}
-                  checked={isTestCaseSelected(testCase.id!.toString())}
+                  disabled={frozen || draft}
+                  checked={selected}
                   onCheckedChange={(e) =>
                     setTestCaseSelected(testCase.id!.toString(), e.checked === true)
                   }
@@ -393,6 +461,11 @@ function CreateNewTestPlan() {
                         {t("test_cases.frozen_module")}
                       </Badge>
                     )}
+                    {draft && (
+                      <Badge colorPalette="yellow" variant="outline" ml={2}>
+                        {t("test_cases.draft")}
+                      </Badge>
+                    )}
                   </Checkbox.Label>
                 </Checkbox.Root>
 
@@ -400,16 +473,16 @@ function CreateNewTestPlan() {
                   size="sm"
                   colorPalette="brand"
                   variant="outline"
-                  disabled={frozen}
+                  disabled={frozen || draft}
                   onClick={() => openAssignModal(testCase.id!.toString())}
                 >
                   {t("test_plans.assign_tester")}
                 </Button>
               </Flex>
 
-              {frozen ? (
+              {unusableHint ? (
                 <Box mt={2} fontSize="sm" color="fg.subtle">
-                  {t("test_cases.frozen_module_hint")}
+                  {unusableHint}
                 </Box>
               ) : testerIdsFor(testCase.id!.toString()).length ? (
                 <Flex mt={2} gap={2} wrap="wrap">
@@ -631,6 +704,16 @@ function CreateNewTestPlan() {
           </>
         )}
       </AppDialog>
+
+      <DraftsSkippedDialog
+        drafts={pendingPlan?.drafts ?? null}
+        onCancel={() => setPendingPlan(null)}
+        onConfirm={() => {
+          const data = pendingPlan?.data;
+          setPendingPlan(null);
+          if (data) void createPlan(data);
+        }}
+      />
     </div>
   );
 }

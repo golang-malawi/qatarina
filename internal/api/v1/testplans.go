@@ -180,7 +180,7 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 
 		_, err := testPlanService.Create(context.Background(), request)
 		if err != nil {
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
@@ -304,7 +304,7 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 			if errors.Is(err, services.ErrTestPlanLocked) {
 				return problemdetail.Conflict(c, err.Error())
 			}
-			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestPlanProjectMismatch) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) || errors.Is(err, services.ErrTestPlanProjectMismatch) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
@@ -695,7 +695,7 @@ func BatchAssignTestCasesToPlan(testPlanService services.TestPlanService, logger
 			if errors.Is(err, services.ErrTestPlanLocked) {
 				return problemdetail.Conflict(c, err.Error())
 			}
-			if errors.Is(err, services.ErrModuleFrozen) {
+			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)

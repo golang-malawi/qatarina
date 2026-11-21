@@ -87,6 +87,9 @@ func (t *testRunService) Create(ctx context.Context, request *schema.TestRunRequ
 	if err := ensureNotInFrozenModules(ctx, t.queries, []uuid.UUID{testCaseID}); err != nil {
 		return nil, err
 	}
+	if err := ensureNotDrafts(ctx, t.queries, []uuid.UUID{testCaseID}); err != nil {
+		return nil, err
+	}
 
 	// Determine result state: use provided state, or default to pending if no feedback provided
 	resultState := dbsqlc.TestRunStatePending

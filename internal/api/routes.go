@@ -121,6 +121,7 @@ func (api *API) routes() {
 		testCasesV1.Post("/bulk", apiv1.BulkCreateTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("/bulk-delete", apiv1.BulkDeleteTestCases(api.TestCasesService, api.logger))
 		testCasesV1.Post("/bulk-transfer", apiv1.BulkTransferTestCases(api.TestCasesService, api.logger))
+		testCasesV1.Post("/selection-drafts", apiv1.ListSelectionDrafts(api.TestCasesService, api.logger))
 		testCasesV1.Get("/query", apiv1.SearchTestCases(api.TestCasesService))
 		testCasesV1.Post("/github-import", apiv1.ImportIssuesFromGitHubAsTestCases(api.ProjectsService, api.TestCasesService, api.logger))
 		testCasesV1.Post("/suggest", apiv1.SuggestTestCase(api.TestCasesService, api.logger))

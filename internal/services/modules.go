@@ -241,3 +241,39 @@ func ensureNotInFrozenModules(ctx context.Context, queries *dbsqlc.Queries, test
 	}
 	return fmt.Errorf("%w: %s", ErrModuleFrozen, strings.Join(codes, ", "))
 }
+
+// ErrTestCaseDraft is returned when draft test cases are assigned to testers
+var ErrTestCaseDraft = errors.New("draft test cases cannot be assigned to testers, publish them or remove them from the selection")
+
+// maxListedDraftCodes caps how many draft test case codes an error names
+const maxListedDraftCodes = 10
+
+// draftTestCasesError returns ErrTestCaseDraft naming the given draft test case codes,
+// or nil if there are none
+func draftTestCasesError(codes []string) error {
+	if len(codes) == 0 {
+		return nil
+	}
+	listed := strings.Join(codes, ", ")
+	if len(codes) > maxListedDraftCodes {
+		listed = fmt.Sprintf("%s and %d more", strings.Join(codes[:maxListedDraftCodes], ", "), len(codes)-maxListedDraftCodes)
+	}
+	return fmt.Errorf("%w: %s", ErrTestCaseDraft, listed)
+}
+
+// ensureNotDrafts returns ErrTestCaseDraft, naming the offending test cases,
+// if any of the given test cases is a draft
+func ensureNotDrafts(ctx context.Context, queries *dbsqlc.Queries, testCaseIDs []uuid.UUID) error {
+	if len(testCaseIDs) == 0 {
+		return nil
+	}
+	drafts, err := queries.ListDraftTestCases(ctx, testCaseIDs)
+	if err != nil {
+		return fmt.Errorf("failed to check for draft test cases: %w", err)
+	}
+	codes := make([]string, 0, len(drafts))
+	for _, tc := range drafts {
+		codes = append(codes, tc.Code)
+	}
+	return draftTestCasesError(codes)
+}
