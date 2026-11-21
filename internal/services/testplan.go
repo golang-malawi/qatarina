@@ -489,7 +489,7 @@ var (
 	// ErrTestPlanLocked is returned when changing a test plan that was closed
 	ErrTestPlanLocked = errors.New("test plan is closed and locked, reopen it to make changes")
 	// ErrTestPlanHasPendingRuns is returned when closing a test plan with test runs still open
-	ErrTestPlanHasPendingRuns = errors.New("test plan cannot be closed while some of its test runs are pending")
+	ErrTestPlanHasPendingRuns = errors.New("test plan cannot be closed while some of its test runs are still open")
 	// ErrTestPlanAlreadyClosed is returned when closing a test plan twice
 	ErrTestPlanAlreadyClosed = errors.New("test plan is already closed")
 	// ErrTestPlanNotClosedYet is returned when reopening a test plan that is open
@@ -516,6 +516,47 @@ func ensureTestPlanNotLocked(ctx context.Context, queries *dbsqlc.Queries, testP
 	return nil
 }
 
+// maxListedOpenRunCodes caps how many test case codes are named for each kind of open test run
+const maxListedOpenRunCodes = 10
+
+// openTestRunsError returns ErrTestPlanHasPendingRuns explaining which test runs stop the plan
+// from closing: the ones still waiting for a result, and the ones with a result that were not
+// closed. It returns nil when every test run is closed.
+func openTestRunsError(testRuns []dbsqlc.ListTestRunsByPlanRow) error {
+	var pending, notClosed []string
+	for _, testRun := range testRuns {
+		code := testRun.TestCaseCode
+		if code == "" {
+			code = testRun.Code
+		}
+		switch {
+		case testRun.ResultState == dbsqlc.TestRunStatePending:
+			pending = append(pending, code)
+		case !testRun.IsClosed.Bool:
+			notClosed = append(notClosed, code)
+		}
+	}
+	if len(pending) == 0 && len(notClosed) == 0 {
+		return nil
+	}
+
+	listed := func(codes []string) string {
+		if len(codes) > maxListedOpenRunCodes {
+			return fmt.Sprintf("%s and %d more", strings.Join(codes[:maxListedOpenRunCodes], ", "), len(codes)-maxListedOpenRunCodes)
+		}
+		return strings.Join(codes, ", ")
+	}
+	var reasons []string
+	if len(pending) > 0 {
+		reasons = append(reasons, fmt.Sprintf("%d still waiting for a result (%s)", len(pending), listed(pending)))
+	}
+	if len(notClosed) > 0 {
+		reasons = append(reasons, fmt.Sprintf("%d with a result that were not closed (%s)", len(notClosed), listed(notClosed)))
+	}
+	return fmt.Errorf("%w: %s. Record their results and close those test runs, then close the test plan",
+		ErrTestPlanHasPendingRuns, strings.Join(reasons, " and "))
+}
+
 func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (*dbsqlc.Report, error) {
 	plan, err := t.queries.GetTestPlan(ctx, int64(testPlanID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -534,10 +575,8 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (
 		t.logger.Error("error listing test runs", "error", err)
 		return nil, err
 	}
-	for _, testRun := range testRuns {
-		if testRun.ResultState == dbsqlc.TestRunStatePending || !testRun.IsClosed.Bool {
-			return nil, ErrTestPlanHasPendingRuns
-		}
+	if err := openTestRunsError(testRuns); err != nil {
+		return nil, err
 	}
 
 	closedAt := time.Now()

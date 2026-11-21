@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -84,8 +85,24 @@ func TestTestPlans_ClosingLocksPlanAndLinksReport(t *testing.T) {
 		t.Errorf("report for an open plan: err = %v, want ErrTestPlanNotClosed", err)
 	}
 
-	if _, err := f.plans.CloseTestPlan(ctx, int32(plan.ID)); !errors.Is(err, services.ErrTestPlanHasPendingRuns) {
+	// the error says which test runs stop the plan from closing, and why
+	code := f.testCaseCode(t, testCase)
+	_, err = f.plans.CloseTestPlan(ctx, int32(plan.ID))
+	if !errors.Is(err, services.ErrTestPlanHasPendingRuns) {
 		t.Fatalf("close with a pending run: err = %v, want ErrTestPlanHasPendingRuns", err)
+	}
+	if msg := err.Error(); !strings.Contains(msg, code) || !strings.Contains(msg, "waiting for a result") {
+		t.Errorf("close with a pending run: error %q does not name %s as waiting for a result", msg, code)
+	}
+	if err := f.commitRun(run.ID.String(), false); err != nil {
+		t.Fatalf("commit test run: %v", err)
+	}
+	_, err = f.plans.CloseTestPlan(ctx, int32(plan.ID))
+	if !errors.Is(err, services.ErrTestPlanHasPendingRuns) {
+		t.Fatalf("close with a run that was not closed: err = %v, want ErrTestPlanHasPendingRuns", err)
+	}
+	if msg := err.Error(); !strings.Contains(msg, code) || !strings.Contains(msg, "not closed") {
+		t.Errorf("close with a run that was not closed: error %q does not name %s as not closed", msg, code)
 	}
 	if err := f.commitRun(run.ID.String(), true); err != nil {
 		t.Fatalf("commit test run: %v", err)

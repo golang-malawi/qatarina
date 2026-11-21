@@ -148,7 +148,12 @@ function ViewTestPlan() {
       }
     } catch (closeError: any) {
       console.error("Failed to close test plan:", closeError);
-      toaster.error({ title: t("test_plans.close.error"), description: closeError?.message });
+      // The message says which test runs stop the plan from closing, so leave it up long enough to read
+      toaster.error({
+        title: t("test_plans.close.error"),
+        description: closeError?.message,
+        duration: 10000,
+      });
     } finally {
       setIsClosing(false);
     }
