@@ -382,7 +382,7 @@
   "test_plans.locked_notice": "This test plan is closed and locked. Reopen it to assign testers, add test runs or change results.",
   "test_plans.close.error": "The test plan could not be closed",
   "test_plans.close.closed": "Plan Closed",
-  "test_plans.close.mark_complete": "Mark as Complete",
+  "test_plans.close.mark_complete": "Close Test Plan",
   "test_plans.untitled": "Test Plan #{{id}}",
   "test_plans.plan_description": "Plan ID: {{id}} · Kind: {{kind}}",
   "test_plans.report.none": "No report yet",
