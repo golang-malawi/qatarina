@@ -23,7 +23,6 @@ type TestPlanService interface {
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
-	Update(context.Context, schema.UpdateTestPlan) (bool, error)
 	// CloseTestPlan closes and locks a test plan and generates its report. The plan stays
 	// closed if the report fails, in which case the error wraps ErrTestPlanReportFailed
 	CloseTestPlan(context.Context, int32) (*dbsqlc.Report, error)
@@ -469,22 +468,6 @@ func (t *testPlanService) GetOneTestPlan(ctx context.Context, id int64) (*schema
 	return &response, nil
 }
 
-func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestPlan) (bool, error) {
-	err := t.queries.UpdateTestPlan(ctx, dbsqlc.UpdateTestPlanParams{
-		ProjectID:      int32(request.ProjectID),
-		Kind:           dbsqlc.TestKind(request.Kind),
-		Description:    common.NullString(request.Description),
-		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
-		StartAt:        common.NullTime(request.StartAt),
-		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
-	})
-	if err != nil {
-		t.logger.Error("failed to update test plan", "error", err)
-		return false, err
-	}
-	return true, nil
-}
-
 var (
 	// ErrTestPlanLocked is returned when changing a test plan that was closed
 	ErrTestPlanLocked = errors.New("test plan is closed and locked, reopen it to make changes")
@@ -844,6 +827,24 @@ func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentI
 	}
 	return id.String(), nil
 }
+var (
+	ErrTestPlanClosed           = errors.New("test plan is complete or locked and cannot be changed")
+	ErrTestPlanInvalidKind      = errors.New("test plan kind is not valid")
+	ErrTestPlanEmptyDescription = errors.New("test plan description must not be empty")
+	ErrTestPlanEnvironment      = errors.New("environment does not belong to the test plan's project")
+	ErrTestPlanEndBeforeStart   = errors.New("scheduled end must not be before the start")
+)
+
+func isValidTestKind(kind string) bool {
+	switch dbsqlc.TestKind(kind) {
+	case dbsqlc.TestKindGeneral, dbsqlc.TestKindAdhoc, dbsqlc.TestKindTriage,
+		dbsqlc.TestKindIntegration, dbsqlc.TestKindUserAcceptance, dbsqlc.TestKindRegression,
+		dbsqlc.TestKindSecurity, dbsqlc.TestKindUserInterface, dbsqlc.TestKindScenario:
+		return true
+	}
+	return false
+}
+
 func (t *testPlanService) UpdateDetails(ctx context.Context, request schema.UpdateTestPlanDetails) error {
 	plan, err := t.queries.GetTestPlan(ctx, request.ID)
 	if err != nil {
@@ -852,8 +853,39 @@ func (t *testPlanService) UpdateDetails(ctx context.Context, request schema.Upda
 		}
 		return fmt.Errorf("failed to load test plan: %w", err)
 	}
-	if plan.IsLocked.Bool {
-		return ErrTestPlanLocked
+
+	// Rules shared by every caller (REST API and MCP server)
+	if plan.IsComplete.Bool || plan.IsLocked.Bool {
+		return ErrTestPlanClosed
+	}
+	if request.Description != nil && strings.TrimSpace(*request.Description) == "" {
+		return ErrTestPlanEmptyDescription
+	}
+	if request.Kind != nil && !isValidTestKind(*request.Kind) {
+		return ErrTestPlanInvalidKind
+	}
+	if request.EnvironmentID != nil && *request.EnvironmentID != 0 {
+		env, err := t.queries.GetEnvironment(ctx, int32(*request.EnvironmentID))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrTestPlanEnvironment
+			}
+			return fmt.Errorf("failed to load environment: %w", err)
+		}
+		if env.ProjectID.Int32 != plan.ProjectID {
+			return ErrTestPlanEnvironment
+		}
+	}
+	// Compare the dates, using the current value of any that isn't being changed
+	startAt, endAt := plan.StartAt, plan.ScheduledEndAt
+	if request.StartAt != nil {
+		startAt = common.NullTime(*request.StartAt)
+	}
+	if request.ScheduledEndAt != nil {
+		endAt = common.NullTime(*request.ScheduledEndAt)
+	}
+	if startAt.Valid && endAt.Valid && endAt.Time.Before(startAt.Time) {
+		return ErrTestPlanEndBeforeStart
 	}
 
 	params := dbsqlc.UpdateTestPlanDetailsParams{

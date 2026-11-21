@@ -34,6 +34,8 @@ export const testPlanCreationFields: FieldConfig[] = [
     helperText: 'When the test plan is scheduled to end',
     type: "date",
   }),
+  // No "Closed Date" field: a plan is closed with the Close action, which checks that all
+  // its runs are finished and marks it complete. Setting a date here left plans half-closed.
 ];
 
 
@@ -58,4 +60,5 @@ export const testPlanUpdateFields: FieldConfig[] = [
     helperText: 'When the test plan is scheduled to end',
     type: "date",
   }),
+  // No "Closed Date" field, see testPlanCreationFields above
 ]; 

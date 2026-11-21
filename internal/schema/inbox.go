@@ -6,6 +6,23 @@ type InboxFilterParams struct {
 	Page          int     `json:"page"`
 	IncludeClosed bool    `json:"include_closed"`
 	Projects      []int32 `json:"projects"` // Projects to filter by
+	EnvironmentID int32   `json:"environment_id"` // 0 means any environment
+	Module        string  `json:"module"`         // Feature or module name; empty means any
+	Search        string  `json:"search"`         // Matches title, code or feature/module
+}
+
+// InboxFilterOption is one selectable value in an inbox filter dropdown
+type InboxFilterOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// InboxFilterOptionsResponse lists the projects, environments and modules
+// present in the current user's inbox
+type InboxFilterOptionsResponse struct {
+	Projects     []InboxFilterOption `json:"projects"`
+	Environments []InboxFilterOption `json:"environments"`
+	Modules      []InboxFilterOption `json:"modules"`
 }
 
 type InboxUnseenCountResponse struct {

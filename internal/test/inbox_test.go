@@ -107,7 +107,7 @@ func TestInbox_OneRowPerTestPlanAndClosedPlansAreHistory(t *testing.T) {
 	}
 
 	// navigation from the closed assignment still works, and follows the inbox filter
-	nav, err := svc.FindInboxNavigation(ctx, f.ownerID, testCase, older.ID, false)
+	nav, err := svc.FindInboxNavigation(ctx, &schema.InboxFilterParams{UserID: f.ownerID}, testCase, older.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation: %v", err)
 	}

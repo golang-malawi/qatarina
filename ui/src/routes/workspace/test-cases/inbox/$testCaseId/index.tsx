@@ -20,9 +20,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   findInboxNavigationQueryOptions,
   findTestCaseInboxByIdQueryOptions,
-  findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
+  hasActiveInboxFilters,
 } from "@/data/queries/test-cases";
+import { useInboxFilters } from "@/lib/inbox-filters-context";
 import {
   useQuery,
   useSuspenseQuery,
@@ -54,11 +55,9 @@ import {
 import { useAuth } from "@/hooks/isLoggedIn";   
 
 // An inbox row is a test case in a test plan, so links carry the plan. Without it the
-// server opens the open assignment of the test case. history keeps previous/next on
-// the same rows as the list when it shows closed test cases.
+// server opens the open assignment of the test case.
 type InboxItemSearch = {
   plan?: number;
-  history?: boolean;
 };
 
 export const Route = createFileRoute(
@@ -66,10 +65,8 @@ export const Route = createFileRoute(
 )({
   validateSearch: (search): InboxItemSearch => {
     const plan = Number((search as any)?.plan);
-    const history = (search as any)?.history;
     return {
       plan: Number.isInteger(plan) && plan > 0 ? plan : undefined,
-      history: history === true || history === "true" ? true : undefined,
     };
   },
   loaderDeps: ({ search: { plan } }) => ({ plan }),
@@ -106,7 +103,7 @@ function InboxNavigation({
         colorPalette="brand"
         disabled={isPending || !nav?.previous_id}
         onClick={() => nav?.previous_id && onGoTo(nav.previous_id, nav.previous_test_plan_id)}
-        title="Previous test case in your inbox"
+        title="Previous test case in the list"
       >
         <IconChevronLeft />
         Previous
@@ -122,7 +119,7 @@ function InboxNavigation({
         colorPalette="brand"
         disabled={isPending || !nav?.next_id}
         onClick={() => nav?.next_id && onGoTo(nav.next_id, nav.next_test_plan_id)}
-        title="Next test case in your inbox"
+        title="Next test case in the list"
       >
         Next
         <IconChevronRight />
@@ -133,7 +130,7 @@ function InboxNavigation({
 
 function InboxTestCaseView() {
   const { testCaseId } = Route.useParams();
-  const { plan, history } = Route.useSearch();
+  const { plan } = Route.useSearch();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const auth = useAuth();               
@@ -147,14 +144,17 @@ function InboxTestCaseView() {
   const isDraft = tc.is_draft;
   const testPlanID = tc.test_plan_id ?? 0;
 
+  // Previous/Next follow the list as filtered in the inbox toolbar
+  const inboxFilters = useInboxFilters();
+  const isFiltered = hasActiveInboxFilters(inboxFilters);
   const { data: nav, isPending: isPendingNav } = useQuery(
-    findInboxNavigationQueryOptions(testCaseId, testPlanID, Boolean(history)),
+    findInboxNavigationQueryOptions(testCaseId, testPlanID, inboxFilters),
   );
   const goToTestCase = (id: string, nextPlanID?: number) =>
     navigate({
       to: "/workspace/test-cases/inbox/$testCaseId",
       params: { testCaseId: id },
-      search: { plan: nextPlanID || undefined, history },
+      search: { plan: nextPlanID || undefined },
     });
   const navigation = (
     <InboxNavigation
@@ -255,7 +255,9 @@ function InboxTestCaseView() {
         title: "Success",
         description: nextId
           ? "Test result recorded. Moved to the next test case."
-          : "Test result recorded. That was the last test case in your inbox.",
+          : isFiltered
+            ? "Test result recorded. That was the last test case matching your filters."
+            : "Test result recorded. That was the last test case in your inbox.",
         type: "success",
       });
       setResultText("");
@@ -266,13 +268,10 @@ function InboxTestCaseView() {
         attachmentInputRef.current.value = "";
       }
 
-      queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
+      // Refreshes the inbox list (whatever filters are applied), this item, the counts
+      // and the filter options
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
-      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId, plan));
-
-      // Optional: force refetch for instant UI update
-      queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
-      queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
 
       if (nextId) {
         goToTestCase(nextId, nav?.next_test_plan_id);

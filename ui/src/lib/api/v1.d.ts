@@ -458,7 +458,7 @@ export interface paths {
         };
         /**
          * Get the previous and next Test Cases in the current user's inbox
-         * @description Get the neighbouring inbox rows around a Test Case in a Test Plan, following the inbox order and filter, with its position. Empty IDs mean there is none in that direction.
+         * @description Get the neighbouring inbox rows around a Test Case in a Test Plan, following the inbox order and the same filters as the inbox list, with its position. Empty IDs mean there is none in that direction.
          */
         get: operations["GetInboxNavigation"];
         put?: never;
@@ -483,6 +483,26 @@ export interface paths {
          * @description Mark a Test Case in a Test Plan in the current user's inbox as viewed, or in every Test Plan without testPlanID
          */
         post: operations["MarkInboxTestCaseViewed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/test-cases/inbox/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the filter options for the current user's inbox
+         * @description List the distinct projects, environments and modules found in the current user's inbox
+         */
+        get: operations["GetInboxFilterOptions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2040,7 +2060,7 @@ export interface paths {
         put?: never;
         /**
          * Update a Test Plan
-         * @description Update a Test Plan
+         * @description Update a Test Plan's kind, description, environment and dates. Fields left out keep their current value. Complete or locked plans can't be changed.
          */
         post: operations["UpdateTestPlan"];
         /**
@@ -2712,6 +2732,7 @@ export interface components {
             created_by_id?: number;
             description?: string;
             environment_id?: number;
+            environment_name?: string;
             external_id?: string;
             feature_or_module?: string;
             id?: string;
@@ -2727,6 +2748,7 @@ export interface components {
             preconditions?: string;
             priority?: string;
             project_id?: number;
+            project_title?: string;
             tags?: string[];
             test_plan_id?: number;
             /** @description Description of the test plan, used as its name */
@@ -3004,6 +3026,15 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxFilterOption": {
+            label?: string;
+            value?: string;
+        };
+        "schema.InboxFilterOptionsResponse": {
+            environments?: components["schemas"]["schema.InboxFilterOption"][];
+            modules?: components["schemas"]["schema.InboxFilterOption"][];
+            projects?: components["schemas"]["schema.InboxFilterOption"][];
+        };
         "schema.InboxNavigationResponse": {
             next_id?: string;
             next_test_plan_id?: number;
@@ -3430,6 +3461,13 @@ export interface components {
             tags?: string[];
             title: string;
         };
+        "schema.UpdateTestPlan": {
+            description?: string;
+            environment_id?: number;
+            kind?: string;
+            scheduled_end_at?: string;
+            start_at?: string;
+        };
         "schema.UpdateTestPlanCaseUrgencyRequest": {
             /** @enum {string} */
             urgency: "low" | "medium" | "high" | "urgent";
@@ -3717,6 +3755,14 @@ export interface operations {
                 pageSize?: number;
                 /** @description Include closed test cases and test cases of closed test plans */
                 includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Environment ID to filter by */
+                environmentID?: number;
+                /** @description Feature or module name to filter by */
+                module?: string;
+                /** @description Search title, code or feature/module */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -3821,6 +3867,14 @@ export interface operations {
                 testPlanID: number;
                 /** @description Include closed test cases and test cases of closed test plans */
                 includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Environment ID to filter by */
+                environmentID?: number;
+                /** @description Feature or module name to filter by */
+                module?: string;
+                /** @description Search title, code or feature/module */
+                search?: string;
             };
             header?: never;
             path: {
@@ -3906,6 +3960,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxFilterOptions: {
+        parameters: {
+            query?: {
+                /** @description Include closed test cases */
+                includeClosed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxFilterOptionsResponse"];
                 };
             };
             /** @description Internal Server Error */
@@ -7581,14 +7671,14 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testPlanID: string;
+                testPlanID: number;
             };
             cookie?: never;
         };
-        /** @description Test Plan data */
+        /** @description Fields to change */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.UpdateTestPlan"];
             };
         };
         responses: {
@@ -7598,11 +7688,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TestPlanResponseItem"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

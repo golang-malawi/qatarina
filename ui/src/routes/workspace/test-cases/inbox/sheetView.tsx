@@ -14,7 +14,6 @@ import {
   Separator,
   Input,
 } from "@chakra-ui/react";
-import { Checkbox } from "@/components/ui/checkbox";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { components } from "@/lib/api/v1";
@@ -26,8 +25,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
-  findTestCaseInboxQueryOptions,
   findTestCaseSummaryQueryOptions,
+  inboxListInfiniteQueryOptions,
+  type InboxFilters,
 } from "@/data/queries/test-cases";
 import {
   createTestRun,
@@ -38,7 +38,6 @@ import { IconPaperclip, IconX } from "@tabler/icons-react";
 import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/hooks/isLoggedIn";
 import { apiClient } from "@/lib/api/query";
-import { getInboxTestCases } from "@/services/TestCaseService";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import {
   applyChecklistState,
@@ -147,19 +146,17 @@ const filterSelectStyle: React.CSSProperties = { ...selectStyle, padding: "2px 4
 interface SheetViewProps {
   projectMap: Record<number, string>;
   environmentMap: Record<number, string>;
-  onBackToStandard: () => void;
-  includeClosed: boolean;
+  // Search, project, environment, module and open/closed come from the inbox toolbar
+  // and are applied by the server; the column filters below narrow the loaded rows further
+  filters: InboxFilters;
 }
 
 export function SheetView({
   projectMap,
   environmentMap,
-  onBackToStandard,
-  includeClosed: initialIncludeClosed,
+  filters,
 }: SheetViewProps) {
   const { t } = useTranslation();
-  const [includeClosed, setIncludeClosed] = useState(initialIncludeClosed);
-  const [moduleFilter, setModuleFilter] = useState<string>("");
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>(emptyColumnFilters);
   const setColumnFilter = (key: keyof ColumnFilters, value: string) =>
     setColumnFilters((prev) => ({ ...prev, [key]: value }));
@@ -175,8 +172,6 @@ export function SheetView({
   const auth = useAuth();
   const currentUser = auth.user;
 
-  const pageSize = 20;
-
   const {
     data,
     fetchNextPage,
@@ -184,26 +179,7 @@ export function SheetView({
     isFetchingNextPage,
     isPending,
     error,
-  } = useInfiniteQuery({
-    queryKey: ["me-test-cases-inbox", includeClosed],
-    queryFn: async ({ pageParam = 1 }) => {
-      const res = await getInboxTestCases({
-        includeClosed,
-        page: pageParam,
-        pageSize,
-      });
-      return res.data;
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      const total = lastPage?.pagination?.total ?? 0;
-      const loadedCount = allPages.reduce(
-        (acc, page) => acc + (page?.test_cases?.length ?? 0),
-        0
-      );
-      return loadedCount < total ? allPages.length + 1 : undefined;
-    },
-  });
+  } = useInfiniteQuery(inboxListInfiniteQueryOptions(filters));
 
   const testCases = useMemo(
     () => data?.pages.flatMap((page: any) => page?.test_cases ?? []) ?? [],
@@ -237,13 +213,6 @@ export function SheetView({
     });
     return map;
   }, [testRunsQueries, testPlanIds]);
-
-  // Derive module options from loaded test cases
-  const moduleOptions = useMemo(() => {
-    return Array.from(
-      new Set(testCases.map((tc) => (tc as any)?.feature_or_module).filter(Boolean))
-    ).map((v) => ({ label: v as string, value: v as string }));
-  }, [testCases]);
 
   // Options for the column filters, built from the test cases loaded so far
   const projectFilterOptions = useMemo(
@@ -287,14 +256,13 @@ export function SheetView({
     return options;
   }, [testCases, lastResultOf, t]);
 
-  // Apply the module and column filters client-side
+  // Apply the column filters client-side
   const filteredTestCases = useMemo(() => {
     const code = columnFilters.code.trim().toLowerCase();
     const title = columnFilters.title.trim().toLowerCase();
     const preconditions = columnFilters.preconditions.trim().toLowerCase();
 
     return testCases.filter((tc) => {
-      if (moduleFilter && tc.feature_or_module !== moduleFilter) return false;
       if (code && !(tc.code || `#${tc.id}`).toLowerCase().includes(code)) return false;
       if (title && !(tc.title ?? "").toLowerCase().includes(title)) return false;
       if (preconditions && !(tc.preconditions ?? "").toLowerCase().includes(preconditions)) {
@@ -311,14 +279,12 @@ export function SheetView({
       }
       return true;
     });
-  }, [testCases, moduleFilter, columnFilters, lastResultOf]);
+  }, [testCases, columnFilters, lastResultOf]);
 
-  const isFiltering =
-    Boolean(moduleFilter) || Object.values(columnFilters).some((v) => v.trim() !== "");
+  const isFiltering = Object.values(columnFilters).some((v) => v.trim() !== "");
   const totalTestCases = data?.pages[0]?.pagination?.total ?? testCases.length;
 
   const clearFilters = () => {
-    setModuleFilter("");
     setColumnFilters(emptyColumnFilters);
   };
 
@@ -429,7 +395,7 @@ export function SheetView({
       if (variables.tc.id) {
         setRowAttachments(rowKey(variables.tc), []);
       }
-      queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
+      queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
       // Clear the ticked steps for the next run, as the inbox view does
       if (variables.tc.id) {
@@ -466,59 +432,23 @@ export function SheetView({
 
   return (
     <Box display="flex" flexDirection="column" h="full" w="full" p={0} m={0}>
-      {/* Header bar with actions and filters */}
-      <Flex justify="space-between" align="center" mb={2} px={2} pt={1} flexShrink={0} wrap="wrap" gap={2}>
-        <Flex align="center" gap={4}>
-          <Heading size="md" color="fg.heading">
-            {t("test_cases.sheet_view.title", "Test Case Sheet View")}
-          </Heading>
-          
-          <Checkbox
-            checked={includeClosed}
-            onCheckedChange={(e) => setIncludeClosed(e.checked as boolean)}
-          >
-            {t("test_cases.show_history", "Show history")}
-          </Checkbox>
-
-          <select
-            value={moduleFilter}
-            onChange={(e) => setModuleFilter(e.target.value)}
-            style={{ ...selectStyle, width: "auto", padding: "4px 8px", fontSize: "13px" }}
-          >
-            <option value="">{t("common.all", "All")}</option>
-            {moduleOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          {isFiltering && (
-            <Flex align="center" gap={2}>
-              <Text fontSize="xs" color="fg.muted">
-                {t("test_cases.sheet_view.filter.showing", "Showing {{shown}} of {{total}}", {
-                  shown: filteredTestCases.length,
-                  total: totalTestCases,
-                })}
-                {hasNextPage &&
-                  ` ${t("test_cases.sheet_view.filter.loading_rest", "(loading the rest...)")}`}
-              </Text>
-              <Button size="xs" variant="ghost" colorPalette="brand" onClick={clearFilters}>
-                {t("test_cases.sheet_view.filter.clear", "Clear filters")}
-              </Button>
-            </Flex>
-          )}
+      {/* Search, filters and the view switch live in the inbox toolbar above.
+          This bar only appears while the grid's own column filters are in use. */}
+      {isFiltering && (
+        <Flex align="center" gap={2} px={3} py={2} flexShrink={0}>
+          <Text fontSize="xs" color="fg.muted">
+            {t("test_cases.sheet_view.filter.showing", "Showing {{shown}} of {{total}}", {
+              shown: filteredTestCases.length,
+              total: totalTestCases,
+            })}
+            {hasNextPage &&
+              ` ${t("test_cases.sheet_view.filter.loading_rest", "(loading the rest...)")}`}
+          </Text>
+          <Button size="xs" variant="ghost" colorPalette="brand" onClick={clearFilters}>
+            {t("test_cases.sheet_view.filter.clear", "Clear column filters")}
+          </Button>
         </Flex>
-
-        <Button
-          size="xs"
-          variant="outline"
-          colorPalette="brand"
-          onClick={onBackToStandard}
-        >
-          {t("test_cases.sheet_view.back_to_standard", "Back to Standard View")}
-        </Button>
-      </Flex>
+      )}
 
       <Box flex="1" overflowY="auto" borderTop="1px solid" borderBottom="1px solid" borderColor="border" bg="bg.surface" w="full">
         <Table.Root

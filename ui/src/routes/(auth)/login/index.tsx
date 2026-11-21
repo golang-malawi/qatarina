@@ -27,16 +27,15 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { SiteConfig } from "@/lib/config/site";
 import { useState } from "react";
 import { useAuth } from "@/hooks/isLoggedIn";
-import { getLastProjectPath } from "@/lib/last-project";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { toaster } from "@/components/ui/toaster";
 
 const fallback = "/" as const;
 
+// A deep link the user was bounced from wins; otherwise "/" picks the landing page
+// (Inbox when there is work waiting, see routes/(app)/index.tsx).
 const resolvePostLoginRedirect = (redirectTo?: string) => {
-  const lastProjectPath = getLastProjectPath();
-  if (lastProjectPath) return lastProjectPath;
   if (redirectTo) return redirectTo;
   return fallback;
 };

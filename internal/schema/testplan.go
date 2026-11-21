@@ -126,16 +126,15 @@ type TestPlanListResponse struct {
 	TestPlans []TestPlanResponseItem `json:"test_plans"`
 }
 
+// UpdateTestPlan is the request body for editing a test plan. Every field is optional;
+// fields left out keep their current value. Progress, status and assignments can't be
+// changed here (a plan is closed with the close endpoint).
 type UpdateTestPlan struct {
-	ProjectID      int64      `json:"project_id" validate:"required"`
-	Kind           string     `json:"kind" validate:"required"`
-	Description    string     `json:"description" validate:"required"`
-	StartAt        time.Time  `json:"start_at" validate:"required"`
-	ScheduledEndAt time.Time  `json:"scheduled_end_at"`
-	AssignedToID   int64      `json:"assigned_to_id" validate:"-"`
-	CreatedByID    int64      `json:"created_by_id" validate:"-"`
-	UpdatedByID    int64      `json:"updated_by_id" validate:"-"`
-	EnvironmentID  int64      `json:"environment_id" validate:"-"`
+	Kind           *string    `json:"kind,omitempty"`
+	Description    *string    `json:"description,omitempty"`
+	EnvironmentID  *int64     `json:"environment_id,omitempty"`
+	StartAt        *time.Time `json:"start_at,omitempty"`
+	ScheduledEndAt *time.Time `json:"scheduled_end_at,omitempty"`
 }
 
 type TestCaseResponseItem struct {

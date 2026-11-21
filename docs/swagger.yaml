@@ -73,6 +73,8 @@ components:
           type: string
         environment_id:
           type: integer
+        environment_name:
+          type: string
         external_id:
           type: string
         feature_or_module:
@@ -98,6 +100,8 @@ components:
           type: string
         project_id:
           type: integer
+        project_title:
+          type: string
         tags:
           items:
             type: string
@@ -727,6 +731,31 @@ components:
           type: string
       type: object
     schema.ImportProjectRequest:
+      type: object
+    schema.InboxFilterOption:
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+      type: object
+    schema.InboxFilterOptionsResponse:
+      properties:
+        environments:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
+        modules:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
+        projects:
+          items:
+            $ref: '#/components/schemas/schema.InboxFilterOption'
+          type: array
+          uniqueItems: false
       type: object
     schema.InboxNavigationResponse:
       properties:
@@ -1661,6 +1690,19 @@ components:
       - project_id
       - title
       type: object
+    schema.UpdateTestPlan:
+      properties:
+        description:
+          type: string
+        environment_id:
+          type: integer
+        kind:
+          type: string
+        scheduled_end_at:
+          type: string
+        start_at:
+          type: string
+      type: object
     schema.UpdateTestPlanCaseUrgencyRequest:
       properties:
         urgency:
@@ -2096,6 +2138,26 @@ paths:
         name: includeClosed
         schema:
           type: boolean
+      - description: Comma-separated project IDs to filter by
+        in: query
+        name: projects
+        schema:
+          type: string
+      - description: Environment ID to filter by
+        in: query
+        name: environmentID
+        schema:
+          type: integer
+      - description: Feature or module name to filter by
+        in: query
+        name: module
+        schema:
+          type: string
+      - description: Search title, code or feature/module
+        in: query
+        name: search
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -2177,8 +2239,8 @@ paths:
   /v1/me/test-cases/inbox/{testCaseID}/navigation:
     get:
       description: Get the neighbouring inbox rows around a Test Case in a Test Plan,
-        following the inbox order and filter, with its position. Empty IDs mean there
-        is none in that direction.
+        following the inbox order and the same filters as the inbox list, with its
+        position. Empty IDs mean there is none in that direction.
       operationId: GetInboxNavigation
       parameters:
       - description: Test Case ID
@@ -2198,6 +2260,26 @@ paths:
         name: includeClosed
         schema:
           type: boolean
+      - description: Comma-separated project IDs to filter by
+        in: query
+        name: projects
+        schema:
+          type: string
+      - description: Environment ID to filter by
+        in: query
+        name: environmentID
+        schema:
+          type: integer
+      - description: Feature or module name to filter by
+        in: query
+        name: module
+        schema:
+          type: string
+      - description: Search title, code or feature/module
+        in: query
+        name: search
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -2269,6 +2351,38 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Mark a Test Case in the current user's inbox as viewed
+      tags:
+      - test-cases
+  /v1/me/test-cases/inbox/filter-options:
+    get:
+      description: List the distinct projects, environments and modules found in the
+        current user's inbox
+      operationId: GetInboxFilterOptions
+      parameters:
+      - description: Include closed test cases
+        in: query
+        name: includeClosed
+        schema:
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.InboxFilterOptionsResponse'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: List the filter options for the current user's inbox
       tags:
       - test-cases
   /v1/me/test-cases/inbox/unseen-count:
@@ -5582,7 +5696,9 @@ paths:
       tags:
       - test-plans
     post:
-      description: Update a Test Plan
+      description: Update a Test Plan's kind, description, environment and dates.
+        Fields left out keep their current value. Complete or locked plans can't be
+        changed.
       operationId: UpdateTestPlan
       parameters:
       - description: Test Plan ID
@@ -5590,20 +5706,20 @@ paths:
         name: testPlanID
         required: true
         schema:
-          type: string
+          type: integer
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-        description: Test Plan data
+              $ref: '#/components/schemas/schema.UpdateTestPlan'
+        description: Fields to change
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.TestPlanResponseItem'
           description: OK
         "400":
           content:
@@ -5611,6 +5727,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Conflict
         "500":
           content:
             application/json:
