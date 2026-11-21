@@ -176,6 +176,50 @@ func TestTestPlans_ClosingLocksPlanAndLinksReport(t *testing.T) {
 	}
 }
 
+func TestTestPlans_ClosingTwiceAtOnceMakesOneReport(t *testing.T) {
+	f, _ := newCloseFixture(t)
+	ctx := context.Background()
+
+	plan, err := f.createPlan(f.newTestCase(t, ""))
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+
+	const attempts = 5
+	errs := make(chan error, attempts)
+	start := make(chan struct{})
+	for range attempts {
+		go func() {
+			<-start
+			_, err := f.plans.CloseTestPlan(ctx, int32(plan.ID))
+			errs <- err
+		}()
+	}
+	close(start)
+
+	closed := 0
+	for range attempts {
+		err := <-errs
+		switch {
+		case err == nil:
+			closed++
+		case !errors.Is(err, services.ErrTestPlanAlreadyClosed):
+			t.Errorf("concurrent close: err = %v, want nil or ErrTestPlanAlreadyClosed", err)
+		}
+	}
+	if closed != 1 {
+		t.Errorf("%d requests closed the plan, want 1", closed)
+	}
+
+	var reports int
+	if err := f.db.QueryRow(`SELECT COUNT(*) FROM reports WHERE test_plan_id = $1`, plan.ID).Scan(&reports); err != nil {
+		t.Fatalf("count reports: %v", err)
+	}
+	if reports != 1 {
+		t.Errorf("closing at once made %d reports, want 1", reports)
+	}
+}
+
 func TestTestPlans_ClosedAtAloneDoesNotCloseAPlan(t *testing.T) {
 	f, reports := newCloseFixture(t)
 	ctx := context.Background()

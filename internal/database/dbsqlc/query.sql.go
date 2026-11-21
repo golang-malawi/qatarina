@@ -243,6 +243,7 @@ is_locked = TRUE,
 closed_at = $2,
 updated_at = $2
 WHERE id = $1
+  AND is_complete IS NOT TRUE
 `
 
 type CloseTestPlanParams struct {
@@ -250,7 +251,8 @@ type CloseTestPlanParams struct {
 	ClosedAt sql.NullTime
 }
 
-// Closing a test plan also locks it
+// Closing a test plan also locks it. Plans that are already closed are left alone,
+// so when two requests close a plan at once only one of them updates it
 func (q *Queries) CloseTestPlan(ctx context.Context, arg CloseTestPlanParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, closeTestPlan, arg.ID, arg.ClosedAt)
 	if err != nil {

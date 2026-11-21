@@ -548,8 +548,10 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (
 	if err != nil {
 		return nil, err
 	}
+	// The plan exists, so no update means another request closed it first. Only
+	// that request goes on to generate the report.
 	if rowsAffected == 0 {
-		return nil, ErrNotFound
+		return nil, ErrTestPlanAlreadyClosed
 	}
 
 	plan.IsComplete = sql.NullBool{Bool: true, Valid: true}

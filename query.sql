@@ -572,13 +572,15 @@ has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
 WHERE id = $1;
 
 -- name: CloseTestPlan :execrows
--- Closing a test plan also locks it
+-- Closing a test plan also locks it. Plans that are already closed are left alone,
+-- so when two requests close a plan at once only one of them updates it
 UPDATE test_plans
 SET is_complete = TRUE,
 is_locked = TRUE,
 closed_at = $2,
 updated_at = $2
-WHERE id = $1;
+WHERE id = $1
+  AND is_complete IS NOT TRUE;
 
 -- name: ReopenTestPlan :execrows
 UPDATE test_plans
