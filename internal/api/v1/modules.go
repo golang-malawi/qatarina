@@ -152,6 +152,9 @@ func UpdateModule(module services.ModuleService, logger logging.Logger) fiber.Ha
 
 		_, err = module.Update(context.Background(), *request)
 		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "module not found")
+			}
 			if services.IsModuleHierarchyError(err) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
