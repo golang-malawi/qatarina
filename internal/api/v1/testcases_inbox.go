@@ -25,7 +25,7 @@ import (
 //	@Produce        json
 //	@Param          page        query       int     false   "Page number (1-based)"
 //	@Param          pageSize    query       int     false   "Page size"
-//	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Param          includeClosed   query   bool    false   "Include closed test cases and test cases of closed test plans"
 //	@Success        200         {object}    schema.AssignedTestCaseListResponse
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        500         {object}    problemdetail.ProblemDetail
@@ -78,11 +78,12 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 //
 //	@ID             GetAssignedTestCase
 //	@Summary        Get a single Test Case from the current user's inbox
-//	@Description    Get a single Test Case assigned to the current user, regardless of which inbox page it is on
+//	@Description    Get a single Test Case assigned to the current user in a Test Plan, regardless of which inbox page it is on. Without testPlanID it picks the open assignment, or the latest one when every test plan it is in is closed.
 //	@Tags           test-cases
 //	@Accept         json
 //	@Produce        json
 //	@Param          testCaseID  path        string  true    "Test Case ID"
+//	@Param          testPlanID  query       int     false   "Test Plan ID"
 //	@Success        200         {object}    schema.AssignedTestCase
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        404         {object}    problemdetail.ProblemDetail
@@ -96,7 +97,7 @@ func GetAssignedTestCase(testCasesService services.TestCaseService, logger loggi
 			return problemdetail.BadRequest(ctx, "invalid test case id")
 		}
 
-		testCase, err := testCasesService.FindAssignedToUserByID(ctx.Context(), userID, testCaseID)
+		testCase, err := testCasesService.FindAssignedToUserByID(ctx.Context(), userID, testCaseID, int64(ctx.QueryInt("testPlanID", 0)))
 		if err != nil {
 			if errors.Is(err, services.ErrNotFound) {
 				return problemdetail.NotFound(ctx, "test case not found in inbox")
@@ -113,11 +114,13 @@ func GetAssignedTestCase(testCasesService services.TestCaseService, logger loggi
 //
 //	@ID             GetInboxNavigation
 //	@Summary        Get the previous and next Test Cases in the current user's inbox
-//	@Description    Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+//	@Description    Get the neighbouring inbox rows around a Test Case in a Test Plan, following the inbox order and filter, with its position. Empty IDs mean there is none in that direction.
 //	@Tags           test-cases
 //	@Accept         json
 //	@Produce        json
-//	@Param          testCaseID  path        string  true    "Test Case ID"
+//	@Param          testCaseID      path    string  true    "Test Case ID"
+//	@Param          testPlanID      query   int     true    "Test Plan ID"
+//	@Param          includeClosed   query   bool    false   "Include closed test cases and test cases of closed test plans"
 //	@Success        200         {object}    schema.InboxNavigationResponse
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        404         {object}    problemdetail.ProblemDetail
@@ -131,7 +134,12 @@ func GetInboxNavigation(testCasesService services.TestCaseService, logger loggin
 			return problemdetail.BadRequest(ctx, "invalid test case id")
 		}
 
-		nav, err := testCasesService.FindInboxNavigation(ctx.Context(), userID, testCaseID)
+		testPlanID := ctx.QueryInt("testPlanID", 0)
+		if testPlanID <= 0 {
+			return problemdetail.BadRequest(ctx, "invalid test plan id")
+		}
+
+		nav, err := testCasesService.FindInboxNavigation(ctx.Context(), userID, testCaseID, int64(testPlanID), ctx.QueryBool("includeClosed", false))
 		if err != nil {
 			if errors.Is(err, services.ErrNotFound) {
 				return problemdetail.NotFound(ctx, "test case not found in inbox")
@@ -173,11 +181,12 @@ func GetInboxUnseenCount(testCasesService services.TestCaseService, logger loggi
 //
 //	@ID             MarkInboxTestCaseViewed
 //	@Summary        Mark a Test Case in the current user's inbox as viewed
-//	@Description    Mark a Test Case in the current user's inbox as viewed
+//	@Description    Mark a Test Case in a Test Plan in the current user's inbox as viewed, or in every Test Plan without testPlanID
 //	@Tags           test-cases
 //	@Accept         json
 //	@Produce        json
 //	@Param          testCaseID  path        string  true    "Test Case ID"
+//	@Param          testPlanID  query       int     false   "Test Plan ID"
 //	@Success        204
 //	@Failure        400         {object}    problemdetail.ProblemDetail
 //	@Failure        500         {object}    problemdetail.ProblemDetail
@@ -190,7 +199,7 @@ func MarkInboxTestCaseViewed(testCasesService services.TestCaseService, logger l
 			return problemdetail.BadRequest(ctx, "invalid test case id")
 		}
 
-		if err := testCasesService.MarkAssignedAsViewed(ctx.Context(), userID, testCaseID); err != nil {
+		if err := testCasesService.MarkAssignedAsViewed(ctx.Context(), userID, testCaseID, int64(ctx.QueryInt("testPlanID", 0))); err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to mark test case as viewed", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to mark test case as viewed")
 		}

@@ -62,16 +62,20 @@ type TestCaseService interface {
 
 	//Search is used to search a test case based on the title or code
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
-	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
+	// FindAllAssignedToUser fetches the user's inbox, one row per test case in a test plan. Closed
+	// runs and closed test plans are only included with IncludeClosed.
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
-	// FindAssignedToUserByID fetches a single test case from the user's inbox, regardless of which page it is on
-	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error)
-	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox, in inbox order
-	FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error)
+	// FindAssignedToUserByID fetches a test case from the user's inbox in the given test plan,
+	// regardless of which page it is on. With testPlanID 0 it picks the open assignment.
+	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string, testPlanID int64) (*schema.AssignedTestCase, error)
+	// FindInboxNavigation finds the previous and next assignments around a test case in a test plan
+	// in the user's inbox, in inbox order
+	FindInboxNavigation(ctx context.Context, userID int64, testCaseID string, testPlanID int64, includeClosed bool) (*schema.InboxNavigationResponse, error)
 	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
 	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
-	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
-	MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error
+	// MarkAssignedAsViewed marks a test case in a test plan in the user's inbox as viewed, or in
+	// every test plan with testPlanID 0
+	MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string, testPlanID int64) error
 	// MarkAsDraft is used to mark a test case as draft
 	MarkAsDraft(ctx context.Context, testCaseID string) error
 	// UnMarkAsDraft is used to unmark a draft test case
@@ -703,27 +707,29 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	res := make([]schema.AssignedTestCase, 0, len(rows))
 	for _, row := range rows {
 		res = append(res, schema.AssignedTestCase{
-			ID:              row.ID.String(),
-			Kind:            row.Kind,
-			Code:            row.Code,
-			FeatureOrModule: row.FeatureOrModule.String,
-			Title:           row.Title,
-			Description:     row.Description,
-			Preconditions:   row.Preconditions.String,
-			ExternalID:      row.ExternalID.String,
-			IsDraft:         row.IsDraft.Bool,
-			Tags:            row.Tags,
-			CreatedByID:     row.CreatedByID,
-			CreatedAt:       row.CreatedAt.Time,
-			UpdatedAt:       row.UpdatedAt.Time,
-			ProjectID:       int64(row.ProjectID.Int32),
-			TestPlanID:      int32(row.TestPlanID),
-			AssignedToID:    int32(row.AssignedToID),
-			EnvironmentID:   row.EnvironmentID,
-			IsClosed:        row.IsClosed,
-			IsViewed:        row.IsViewed,
-			Priority:        string(row.Priority),
-			Urgency:         string(row.Urgency),
+			ID:               row.ID.String(),
+			Kind:             row.Kind,
+			Code:             row.Code,
+			FeatureOrModule:  row.FeatureOrModule.String,
+			Title:            row.Title,
+			Description:      row.Description,
+			Preconditions:    row.Preconditions.String,
+			ExternalID:       row.ExternalID.String,
+			IsDraft:          row.IsDraft.Bool,
+			Tags:             row.Tags,
+			CreatedByID:      row.CreatedByID,
+			CreatedAt:        row.CreatedAt.Time,
+			UpdatedAt:        row.UpdatedAt.Time,
+			ProjectID:        int64(row.ProjectID.Int32),
+			TestPlanID:       int32(row.TestPlanID),
+			TestPlanName:     row.TestPlanName,
+			IsTestPlanClosed: row.IsTestPlanClosed,
+			AssignedToID:     int32(row.AssignedToID),
+			EnvironmentID:    row.EnvironmentID,
+			IsClosed:         row.IsClosed,
+			IsViewed:         row.IsViewed,
+			Priority:         string(row.Priority),
+			Urgency:          string(row.Urgency),
 		})
 	}
 
@@ -731,6 +737,7 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
 		UserID:        params.UserID,
 		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
 	})
 	if err != nil {
 		return res, 0, err
@@ -739,15 +746,17 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	return res, total, nil
 }
 
-func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error) {
+func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID int64, testCaseID string, testPlanID int64, includeClosed bool) (*schema.InboxNavigationResponse, error) {
 	id, err := uuid.Parse(testCaseID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid test case id: %w", err)
 	}
 
 	row, err := t.queries.TestCaseInboxNavigation(ctx, dbsqlc.TestCaseInboxNavigationParams{
-		UserID:     userID,
-		TestCaseID: id,
+		UserID:        userID,
+		TestCaseID:    id,
+		TestPlanID:    testPlanID,
+		IncludeClosed: includeClosed,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -757,14 +766,16 @@ func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID in
 	}
 
 	return &schema.InboxNavigationResponse{
-		PreviousID: row.PreviousID,
-		NextID:     row.NextID,
-		Position:   row.Position,
-		Total:      row.Total,
+		PreviousID:         row.PreviousID,
+		PreviousTestPlanID: row.PreviousTestPlanID,
+		NextID:             row.NextID,
+		NextTestPlanID:     row.NextTestPlanID,
+		Position:           row.Position,
+		Total:              row.Total,
 	}, nil
 }
 
-func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error) {
+func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string, testPlanID int64) (*schema.AssignedTestCase, error) {
 	id, err := uuid.Parse(testCaseID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid test case id: %w", err)
@@ -773,6 +784,7 @@ func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID
 	row, err := t.queries.TestCaseGetByAssignedUser(ctx, dbsqlc.TestCaseGetByAssignedUserParams{
 		UserID:     userID,
 		TestCaseID: id,
+		TestPlanID: testPlanID,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -782,27 +794,29 @@ func (t *testCaseServiceImpl) FindAssignedToUserByID(ctx context.Context, userID
 	}
 
 	return &schema.AssignedTestCase{
-		ID:              row.ID.String(),
-		Kind:            row.Kind,
-		Code:            row.Code,
-		FeatureOrModule: row.FeatureOrModule.String,
-		Title:           row.Title,
-		Description:     row.Description,
-		Preconditions:   row.Preconditions.String,
-		ExternalID:      row.ExternalID.String,
-		IsDraft:         row.IsDraft.Bool,
-		Tags:            row.Tags,
-		CreatedByID:     row.CreatedByID,
-		CreatedAt:       row.CreatedAt.Time,
-		UpdatedAt:       row.UpdatedAt.Time,
-		ProjectID:       int64(row.ProjectID.Int32),
-		TestPlanID:      int32(row.TestPlanID),
-		AssignedToID:    int32(row.AssignedToID),
-		EnvironmentID:   row.EnvironmentID,
-		IsClosed:        row.IsClosed,
-		IsViewed:        row.IsViewed,
-		Priority:        string(row.Priority),
-		Urgency:         string(row.Urgency),
+		ID:               row.ID.String(),
+		Kind:             row.Kind,
+		Code:             row.Code,
+		FeatureOrModule:  row.FeatureOrModule.String,
+		Title:            row.Title,
+		Description:      row.Description,
+		Preconditions:    row.Preconditions.String,
+		ExternalID:       row.ExternalID.String,
+		IsDraft:          row.IsDraft.Bool,
+		Tags:             row.Tags,
+		CreatedByID:      row.CreatedByID,
+		CreatedAt:        row.CreatedAt.Time,
+		UpdatedAt:        row.UpdatedAt.Time,
+		ProjectID:        int64(row.ProjectID.Int32),
+		TestPlanID:       int32(row.TestPlanID),
+		TestPlanName:     row.TestPlanName,
+		IsTestPlanClosed: row.IsTestPlanClosed,
+		AssignedToID:     int32(row.AssignedToID),
+		EnvironmentID:    row.EnvironmentID,
+		IsClosed:         row.IsClosed,
+		IsViewed:         row.IsViewed,
+		Priority:         string(row.Priority),
+		Urgency:          string(row.Urgency),
 	}, nil
 }
 
@@ -814,7 +828,7 @@ func (t *testCaseServiceImpl) CountUnseenAssignedToUser(ctx context.Context, use
 	return count, nil
 }
 
-func (t *testCaseServiceImpl) MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string) error {
+func (t *testCaseServiceImpl) MarkAssignedAsViewed(ctx context.Context, userID int64, testCaseID string, testPlanID int64) error {
 	id, err := uuid.Parse(testCaseID)
 	if err != nil {
 		return fmt.Errorf("invalid test case id: %w", err)
@@ -823,6 +837,7 @@ func (t *testCaseServiceImpl) MarkAssignedAsViewed(ctx context.Context, userID i
 	err = t.queries.MarkAssignedTestCaseViewed(ctx, dbsqlc.MarkAssignedTestCaseViewedParams{
 		TestCaseID: id,
 		UserID:     userID,
+		TestPlanID: testPlanID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to mark test case as viewed: %w", err)

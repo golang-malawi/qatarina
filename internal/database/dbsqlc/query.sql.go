@@ -5012,16 +5012,20 @@ UPDATE test_plan_cases
 SET viewed_at = now()
 WHERE test_case_id = $1
   AND assigned_to_id = $2
+  AND ($3::bigint = 0 OR test_plan_id = $3::bigint)
   AND viewed_at IS NULL
 `
 
 type MarkAssignedTestCaseViewedParams struct {
 	TestCaseID uuid.UUID
 	UserID     int64
+	TestPlanID int64
 }
 
+// Marks the user's assignment of a test case in one test plan as viewed, or in every
+// test plan when test_plan_id is 0
 func (q *Queries) MarkAssignedTestCaseViewed(ctx context.Context, arg MarkAssignedTestCaseViewedParams) error {
-	_, err := q.db.ExecContext(ctx, markAssignedTestCaseViewed, arg.TestCaseID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, markAssignedTestCaseViewed, arg.TestCaseID, arg.UserID, arg.TestPlanID)
 	return err
 }
 
@@ -5298,24 +5302,28 @@ func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDra
 
 const testCaseCountByAssignedUser = `-- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = $1
-  GROUP BY tc.id
-  HAVING $2::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-) sub
+FROM test_plan_cases pc
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND ($2::bool OR (
+    NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
+  ))
+  AND ($3::int[] IS NULL OR tp.project_id = ANY($3::int[]))
 `
 
 type TestCaseCountByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
+	Projects      []int32
 }
 
+// Counts the rows TestCaseListByAssignedUser lists for the same filter
 func (q *Queries) TestCaseCountByAssignedUser(ctx context.Context, arg TestCaseCountByAssignedUserParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser, arg.UserID, arg.IncludeClosed)
+	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser, arg.UserID, arg.IncludeClosed, pq.Array(arg.Projects))
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -5343,18 +5351,18 @@ func (q *Queries) TestCaseCountByProjectPaged(ctx context.Context, arg TestCaseC
 
 const testCaseCountUnseenByAssignedUser = `-- name: TestCaseCountUnseenByAssignedUser :one
 SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = $1
-  GROUP BY tc.id
-  HAVING COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-    AND BOOL_OR(pc.viewed_at IS NULL)
-) sub
+FROM test_plan_cases pc
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND pc.viewed_at IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
 `
 
+// Counts the open assignments in the user's inbox they have not viewed yet
 func (q *Queries) TestCaseCountUnseenByAssignedUser(ctx context.Context, userID int64) (int64, error) {
 	row := q.db.QueryRowContext(ctx, testCaseCountUnseenByAssignedUser, userID)
 	var count int64
@@ -5378,53 +5386,68 @@ SELECT
   tc.created_at,
   tc.updated_at,
   tc.project_id,
-  MAX(pc.test_plan_id)::int AS test_plan_id,
-  MAX(pc.assigned_to_id)::int AS assigned_to_id,
-  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
-  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  pc.test_plan_id::int AS test_plan_id,
+  pc.assigned_to_id::int AS assigned_to_id,
+  COALESCE(tp.environment_id, 0)::int AS environment_id,
+  COALESCE(tp.description, '')::text AS test_plan_name,
+  COALESCE(tp.is_complete, false)::boolean AS is_test_plan_closed,
+  EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+  )::boolean AS is_closed,
+  (pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
-FROM test_cases tc
-INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  pc.urgency
+FROM test_plan_cases pc
+INNER JOIN test_cases tc ON tc.id = pc.test_case_id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
-  AND tc.id = $2
-GROUP BY tc.id
+  AND pc.test_case_id = $2
+  AND ($3::bigint = 0 OR pc.test_plan_id = $3::bigint)
+ORDER BY (NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE) DESC, pc.test_plan_id DESC
+LIMIT 1
 `
 
 type TestCaseGetByAssignedUserParams struct {
 	UserID     int64
 	TestCaseID uuid.UUID
+	TestPlanID int64
 }
 
 type TestCaseGetByAssignedUserRow struct {
-	ID              uuid.UUID
-	Kind            TestKind
-	Code            string
-	FeatureOrModule sql.NullString
-	Title           string
-	Description     string
-	Preconditions   sql.NullString
-	ExternalID      sql.NullString
-	IsDraft         sql.NullBool
-	Tags            []string
-	CreatedByID     int32
-	CreatedAt       sql.NullTime
-	UpdatedAt       sql.NullTime
-	ProjectID       sql.NullInt32
-	TestPlanID      int32
-	AssignedToID    int32
-	EnvironmentID   int32
-	IsClosed        bool
-	IsViewed        bool
-	Priority        PriorityLevel
-	Urgency         PriorityLevel
+	ID               uuid.UUID
+	Kind             TestKind
+	Code             string
+	FeatureOrModule  sql.NullString
+	Title            string
+	Description      string
+	Preconditions    sql.NullString
+	ExternalID       sql.NullString
+	IsDraft          sql.NullBool
+	Tags             []string
+	CreatedByID      int32
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	ProjectID        sql.NullInt32
+	TestPlanID       int32
+	AssignedToID     int32
+	EnvironmentID    int32
+	TestPlanName     string
+	IsTestPlanClosed bool
+	IsClosed         bool
+	IsViewed         bool
+	Priority         PriorityLevel
+	Urgency          PriorityLevel
 }
 
+// One assignment from the user's inbox. With test_plan_id 0 it picks the user's open
+// assignment of the test case, or the latest one when all of them are closed.
 func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGetByAssignedUserParams) (TestCaseGetByAssignedUserRow, error) {
-	row := q.db.QueryRowContext(ctx, testCaseGetByAssignedUser, arg.UserID, arg.TestCaseID)
+	row := q.db.QueryRowContext(ctx, testCaseGetByAssignedUser, arg.UserID, arg.TestCaseID, arg.TestPlanID)
 	var i TestCaseGetByAssignedUserRow
 	err := row.Scan(
 		&i.ID,
@@ -5444,6 +5467,8 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 		&i.TestPlanID,
 		&i.AssignedToID,
 		&i.EnvironmentID,
+		&i.TestPlanName,
+		&i.IsTestPlanClosed,
 		&i.IsClosed,
 		&i.IsViewed,
 		&i.Priority,
@@ -5454,55 +5479,78 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 
 const testCaseInboxNavigation = `-- name: TestCaseInboxNavigation :one
 WITH inbox AS (
-  SELECT tc.id, tc.created_at
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  SELECT pc.test_case_id, pc.test_plan_id, tc.created_at
+  FROM test_plan_cases pc
+  INNER JOIN test_cases tc ON tc.id = pc.test_case_id
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = $2::bigint
-    AND (COALESCE(tr.is_closed, false) = false OR tc.id = $1::uuid)
-  GROUP BY tc.id
+  WHERE pc.assigned_to_id = $3::bigint
+    AND (
+      $4::bool
+      OR (pc.test_case_id = $1::uuid AND pc.test_plan_id = $2::bigint)
+      OR (NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE)
+    )
 ),
 ordered AS (
   SELECT
-    id,
-    LAG(id) OVER w AS previous_id,
-    LEAD(id) OVER w AS next_id,
+    test_case_id,
+    test_plan_id,
+    LAG(test_case_id) OVER w AS previous_id,
+    LAG(test_plan_id) OVER w AS previous_test_plan_id,
+    LEAD(test_case_id) OVER w AS next_id,
+    LEAD(test_plan_id) OVER w AS next_test_plan_id,
     ROW_NUMBER() OVER w AS position,
     COUNT(*) OVER () AS total
   FROM inbox
-  WINDOW w AS (ORDER BY created_at DESC, id DESC)
+  WINDOW w AS (ORDER BY test_plan_id DESC, created_at DESC, test_case_id DESC)
 )
 SELECT
   COALESCE(previous_id::text, '')::text AS previous_id,
+  COALESCE(previous_test_plan_id, 0)::bigint AS previous_test_plan_id,
   COALESCE(next_id::text, '')::text AS next_id,
+  COALESCE(next_test_plan_id, 0)::bigint AS next_test_plan_id,
   position,
   total
 FROM ordered
-WHERE id = $1::uuid
+WHERE test_case_id = $1::uuid
+  AND test_plan_id = $2::bigint
 `
 
 type TestCaseInboxNavigationParams struct {
-	TestCaseID uuid.UUID
-	UserID     int64
+	TestCaseID    uuid.UUID
+	TestPlanID    int64
+	UserID        int64
+	IncludeClosed bool
 }
 
 type TestCaseInboxNavigationRow struct {
-	PreviousID string
-	NextID     string
-	Position   int64
-	Total      int64
+	PreviousID         string
+	PreviousTestPlanID int64
+	NextID             string
+	NextTestPlanID     int64
+	Position           int64
+	Total              int64
 }
 
-// Neighbours of a test case in the user's inbox, in the same order and with the
-// same open-only filter as TestCaseListByAssignedUser. The current test case is
-// always included so navigation still works when it is closed.
+// Neighbours of an assignment in the user's inbox, in the same order and with the
+// same filter as TestCaseListByAssignedUser. The current assignment is always
+// included so navigation still works when it is closed.
 func (q *Queries) TestCaseInboxNavigation(ctx context.Context, arg TestCaseInboxNavigationParams) (TestCaseInboxNavigationRow, error) {
-	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation, arg.TestCaseID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation,
+		arg.TestCaseID,
+		arg.TestPlanID,
+		arg.UserID,
+		arg.IncludeClosed,
+	)
 	var i TestCaseInboxNavigationRow
 	err := row.Scan(
 		&i.PreviousID,
+		&i.PreviousTestPlanID,
 		&i.NextID,
+		&i.NextTestPlanID,
 		&i.Position,
 		&i.Total,
 	)
@@ -5525,22 +5573,31 @@ SELECT
   tc.created_at,
   tc.updated_at,
   tc.project_id,
-  MAX(pc.test_plan_id)::int AS test_plan_id,
-  MAX(pc.assigned_to_id)::int AS assigned_to_id,
-  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
-  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  pc.test_plan_id::int AS test_plan_id,
+  pc.assigned_to_id::int AS assigned_to_id,
+  COALESCE(tp.environment_id, 0)::int AS environment_id,
+  COALESCE(tp.description, '')::text AS test_plan_name,
+  COALESCE(tp.is_complete, false)::boolean AS is_test_plan_closed,
+  EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+  )::boolean AS is_closed,
+  (pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
-FROM test_cases tc
-INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  pc.urgency
+FROM test_plan_cases pc
+INNER JOIN test_cases tc ON tc.id = pc.test_case_id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = $1
-  AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
-GROUP BY tc.id
-ORDER BY tc.created_at DESC, tc.id DESC
+  AND ($2::bool OR (
+    NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
+  ))
+  AND ($3::int[] IS NULL OR tp.project_id = ANY($3::int[]))
+ORDER BY pc.test_plan_id DESC, tc.created_at DESC, tc.id DESC
 LIMIT $5::int OFFSET $4::int
 `
 
@@ -5553,29 +5610,34 @@ type TestCaseListByAssignedUserParams struct {
 }
 
 type TestCaseListByAssignedUserRow struct {
-	ID              uuid.UUID
-	Kind            TestKind
-	Code            string
-	FeatureOrModule sql.NullString
-	Title           string
-	Description     string
-	Preconditions   sql.NullString
-	ExternalID      sql.NullString
-	IsDraft         sql.NullBool
-	Tags            []string
-	CreatedByID     int32
-	CreatedAt       sql.NullTime
-	UpdatedAt       sql.NullTime
-	ProjectID       sql.NullInt32
-	TestPlanID      int32
-	AssignedToID    int32
-	EnvironmentID   int32
-	IsClosed        bool
-	IsViewed        bool
-	Priority        PriorityLevel
-	Urgency         PriorityLevel
+	ID               uuid.UUID
+	Kind             TestKind
+	Code             string
+	FeatureOrModule  sql.NullString
+	Title            string
+	Description      string
+	Preconditions    sql.NullString
+	ExternalID       sql.NullString
+	IsDraft          sql.NullBool
+	Tags             []string
+	CreatedByID      int32
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+	ProjectID        sql.NullInt32
+	TestPlanID       int32
+	AssignedToID     int32
+	EnvironmentID    int32
+	TestPlanName     string
+	IsTestPlanClosed bool
+	IsClosed         bool
+	IsViewed         bool
+	Priority         PriorityLevel
+	Urgency          PriorityLevel
 }
 
+// The user's inbox has one row per assignment, so a test case assigned to the user in
+// two test plans shows twice. Without include_closed it only lists open assignments:
+// the test case has no closed run in the plan and the plan is not closed.
 func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseListByAssignedUserParams) ([]TestCaseListByAssignedUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, testCaseListByAssignedUser,
 		arg.UserID,
@@ -5609,6 +5671,8 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 			&i.TestPlanID,
 			&i.AssignedToID,
 			&i.EnvironmentID,
+			&i.TestPlanName,
+			&i.IsTestPlanClosed,
 			&i.IsClosed,
 			&i.IsViewed,
 			&i.Priority,
