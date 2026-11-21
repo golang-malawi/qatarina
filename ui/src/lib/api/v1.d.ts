@@ -2132,6 +2132,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/comments/{commentID}/reaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * React to a comment with an emoji
+         * @description Each person has one reaction per comment; reacting again replaces it.
+         */
+        put: operations["SetTestPlanCommentReaction"];
+        post?: never;
+        /** Remove your reaction from a comment */
+        delete: operations["RemoveTestPlanCommentReaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/{testPlanID}/comments/attachments": {
         parameters: {
             query?: never;
@@ -2768,12 +2789,18 @@ export interface components {
             comments?: components["schemas"]["schema.CommentResponseItem"][];
             pagination?: components["schemas"]["schema.Pagination"];
         };
+        "schema.CommentReaction": {
+            emoji?: string;
+            user_id?: number;
+            user_name?: string;
+        };
         "schema.CommentResponseItem": {
             attachments?: components["schemas"]["schema.CommentAttachment"][];
             content?: string;
             created_at?: string;
             id?: string;
             parent_comment_id?: string;
+            reactions?: components["schemas"]["schema.CommentReaction"][];
             replies?: components["schemas"]["schema.CommentResponseItem"][];
             test_plan_id?: number;
             updated_at?: string;
@@ -3136,6 +3163,9 @@ export interface components {
             count?: number;
             /** @description IDs of every draft in the selection */
             test_case_ids?: string[];
+        };
+        "schema.SetCommentReaction": {
+            emoji: string;
         };
         "schema.SignUpRequest": {
             display_name: string;
@@ -7890,6 +7920,115 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    SetTestPlanCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Comment ID */
+                commentID: string;
+            };
+            cookie?: never;
+        };
+        /** @description Reaction payload */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.SetCommentReaction"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentReaction"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    RemoveTestPlanCommentReaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Comment ID */
+                commentID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.CommentReaction"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

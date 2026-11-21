@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api/query";
 import $api from "@/lib/api/query";
 import { components } from "@/lib/api/v1";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 export type TestPlan = components["schemas"]["schema.TestPlanResponseItem"];
@@ -13,6 +13,7 @@ export type TestPlansResponse = {
 export type Comment = components["schemas"]["schema.CommentResponseItem"];
 export type CommentListResponse = components["schemas"]["schema.CommentListResponse"];
 export type CommentAttachment = components["schemas"]["schema.CommentAttachment"];
+export type CommentReaction = components["schemas"]["schema.CommentReaction"];
 export type LinkPreview = components["schemas"]["schema.LinkPreview"];
 
 type AssignTestsToPlanPayload = components["schemas"]["schema.AssignTestsToPlanRequest"];
@@ -196,6 +197,63 @@ export function useUpdateCommentMutation() {
 
 export function useDeleteCommentMutation() {
   return $api.useMutation("delete", "/v1/test-plans/{testPlanID}/comments/{commentID}");
+}
+
+// Replaces the reactions of one comment (or reply, at any depth) in the cached comment pages
+function withReactions(
+  data: InfiniteData<CommentListResponse> | undefined,
+  commentID: string,
+  reactions: CommentReaction[]
+) {
+  if (!data) return data;
+  const update = (comments?: Comment[]): Comment[] | undefined =>
+    comments?.map((c) =>
+      c.id === commentID ? { ...c, reactions } : c.replies?.length ? { ...c, replies: update(c.replies) } : c
+    );
+  return { ...data, pages: data.pages.map((page) => ({ ...page, comments: update(page.comments) })) };
+}
+
+/**
+ * Sets or removes the signed-in user's reaction to a comment. People have one reaction per
+ * comment, like WhatsApp: picking another emoji replaces it, picking the same one removes it.
+ * The change shows straight away and is rolled back if the server rejects it.
+ */
+export function useCommentReaction(testPlanID: number) {
+  const queryClient = useQueryClient();
+  const queryKey = ["test-plan-comments", testPlanID];
+
+  return async (
+    comment: Comment,
+    emoji: string,
+    me: { user_id: number; user_name?: string }
+  ): Promise<void> => {
+    if (!comment.id) return;
+    const commentID = comment.id;
+    const current = comment.reactions ?? [];
+    const mine = current.find((r) => r.user_id === me.user_id);
+    const removing = mine?.emoji === emoji;
+    const others = current.filter((r) => r.user_id !== me.user_id);
+    const optimistic = removing ? others : [...others, { emoji, user_id: me.user_id, user_name: me.user_name }];
+
+    await queryClient.cancelQueries({ queryKey });
+    const snapshot = queryClient.getQueriesData<InfiniteData<CommentListResponse>>({ queryKey });
+    queryClient.setQueriesData<InfiniteData<CommentListResponse>>({ queryKey }, (data) =>
+      withReactions(data, commentID, optimistic)
+    );
+
+    const path = { params: { path: { testPlanID, commentID } } };
+    const { data, error } = removing
+      ? await apiClient.DELETE("/v1/test-plans/{testPlanID}/comments/{commentID}/reaction", path)
+      : await apiClient.PUT("/v1/test-plans/{testPlanID}/comments/{commentID}/reaction", { ...path, body: { emoji } });
+
+    if (error || !data) {
+      snapshot.forEach(([key, value]) => queryClient.setQueryData(key, value));
+      throw new Error(error?.detail || error?.title || "Failed to save reaction");
+    }
+    queryClient.setQueriesData<InfiniteData<CommentListResponse>>({ queryKey }, (cached) =>
+      withReactions(cached, commentID, data)
+    );
+  };
 }
 
 export function useConvertCommentMutation() {

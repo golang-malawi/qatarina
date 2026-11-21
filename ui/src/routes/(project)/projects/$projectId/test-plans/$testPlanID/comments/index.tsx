@@ -26,6 +26,7 @@ import {
   useTestPlanCommentsInfiniteQuery,
   useCreateCommentMutation,
   useUpdateCommentMutation,
+  useCommentReaction,
   useDeleteCommentMutation,
   Comment,
 } from "@/services/TestPlanService";
@@ -34,6 +35,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CommentBody } from "@/components/comments/CommentBody";
 import { CommentComposer } from "@/components/comments/CommentComposer";
+import { CommentReactions, ReactButton } from "@/components/comments/CommentReactions";
 import { stripAttachmentTokens } from "@/components/comments/attachmentTokens";
 
 export const Route = createFileRoute(
@@ -122,6 +124,17 @@ function CommentItem({
 
   const createMutation = useCreateCommentMutation();
   const updateMutation = useUpdateCommentMutation();
+  const react = useCommentReaction(numericTestPlanId);
+
+  const handleReact = (emoji: string) => {
+    if (!user?.user_id) return;
+    react(comment, emoji, { user_id: user.user_id, user_name: user.displayName }).catch((err: Error) =>
+      toaster.error({
+        title: t("test_plans.comments.reaction_error", "Failed to save reaction"),
+        description: err.message,
+      })
+    );
+  };
   const deleteMutation = useDeleteCommentMutation();
 
   const handleEdit = async (content: string, attachmentIds: string[]) => {
@@ -253,7 +266,12 @@ function CommentItem({
           />
         )}
 
+        {!isEditing && (
+          <CommentReactions reactions={comment.reactions} myUserId={user?.user_id} onReact={handleReact} />
+        )}
+
         <HStack gap={2} mt={2} wrap="wrap" hidden={isEditing}>
+          <ReactButton onReact={handleReact} />
           <Button
             size="2xs"
             variant="subtle"

@@ -1191,6 +1191,24 @@ func (q *Queries) DeleteCommentAttachmentsExcept(ctx context.Context, arg Delete
 	return items, nil
 }
 
+const deleteCommentReaction = `-- name: DeleteCommentReaction :execrows
+DELETE FROM test_plan_comment_reactions
+WHERE comment_id = $1 AND user_id = $2
+`
+
+type DeleteCommentReactionParams struct {
+	CommentID uuid.UUID
+	UserID    int64
+}
+
+func (q *Queries) DeleteCommentReaction(ctx context.Context, arg DeleteCommentReactionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteCommentReaction, arg.CommentID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deleteEnvironment = `-- name: DeleteEnvironment :execrows
 DELETE FROM environments WHERE id = $1 AND project_id = $2
 `
@@ -3099,6 +3117,49 @@ func (q *Queries) ListCommentAttachmentsByComments(ctx context.Context, commentI
 			&i.FileSize,
 			&i.StoragePath,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCommentReactionsByComments = `-- name: ListCommentReactionsByComments :many
+SELECT r.comment_id, r.user_id, u.display_name, r.emoji
+FROM test_plan_comment_reactions r
+JOIN users u ON u.id = r.user_id
+WHERE r.comment_id = ANY($1::uuid[])
+ORDER BY r.created_at ASC
+`
+
+type ListCommentReactionsByCommentsRow struct {
+	CommentID   uuid.UUID
+	UserID      int64
+	DisplayName sql.NullString
+	Emoji       string
+}
+
+func (q *Queries) ListCommentReactionsByComments(ctx context.Context, commentIds []uuid.UUID) ([]ListCommentReactionsByCommentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCommentReactionsByComments, pq.Array(commentIds))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCommentReactionsByCommentsRow
+	for rows.Next() {
+		var i ListCommentReactionsByCommentsRow
+		if err := rows.Scan(
+			&i.CommentID,
+			&i.UserID,
+			&i.DisplayName,
+			&i.Emoji,
 		); err != nil {
 			return nil, err
 		}
@@ -5158,6 +5219,23 @@ func (q *Queries) SearchUsers(ctx context.Context, dollar_1 sql.NullString) ([]U
 		return nil, err
 	}
 	return items, nil
+}
+
+const setCommentReaction = `-- name: SetCommentReaction :exec
+INSERT INTO test_plan_comment_reactions (comment_id, user_id, emoji, created_at)
+VALUES ($1, $2, $3, NOW())
+ON CONFLICT (comment_id, user_id) DO UPDATE SET emoji = EXCLUDED.emoji, created_at = NOW()
+`
+
+type SetCommentReactionParams struct {
+	CommentID uuid.UUID
+	UserID    int64
+	Emoji     string
+}
+
+func (q *Queries) SetCommentReaction(ctx context.Context, arg SetCommentReactionParams) error {
+	_, err := q.db.ExecContext(ctx, setCommentReaction, arg.CommentID, arg.UserID, arg.Emoji)
+	return err
 }
 
 const setModuleFrozen = `-- name: SetModuleFrozen :execrows

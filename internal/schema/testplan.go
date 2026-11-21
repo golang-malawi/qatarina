@@ -179,6 +179,18 @@ type UpdateComment struct {
 	UserID     int64  `json:"-"`
 }
 
+// CommentReaction is one person's emoji reaction to a comment
+type CommentReaction struct {
+	Emoji    string `json:"emoji"`
+	UserID   int64  `json:"user_id"`
+	UserName string `json:"user_name"`
+}
+
+// SetCommentReaction sets the signed-in user's reaction, replacing any earlier one
+type SetCommentReaction struct {
+	Emoji string `json:"emoji" validate:"required,max=16"`
+}
+
 type CommentAttachment struct {
 	ID          string `json:"id"`
 	FileName    string `json:"file_name"`
@@ -195,6 +207,7 @@ type CommentResponseItem struct {
 	UserName        string                `json:"user_name"`
 	Content         string                `json:"content"`
 	Attachments     []CommentAttachment   `json:"attachments,omitempty"`
+	Reactions       []CommentReaction     `json:"reactions,omitempty"`
 	Replies         []CommentResponseItem `json:"replies,omitempty"`
 	CreatedAt       string                `json:"created_at"`
 	UpdatedAt       string                `json:"updated_at"`
