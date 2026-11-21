@@ -76,6 +76,8 @@ function TestPlanTestCasesPage() {
     isLoading: boolean;
     error: unknown;
   };
+  // A closed test plan is locked: testers and urgency cannot change until it is reopened
+  const isLocked = Boolean(testPlanQuery.data?.is_locked);
 
   const {
     data: testCasesResult,
@@ -176,7 +178,7 @@ function TestPlanTestCasesPage() {
       await refetch();
     } catch (urgencyError) {
       console.error("Failed to update urgency", urgencyError);
-      toaster.error({ title: "Failed to update urgency" });
+      toaster.error({ title: "Failed to update urgency", description: (urgencyError as any)?.detail });
     } finally {
       setUpdatingUrgencyFor(null);
     }
@@ -226,7 +228,7 @@ function TestPlanTestCasesPage() {
               buttonText={t("test_plans.assign_visible")}
               buttonIcon={IconUserPlus}
               onAssign={(ids) => performAssignment(ids, filteredCases)}
-              disabled={filteredCases.length === 0}
+              disabled={isLocked || filteredCases.length === 0}
               projectId={projectId}   
               navigate={navigate}
             />
@@ -314,7 +316,7 @@ function TestPlanTestCasesPage() {
                           <NativeSelect.Root
                             size="sm"
                             width="36"
-                            disabled={updatingUrgencyFor === testCase.id}
+                            disabled={isLocked || updatingUrgencyFor === testCase.id}
                           >
                             <NativeSelect.Field
                               aria-label="Urgency"
@@ -341,6 +343,7 @@ function TestPlanTestCasesPage() {
                           buttonVariant="outline"
                           buttonIcon={IconUserPlus}
                           onAssign={(ids) => performAssignment(ids, [testCase])}
+                          disabled={isLocked}
                           projectId={projectId}
                           navigate={navigate}
                         />

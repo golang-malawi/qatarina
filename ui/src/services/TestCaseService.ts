@@ -88,15 +88,24 @@ export async function getInboxFilterOptions(includeClosed: boolean) {
   });
 }
 
-export async function getInboxTestCaseById(testCaseID: string) {
+/**
+ * Fetches a test case from the inbox in a test plan. Without a test plan the
+ * server picks the open assignment of the test case.
+ */
+export async function getInboxTestCaseById(testCaseID: string, testPlanID?: number) {
   return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}", {
-    params: { path: { testCaseID } },
+    params: { path: { testCaseID }, query: testPlanID ? { testPlanID } : {} },
   });
 }
 
-export async function getInboxNavigation(testCaseID: string, filters?: InboxFilterParams) {
+// An inbox row is a test case in a test plan, so navigation needs both
+export async function getInboxNavigation(
+  testCaseID: string,
+  testPlanID: number,
+  filters?: InboxFilterParams,
+) {
   return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}/navigation", {
-    params: { path: { testCaseID }, query: inboxFilterQuery(filters) },
+    params: { path: { testCaseID }, query: { ...inboxFilterQuery(filters), testPlanID } },
   });
 }
 
@@ -104,9 +113,9 @@ export async function getInboxUnseenCount() {
   return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
 }
 
-export async function markInboxTestCaseViewed(testCaseID: string) {
+export async function markInboxTestCaseViewed(testCaseID: string, testPlanID: number) {
   return apiClient.request("post", "/v1/me/test-cases/inbox/{testCaseID}/view", {
-    params: { path: { testCaseID } },
+    params: { path: { testCaseID }, query: { testPlanID } },
   });
 }
 

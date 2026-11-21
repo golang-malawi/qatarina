@@ -132,6 +132,9 @@ func CreateTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		testRun, err := testRunService.Create(c.Context(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
@@ -184,6 +187,9 @@ func DeleteTestRun(testRunService services.TestRunService, logger logging.Logger
 		}
 		err := testRunService.DeleteByID(context.Background(), testRunID)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 		return c.JSON(fiber.Map{
@@ -223,6 +229,9 @@ func CommitTestRun(testRunService services.TestRunService, logger logging.Logger
 
 		testRun, resultID, err := testRunService.CommitWithResultID(context.Background(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(ctx, err.Error())
+			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to commit test-run results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
@@ -265,6 +274,9 @@ func RecordTestRunFeedback(testRunService services.TestRunService, logger loggin
 
 		testRun, err := testRunService.Commit(context.Background(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(ctx, err.Error())
+			}
 			logger.Error(loggedmodule.ApiTestRuns, "failed to record feedback", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to record feedback")
 		}
@@ -283,6 +295,9 @@ func CommitBulkTestRun(testRunService services.TestRunService, logger logging.Lo
 		request.UserID = authutil.GetAuthUserID(ctx)
 		_, err = testRunService.CommitBulk(context.Background(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(ctx, err.Error())
+			}
 			logger.Debug(loggedmodule.ApiTestRuns, "failed to commit bulk test results", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to process request")
 		}
@@ -520,6 +535,9 @@ func UploadAttachment(testRunService services.TestRunService, logger logging.Log
 			resp, err := testRunService.SaveAttachment(c.Context(), resultID, uploadedBy, attachmentReq)
 			file.Close()
 			if err != nil {
+				if errors.Is(err, services.ErrTestPlanLocked) {
+					return problemdetail.Conflict(c, err.Error())
+				}
 				logger.Error(loggedmodule.ApiTestRuns, "failed to save attachment", "fileName", fileHeader.Filename, "error", err)
 				lastErr = err
 				continue

@@ -85,6 +85,11 @@ components:
           type: boolean
         is_draft:
           type: boolean
+        is_test_plan_closed:
+          description: |-
+            Whether the test plan was closed. Its test cases are only listed with include_closed
+            and results can no longer be recorded for them.
+          type: boolean
         is_viewed:
           type: boolean
         kind:
@@ -104,6 +109,9 @@ components:
           uniqueItems: false
         test_plan_id:
           type: integer
+        test_plan_name:
+          description: Description of the test plan, used as its name
+          type: string
         title:
           type: string
         updated_at:
@@ -216,6 +224,13 @@ components:
       - new_password
       - old_password
       - user_id
+      type: object
+    schema.CloseTestPlanResponse:
+      properties:
+        message:
+          type: string
+        report:
+          $ref: '#/components/schemas/schema.ReportResponse'
       type: object
     schema.CommentAttachment:
       properties:
@@ -541,8 +556,6 @@ components:
           $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         assigned_to_id:
           type: integer
-        closed_at:
-          type: string
         created_by_id:
           type: integer
         description:
@@ -748,10 +761,14 @@ components:
       properties:
         next_id:
           type: string
+        next_test_plan_id:
+          type: integer
         position:
           type: integer
         previous_id:
           type: string
+        previous_test_plan_id:
+          type: integer
         total:
           type: integer
       type: object
@@ -1049,6 +1066,10 @@ components:
           type: integer
         status:
           type: string
+        test_plan_id:
+          description: The test plan the report was generated for, 0 for older reports
+            not linked to a plan
+          type: integer
         type:
           type: string
       type: object
@@ -1355,6 +1376,10 @@ components:
           type: integer
         project_id:
           type: integer
+        report_id:
+          description: The latest report generated for the test plan, only set when
+            fetching one test plan
+          type: string
         scheduled_end_at:
           type: string
         start_at:
@@ -2108,7 +2133,7 @@ paths:
         name: pageSize
         schema:
           type: integer
-      - description: Include closed test cases
+      - description: Include closed test cases and test cases of closed test plans
         in: query
         name: includeClosed
         schema:
@@ -2162,8 +2187,9 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}:
     get:
-      description: Get a single Test Case assigned to the current user, regardless
-        of which inbox page it is on
+      description: Get a single Test Case assigned to the current user in a Test Plan,
+        regardless of which inbox page it is on. Without testPlanID it picks the open
+        assignment, or the latest one when every test plan it is in is closed.
       operationId: GetAssignedTestCase
       parameters:
       - description: Test Case ID
@@ -2172,6 +2198,11 @@ paths:
         required: true
         schema:
           type: string
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        schema:
+          type: integer
       requestBody:
         content:
           application/json:
@@ -2207,9 +2238,9 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/navigation:
     get:
-      description: Get the neighbouring Test Cases around a Test Case, following the
-        inbox order and the same filters as the inbox list, with its position. Empty
-        IDs mean there is none in that direction.
+      description: Get the neighbouring inbox rows around a Test Case in a Test Plan,
+        following the inbox order and the same filters as the inbox list, with its
+        position. Empty IDs mean there is none in that direction.
       operationId: GetInboxNavigation
       parameters:
       - description: Test Case ID
@@ -2218,7 +2249,13 @@ paths:
         required: true
         schema:
           type: string
-      - description: Include closed test cases
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Include closed test cases and test cases of closed test plans
         in: query
         name: includeClosed
         schema:
@@ -2278,7 +2315,8 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
     post:
-      description: Mark a Test Case in the current user's inbox as viewed
+      description: Mark a Test Case in a Test Plan in the current user's inbox as
+        viewed, or in every Test Plan without testPlanID
       operationId: MarkInboxTestCaseViewed
       parameters:
       - description: Test Case ID
@@ -2287,6 +2325,11 @@ paths:
         required: true
         schema:
           type: string
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        schema:
+          type: integer
       requestBody:
         content:
           application/json:
@@ -3706,6 +3749,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -5701,7 +5750,9 @@ paths:
       - test-plans
   /v1/test-plans/{testPlanID}/close:
     post:
-      description: Close a Test Plan
+      description: Closes and locks a Test Plan and generates its report. The plan
+        stays closed if the report fails, then report is empty and the report can
+        be generated from the project reports
       operationId: CloseTestPlan
       parameters:
       - description: Test Plan ID
@@ -5720,7 +5771,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/schema.CloseTestPlanResponse'
           description: OK
         "400":
           content:
@@ -5728,6 +5779,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
         "500":
           content:
             application/json:
@@ -6040,6 +6097,53 @@ paths:
                 $ref: '#/components/schemas/problemdetail.ProblemDetail'
           description: Internal Server Error
       summary: Change environment of a Test Plan
+      tags:
+      - test-plans
+  /v1/test-plans/{testPlanID}/reopen:
+    post:
+      description: Unlocks a closed Test Plan so it can be changed again. Only the
+        plan creator, the project owner or a super admin can reopen it. Its reports
+        are kept
+      operationId: ReopenTestPlan
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Reopen a closed Test Plan
       tags:
       - test-plans
   /v1/test-plans/{testPlanID}/script-test-cases:

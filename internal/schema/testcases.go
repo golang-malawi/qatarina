@@ -178,14 +178,19 @@ type AssignedTestCase struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 	ProjectID       int64           `json:"project_id"`
 	TestPlanID      int32           `json:"test_plan_id"`
-	AssignedToID    int32           `json:"assigned_to_id"`
-	EnvironmentID   int32           `json:"environment_id"`
-	IsClosed        bool            `json:"is_closed"`
-	IsViewed        bool            `json:"is_viewed"`
-	Priority        string          `json:"priority"`
-	Urgency         string          `json:"urgency"`
-	ProjectTitle    string          `json:"project_title,omitempty"`
-	EnvironmentName string          `json:"environment_name,omitempty"`
+	// Description of the test plan, used as its name
+	TestPlanName string `json:"test_plan_name"`
+	// Whether the test plan was closed. Its test cases are only listed with include_closed
+	// and results can no longer be recorded for them.
+	IsTestPlanClosed bool   `json:"is_test_plan_closed"`
+	AssignedToID     int32  `json:"assigned_to_id"`
+	EnvironmentID    int32  `json:"environment_id"`
+	IsClosed         bool   `json:"is_closed"`
+	IsViewed         bool   `json:"is_viewed"`
+	Priority         string `json:"priority"`
+	Urgency          string `json:"urgency"`
+	ProjectTitle     string `json:"project_title,omitempty"`
+	EnvironmentName  string `json:"environment_name,omitempty"`
 }
 
 type TestCaseExecutionSummary struct {

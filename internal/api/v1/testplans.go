@@ -321,6 +321,9 @@ func AssignTestsToPlan(testPlanService services.TestPlanService, logger logging.
 
 		_, err := testPlanService.AddTestCaseToPlan(context.Background(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) || errors.Is(err, services.ErrTestPlanProjectMismatch) {
 				return problemdetail.BadRequest(c, err.Error())
 			}
@@ -372,13 +375,14 @@ func GetTestPlanTestCases(testCaseService services.TestCaseService, logger loggi
 //
 //	@ID				CloseTestPlan
 //	@Summary		Close a Test Plan
-//	@Description	Close a Test Plan
+//	@Description	Closes and locks a Test Plan and generates its report. The plan stays closed if the report fails, then report is empty and the report can be generated from the project reports
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
 //	@Param			testPlanID	path		int	true	"Test Plan ID"
-//	@Success		200			{object}	interface{}
+//	@Success		200			{object}	schema.CloseTestPlanResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID}/close [post]
 func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logger) fiber.Handler {
@@ -388,14 +392,65 @@ func CloseTestPlan(testPlanSevice services.TestPlanService, logger logging.Logge
 			return problemdetail.BadRequest(c, "invalid testPlanID in request")
 		}
 
-		err = testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
-		if err != nil {
+		report, err := testPlanSevice.CloseTestPlan(c.Context(), int32(testPlanID))
+		switch {
+		case err == nil:
+			response := schema.NewReportResponse(*report)
+			return c.JSON(schema.CloseTestPlanResponse{
+				Message: "Test plan closed and its report generated",
+				Report:  &response,
+			})
+		case errors.Is(err, services.ErrTestPlanReportFailed):
+			logger.Error(loggedmodule.ApiTestPlans, "test plan closed without a report", "testPlanID", testPlanID, "error", err)
+			return c.JSON(schema.CloseTestPlanResponse{
+				Message: services.ErrTestPlanReportFailed.Error(),
+			})
+		case errors.Is(err, services.ErrNotFound):
+			return problemdetail.NotFound(c, "test plan not found")
+		case errors.Is(err, services.ErrTestPlanAlreadyClosed), errors.Is(err, services.ErrTestPlanHasPendingRuns):
+			return problemdetail.BadRequest(c, err.Error())
+		default:
 			logger.Error(loggedmodule.ApiTestPlans, "failed to close test plan", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to close test plan")
 		}
-		return c.JSON(fiber.Map{
-			"message": "Test plan closed successfully",
-		})
+	}
+}
+
+// ReopenTestPlan godoc
+//
+//	@ID				ReopenTestPlan
+//	@Summary		Reopen a closed Test Plan
+//	@Description	Unlocks a closed Test Plan so it can be changed again. Only the plan creator, the project owner or a super admin can reopen it. Its reports are kept
+//	@Tags			test-plans
+//	@Produce		json
+//	@Param			testPlanID	path		int	true	"Test Plan ID"
+//	@Success		200			{object}	interface{}
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		403			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/reopen [post]
+func ReopenTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
+		err = testPlanService.ReopenTestPlan(c.Context(), int64(testPlanID), authutil.GetAuthUserID(c))
+		switch {
+		case err == nil:
+			return c.JSON(fiber.Map{"message": "Test plan reopened"})
+		case errors.Is(err, services.ErrNotFound):
+			return problemdetail.NotFound(c, "test plan not found")
+		case errors.Is(err, services.ErrTestPlanReopenForbidden):
+			return problemdetail.Forbidden(c, err.Error())
+		case errors.Is(err, services.ErrTestPlanNotClosedYet):
+			return problemdetail.BadRequest(c, err.Error())
+		default:
+			logger.Error(loggedmodule.ApiTestPlans, "failed to reopen test plan", "testPlanID", testPlanID, "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to reopen test plan")
+		}
 	}
 }
 
@@ -430,6 +485,9 @@ func ChangeEnvironment(testPlanService services.TestPlanService, logger logging.
 
 		err = testPlanService.ChangeEnvironment(c.Context(), int64(testPlanID), request.EnvironmentID)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			logger.Error(loggedmodule.ApiTestPlans, "failed to update environment", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to update environment")
 		}
@@ -473,6 +531,9 @@ func UpdateTestPlanCaseUrgency(testPlanService services.TestPlanService, logger 
 
 		err = testPlanService.UpdateTestCaseUrgency(c.Context(), int64(testPlanID), c.Params("testCaseID"), request.Urgency)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			if errors.Is(err, services.ErrNotFound) {
 				return problemdetail.NotFound(c, "test case is not part of this test plan")
 			}
@@ -651,6 +712,9 @@ func BatchAssignTestCasesToPlan(testPlanService services.TestPlanService, logger
 
 		_, err := testPlanService.BatchAssignTestCasesToPlan(c.Context(), request)
 		if err != nil {
+			if errors.Is(err, services.ErrTestPlanLocked) {
+				return problemdetail.Conflict(c, err.Error())
+			}
 			if errors.Is(err, services.ErrModuleFrozen) || errors.Is(err, services.ErrTestCaseDraft) {
 				return problemdetail.BadRequest(c, err.Error())
 			}

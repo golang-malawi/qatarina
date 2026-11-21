@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Badge, Box, Button, Flex, HStack, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { LuCheck, LuFolder, LuListTree, LuX } from "react-icons/lu";
 import {
@@ -26,6 +26,8 @@ export function InboxList({ filters, onClearFilters }: InboxListProps) {
   const { t } = useTranslation();
   const [isGrouped, setIsGrouped] = useState(false);
   const { testCaseId: selectedId } = useParams({ strict: false }) as { testCaseId?: string };
+  // A row is a test case in a test plan, so the open one is picked by both
+  const { plan: selectedPlan } = useSearch({ strict: false }) as { plan?: number };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending, error } =
     useInfiniteQuery(inboxListInfiniteQueryOptions(filters));
@@ -114,10 +116,10 @@ export function InboxList({ filters, onClearFilters }: InboxListProps) {
 
   const renderRow = (tc: AssignedTestCase) => (
     <InboxRow
-      key={tc.id}
+      key={`${tc.test_plan_id ?? 0}:${tc.id ?? ""}`}
       tc={tc}
       counts={countsById.get(tc.id ?? "")}
-      isSelected={tc.id === selectedId}
+      isSelected={tc.id === selectedId && (!selectedPlan || tc.test_plan_id === selectedPlan)}
     />
   );
 
@@ -214,12 +216,21 @@ function InboxRow({
   const { t } = useTranslation();
   const isNew = !tc.is_viewed;
   const attention = attentionLevel(tc);
-  const details = [tc.code, tc.project_title, tc.feature_or_module, tc.environment_name].filter(Boolean);
+  // The test plan tells rows of the same test case apart
+  const details = [
+    tc.code,
+    tc.project_title,
+    tc.test_plan_name,
+    tc.feature_or_module,
+    tc.environment_name,
+  ].filter(Boolean);
+  const isLocked = Boolean(tc.is_closed || tc.is_test_plan_closed);
 
   return (
     <Link
       to="/workspace/test-cases/inbox/$testCaseId"
       params={{ testCaseId: tc.id ?? "" }}
+      search={{ plan: tc.test_plan_id || undefined }}
       title={tc.title}
     >
       <Box
@@ -231,7 +242,8 @@ function InboxRow({
         borderLeftColor={isSelected ? "brand.solid" : "transparent"}
         bg={isSelected ? "brand.subtle" : undefined}
         _hover={{ bg: isSelected ? "brand.subtle" : "bg.subtle" }}
-        opacity={tc.is_closed ? 0.6 : 1}
+        // Closed test cases and test cases of closed test plans can no longer be recorded
+        opacity={isLocked ? 0.6 : 1}
         aria-current={isSelected ? "page" : undefined}
       >
         <Flex align="center" gap={2}>
@@ -253,10 +265,16 @@ function InboxRow({
           >
             {tc.title}
           </Text>
-          {tc.is_closed && (
+          {tc.is_test_plan_closed ? (
             <Badge size="sm" variant="subtle">
-              {t("inbox.closed", "Closed")}
+              {t("inbox.test_plan_closed", "Test plan closed")}
             </Badge>
+          ) : (
+            tc.is_closed && (
+              <Badge size="sm" variant="subtle">
+                {t("inbox.closed", "Closed")}
+              </Badge>
+            )
           )}
           {attention && <PriorityBadge value={attention} />}
         </Flex>
