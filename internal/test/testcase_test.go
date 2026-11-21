@@ -18,9 +18,13 @@ import (
 
 func TestConcurrentBulkCreateByProject(t *testing.T) {
 	const concurrency = 10
-	projectID := int64(2)
 
-	db := openTestDB()
+	// A project of its own, so the test doesn't depend on data already in the
+	// database. Its test cases are removed again when the test ends.
+	f := newFreezeFixture(t)
+	projectID := int64(f.projectID)
+
+	db := f.db
 	conn := dbsqlc.New(db)
 	logger := logging.NewForTest()
 	svc := services.NewTestCaseService(db, conn, logger)
