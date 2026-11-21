@@ -17,6 +17,14 @@ export type LinkPreview = components["schemas"]["schema.LinkPreview"];
 
 type AssignTestsToPlanPayload = components["schemas"]["schema.AssignTestsToPlanRequest"];
 
+/**
+ * The test plans that can still take test cases and testers. Closing a test plan
+ * locks it, so closed plans are left out wherever test cases are assigned to a plan.
+ */
+export function openTestPlans<T extends { is_complete?: boolean }>(plans?: T[] | null): T[] {
+  return (plans ?? []).filter((plan) => !plan.is_complete);
+}
+
 export function useProjectTestPlansQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-plans", {
     params: { path: { projectID } },
