@@ -350,7 +350,7 @@ export function CommentComposer({
             }}
           />
           <Text fontSize="xs" color="fg.subtle" truncate>
-            {t("test_plans.comments.send_hint_with_attachments", "Paste or drop screenshots · Ctrl + Enter to send")}
+            {t("test_plans.comments.send_hint_with_attachments", "Markdown supported · Paste or drop screenshots · Ctrl + Enter to send")}
           </Text>
         </HStack>
         <HStack gap={1} flexShrink={0}>
