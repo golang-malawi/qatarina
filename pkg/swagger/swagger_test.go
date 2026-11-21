@@ -63,7 +63,7 @@ func Test_Swagger(t *testing.T) {
 		},
 		{
 			name:        "Should be returns status 200 with 'application/json' content-type",
-			url:         "/swag/doc.json",
+			url:         "/swag/swagger.json",
 			statusCode:  200,
 			contentType: "application/json",
 		},
