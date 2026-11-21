@@ -54,12 +54,14 @@ export const findInboxUnseenCountQueryOptions = queryOptions({
   refetchInterval: 60_000,
 });
 
-export const findTestCaseInboxByIdQueryOptions =(id: string) =>
+// An inbox row is a test case in a test plan. Without a plan the server picks the
+// open assignment of the test case.
+export const findTestCaseInboxByIdQueryOptions = (id: string, testPlanID?: number) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", id],
+    queryKey: ["testCases", "inbox", id, testPlanID ?? 0],
     queryFn: async (): Promise<AssignedTestCase> => {
       // Fetch the test case directly so it is found no matter which inbox page it is on
-      const res = await getInboxTestCaseById(id);
+      const res = await getInboxTestCaseById(id, testPlanID);
       const match = (res?.data ?? res) as AssignedTestCase | undefined;
       if (!match?.id) {
         throw new Error(`Inbox test case ${id} not found`);
@@ -68,13 +70,18 @@ export const findTestCaseInboxByIdQueryOptions =(id: string) =>
     },
   });
 
-// Previous/next test cases and position in the inbox, in inbox order.
-// Shares the ["testCases", "inbox"] prefix so it refreshes along with the inbox.
-export const findInboxNavigationQueryOptions = (id: string) =>
+// Previous/next rows and position in the inbox, in inbox order and with the same
+// filter as the list. Shares the ["testCases", "inbox"] prefix so it refreshes along
+// with the inbox.
+export const findInboxNavigationQueryOptions = (
+  id: string,
+  testPlanID: number,
+  includeClosed: boolean,
+) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", id, "navigation"],
+    queryKey: ["testCases", "inbox", id, testPlanID, "navigation", includeClosed],
     queryFn: async (): Promise<InboxNavigationResponse> => {
-      const res = await getInboxNavigation(id);
+      const res = await getInboxNavigation(id, testPlanID, includeClosed);
       return (res?.data ?? res) as InboxNavigationResponse;
     },
   });

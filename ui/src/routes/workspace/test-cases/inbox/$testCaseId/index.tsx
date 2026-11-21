@@ -53,18 +53,36 @@ import {
 } from "@/lib/preconditions-checklist";
 import { useAuth } from "@/hooks/isLoggedIn";   
 
+// An inbox row is a test case in a test plan, so links carry the plan. Without it the
+// server opens the open assignment of the test case. history keeps previous/next on
+// the same rows as the list when it shows closed test cases.
+type InboxItemSearch = {
+  plan?: number;
+  history?: boolean;
+};
+
 export const Route = createFileRoute(
   "/workspace/test-cases/inbox/$testCaseId/",
 )({
-  loader: ({ context: { queryClient }, params: { testCaseId } }) =>
-    queryClient.ensureQueryData(findTestCaseInboxByIdQueryOptions(testCaseId)),
+  validateSearch: (search): InboxItemSearch => {
+    const plan = Number((search as any)?.plan);
+    const history = (search as any)?.history;
+    return {
+      plan: Number.isInteger(plan) && plan > 0 ? plan : undefined,
+      history: history === true || history === "true" ? true : undefined,
+    };
+  },
+  loaderDeps: ({ search: { plan } }) => ({ plan }),
+  loader: ({ context: { queryClient }, params: { testCaseId }, deps: { plan } }) =>
+    queryClient.ensureQueryData(findTestCaseInboxByIdQueryOptions(testCaseId, plan)),
   component: TestCaseInboxItem,
 });
 
 function TestCaseInboxItem() {
   const { testCaseId } = Route.useParams();
-  // Keyed so typed results, notes and attachments don't carry over between test cases
-  return <InboxTestCaseView key={testCaseId} />;
+  const { plan } = Route.useSearch();
+  // Keyed so typed results, notes and attachments don't carry over between inbox rows
+  return <InboxTestCaseView key={`${testCaseId}:${plan ?? ""}`} />;
 }
 
 type InboxNavigationData =
@@ -78,7 +96,7 @@ function InboxNavigation({
 }: {
   nav?: InboxNavigationData;
   isPending: boolean;
-  onGoTo: (id: string) => void;
+  onGoTo: (id: string, testPlanID?: number) => void;
 }) {
   return (
     <Flex justify="space-between" align="center" mb={4} gap={2}>
@@ -87,7 +105,7 @@ function InboxNavigation({
         variant="outline"
         colorPalette="brand"
         disabled={isPending || !nav?.previous_id}
-        onClick={() => nav?.previous_id && onGoTo(nav.previous_id)}
+        onClick={() => nav?.previous_id && onGoTo(nav.previous_id, nav.previous_test_plan_id)}
         title="Previous test case in your inbox"
       >
         <IconChevronLeft />
@@ -103,7 +121,7 @@ function InboxNavigation({
         variant="outline"
         colorPalette="brand"
         disabled={isPending || !nav?.next_id}
-        onClick={() => nav?.next_id && onGoTo(nav.next_id)}
+        onClick={() => nav?.next_id && onGoTo(nav.next_id, nav.next_test_plan_id)}
         title="Next test case in your inbox"
       >
         Next
@@ -115,25 +133,28 @@ function InboxNavigation({
 
 function InboxTestCaseView() {
   const { testCaseId } = Route.useParams();
+  const { plan, history } = Route.useSearch();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const auth = useAuth();               
   const currentUser = auth.user;        
 
   const { data: testCase } = useSuspenseQuery(
-    findTestCaseInboxByIdQueryOptions(testCaseId),
+    findTestCaseInboxByIdQueryOptions(testCaseId, plan),
   );
 
   const tc = testCase;
   const isDraft = tc.is_draft;
+  const testPlanID = tc.test_plan_id ?? 0;
 
   const { data: nav, isPending: isPendingNav } = useQuery(
-    findInboxNavigationQueryOptions(testCaseId),
+    findInboxNavigationQueryOptions(testCaseId, testPlanID, Boolean(history)),
   );
-  const goToTestCase = (id: string) =>
+  const goToTestCase = (id: string, nextPlanID?: number) =>
     navigate({
       to: "/workspace/test-cases/inbox/$testCaseId",
       params: { testCaseId: id },
+      search: { plan: nextPlanID || undefined, history },
     });
   const navigation = (
     <InboxNavigation
@@ -166,7 +187,7 @@ function InboxTestCaseView() {
   const env = environments.find((e: any) => e.id === tc.environment_id);
 
   const markViewedMutation = useMutation({
-    mutationFn: () => markInboxTestCaseViewed(testCaseId),
+    mutationFn: () => markInboxTestCaseViewed(testCaseId, testPlanID),
     onSuccess: () => {
       // Refreshes the inbox list, this item and the unseen count
       queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
@@ -247,14 +268,14 @@ function InboxTestCaseView() {
 
       queryClient.invalidateQueries(findTestCaseInboxQueryOptions(false));
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
-      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId));
+      queryClient.invalidateQueries(findTestCaseInboxByIdQueryOptions(testCaseId, plan));
 
       // Optional: force refetch for instant UI update
       queryClient.refetchQueries(findTestCaseInboxQueryOptions(false));
       queryClient.refetchQueries(findTestCaseSummaryQueryOptions);
 
       if (nextId) {
-        goToTestCase(nextId);
+        goToTestCase(nextId, nav?.next_test_plan_id);
       }
     },
     onError: () => {
@@ -295,16 +316,34 @@ function InboxTestCaseView() {
     },
   });
 
-  if (tc.is_closed) {
+  // A closed test plan is locked, so its test cases open read only
+  if (tc.is_test_plan_closed || tc.is_closed) {
     return (
       <Box>
         {navigation}
-        <Heading size="lg" color="fg.heading">
-          {tc.title}
-        </Heading>
+        <Flex alignItems="center" justifyContent="space-between" gap={2}>
+          <Heading size="lg" color="fg.heading">
+            {tc.title}
+          </Heading>
+          {tc.is_test_plan_closed && (
+            <Button
+              size="sm"
+              variant="solid"
+              colorPalette="brand"
+              onClick={() => navigate({ to: `/projects/${tc.project_id}/test-plans/${tc.test_plan_id}/` })}
+            >
+              Go to Test Plan
+            </Button>
+          )}
+        </Flex>
         <Badge colorScheme="gray" ml={2}>
-          Closed
+          {tc.is_test_plan_closed ? "Test plan closed" : "Closed"}
         </Badge>
+        {tc.test_plan_name && (
+          <Text mt={2} color="fg.muted">
+            <strong>Test plan:</strong> {tc.test_plan_name}
+          </Text>
+        )}
         {tc.preconditions && (
           <Box mt={2}>
             <Heading size="sm" mb={2} color="fg.heading">
@@ -319,7 +358,9 @@ function InboxTestCaseView() {
           </Box>
         )}
         <Text mt={4} color="fg.subtle">
-          This test case is closed. Results can no longer be recorded.
+          {tc.is_test_plan_closed
+            ? "This test plan is closed. Results can no longer be recorded."
+            : "This test case is closed. Results can no longer be recorded."}
         </Text>
       </Box>
     );
@@ -359,6 +400,11 @@ function InboxTestCaseView() {
         <Text color="fg.muted">
           <strong>Code:</strong> {tc.code}
         </Text>
+        {tc.test_plan_name && (
+          <Text color="fg.muted">
+            <strong>Test plan:</strong> {tc.test_plan_name}
+          </Text>
+        )}
         {tc.preconditions && (
           <Box mt={2}>
             <Heading size="sm" mb={2} color="fg.heading">

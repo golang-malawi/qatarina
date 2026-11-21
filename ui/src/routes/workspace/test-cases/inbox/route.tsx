@@ -27,6 +27,29 @@ import { findProjectsQueryOptions } from "@/data/queries/projects";
 import React, { useEffect, useRef, useState } from "react";
 import { SheetView } from "./sheetView";
 import $api from "@/lib/api/query";
+import type { components } from "@/lib/api/v1";
+
+type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
+
+// An inbox row is a test case in a test plan, the same test case can show once per plan
+const inboxRowKey = (tc: AssignedTestCase) => (tc.id ? `${tc.test_plan_id ?? 0}:${tc.id}` : "");
+
+// Project and test plan of an inbox row, so rows of the same test case can be told apart
+function InboxRowPlan({ tc, projectName }: { tc: AssignedTestCase; projectName?: string }) {
+  return (
+    <Flex align="center" gap={2} wrap="wrap">
+      <Text fontSize="xs" color="fg.subtle">
+        {projectName ?? "Unknown Project"}
+        {tc.test_plan_name ? ` · ${tc.test_plan_name}` : ""}
+      </Text>
+      {tc.is_test_plan_closed && (
+        <Badge colorPalette="gray" variant="subtle" size="xs">
+          Test plan closed
+        </Badge>
+      )}
+    </Flex>
+  );
+}
 
 export const Route = createFileRoute("/workspace/test-cases/inbox")({
   loader: ({ context: { queryClient } }) => {
@@ -264,7 +287,11 @@ function TestCasePageInbox() {
                 colorPalette="brand"
                 variant="subtle"
                 rounded="full"
-                title={includeClosed ? "All test cases in your inbox" : "Open test cases in your inbox"}
+                title={
+                  includeClosed
+                    ? "Open test cases, closed test cases and test cases of closed test plans"
+                    : "Open test cases in your inbox"
+                }
               >
                 {totalCount} {totalCount === 1 ? "test case" : "test cases"}
               </Badge>
@@ -304,7 +331,7 @@ function TestCasePageInbox() {
                 setPage(1);
               }}
             >
-              Show closed test cases
+              Show history
             </Checkbox>
 
             {/* Compact filters and group button on the same line with original font styling */}
@@ -397,18 +424,19 @@ function TestCasePageInbox() {
                       };
                       return (
                         <Box
-                          key={tc.id ?? idx}
+                          key={inboxRowKey(tc) || idx}
                           p={3}
                           pl={5}
                           borderBottom="sm"
                           borderColor="border.subtle"
                           bg={tc.is_viewed ? undefined : "bg.subtle"}
                           _hover={{ bg: tc.is_viewed ? "bg.subtle" : "bg.muted", cursor: "pointer" }}
-                          opacity={tc.is_closed ? 0.5 : 1}
+                          opacity={tc.is_closed || tc.is_test_plan_closed ? 0.5 : 1}
                         >
                           <Link
                             to="/workspace/test-cases/inbox/$testCaseId"
                             params={{ testCaseId: tc.id ?? "" }}
+                            search={{ plan: tc.test_plan_id || undefined, history: includeClosed || undefined }}
                             title={tc.description ?? ""}
                           >
                             <Flex direction="column">
@@ -425,9 +453,7 @@ function TestCasePageInbox() {
                                   </Badge>
                                 )}
                               </Flex>
-                              <Text fontSize="xs" color="fg.subtle">
-                                {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
-                              </Text>
+                              <InboxRowPlan tc={tc} projectName={projectMap[tc.project_id ?? -1]} />
                             </Flex>
                             <Stack direction="row" mt={2} gap={2} flexWrap="wrap">
                               <PriorityBadge value={tc.priority} label="Priority" />
@@ -463,17 +489,18 @@ function TestCasePageInbox() {
                   };
                   return (
                     <Box
-                      key={tc.id ?? idx}
+                      key={inboxRowKey(tc) || idx}
                       p={3}
                       borderBottom="sm"
                       borderColor="border.subtle"
                       bg={tc.is_viewed ? undefined : "bg.subtle"}
                       _hover={{ bg: tc.is_viewed ? "bg.subtle" : "bg.muted", cursor: "pointer" }}
-                      opacity={tc.is_closed ? 0.5 : 1}
+                      opacity={tc.is_closed || tc.is_test_plan_closed ? 0.5 : 1}
                     >
                       <Link
                         to="/workspace/test-cases/inbox/$testCaseId"
                         params={{ testCaseId: tc.id ?? "" }}
+                        search={{ plan: tc.test_plan_id || undefined, history: includeClosed || undefined }}
                         title={tc.description ?? ""}
                       >
                         <Flex direction="column">
@@ -490,9 +517,7 @@ function TestCasePageInbox() {
                               </Badge>
                             )}
                           </Flex>
-                          <Text fontSize="xs" color="fg.subtle">
-                            {projectMap[tc.project_id ?? -1] ?? "Unknown Project"}
-                          </Text>
+                          <InboxRowPlan tc={tc} projectName={projectMap[tc.project_id ?? -1]} />
                         </Flex>
                         <Stack direction="row" mt={2} gap={2} flexWrap="wrap">
                           <PriorityBadge value={tc.priority} label="Priority" />
