@@ -64,10 +64,13 @@ type TestCaseService interface {
 	Search(context.Context, string) ([]dbsqlc.TestCase, error)
 	// FindAllAssignedToUser fetches test cases assigned to a logged in user (via test_plan_cases), with option to include/exclude closed runs
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
+	// FindInboxFilterOptions lists the projects, environments and modules present in the user's inbox
+	FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error)
 	// FindAssignedToUserByID fetches a single test case from the user's inbox, regardless of which page it is on
 	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string) (*schema.AssignedTestCase, error)
-	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox, in inbox order
-	FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error)
+	// FindInboxNavigation finds the previous and next test cases around a test case in the user's inbox,
+	// in inbox order and limited by the same filters as the inbox list (paging fields are ignored)
+	FindInboxNavigation(ctx context.Context, params *schema.InboxFilterParams, testCaseID string) (*schema.InboxNavigationResponse, error)
 	// CountUnseenAssignedToUser counts open test cases in the user's inbox that they have not viewed yet
 	CountUnseenAssignedToUser(ctx context.Context, userID int64) (int64, error)
 	// MarkAssignedAsViewed marks a test case in the user's inbox as viewed
@@ -692,6 +695,9 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 		RowOffset:     int32(params.Page),
 		IncludeClosed: params.IncludeClosed,
 		Projects:      params.Projects,
+		EnvironmentID: params.EnvironmentID,
+		Module:        params.Module,
+		Search:        params.Search,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -724,13 +730,19 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 			IsViewed:        row.IsViewed,
 			Priority:        string(row.Priority),
 			Urgency:         string(row.Urgency),
+			ProjectTitle:    row.ProjectTitle,
+			EnvironmentName: row.EnvironmentName,
 		})
 	}
 
-	// Count query
+	// Count query (same filters as the list, so pagination is accurate)
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
 		UserID:        params.UserID,
 		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
+		EnvironmentID: params.EnvironmentID,
+		Module:        params.Module,
+		Search:        params.Search,
 	})
 	if err != nil {
 		return res, 0, err
@@ -739,15 +751,48 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	return res, total, nil
 }
 
-func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, userID int64, testCaseID string) (*schema.InboxNavigationResponse, error) {
+func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error) {
+	rows, err := t.queries.TestCaseInboxFilterOptions(ctx, dbsqlc.TestCaseInboxFilterOptionsParams{
+		UserID:        userID,
+		IncludeClosed: includeClosed,
+	})
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to load inbox filter options: %v", err)
+	}
+
+	res := &schema.InboxFilterOptionsResponse{
+		Projects:     []schema.InboxFilterOption{},
+		Environments: []schema.InboxFilterOption{},
+		Modules:      []schema.InboxFilterOption{},
+	}
+	for _, row := range rows {
+		option := schema.InboxFilterOption{Value: row.Value, Label: row.Label}
+		switch row.Kind {
+		case "project":
+			res.Projects = append(res.Projects, option)
+		case "environment":
+			res.Environments = append(res.Environments, option)
+		case "module":
+			res.Modules = append(res.Modules, option)
+		}
+	}
+	return res, nil
+}
+
+func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, params *schema.InboxFilterParams, testCaseID string) (*schema.InboxNavigationResponse, error) {
 	id, err := uuid.Parse(testCaseID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid test case id: %w", err)
 	}
 
 	row, err := t.queries.TestCaseInboxNavigation(ctx, dbsqlc.TestCaseInboxNavigationParams{
-		UserID:     userID,
-		TestCaseID: id,
+		UserID:        params.UserID,
+		TestCaseID:    id,
+		IncludeClosed: params.IncludeClosed,
+		Projects:      params.Projects,
+		EnvironmentID: params.EnvironmentID,
+		Module:        params.Module,
+		Search:        params.Search,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

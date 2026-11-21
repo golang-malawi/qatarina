@@ -5162,25 +5162,43 @@ func (q *Queries) SetTestCaseDraftStatus(ctx context.Context, arg SetTestCaseDra
 }
 
 const testCaseCountByAssignedUser = `-- name: TestCaseCountByAssignedUser :one
-SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = $1
-  GROUP BY tc.id
-  HAVING $2::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-) sub
+SELECT COUNT(DISTINCT tc.id)
+FROM test_cases tc
+INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+WHERE pc.assigned_to_id = $1
+  AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
+  AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
+  AND ($4::int = 0 OR tp.environment_id = $4::int)
+  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND (
+    $6::text = ''
+    OR tc.title ILIKE '%' || $6::text || '%'
+    OR tc.code ILIKE '%' || $6::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+  )
 `
 
 type TestCaseCountByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
+	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 }
 
+// Must use the same filters as TestCaseListByAssignedUser so pagination totals match the rows.
 func (q *Queries) TestCaseCountByAssignedUser(ctx context.Context, arg TestCaseCountByAssignedUserParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser, arg.UserID, arg.IncludeClosed)
+	row := q.db.QueryRowContext(ctx, testCaseCountByAssignedUser,
+		arg.UserID,
+		arg.IncludeClosed,
+		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -5317,6 +5335,65 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 	return i, err
 }
 
+const testCaseInboxFilterOptions = `-- name: TestCaseInboxFilterOptions :many
+WITH inbox AS (
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  FROM test_cases tc
+  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+  WHERE pc.assigned_to_id = $1
+    AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
+)
+SELECT kind, value, label FROM (
+  SELECT 'project'::text AS kind, p.id::text AS value, p.title::text AS label
+  FROM inbox i INNER JOIN projects p ON p.id = i.project_id
+  UNION
+  SELECT 'environment'::text, e.id::text, e.name::text
+  FROM inbox i INNER JOIN environments e ON e.id = i.environment_id
+  UNION
+  SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
+  FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+) options
+ORDER BY kind, label
+`
+
+type TestCaseInboxFilterOptionsParams struct {
+	UserID        int64
+	IncludeClosed bool
+}
+
+type TestCaseInboxFilterOptionsRow struct {
+	Kind  string
+	Value string
+	Label string
+}
+
+// Distinct projects, environments and modules found in the user's inbox,
+// used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+func (q *Queries) TestCaseInboxFilterOptions(ctx context.Context, arg TestCaseInboxFilterOptionsParams) ([]TestCaseInboxFilterOptionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, testCaseInboxFilterOptions, arg.UserID, arg.IncludeClosed)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TestCaseInboxFilterOptionsRow
+	for rows.Next() {
+		var i TestCaseInboxFilterOptionsRow
+		if err := rows.Scan(&i.Kind, &i.Value, &i.Label); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const testCaseInboxNavigation = `-- name: TestCaseInboxNavigation :one
 WITH inbox AS (
   SELECT tc.id, tc.created_at
@@ -5325,7 +5402,21 @@ WITH inbox AS (
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
   LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = $2::bigint
-    AND (COALESCE(tr.is_closed, false) = false OR tc.id = $1::uuid)
+    AND (
+      tc.id = $1::uuid
+      OR (
+        ($3::bool = true OR COALESCE(tr.is_closed, false) = false)
+        AND ($4::int[] IS NULL OR tc.project_id = ANY($4::int[]))
+        AND ($5::int = 0 OR tp.environment_id = $5::int)
+        AND ($6::text = '' OR tc.feature_or_module = $6::text)
+        AND (
+          $7::text = ''
+          OR tc.title ILIKE '%' || $7::text || '%'
+          OR tc.code ILIKE '%' || $7::text || '%'
+          OR tc.feature_or_module ILIKE '%' || $7::text || '%'
+        )
+      )
+    )
   GROUP BY tc.id
 ),
 ordered AS (
@@ -5348,8 +5439,13 @@ WHERE id = $1::uuid
 `
 
 type TestCaseInboxNavigationParams struct {
-	TestCaseID uuid.UUID
-	UserID     int64
+	TestCaseID    uuid.UUID
+	UserID        int64
+	IncludeClosed bool
+	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 }
 
 type TestCaseInboxNavigationRow struct {
@@ -5360,10 +5456,19 @@ type TestCaseInboxNavigationRow struct {
 }
 
 // Neighbours of a test case in the user's inbox, in the same order and with the
-// same open-only filter as TestCaseListByAssignedUser. The current test case is
-// always included so navigation still works when it is closed.
+// same filters as TestCaseListByAssignedUser, so Previous/Next follow the list the
+// user is looking at. The current test case is always included so navigation still
+// works when it is closed or no longer matches the filters.
 func (q *Queries) TestCaseInboxNavigation(ctx context.Context, arg TestCaseInboxNavigationParams) (TestCaseInboxNavigationRow, error) {
-	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation, arg.TestCaseID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, testCaseInboxNavigation,
+		arg.TestCaseID,
+		arg.UserID,
+		arg.IncludeClosed,
+		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
+	)
 	var i TestCaseInboxNavigationRow
 	err := row.Scan(
 		&i.PreviousID,
@@ -5396,23 +5501,38 @@ SELECT
   COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
   BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
+  MAX(pc.urgency)::priority_level AS urgency,
+  COALESCE(MAX(p.title), '')::text AS project_title,
+  COALESCE(MAX(e.name), '')::text AS environment_name
 FROM test_cases tc
 INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
 LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN projects p ON p.id = tc.project_id
+LEFT JOIN environments e ON e.id = tp.environment_id
 WHERE pc.assigned_to_id = $1
   AND ($2::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND ($3::int[] IS NULL OR tr.project_id = ANY($3::int[]))
+  AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
+  AND ($4::int = 0 OR tp.environment_id = $4::int)
+  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND (
+    $6::text = ''
+    OR tc.title ILIKE '%' || $6::text || '%'
+    OR tc.code ILIKE '%' || $6::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+  )
 GROUP BY tc.id
 ORDER BY tc.created_at DESC, tc.id DESC
-LIMIT $5::int OFFSET $4::int
+LIMIT $8::int OFFSET $7::int
 `
 
 type TestCaseListByAssignedUserParams struct {
 	UserID        int64
 	IncludeClosed bool
 	Projects      []int32
+	EnvironmentID int32
+	Module        string
+	Search        string
 	RowOffset     int32
 	RowLimit      int32
 }
@@ -5439,6 +5559,8 @@ type TestCaseListByAssignedUserRow struct {
 	IsViewed        bool
 	Priority        PriorityLevel
 	Urgency         PriorityLevel
+	ProjectTitle    string
+	EnvironmentName string
 }
 
 func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseListByAssignedUserParams) ([]TestCaseListByAssignedUserRow, error) {
@@ -5446,6 +5568,9 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 		arg.UserID,
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
+		arg.EnvironmentID,
+		arg.Module,
+		arg.Search,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -5478,6 +5603,8 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 			&i.IsViewed,
 			&i.Priority,
 			&i.Urgency,
+			&i.ProjectTitle,
+			&i.EnvironmentName,
 		); err != nil {
 			return nil, err
 		}
@@ -5924,60 +6051,6 @@ func (q *Queries) UpdateTestCase(ctx context.Context, arg UpdateTestCaseParams) 
 		arg.Priority,
 		arg.Preconditions,
 		arg.ExternalID,
-	)
-	return err
-}
-
-const updateTestPlan = `-- name: UpdateTestPlan :exec
-UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
-updated_by_id = $5, kind = $6, description = $7, start_at = $8,
-closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
-num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
-WHERE id = $1
-`
-
-type UpdateTestPlanParams struct {
-	ID             int64
-	ProjectID      int32
-	AssignedToID   int32
-	CreatedByID    int32
-	UpdatedByID    int32
-	Kind           TestKind
-	Description    sql.NullString
-	StartAt        sql.NullTime
-	ClosedAt       sql.NullTime
-	ScheduledEndAt sql.NullTime
-	NumTestCases   int32
-	NumFailures    int32
-	IsComplete     sql.NullBool
-	IsLocked       sql.NullBool
-	HasReport      sql.NullBool
-	CreatedAt      sql.NullTime
-	UpdatedAt      sql.NullTime
-	EnvironmentID  sql.NullInt32
-}
-
-func (q *Queries) UpdateTestPlan(ctx context.Context, arg UpdateTestPlanParams) error {
-	_, err := q.db.ExecContext(ctx, updateTestPlan,
-		arg.ID,
-		arg.ProjectID,
-		arg.AssignedToID,
-		arg.CreatedByID,
-		arg.UpdatedByID,
-		arg.Kind,
-		arg.Description,
-		arg.StartAt,
-		arg.ClosedAt,
-		arg.ScheduledEndAt,
-		arg.NumTestCases,
-		arg.NumFailures,
-		arg.IsComplete,
-		arg.IsLocked,
-		arg.HasReport,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-		arg.EnvironmentID,
 	)
 	return err
 }

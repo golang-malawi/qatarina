@@ -49,19 +49,42 @@ export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getInboxTestCases(params?: {
+type InboxFilterParams = {
   includeClosed?: boolean;
-  page?: number;
-  pageSize?: number;
-}) {
+  search?: string;
+  projectId?: string;
+  environmentId?: string;
+  module?: string;
+};
+
+// Query parameters shared by the inbox list and Previous/Next navigation
+function inboxFilterQuery(params?: InboxFilterParams) {
+  return {
+    includeClosed: params?.includeClosed ?? false,
+    search: params?.search || undefined,
+    projects: params?.projectId || undefined,
+    environmentID: params?.environmentId ? Number(params.environmentId) : undefined,
+    module: params?.module || undefined,
+  };
+}
+
+export async function getInboxTestCases(
+  params?: InboxFilterParams & { page?: number; pageSize?: number },
+) {
   return apiClient.request("get", "/v1/me/test-cases/inbox", {
     params: {
       query: {
-        includeClosed: params?.includeClosed ?? false,
+        ...inboxFilterQuery(params),
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 10,
       },
     },
+  });
+}
+
+export async function getInboxFilterOptions(includeClosed: boolean) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/filter-options", {
+    params: { query: { includeClosed } },
   });
 }
 
@@ -71,9 +94,9 @@ export async function getInboxTestCaseById(testCaseID: string) {
   });
 }
 
-export async function getInboxNavigation(testCaseID: string) {
+export async function getInboxNavigation(testCaseID: string, filters?: InboxFilterParams) {
   return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}/navigation", {
-    params: { path: { testCaseID } },
+    params: { path: { testCaseID }, query: inboxFilterQuery(filters) },
   });
 }
 

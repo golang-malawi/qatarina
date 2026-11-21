@@ -197,44 +197,64 @@ func CreateTestPlan(testPlanService services.TestPlanService, logger logging.Log
 //
 //	@ID				UpdateTestPlan
 //	@Summary		Update a Test Plan
-//	@Description	Update a Test Plan
+//	@Description	Update a Test Plan's kind, description, environment and dates. Fields left out keep their current value. Complete or locked plans can't be changed.
 //	@Tags			test-plans
 //	@Accept			json
 //	@Produce		json
-//	@Param			testPlanID	path		string		true	"Test Plan ID"
-//	@Param			request		body		interface{}	true	"Test Plan data"
-//	@Success		200			{object}	interface{}
+//	@Param			testPlanID	path		int						true	"Test Plan ID"
+//	@Param			request		body		schema.UpdateTestPlan	true	"Fields to change"
+//	@Success		200			{object}	schema.TestPlanResponseItem
 //	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
+//	@Failure		409			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/test-plans/{testPlanID} [post]
 func UpdateTestPlan(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid testPlanID in request")
+		}
+
 		request := new(schema.UpdateTestPlan)
-		if validationErros, err := common.ParseBodyThenValidate(c, request); err != nil {
-			if validationErros {
-				return problemdetail.ValidationErrors(c, "invalid datea in request", err)
+		if validationErrors, err := common.ParseBodyThenValidate(c, request); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data in request", err)
 			}
 			return problemdetail.BadRequest(c, "failed to parse data in request")
 		}
-		// testPlanID, err := c.ParamsInt("testPlanID", 0)
-		// if err != nil{
-		// 	return problemdetail.BadRequest(c, "failed to pass test plan id data in request")
-		// }
-		userID := authutil.GetAuthUserID(c)
 
-		request.CreatedByID = userID
-		request.AssignedToID = userID
-		request.UpdatedByID = userID
-
-		_, err := testPlanService.Update(c.Context(), *request)
-		if err != nil {
-			logger.Error(loggedmodule.ApiTestPlans, "failed to process request", "error", err)
-			return problemdetail.ServerErrorProblem(c, "failed to process request")
+		err = testPlanService.UpdateDetails(c.Context(), schema.UpdateTestPlanDetails{
+			ID:             int64(testPlanID),
+			UpdatedByID:    authutil.GetAuthUserID(c),
+			Kind:           request.Kind,
+			Description:    request.Description,
+			EnvironmentID:  request.EnvironmentID,
+			StartAt:        request.StartAt,
+			ScheduledEndAt: request.ScheduledEndAt,
+		})
+		switch {
+		case err == nil:
+		case errors.Is(err, services.ErrNotFound):
+			return problemdetail.NotFound(c, "test plan not found")
+		case errors.Is(err, services.ErrTestPlanClosed):
+			return problemdetail.Conflict(c, err.Error())
+		case errors.Is(err, services.ErrTestPlanInvalidKind),
+			errors.Is(err, services.ErrTestPlanEmptyDescription),
+			errors.Is(err, services.ErrTestPlanEnvironment),
+			errors.Is(err, services.ErrTestPlanEndBeforeStart):
+			return problemdetail.BadRequest(c, err.Error())
+		default:
+			logger.Error(loggedmodule.ApiTestPlans, "failed to update test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update test plan")
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Test plan updated successfully",
-		})
+		updated, err := testPlanService.GetOneTestPlan(c.Context(), int64(testPlanID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to load updated test plan", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to load updated test plan")
+		}
+		return c.JSON(updated)
 	}
 }
 
