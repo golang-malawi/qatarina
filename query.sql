@@ -1164,6 +1164,34 @@ RETURNING
 -- name: DeleteComment :execrows
 DELETE FROM test_plan_comments WHERE id = $1;
 
+-- name: UpdateCommentContent :execrows
+UPDATE test_plan_comments
+SET content = sqlc.arg(content), updated_at = NOW()
+WHERE id = sqlc.arg(id);
+
+-- name: DeleteCommentAttachmentsExcept :many
+-- Removes the attachments of a comment that are not in keep_ids, returning their file paths
+DELETE FROM test_plan_comment_attachments
+WHERE comment_id = sqlc.arg(comment_id)
+  AND NOT (id = ANY(sqlc.arg(keep_ids)::uuid[]))
+RETURNING storage_path;
+
+-- name: SetCommentReaction :exec
+INSERT INTO test_plan_comment_reactions (comment_id, user_id, emoji, created_at)
+VALUES (sqlc.arg(comment_id), sqlc.arg(user_id), sqlc.arg(emoji), NOW())
+ON CONFLICT (comment_id, user_id) DO UPDATE SET emoji = EXCLUDED.emoji, created_at = NOW();
+
+-- name: DeleteCommentReaction :execrows
+DELETE FROM test_plan_comment_reactions
+WHERE comment_id = sqlc.arg(comment_id) AND user_id = sqlc.arg(user_id);
+
+-- name: ListCommentReactionsByComments :many
+SELECT r.comment_id, r.user_id, u.display_name, r.emoji
+FROM test_plan_comment_reactions r
+JOIN users u ON u.id = r.user_id
+WHERE r.comment_id = ANY(sqlc.arg(comment_ids)::uuid[])
+ORDER BY r.created_at ASC;
+
 -- name: CreateCommentAttachment :one
 INSERT INTO test_plan_comment_attachments (
     id, test_plan_id, uploaded_by_id, file_name, content_type, file_size, storage_path, created_at

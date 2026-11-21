@@ -15,7 +15,9 @@ import { Plugin, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { gapCursor } from "@tiptap/pm/gapcursor";
 import { dropCursor } from "@tiptap/pm/dropcursor";
-import { attachmentToken } from "@/components/comments/attachmentTokens";
+import { attachmentToken, attachmentTokenPattern } from "@/components/comments/attachmentTokens";
+import { CommentAttachment, useCommentAttachmentImage } from "@/services/TestPlanService";
+import { EmojiPickerButton } from "@/components/comments/EmojiPickerButton";
 import {
   ACCEPTED_IMAGE_TYPES,
   useAttachmentUploads,
@@ -25,13 +27,25 @@ import {
 
 const IMAGE_NODE = "commentImage";
 
-const UploadsContext = createContext<Pick<AttachmentUploads, "items" | "retry"> | null>(null);
+type UploadsContextValue = Pick<AttachmentUploads, "items" | "retry"> & { testPlanId: number };
+
+const UploadsContext = createContext<UploadsContextValue | null>(null);
 
 function ImageNodeView({ node, selected, deleteNode }: NodeViewProps) {
   const { t } = useTranslation();
   const uploads = useContext(UploadsContext);
+  // Screenshots already saved on the comment being edited are loaded from the server
+  const attachmentId: string | undefined = node.attrs.attachmentId ?? undefined;
+  const saved = useCommentAttachmentImage(uploads?.testPlanId ?? 0, attachmentId);
   const item = uploads?.items.find((i) => i.localId === node.attrs.localId);
-  const status = item?.status ?? "missing";
+  const status = attachmentId
+    ? saved.isError
+      ? "missing"
+      : saved.src
+        ? "done"
+        : "uploading"
+    : (item?.status ?? "missing");
+  const src = attachmentId ? saved.src : node.attrs.src;
 
   return (
     <NodeViewWrapper data-drag-handle>
@@ -53,9 +67,12 @@ function ImageNodeView({ node, selected, deleteNode }: NodeViewProps) {
             <LuImageOff />
             <Text fontSize="xs">{t("test_plans.comments.image_removed", "Image removed")}</Text>
           </Flex>
+        ) : !src ? (
+          // A saved screenshot that is still being fetched
+          <Box w="160px" h="100px" bg="bg.muted" />
         ) : (
           <img
-            src={node.attrs.src}
+            src={src}
             alt={node.attrs.name}
             draggable={false}
             style={{ display: "block", maxHeight: 180, maxWidth: 280, objectFit: "cover" }}
@@ -109,6 +126,8 @@ const CommentImage = TiptapNode.create({
   addAttributes() {
     return {
       localId: { default: null },
+      // Set for a screenshot that was already posted, instead of localId
+      attachmentId: { default: null },
       src: { default: null },
       name: { default: "" },
     };
@@ -132,13 +151,76 @@ function collectImageIds(doc: PMNode) {
   return ids;
 }
 
+// The saved attachment behind an image node: one posted earlier, or one uploaded in this session
+function imageAttachment(node: PMNode, items: PendingAttachment[]) {
+  if (node.attrs.attachmentId) return { id: node.attrs.attachmentId as string, name: node.attrs.name as string };
+  const item = items.find((i) => i.localId === node.attrs.localId);
+  return item?.attachment?.id ? { id: item.attachment.id, name: item.file.name } : null;
+}
+
+function collectAttachmentIds(doc: PMNode, items: PendingAttachment[]) {
+  const ids: string[] = [];
+  doc.forEach((node) => {
+    if (node.type.name !== IMAGE_NODE) return;
+    const id = imageAttachment(node, items)?.id;
+    if (id && !ids.includes(id)) ids.push(id);
+  });
+  return ids;
+}
+
+function hasSavedImages(doc: PMNode) {
+  let found = false;
+  doc.forEach((node) => {
+    if (node.type.name === IMAGE_NODE && node.attrs.attachmentId) found = true;
+  });
+  return found;
+}
+
+type JSONNode = { type: string; attrs?: Record<string, unknown>; content?: JSONNode[]; text?: string };
+
+// Turns stored comment text back into editor content, so a posted comment can be edited.
+// Each line becomes a paragraph and each attachment token becomes an image.
+function deserialize(content: string, attachments: CommentAttachment[]): JSONNode {
+  const byId = new Map(attachments.filter((a) => a.id).map((a) => [a.id!, a]));
+  const placed = new Set<string>();
+  const nodes: JSONNode[] = [];
+  const paragraph = (text: string): JSONNode =>
+    text ? { type: "paragraph", content: [{ type: "text", text }] } : { type: "paragraph" };
+  const image = (a: CommentAttachment): JSONNode => ({
+    type: IMAGE_NODE,
+    attrs: { attachmentId: a.id, name: a.file_name || "screenshot" },
+  });
+
+  for (const line of content.split("\n")) {
+    let lastIndex = 0;
+    let hadToken = false;
+    for (const match of line.matchAll(attachmentTokenPattern())) {
+      hadToken = true;
+      const before = line.slice(lastIndex, match.index);
+      if (before.trim()) nodes.push(paragraph(before));
+      lastIndex = (match.index ?? 0) + match[0].length;
+      const attachment = byId.get(match[2]);
+      if (attachment && !placed.has(match[2])) {
+        placed.add(match[2]);
+        nodes.push(image(attachment));
+      }
+    }
+    const rest = line.slice(lastIndex);
+    if (!hadToken || rest.trim()) nodes.push(paragraph(rest));
+  }
+  // Attachments the text doesn't reference (e.g. older comments) are shown at the end
+  for (const [id, attachment] of byId) if (!placed.has(id)) nodes.push(image(attachment));
+  if (nodes.length === 0 || nodes[nodes.length - 1].type === IMAGE_NODE) nodes.push(paragraph(""));
+  return { type: "doc", content: nodes };
+}
+
 // Turns the editor content into the stored comment format: plain text lines with attachment tokens
 function serialize(doc: PMNode, items: PendingAttachment[]) {
   const blocks: string[] = [];
   doc.forEach((node) => {
     if (node.type.name === IMAGE_NODE) {
-      const item = items.find((i) => i.localId === node.attrs.localId);
-      if (item?.attachment?.id) blocks.push(attachmentToken(item.file.name || "screenshot", item.attachment.id));
+      const attachment = imageAttachment(node, items);
+      if (attachment) blocks.push(attachmentToken(attachment.name || "screenshot", attachment.id));
       return;
     }
     let text = "";
@@ -158,6 +240,8 @@ export function CommentComposer({
   autoFocus,
   onCancel,
   compact = false,
+  initialContent,
+  initialAttachments,
 }: {
   testPlanId: number;
   placeholder: string;
@@ -167,11 +251,21 @@ export function CommentComposer({
   autoFocus?: boolean;
   onCancel?: () => void;
   compact?: boolean;
+  // Prefills the composer with a posted comment, for editing it
+  initialContent?: string;
+  initialAttachments?: CommentAttachment[];
 }) {
   const { t } = useTranslation();
   const uploads = useAttachmentUploads(testPlanId);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [hasText, setHasText] = useState(false);
+  const isEditing = initialContent !== undefined;
+  const [initialDoc] = useState(() =>
+    isEditing ? deserialize(initialContent, initialAttachments ?? []) : undefined
+  );
+  const [hasText, setHasText] = useState(
+    () => !!initialContent && initialContent.replace(attachmentTokenPattern(), "").trim().length > 0
+  );
+  const [hasSaved, setHasSaved] = useState(() => (initialAttachments?.length ?? 0) > 0);
   const [isDragging, setIsDragging] = useState(false);
 
   // The editor is created once, so its handlers reach the latest values through refs
@@ -246,6 +340,7 @@ export function CommentComposer({
         },
       }),
     ],
+    content: initialDoc,
     autofocus: autoFocus ? "end" : false,
     editorProps: {
       handlePaste: (view, event) => {
@@ -264,20 +359,22 @@ export function CommentComposer({
     },
     onUpdate: ({ editor }) => {
       setHasText(editor.state.doc.textContent.trim().length > 0);
+      setHasSaved(hasSavedImages(editor.state.doc));
       uploadsRef.current.retain(collectImageIds(editor.state.doc));
     },
   });
 
-  const hasImages = uploads.items.some((item) => item.status === "done");
+  const hasImages = hasSaved || uploads.items.some((item) => item.status === "done");
   const canSubmit = (hasText || hasImages) && !uploads.isUploading && !uploads.hasErrors && !isSubmitting;
 
   const submit = async () => {
     if (!editor || !canSubmit) return;
     const items = uploadsRef.current.itemsRef.current;
     const content = serialize(editor.state.doc, items);
-    const attachmentIds = items.flatMap((item) => (item.attachment?.id ? [item.attachment.id] : []));
+    // Every screenshot still in the message, so an edit keeps the ones left in and drops the rest
+    const attachmentIds = collectAttachmentIds(editor.state.doc, items);
     if (await onSubmit(content, attachmentIds)) {
-      editor.commands.clearContent(true);
+      if (!isEditing) editor.commands.clearContent(true);
       uploads.reset();
     }
   };
@@ -322,7 +419,7 @@ export function CommentComposer({
         "& .comment-image-node": { display: "inline-block", verticalAlign: "top", marginRight: 2, marginY: 1 },
       }}
     >
-      <UploadsContext.Provider value={uploads}>
+      <UploadsContext.Provider value={{ items: uploads.items, retry: uploads.retry, testPlanId }}>
         <EditorContent editor={editor} />
       </UploadsContext.Provider>
       <Flex justify="space-between" align="center" px={2} pb={2} gap={2}>
@@ -338,6 +435,10 @@ export function CommentComposer({
           >
             <LuImagePlus />
           </IconButton>
+          <EmojiPickerButton
+            onSelect={(emoji) => editor?.chain().focus().insertContent(emoji).run()}
+            onPicked={() => editor?.commands.focus()}
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -350,7 +451,7 @@ export function CommentComposer({
             }}
           />
           <Text fontSize="xs" color="fg.subtle" truncate>
-            {t("test_plans.comments.send_hint_with_attachments", "Paste or drop screenshots · Ctrl + Enter to send")}
+            {t("test_plans.comments.send_hint", "Ctrl + Enter to send")}
           </Text>
         </HStack>
         <HStack gap={1} flexShrink={0}>
