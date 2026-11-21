@@ -175,3 +175,30 @@ func TestTestPlans_ClosingLocksPlanAndLinksReport(t *testing.T) {
 		t.Errorf("after deleting its report: has_report=%v report_id=%q, want false and empty", afterDelete.HasReport, afterDelete.ReportID)
 	}
 }
+
+func TestTestPlans_ClosedAtAloneDoesNotCloseAPlan(t *testing.T) {
+	f, reports := newCloseFixture(t)
+	ctx := context.Background()
+
+	testCase := f.newTestCase(t, "")
+	plan, err := f.createPlan(testCase)
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+	// plans created before closed_at was removed from the forms can have one set
+	if _, err := f.db.Exec(`UPDATE test_plans SET closed_at = now() WHERE id = $1`, plan.ID); err != nil {
+		t.Fatalf("set closed_at: %v", err)
+	}
+
+	if _, err := f.createRun(plan.ID, testCase); err != nil {
+		t.Errorf("create test run in an open plan with closed_at: unexpected error %v", err)
+	}
+	if _, err := reports.Create(ctx, &schema.CreateReportRequest{
+		ProjectID: int64(f.projectID), TestPlanID: plan.ID, Name: "early", Type: "Summary", Status: "Completed",
+	}); !errors.Is(err, services.ErrTestPlanNotClosed) {
+		t.Errorf("report for an open plan with closed_at: err = %v, want ErrTestPlanNotClosed", err)
+	}
+	if err := f.plans.ReopenTestPlan(ctx, plan.ID, f.ownerID); !errors.Is(err, services.ErrTestPlanNotClosedYet) {
+		t.Errorf("reopen an open plan with closed_at: err = %v, want ErrTestPlanNotClosedYet", err)
+	}
+}

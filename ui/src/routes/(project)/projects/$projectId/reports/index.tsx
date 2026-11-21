@@ -48,7 +48,7 @@ function ReportsPage() {
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
   // Reports can only be generated for closed test plans
   const testPlans = (testPlansData?.test_plans ?? [])
-    .filter((tp: any) => tp.is_complete || tp.closed_at)
+    .filter((tp: any) => tp.is_complete)
     .map((tp: any) => ({
     id: tp.id,
     title: tp.description ?? tp.name ?? t("reports.untitled_plan"),

@@ -91,14 +91,14 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 
 		StartAt:        common.NullTime(request.StartAt),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
-		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)),
-		NumTestCases:   0,
-		NumFailures:    0,
-		IsComplete:     common.FalseNullBool(),
-		IsLocked:       common.FalseNullBool(),
-		HasReport:      common.FalseNullBool(),
-		CreatedAt:      common.NewNullTime(time.Now()),
-		UpdatedAt:      common.NewNullTime(time.Now()),
+		// closed_at is left NULL until the plan is closed, see CloseTestPlan
+		NumTestCases: 0,
+		NumFailures:  0,
+		IsComplete:   common.FalseNullBool(),
+		IsLocked:     common.FalseNullBool(),
+		HasReport:    common.FalseNullBool(),
+		CreatedAt:    common.NewNullTime(time.Now()),
+		UpdatedAt:    common.NewNullTime(time.Now()),
 	}
 
 	testPlanID, err := t.queries.CreateTestPlan(ctx, testPlanParams)
@@ -476,7 +476,6 @@ func (t *testPlanService) Update(ctx context.Context, request schema.UpdateTestP
 		Description:    common.NullString(request.Description),
 		EnvironmentID:  common.NewNullInt32(int32(request.EnvironmentID)),
 		StartAt:        common.NullTime(request.StartAt),
-		ClosedAt:       common.NullTime(common.ZeroOrTime(request.ClosedAt)),
 		ScheduledEndAt: common.NullTime(request.ScheduledEndAt),
 	})
 	if err != nil {
@@ -525,7 +524,8 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to load test plan: %w", err)
 	}
-	if plan.IsComplete.Bool || plan.ClosedAt.Valid {
+	// is_complete is what marks a plan closed, closed_at only records when it happened
+	if plan.IsComplete.Bool {
 		return nil, ErrTestPlanAlreadyClosed
 	}
 
@@ -584,7 +584,7 @@ func (t *testPlanService) ReopenTestPlan(ctx context.Context, testPlanID int64, 
 	if !canReopen {
 		return ErrTestPlanReopenForbidden
 	}
-	if !plan.IsComplete.Bool && !plan.ClosedAt.Valid && !plan.IsLocked.Bool {
+	if !plan.IsComplete.Bool {
 		return ErrTestPlanNotClosedYet
 	}
 	// Reports generated for the plan stay linked to it

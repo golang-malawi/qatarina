@@ -373,7 +373,7 @@ func (t *testRunService) IsTestPlanActive(ctx context.Context, planID int64) (bo
 	if err != nil {
 		return false, err
 	}
-	return !plan.ClosedAt.Valid && !plan.IsComplete.Bool, nil
+	return !plan.IsComplete.Bool, nil
 }
 
 func (t *testRunService) IsTestCaseActive(ctx context.Context, caseID string) (bool, error) {

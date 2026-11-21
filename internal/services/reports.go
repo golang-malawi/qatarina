@@ -53,7 +53,7 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	if int64(plan.ProjectID) != req.ProjectID {
 		return nil, ErrTestPlanProjectMismatch
 	}
-	if !plan.IsComplete.Bool && !plan.ClosedAt.Valid {
+	if !plan.IsComplete.Bool {
 		return nil, ErrTestPlanNotClosed
 	}
 	return createTestPlanReport(ctx, s.queries, s.logger, plan, req.Name, req.Type, req.Status)

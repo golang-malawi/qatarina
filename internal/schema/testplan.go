@@ -14,7 +14,6 @@ type CreateTestPlan struct {
 	Kind           string                    `json:"kind" validate:"required"`
 	Description    string                    `json:"description" validate:"required"`
 	StartAt        time.Time                 `json:"start_at" validate:"required"`
-	ClosedAt       *time.Time                `json:"closed_at,omitempty"`
 	ScheduledEndAt time.Time                 `json:"scheduled_end_at" validate:"required"`
 	AssignedToID   int64                     `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64                     `json:"created_by_id" validate:"-"`
@@ -132,7 +131,6 @@ type UpdateTestPlan struct {
 	Kind           string     `json:"kind" validate:"required"`
 	Description    string     `json:"description" validate:"required"`
 	StartAt        time.Time  `json:"start_at" validate:"required"`
-	ClosedAt       *time.Time `json:"closed_at,omitempty"`
 	ScheduledEndAt time.Time  `json:"scheduled_end_at"`
 	AssignedToID   int64      `json:"assigned_to_id" validate:"-"`
 	CreatedByID    int64      `json:"created_by_id" validate:"-"`
