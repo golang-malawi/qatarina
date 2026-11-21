@@ -107,6 +107,8 @@ type TestCaseService interface {
 
 	// FindBySelection lists the test cases picked in a project's test case list
 	FindBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.TestCase, error)
+	// FindDraftsBySelection lists the drafts among the test cases picked in a project's test case list
+	FindDraftsBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.ListDraftTestCasesBySelectionRow, error)
 	// DeleteBySelection deletes the test cases picked in a project's test case list
 	DeleteBySelection(ctx context.Context, selection schema.TestCaseSelection) (int64, error)
 	// TransferBySelection moves the test cases picked in a project's test case list to another project
@@ -1216,6 +1218,28 @@ func findBySelection(ctx context.Context, db *dbsqlc.Queries, selection schema.T
 // FindBySelection implements TestCaseService.
 func (t *testCaseServiceImpl) FindBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.TestCase, error) {
 	return findBySelection(ctx, t.queries, selection)
+}
+
+// FindDraftsBySelection implements TestCaseService.
+func (t *testCaseServiceImpl) FindDraftsBySelection(ctx context.Context, selection schema.TestCaseSelection) ([]dbsqlc.ListDraftTestCasesBySelectionRow, error) {
+	if selection.IsEmpty() {
+		return nil, ErrEmptyTestCaseSelection
+	}
+	testCaseIDs, err := parseUUIDs(selection.TestCaseIDs)
+	if err != nil {
+		return nil, err
+	}
+	excluded, err := parseUUIDs(selection.ExcludedTestCaseIDs)
+	if err != nil {
+		return nil, err
+	}
+	return t.queries.ListDraftTestCasesBySelection(ctx, dbsqlc.ListDraftTestCasesBySelectionParams{
+		ProjectID:           int32(selection.ProjectID),
+		SelectAll:           selection.SelectAll,
+		Search:              strings.TrimSpace(selection.Search),
+		ExcludedTestCaseIds: excluded,
+		TestCaseIds:         testCaseIDs,
+	})
 }
 
 // DeleteBySelection implements TestCaseService. Either every selected test case is

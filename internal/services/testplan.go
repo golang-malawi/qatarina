@@ -70,6 +70,10 @@ func (t *testPlanService) Create(ctx context.Context, request *schema.CreateTest
 	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
 		return nil, err
 	}
+	// Drafts picked one by one are rejected, "select all" skips them instead
+	if err := ensureNotDrafts(ctx, t.queries, testCaseIDs); err != nil {
+		return nil, err
+	}
 
 	testPlanParams := dbsqlc.CreateTestPlanParams{
 		ProjectID:     int32(request.ProjectID),
@@ -126,7 +130,8 @@ var ErrTestPlanProjectMismatch = errors.New("test plan does not belong to the pr
 
 // addAllProjectTestCases adds every test case in the project matching the selection
 // to the plan in a single statement. Test cases in plannedTests are skipped so they
-// keep the testers explicitly assigned to them.
+// keep the testers explicitly assigned to them, and drafts are skipped
+// because they cannot be assigned to testers.
 func (t *testPlanService) addAllProjectTestCases(ctx context.Context, planID, projectID int64, selection *schema.ProjectTestCaseSelection, plannedTests []schema.TestCaseAssignment) error {
 	excluded := make([]uuid.UUID, 0, len(selection.ExcludedTestCaseIDs)+len(plannedTests))
 	for _, id := range selection.ExcludedTestCaseIDs {
@@ -279,6 +284,14 @@ func (t *testPlanService) assignTestCases(ctx context.Context, planID int64, ass
 		}
 	}
 	if err := ensureNotInFrozenModules(ctx, t.queries, testCaseIDs); err != nil {
+		return nil, err
+	}
+	// Unlike frozen modules, a draft cannot be assigned to testers even if it is already in the plan
+	assignedIDs := make([]uuid.UUID, 0, len(assignments))
+	for _, a := range assignments {
+		assignedIDs = append(assignedIDs, a.TestCaseID)
+	}
+	if err := ensureNotDrafts(ctx, t.queries, assignedIDs); err != nil {
 		return nil, err
 	}
 

@@ -644,7 +644,8 @@ ON CONFLICT DO NOTHING;
 
 -- name: AddProjectTestCasesToPlan :execrows
 -- Adds every (non-suggested) test case in a project matching the search filter to a
--- test plan, assigning each one to all the given testers, without loading the cases
+-- test plan, assigning each one to all the given testers, without loading the cases.
+-- Drafts are skipped because they cannot be assigned to testers
 INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
 SELECT
     sqlc.arg(test_plan_id)::bigint,
@@ -660,6 +661,7 @@ FROM test_cases tc
 CROSS JOIN unnest(sqlc.arg(user_ids)::bigint[]) AS u(user_id)
 WHERE tc.project_id = sqlc.arg(project_id)::int
   AND (tc.suggested IS NULL OR tc.suggested = false)
+  AND tc.is_draft IS NOT TRUE
   AND (sqlc.arg(search)::text = '' OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%' OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%')
   AND NOT (tc.id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[]))
 ON CONFLICT DO NOTHING;
@@ -728,7 +730,8 @@ SELECT
       JOIN test_run_results trr ON tra.test_run_result_id = trr.id
       WHERE trr.test_run_id = tr.id
     ) AS attachment_count,
-    tc.title AS test_case_title
+    tc.title AS test_case_title,
+    tc.code AS test_case_code
 FROM test_runs tr
 JOIN test_cases tc ON tr.test_case_id = tc.id
 JOIN users u ON tr.tested_by_id = u.id
@@ -942,6 +945,30 @@ INNER JOIN frozen f ON f.project_id = tc.project_id
     AND lower(trim(tc.feature_or_module)) IN (lower(f.name), lower(f.code))
 WHERE tc.id = ANY(sqlc.arg(test_case_ids)::uuid[])
 ORDER BY tc.code;
+
+-- name: ListDraftTestCases :many
+-- Returns the test cases among the given IDs that are still drafts
+SELECT id, code
+FROM test_cases
+WHERE id = ANY(sqlc.arg(test_case_ids)::uuid[])
+  AND is_draft = true
+ORDER BY code;
+
+-- name: ListDraftTestCasesBySelection :many
+-- Returns the drafts among the test cases picked in a project's test case list, using
+-- the same selection as ListTestCasesBySelection
+SELECT id, code
+FROM test_cases
+WHERE project_id = sqlc.arg(project_id)::int
+  AND is_draft = true
+  AND (suggested IS NULL OR suggested = false)
+  AND (
+    (sqlc.arg(select_all)::bool
+      AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%')
+      AND NOT (id = ANY(sqlc.arg(excluded_test_case_ids)::uuid[])))
+    OR (NOT sqlc.arg(select_all)::bool AND id = ANY(sqlc.arg(test_case_ids)::uuid[]))
+  )
+ORDER BY code;
 
 -- name: CreatePage :one
 INSERT INTO pages(parent_page_id, page_version, org_id, project_id, code, title, file_path, content, page_type, mime_type, has_embedded_media, external_content_url, notion_url, last_edited_by, created_by, created_at, updated_at, deleted_at

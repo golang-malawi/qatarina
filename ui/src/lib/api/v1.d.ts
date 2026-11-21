@@ -1961,6 +1961,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-cases/selection-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List the drafts among the selected test cases of a project
+         * @description List the drafts among the test cases ticked in a project's test case list, or with select_all every test case matching the search except the excluded ones. Drafts cannot be assigned to testers, so they are skipped when the selection is used in a test plan.
+         */
+        post: operations["ListSelectionDrafts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-cases/suggest": {
         parameters: {
             query?: never;
@@ -3132,6 +3152,17 @@ export interface components {
             confirm_password: string;
             new_password: string;
             user_id: number;
+        };
+        "schema.SelectionDraftsRequest": {
+            selection: components["schemas"]["schema.TestCaseSelection"];
+        };
+        "schema.SelectionDraftsResponse": {
+            /** @description Codes of the first drafts, for display */
+            codes?: string[];
+            /** @description Number of drafts in the selection */
+            count?: number;
+            /** @description IDs of every draft in the selection */
+            test_case_ids?: string[];
         };
         "schema.SignUpRequest": {
             display_name: string;
@@ -7298,6 +7329,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestCaseListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ListSelectionDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Selected test cases */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["schema.SelectionDraftsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.SelectionDraftsResponse"];
                 };
             };
             /** @description Bad Request */

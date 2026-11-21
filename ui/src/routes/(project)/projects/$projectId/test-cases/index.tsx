@@ -58,9 +58,12 @@ import {
   exportTestCasesToFile,
   bulkDeleteTestCases,
   bulkTransferTestCases,
+  findSelectionDrafts,
   type ExportFileFormat,
+  type SelectionDrafts,
   type TestCaseSelection,
 } from "@/services/TestCaseService";
+import { DraftsSkippedDialog } from "@/components/DraftsSkippedDialog";
 import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import { useProjectTestersQuery } from "@/services/TesterService";
@@ -119,6 +122,11 @@ export default function ListProjectTestCases() {
   const [bulkAssignStep, setBulkAssignStep] = useState<"plan" | "users">("plan");
   const [selectedTestPlans, setSelectedTestPlans] = useState<string[]>([]);
   const [bulkSelectedUsers, setBulkSelectedUsers] = useState<string[]>([]);
+  // Drafts in the selection waiting for the user to confirm they will be skipped
+  const [pendingDrafts, setPendingDrafts] = useState<SelectionDrafts | null>(null);
+  // Drafts left out of the bulk assignment, since drafts cannot be assigned to testers
+  const [skippedDraftIds, setSkippedDraftIds] = useState<string[]>([]);
+  const assignCount = Math.max(0, selectedCount - skippedDraftIds.length);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [targetProjectId, setTargetProjectId] = useState<string>("");
   const [targetFeatureOrModule, setTargetFeatureOrModule] = useState<string>("");
@@ -289,8 +297,16 @@ export default function ListProjectTestCases() {
     }
   };
 
-  const handleBulkUseInTestSession = () => {
-    if (selectedRows.length === 0) return;
+  const openBulkAssign = () => {
+    setBulkAssignOpen(true);
+    setBulkAssignStep("plan");
+    setSelectedTestPlans([]);
+    setBulkSelectedUsers([]);
+  };
+
+  const handleBulkUseInTestSession = async () => {
+    // With "Select all" selectedRows is empty, the backend resolves the selection
+    if (selectedCount === 0) return;
     const frozenRows = selectedRows.filter((row) => isFrozen(row.feature_or_module));
     if (frozenRows.length > 0) {
       toaster.error({
@@ -302,11 +318,33 @@ export default function ListProjectTestCases() {
       });
       return;
     }
-    if (selectedCount === 0) return;
-    setBulkAssignOpen(true);
-    setBulkAssignStep("plan");
-    setSelectedTestPlans([]);
-    setBulkSelectedUsers([]);
+
+    // Drafts cannot be assigned to testers, so they are skipped once the user agrees.
+    // The backend also finds the drafts on pages that are not loaded.
+    let drafts: SelectionDrafts;
+    try {
+      drafts = await findSelectionDrafts(buildSelection());
+    } catch (err: any) {
+      toaster.error({
+        title: t("test_cases.drafts_skipped.check_error"),
+        description: err?.message,
+      });
+      return;
+    }
+    if (drafts.count >= selectedCount) {
+      toaster.error({
+        title: t("test_cases.drafts_only.title"),
+        description: t("test_cases.drafts_only.description"),
+        duration: 6000,
+      });
+      return;
+    }
+    setSkippedDraftIds(drafts.test_case_ids ?? []);
+    if (drafts.count > 0) {
+      setPendingDrafts(drafts);
+      return;
+    }
+    openBulkAssign();
   };
 
   const handleTransferClick = (row: TestCase) => {
@@ -606,8 +644,10 @@ export default function ListProjectTestCases() {
                   label: (row) =>
                     isFrozen(row.feature_or_module)
                       ? t("test_cases.use_in_test_session_frozen")
-                      : t("test_cases.use_in_test_session"),
-                  disabled: (row) => isFrozen(row.feature_or_module),
+                      : row.is_draft
+                        ? t("test_cases.use_in_test_session_draft")
+                        : t("test_cases.use_in_test_session"),
+                  disabled: (row) => isFrozen(row.feature_or_module) || Boolean(row.is_draft),
                   link: (row) =>
                     `/projects/${projectId}/test-cases/${String(row.id ?? "")}?tab=usage`,
                 },
@@ -677,6 +717,18 @@ export default function ListProjectTestCases() {
         </Text>
       </AppDialog>
 
+      <DraftsSkippedDialog
+        drafts={pendingDrafts}
+        onCancel={() => {
+          setPendingDrafts(null);
+          setSkippedDraftIds([]);
+        }}
+        onConfirm={() => {
+          setPendingDrafts(null);
+          openBulkAssign();
+        }}
+      />
+
       {/* Bulk assign modal - Step 1: Select Test Plans with Checkboxes */}
       {bulkAssignStep === "plan" && (
         <AppDialog
@@ -707,7 +759,7 @@ export default function ListProjectTestCases() {
           }
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
-            Select test plan(s) to add {selectedCount} test case(s)
+            Select test plan(s) to add {assignCount} test case(s)
           </Box>
           <Box maxH="300px" overflowY="auto" pr={2}>
             {projectTestPlans.length === 0 ? (
@@ -805,10 +857,13 @@ export default function ListProjectTestCases() {
                                 },
                               }
                             : {
-                                planned_tests: selectedRows.map((row) => ({
-                                  test_case_id: String(row.id),
-                                  user_ids: bulkSelectedUsers.map(Number),
-                                })),
+                                // Drafts the user agreed to skip; "Select all" skips them on the backend
+                                planned_tests: selectedRows
+                                  .filter((row) => !skippedDraftIds.includes(String(row.id)))
+                                  .map((row) => ({
+                                    test_case_id: String(row.id),
+                                    user_ids: bulkSelectedUsers.map(Number),
+                                  })),
                               }),
                         })
                       )
@@ -816,7 +871,7 @@ export default function ListProjectTestCases() {
 
                     toaster.create({
                       title: "Success",
-                      description: `Successfully assigned ${selectedCount} test case(s) to test plan(s)`,
+                      description: `Successfully assigned ${assignCount} test case(s) to test plan(s)`,
                       type: "success",
                     });
 
@@ -831,6 +886,7 @@ export default function ListProjectTestCases() {
                     setSelectedRows([]);
                     setRowSelection({});
                     setAllSelection(null);
+                    setSkippedDraftIds([]);
                   } catch (err: any) {
                     toaster.create({
                       title: "Assignment failed",
@@ -847,7 +903,7 @@ export default function ListProjectTestCases() {
         >
           <Box fontSize="sm" mb={3} color="fg.muted">
             {t("test_plans.bulk_assign_description", {
-              count: selectedCount,
+              count: assignCount,
             })}
           </Box>
           {projectTesters.length === 0 ? (

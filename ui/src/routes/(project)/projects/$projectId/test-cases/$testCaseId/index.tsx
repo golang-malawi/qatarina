@@ -87,6 +87,9 @@ function ViewTestCase() {
 
   const effectivePlanId = optimisticAssignment?.test_plan_id ?? selectedPlanId;
   const moduleFrozen = isFrozen(testCase.feature_or_module);
+  // Drafts cannot be assigned to testers until they are published
+  const isDraft = Boolean(testCase.is_draft);
+  const cannotAssign = moduleFrozen || isDraft;
   const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
 
   const handleTabChange = (details: { value: string }) => {
@@ -330,6 +333,14 @@ function ViewTestCase() {
                   <Alert.Description>{t("test_cases.frozen_module_hint")}</Alert.Description>
                 </Alert.Content>
               </Alert.Root>
+            ) : isDraft ? (
+              <Alert.Root status="warning">
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>{t("test_cases.draft")}</Alert.Title>
+                  <Alert.Description>{t("test_cases.draft_hint")}</Alert.Description>
+                </Alert.Content>
+              </Alert.Root>
             ) : (
               <Alert.Root status="info">
                 <Alert.Indicator />
@@ -360,7 +371,7 @@ function ViewTestCase() {
                         key={plan.id}
                         value={plan.id.toString()}
                         disabled={
-                          moduleFrozen ||
+                          cannotAssign ||
                           (isLockedToPlan && plan.id.toString() !== effectivePlanId)
                         }
                       >
@@ -384,7 +395,7 @@ function ViewTestCase() {
                 mt={2}
                 size="sm"
                 colorPalette="brand"
-                disabled={!effectivePlanId || moduleFrozen}
+                disabled={!effectivePlanId || cannotAssign}
                 onClick={() => setAssignOpen(true)}
               >
                 Assign testers

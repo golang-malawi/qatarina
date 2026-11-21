@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -89,7 +90,7 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	pdf.SetFont("Arial", "", 12)
 	pdf.Cell(0, 10, fmt.Sprintf("Test Plan: %s", plan.Description.String))
 	pdf.Ln(8)
-	pdf.Cell(0, 10, fmt.Sprintf("Environment ID: %d", plan.EnvironmentID.Int32))
+	pdf.Cell(0, 10, fmt.Sprintf("Environment: %s", s.environmentName(ctx, plan.EnvironmentID)))
 	pdf.Ln(8)
 	pdf.Cell(0, 10, fmt.Sprintf("Passed: %d", stats.PassedCount))
 	pdf.Ln(8)
@@ -105,32 +106,48 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	pdf.Cell(0, 10, "Test Run Details")
 	pdf.Ln(12)
 
+	// Column widths add up to 190mm, the usable width of an A4 page with
+	// the default 10mm margins.
+	const (
+		codeWidth       = 22.0
+		testCaseWidth   = 60.0
+		executedByWidth = 36.0
+		resultWidth     = 22.0
+		statusWidth     = 20.0
+		testedOnWidth   = 30.0
+	)
+
 	pdf.SetFont("Arial", "", 10)
-	pdf.CellFormat(30, 7, "Run ID", "1", 0, "", false, 0, "")
-	pdf.CellFormat(30, 7, "Code", "1", 0, "", false, 0, "")
-	pdf.CellFormat(40, 7, "Executed By", "1", 0, "", false, 0, "")
-	pdf.CellFormat(30, 7, "Result", "1", 0, "", false, 0, "")
-	pdf.CellFormat(30, 7, "Status", "1", 0, "", false, 0, "")
+	pdf.CellFormat(codeWidth, 7, "Code", "1", 0, "", false, 0, "")
+	pdf.CellFormat(testCaseWidth, 7, "Test Case", "1", 0, "", false, 0, "")
+	pdf.CellFormat(executedByWidth, 7, "Executed By", "1", 0, "", false, 0, "")
+	pdf.CellFormat(resultWidth, 7, "Result", "1", 0, "", false, 0, "")
+	pdf.CellFormat(statusWidth, 7, "Status", "1", 0, "", false, 0, "")
+	pdf.CellFormat(testedOnWidth, 7, "Tested On", "1", 0, "", false, 0, "")
 	pdf.Ln(-1)
 
 	for _, run := range runs {
-		runID := run.ID.String()
-		if len(runID) > 8 {
-			runID = runID[:8] + "..."
-		}
-		pdf.CellFormat(30, 7, runID, "1", 0, "", false, 0, "")
-		pdf.CellFormat(30, 7, run.Code, "1", 0, "", false, 0, "")
 		executedBy := "Unknown"
 		if run.ExecutedBy.Valid {
 			executedBy = run.ExecutedBy.String
 		}
-		pdf.CellFormat(40, 7, executedBy, "1", 0, "", false, 0, "")
-		pdf.CellFormat(30, 7, string(run.ResultState), "1", 0, "", false, 0, "")
 		status := "Open"
 		if run.IsClosed.Bool {
 			status = "Closed"
 		}
-		pdf.CellFormat(30, 7, status, "1", 0, "", false, 0, "")
+		// A pending run has not been tested yet, so its tested_on value
+		// is a placeholder rather than a real test date.
+		testedOn := "-"
+		if run.ResultState != dbsqlc.TestRunStatePending {
+			testedOn = run.TestedOn.Format(time.DateOnly)
+		}
+
+		pdf.CellFormat(codeWidth, 7, fitText(pdf, run.TestCaseCode, codeWidth), "1", 0, "", false, 0, "")
+		pdf.CellFormat(testCaseWidth, 7, fitText(pdf, run.TestCaseTitle, testCaseWidth), "1", 0, "", false, 0, "")
+		pdf.CellFormat(executedByWidth, 7, fitText(pdf, executedBy, executedByWidth), "1", 0, "", false, 0, "")
+		pdf.CellFormat(resultWidth, 7, string(run.ResultState), "1", 0, "", false, 0, "")
+		pdf.CellFormat(statusWidth, 7, status, "1", 0, "", false, 0, "")
+		pdf.CellFormat(testedOnWidth, 7, testedOn, "1", 0, "", false, 0, "")
 		pdf.Ln(-1)
 	}
 
@@ -151,6 +168,35 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 
 	r.FilePath = sql.NullString{String: filePath, Valid: true}
 	return &r, nil
+}
+
+// environmentName returns the name of the test plan's environment for display
+// in a report. A missing environment does not stop the report from being made.
+func (s *reportServiceImpl) environmentName(ctx context.Context, environmentID sql.NullInt32) string {
+	if !environmentID.Valid {
+		return "Not set"
+	}
+	env, err := s.queries.GetEnvironment(ctx, environmentID.Int32)
+	if err != nil {
+		s.logger.Error("reports-service", "failed to fetch environment", "environmentID", environmentID.Int32, "error", err)
+		return "Unknown"
+	}
+	return env.Name
+}
+
+// fitText shortens text with "..." so it fits in a table cell of the given
+// width, leaving a little padding on each side.
+func fitText(pdf *gofpdf.Fpdf, text string, width float64) string {
+	maxWidth := width - 2*pdf.GetCellMargin()
+	if pdf.GetStringWidth(text) <= maxWidth {
+		return text
+	}
+	const ellipsis = "..."
+	runes := []rune(text)
+	for len(runes) > 0 && pdf.GetStringWidth(string(runes)+ellipsis) > maxWidth {
+		runes = runes[:len(runes)-1]
+	}
+	return string(runes) + ellipsis
 }
 
 func (s *reportServiceImpl) GetByID(ctx context.Context, id string) (*dbsqlc.Report, error) {

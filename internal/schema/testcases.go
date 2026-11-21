@@ -272,6 +272,22 @@ type BulkTransferTestCasesResponse struct {
 	Transferred int64 `json:"transferred"`
 }
 
+// SelectionDraftsRequest asks which of the selected test cases are drafts
+type SelectionDraftsRequest struct {
+	Selection TestCaseSelection `json:"selection" validate:"required"`
+}
+
+// SelectionDraftsResponse lists the drafts in a selection, which are skipped when the
+// selection is assigned to testers
+type SelectionDraftsResponse struct {
+	// Number of drafts in the selection
+	Count int `json:"count"`
+	// IDs of every draft in the selection
+	TestCaseIDs []string `json:"test_case_ids"`
+	// Codes of the first drafts, for display
+	Codes []string `json:"codes"`
+}
+
 // ParsePriorityLevel converts a priority/urgency value from a request into its
 // database representation, falling back to medium when
 // the value is blank or unknown
