@@ -83,6 +83,11 @@ components:
           type: boolean
         is_draft:
           type: boolean
+        is_test_plan_closed:
+          description: |-
+            Whether the test plan was closed. Its test cases are only listed with include_closed
+            and results can no longer be recorded for them.
+          type: boolean
         is_viewed:
           type: boolean
         kind:
@@ -100,6 +105,9 @@ components:
           uniqueItems: false
         test_plan_id:
           type: integer
+        test_plan_name:
+          description: Description of the test plan, used as its name
+          type: string
         title:
           type: string
         updated_at:
@@ -544,8 +552,6 @@ components:
           $ref: '#/components/schemas/schema.ProjectTestCaseSelection'
         assigned_to_id:
           type: integer
-        closed_at:
-          type: string
         created_by_id:
           type: integer
         description:
@@ -726,10 +732,14 @@ components:
       properties:
         next_id:
           type: string
+        next_test_plan_id:
+          type: integer
         position:
           type: integer
         previous_id:
           type: string
+        previous_test_plan_id:
+          type: integer
         total:
           type: integer
       type: object
@@ -2081,7 +2091,7 @@ paths:
         name: pageSize
         schema:
           type: integer
-      - description: Include closed test cases
+      - description: Include closed test cases and test cases of closed test plans
         in: query
         name: includeClosed
         schema:
@@ -2115,8 +2125,9 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}:
     get:
-      description: Get a single Test Case assigned to the current user, regardless
-        of which inbox page it is on
+      description: Get a single Test Case assigned to the current user in a Test Plan,
+        regardless of which inbox page it is on. Without testPlanID it picks the open
+        assignment, or the latest one when every test plan it is in is closed.
       operationId: GetAssignedTestCase
       parameters:
       - description: Test Case ID
@@ -2125,6 +2136,11 @@ paths:
         required: true
         schema:
           type: string
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        schema:
+          type: integer
       requestBody:
         content:
           application/json:
@@ -2160,8 +2176,9 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/navigation:
     get:
-      description: Get the neighbouring open Test Cases around a Test Case, following
-        the inbox order, with its position. Empty IDs mean there is none in that direction.
+      description: Get the neighbouring inbox rows around a Test Case in a Test Plan,
+        following the inbox order and filter, with its position. Empty IDs mean there
+        is none in that direction.
       operationId: GetInboxNavigation
       parameters:
       - description: Test Case ID
@@ -2170,6 +2187,17 @@ paths:
         required: true
         schema:
           type: string
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        required: true
+        schema:
+          type: integer
+      - description: Include closed test cases and test cases of closed test plans
+        in: query
+        name: includeClosed
+        schema:
+          type: boolean
       requestBody:
         content:
           application/json:
@@ -2205,7 +2233,8 @@ paths:
       - test-cases
   /v1/me/test-cases/inbox/{testCaseID}/view:
     post:
-      description: Mark a Test Case in the current user's inbox as viewed
+      description: Mark a Test Case in a Test Plan in the current user's inbox as
+        viewed, or in every Test Plan without testPlanID
       operationId: MarkInboxTestCaseViewed
       parameters:
       - description: Test Case ID
@@ -2214,6 +2243,11 @@ paths:
         required: true
         schema:
           type: string
+      - description: Test Plan ID
+        in: query
+        name: testPlanID
+        schema:
+          type: integer
       requestBody:
         content:
           application/json:

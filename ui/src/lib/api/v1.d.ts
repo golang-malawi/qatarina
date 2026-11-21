@@ -438,7 +438,7 @@ export interface paths {
         };
         /**
          * Get a single Test Case from the current user's inbox
-         * @description Get a single Test Case assigned to the current user, regardless of which inbox page it is on
+         * @description Get a single Test Case assigned to the current user in a Test Plan, regardless of which inbox page it is on. Without testPlanID it picks the open assignment, or the latest one when every test plan it is in is closed.
          */
         get: operations["GetAssignedTestCase"];
         put?: never;
@@ -458,7 +458,7 @@ export interface paths {
         };
         /**
          * Get the previous and next Test Cases in the current user's inbox
-         * @description Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+         * @description Get the neighbouring inbox rows around a Test Case in a Test Plan, following the inbox order and filter, with its position. Empty IDs mean there is none in that direction.
          */
         get: operations["GetInboxNavigation"];
         put?: never;
@@ -480,7 +480,7 @@ export interface paths {
         put?: never;
         /**
          * Mark a Test Case in the current user's inbox as viewed
-         * @description Mark a Test Case in the current user's inbox as viewed
+         * @description Mark a Test Case in a Test Plan in the current user's inbox as viewed, or in every Test Plan without testPlanID
          */
         post: operations["MarkInboxTestCaseViewed"];
         delete?: never;
@@ -2717,6 +2717,11 @@ export interface components {
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
+            /**
+             * @description Whether the test plan was closed. Its test cases are only listed with include_closed
+             *     and results can no longer be recorded for them.
+             */
+            is_test_plan_closed?: boolean;
             is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             preconditions?: string;
@@ -2724,6 +2729,8 @@ export interface components {
             project_id?: number;
             tags?: string[];
             test_plan_id?: number;
+            /** @description Description of the test plan, used as its name */
+            test_plan_name?: string;
             title?: string;
             updated_at?: string;
             urgency?: string;
@@ -2916,7 +2923,6 @@ export interface components {
         "schema.CreateTestPlan": {
             all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
             assigned_to_id?: number;
-            closed_at?: string;
             created_by_id?: number;
             description: string;
             environment_id?: number;
@@ -3000,8 +3006,10 @@ export interface components {
         "schema.ImportProjectRequest": Record<string, never>;
         "schema.InboxNavigationResponse": {
             next_id?: string;
+            next_test_plan_id?: number;
             position?: number;
             previous_id?: string;
+            previous_test_plan_id?: number;
             total?: number;
         };
         "schema.InboxUnseenCountResponse": {
@@ -3707,7 +3715,7 @@ export interface operations {
                 page?: number;
                 /** @description Page size */
                 pageSize?: number;
-                /** @description Include closed test cases */
+                /** @description Include closed test cases and test cases of closed test plans */
                 includeClosed?: boolean;
             };
             header?: never;
@@ -3751,7 +3759,10 @@ export interface operations {
     };
     GetAssignedTestCase: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Test Plan ID */
+                testPlanID?: number;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
@@ -3805,7 +3816,12 @@ export interface operations {
     };
     GetInboxNavigation: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Include closed test cases and test cases of closed test plans */
+                includeClosed?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
@@ -3859,7 +3875,10 @@ export interface operations {
     };
     MarkInboxTestCaseViewed: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Test Plan ID */
+                testPlanID?: number;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
