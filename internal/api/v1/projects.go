@@ -277,7 +277,6 @@ func CreateProject(projectService services.ProjectService, testPlanService servi
 				Kind:           string(dbsqlc.TestKindGeneral),
 				Description:    "Default -- Ongoing Testing",
 				StartAt:        time.Now(),
-				ClosedAt:       nil,
 				ScheduledEndAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC),
 				AssignedToID:   int64(project.OwnerUserID),
 				CreatedByID:    int64(project.OwnerUserID),

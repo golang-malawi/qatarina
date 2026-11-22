@@ -77,6 +77,8 @@ export interface FieldConfig {
     formValues?: Record<string, any>;
   }) => ReactNode;
   fields?: FieldConfig[];
+  /** Singular name of one item in an "array" field, used on its add/remove buttons */
+  itemLabel?: string;
   accept?: string;
   /** Hide the field behind an "Add" button until the user opts in or it has a value */
   addable?: boolean;
@@ -237,9 +239,16 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     }, 0);
   };
 
-  const renderField = (fieldConfig: FieldConfig) => {
-    const { name, label, type, placeholder, helperText, options, customComponent, addable, minHeight } =
+  // `path` is the field's location in the form values; it differs from
+  // fieldConfig.name for sub-fields of an array (e.g. "environments[0].name")
+  const renderField = (fieldConfig: FieldConfig, path: string = fieldConfig.name) => {
+    const { label, type, placeholder, helperText, options, customComponent, addable, minHeight } =
       fieldConfig;
+    const name = path;
+
+    if (type === "array" && fieldConfig.fields) {
+      return renderArrayField(fieldConfig, path);
+    }
 
     return (
       <form.Field key={name} name={name}>
@@ -628,6 +637,68 @@ export function DynamicForm<T extends z.ZodTypeAny>({
     );
   };
 
+  // A repeatable group of sub-fields, e.g. a project's environments
+  const renderArrayField = (fieldConfig: FieldConfig, path: string) => {
+    const subFields = fieldConfig.fields ?? [];
+    const itemLabel = (fieldConfig.itemLabel ?? fieldConfig.label).toLocaleLowerCase();
+    const emptyItem = () =>
+      Object.fromEntries(subFields.map((sub) => [sub.name, sub.defaultValue ?? ""]));
+
+    return (
+      <form.Field key={path} name={path} mode="array">
+        {(field) => {
+          const items = Array.isArray(field.state.value) ? (field.state.value as unknown[]) : [];
+
+          return (
+            <Field.Root>
+              <Field.Label fontSize="sm" fontWeight="medium">
+                {fieldConfig.label}
+              </Field.Label>
+
+              <VStack align="stretch" gap={3} w="100%">
+                {items.map((_, index) => (
+                  <Box key={index} borderWidth="1px" borderRadius="md" p={3}>
+                    <HStack justify="flex-end" mb={2}>
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => field.removeValue(index)}
+                      >
+                        <LuX />
+                        {t("form.array_field.remove", { label: itemLabel, index: index + 1 })}
+                      </Button>
+                    </HStack>
+                    <VStack align="stretch" gap={3}>
+                      {subFields.map((sub) => renderField(sub, `${path}[${index}].${sub.name}`))}
+                    </VStack>
+                  </Box>
+                ))}
+
+                <Box>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="brand"
+                    onClick={() => field.pushValue(emptyItem() as never)}
+                  >
+                    <LuPlus />
+                    {t("form.array_field.add", { label: itemLabel })}
+                  </Button>
+                </Box>
+              </VStack>
+
+              {fieldConfig.helperText && (
+                <Field.HelperText>{fieldConfig.helperText}</Field.HelperText>
+              )}
+            </Field.Root>
+          );
+        }}
+      </form.Field>
+    );
+  };
+
   const renderFields = () => {
     const visibleFields = fields.filter((field) => !field.hidden);
     if (layout === "horizontal") {
@@ -645,7 +716,7 @@ export function DynamicForm<T extends z.ZodTypeAny>({
         </HStack>
       ));
     }
-    return visibleFields.map(renderField);
+    return visibleFields.map((field) => renderField(field));
   };
 
   return (

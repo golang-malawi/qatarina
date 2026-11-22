@@ -18,6 +18,14 @@ export type LinkPreview = components["schemas"]["schema.LinkPreview"];
 
 type AssignTestsToPlanPayload = components["schemas"]["schema.AssignTestsToPlanRequest"];
 
+/**
+ * The test plans that can still take test cases and testers. Closing a test plan
+ * locks it, so closed plans are left out wherever test cases are assigned to a plan.
+ */
+export function openTestPlans<T extends { is_complete?: boolean }>(plans?: T[] | null): T[] {
+  return (plans ?? []).filter((plan) => !plan.is_complete);
+}
+
 export function useProjectTestPlansQuery(projectID: string) {
   return $api.useQuery("get", "/v1/projects/{projectID}/test-plans", {
     params: { path: { projectID } },
@@ -114,6 +122,24 @@ export async function closeTestPlan(testPlanID: number) {
   if (!response.response.ok) {
     const error = response.error as any;
     throw new Error(error?.detail || "Failed to close test plan");
+  }
+
+  return response.data;
+}
+
+// Reopens a closed test plan, only allowed for its creator, the project owner or super admins
+export async function reopenTestPlan(testPlanID: number) {
+  const response = await apiClient.request(
+    "post",
+    "/v1/test-plans/{testPlanID}/reopen",
+    {
+      params: { path: { testPlanID } },
+    }
+  );
+
+  if (!response.response.ok) {
+    const error = response.error as any;
+    throw new Error(error?.detail || "Failed to reopen test plan");
   }
 
   return response.data;

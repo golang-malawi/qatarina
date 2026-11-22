@@ -326,6 +326,9 @@ WHERE project_id = sqlc.arg(project_id)
   AND (sqlc.arg(search)::text = '' OR title ILIKE '%' || sqlc.arg(search)::text || '%' OR code ILIKE '%' || sqlc.arg(search)::text || '%');
 
 -- name: TestCaseListByAssignedUser :many
+-- The user's inbox has one row per assignment, so a test case assigned to the user in
+-- two test plans shows twice. Without include_closed it only lists open assignments:
+-- the test case has no closed run in the plan and the plan is not closed.
 SELECT
   tc.id,
   tc.kind,
@@ -341,25 +344,77 @@ SELECT
   tc.created_at,
   tc.updated_at,
   tc.project_id,
-  MAX(pc.test_plan_id)::int AS test_plan_id,
-  MAX(pc.assigned_to_id)::int AS assigned_to_id,
-  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
-  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  pc.test_plan_id::int AS test_plan_id,
+  pc.assigned_to_id::int AS assigned_to_id,
+  COALESCE(tp.environment_id, 0)::int AS environment_id,
+  COALESCE(tp.description, '')::text AS test_plan_name,
+  COALESCE(tp.is_complete, false)::boolean AS is_test_plan_closed,
+  EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+  )::boolean AS is_closed,
+  (pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
-FROM test_cases tc
-INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  pc.urgency,
+  COALESCE(p.title, '')::text AS project_title,
+  COALESCE(e.name, '')::text AS environment_name
+FROM test_plan_cases pc
+INNER JOIN test_cases tc ON tc.id = pc.test_case_id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
+LEFT JOIN projects p ON p.id = tc.project_id
+LEFT JOIN environments e ON e.id = tp.environment_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  AND (sqlc.arg(include_closed)::bool = true OR COALESCE(tr.is_closed, false) = false)
-  AND (sqlc.arg(projects)::int[] IS NULL OR tr.project_id = ANY(sqlc.arg(projects)::int[]))
-GROUP BY tc.id
-ORDER BY tc.created_at DESC, tc.id DESC
+  AND (sqlc.arg(include_closed)::bool OR (
+    NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
+  ))
+  AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+  AND (
+    sqlc.arg(search)::text = ''
+    OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+  )
+ORDER BY pc.test_plan_id DESC, tc.created_at DESC, tc.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
+-- Distinct projects, environments and modules found in the user's inbox,
+-- used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+-- name: TestCaseInboxFilterOptions :many
+WITH inbox AS (
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  FROM test_plan_cases pc
+  INNER JOIN test_cases tc ON tc.id = pc.test_case_id
+  INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+  WHERE pc.assigned_to_id = sqlc.arg(user_id)
+    AND (sqlc.arg(include_closed)::bool OR (
+      NOT EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+      )
+      AND tp.is_complete IS NOT TRUE
+    ))
+)
+SELECT kind, value, label FROM (
+  SELECT 'project'::text AS kind, p.id::text AS value, p.title::text AS label
+  FROM inbox i INNER JOIN projects p ON p.id = i.project_id
+  UNION
+  SELECT 'environment'::text, e.id::text, e.name::text
+  FROM inbox i INNER JOIN environments e ON e.id = i.environment_id
+  UNION
+  SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
+  FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+) options
+ORDER BY kind, label;
+
 -- name: TestCaseGetByAssignedUser :one
+-- One assignment from the user's inbox. With test_plan_id 0 it picks the user's open
+-- assignment of the test case, or the latest one when all of them are closed.
 SELECT
   tc.id,
   tc.kind,
@@ -375,83 +430,135 @@ SELECT
   tc.created_at,
   tc.updated_at,
   tc.project_id,
-  MAX(pc.test_plan_id)::int AS test_plan_id,
-  MAX(pc.assigned_to_id)::int AS assigned_to_id,
-  COALESCE(MAX(tp.environment_id), 0)::int AS environment_id,
-  COALESCE(BOOL_OR(tr.is_closed), false)::boolean AS is_closed,
-  BOOL_AND(pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
+  pc.test_plan_id::int AS test_plan_id,
+  pc.assigned_to_id::int AS assigned_to_id,
+  COALESCE(tp.environment_id, 0)::int AS environment_id,
+  COALESCE(tp.description, '')::text AS test_plan_name,
+  COALESCE(tp.is_complete, false)::boolean AS is_test_plan_closed,
+  EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+  )::boolean AS is_closed,
+  (pc.viewed_at IS NOT NULL)::boolean AS is_viewed,
   tc.priority,
-  MAX(pc.urgency)::priority_level AS urgency
-FROM test_cases tc
-INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  pc.urgency
+FROM test_plan_cases pc
+INNER JOIN test_cases tc ON tc.id = pc.test_case_id
 INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
 WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  AND tc.id = sqlc.arg(test_case_id)
-GROUP BY tc.id;
+  AND pc.test_case_id = sqlc.arg(test_case_id)
+  AND (sqlc.arg(test_plan_id)::bigint = 0 OR pc.test_plan_id = sqlc.arg(test_plan_id)::bigint)
+ORDER BY (
+    NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
+  ) DESC, pc.test_plan_id DESC
+LIMIT 1;
 
--- Neighbours of a test case in the user's inbox, in the same order and with the
--- same open-only filter as TestCaseListByAssignedUser. The current test case is
--- always included so navigation still works when it is closed.
+-- Neighbours of an assignment in the user's inbox, in the same order and with the
+-- same filters as TestCaseListByAssignedUser, so Previous/Next follow the list the
+-- user is looking at. The current assignment is always included so navigation still
+-- works when it is closed or no longer matches the filters.
 -- name: TestCaseInboxNavigation :one
 WITH inbox AS (
-  SELECT tc.id, tc.created_at
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
+  SELECT pc.test_case_id, pc.test_plan_id, tc.created_at
+  FROM test_plan_cases pc
+  INNER JOIN test_cases tc ON tc.id = pc.test_case_id
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
   WHERE pc.assigned_to_id = sqlc.arg(user_id)::bigint
-    AND (COALESCE(tr.is_closed, false) = false OR tc.id = sqlc.arg(test_case_id)::uuid)
-  GROUP BY tc.id
+    AND (
+      (pc.test_case_id = sqlc.arg(test_case_id)::uuid AND pc.test_plan_id = sqlc.arg(test_plan_id)::bigint)
+      OR (
+        (sqlc.arg(include_closed)::bool OR (
+          NOT EXISTS (
+            SELECT 1 FROM test_runs tr
+            WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+          )
+          AND tp.is_complete IS NOT TRUE
+        ))
+        AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+        AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+        AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+        AND (
+          sqlc.arg(search)::text = ''
+          OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+          OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+          OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+        )
+      )
+    )
 ),
 ordered AS (
   SELECT
-    id,
-    LAG(id) OVER w AS previous_id,
-    LEAD(id) OVER w AS next_id,
+    test_case_id,
+    test_plan_id,
+    LAG(test_case_id) OVER w AS previous_id,
+    LAG(test_plan_id) OVER w AS previous_test_plan_id,
+    LEAD(test_case_id) OVER w AS next_id,
+    LEAD(test_plan_id) OVER w AS next_test_plan_id,
     ROW_NUMBER() OVER w AS position,
     COUNT(*) OVER () AS total
   FROM inbox
-  WINDOW w AS (ORDER BY created_at DESC, id DESC)
+  WINDOW w AS (ORDER BY test_plan_id DESC, created_at DESC, test_case_id DESC)
 )
 SELECT
   COALESCE(previous_id::text, '')::text AS previous_id,
+  COALESCE(previous_test_plan_id, 0)::bigint AS previous_test_plan_id,
   COALESCE(next_id::text, '')::text AS next_id,
+  COALESCE(next_test_plan_id, 0)::bigint AS next_test_plan_id,
   position,
   total
 FROM ordered
-WHERE id = sqlc.arg(test_case_id)::uuid;
+WHERE test_case_id = sqlc.arg(test_case_id)::uuid
+  AND test_plan_id = sqlc.arg(test_plan_id)::bigint;
 
+-- Must use the same filters as TestCaseListByAssignedUser so pagination totals match the rows.
 -- name: TestCaseCountByAssignedUser :one
 SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  GROUP BY tc.id
-  HAVING sqlc.arg(include_closed)::bool = true OR COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-) sub;
+FROM test_plan_cases pc
+INNER JOIN test_cases tc ON tc.id = pc.test_case_id
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND (sqlc.arg(include_closed)::bool OR (
+    NOT EXISTS (
+      SELECT 1 FROM test_runs tr
+      WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+    )
+    AND tp.is_complete IS NOT TRUE
+  ))
+  AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
+  AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
+  AND (
+    sqlc.arg(search)::text = ''
+    OR tc.title ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.code ILIKE '%' || sqlc.arg(search)::text || '%'
+    OR tc.feature_or_module ILIKE '%' || sqlc.arg(search)::text || '%'
+  );
 
 -- name: TestCaseCountUnseenByAssignedUser :one
+-- Counts the open assignments in the user's inbox they have not viewed yet
 SELECT COUNT(*)
-FROM (
-  SELECT tc.id
-  FROM test_cases tc
-  INNER JOIN test_plan_cases pc ON pc.test_case_id = tc.id
-  LEFT JOIN test_runs tr ON tr.test_case_id = tc.id AND tr.test_plan_id = pc.test_plan_id
-  WHERE pc.assigned_to_id = sqlc.arg(user_id)
-  GROUP BY tc.id
-  HAVING COALESCE(BOOL_OR(tr.is_closed), false)::boolean = false
-    AND BOOL_OR(pc.viewed_at IS NULL)
-) sub;
+FROM test_plan_cases pc
+INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
+WHERE pc.assigned_to_id = sqlc.arg(user_id)
+  AND pc.viewed_at IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM test_runs tr
+    WHERE tr.test_case_id = pc.test_case_id AND tr.test_plan_id = pc.test_plan_id AND tr.is_closed
+  )
+  AND tp.is_complete IS NOT TRUE;
 
 -- name: MarkAssignedTestCaseViewed :exec
+-- Marks the user's assignment of a test case in one test plan as viewed, or in every
+-- test plan when test_plan_id is 0
 UPDATE test_plan_cases
 SET viewed_at = now()
 WHERE test_case_id = sqlc.arg(test_case_id)
   AND assigned_to_id = sqlc.arg(user_id)
+  AND (sqlc.arg(test_plan_id)::bigint = 0 OR test_plan_id = sqlc.arg(test_plan_id)::bigint)
   AND viewed_at IS NULL;
 
 -- name: TestCaseListByProjectPaged :many
@@ -563,20 +670,60 @@ DELETE FROM test_plans WHERE id = $1;
 -- name: DeleteAllTestPlansInProject :execrows
 DELETE FROM test_plans WHERE project_id = $1;
 
--- name: UpdateTestPlan :exec
-UPDATE test_plans SET project_id = $2, assigned_to_id = $3, created_by_id = $4,
-updated_by_id = $5, kind = $6, description = $7, start_at = $8,
-closed_at = $9, scheduled_end_at = $10, num_test_cases = $11,
-num_failures = $12, is_complete = $13, is_locked = $14,
-has_report = $15, created_at = $16, updated_at = $17, environment_id = $18
-WHERE id = $1;
-
 -- name: CloseTestPlan :execrows
+-- Closing a test plan also locks it. Plans that are already closed are left alone,
+-- so when two requests close a plan at once only one of them updates it
 UPDATE test_plans
 SET is_complete = TRUE,
+is_locked = TRUE,
 closed_at = $2,
 updated_at = $2
+WHERE id = $1
+  AND is_complete IS NOT TRUE;
+
+-- name: ReopenTestPlan :execrows
+UPDATE test_plans
+SET is_complete = FALSE,
+is_locked = FALSE,
+closed_at = NULL,
+updated_at = NOW()
 WHERE id = $1;
+
+-- name: IsTestPlanLocked :one
+SELECT COALESCE(is_locked, FALSE)::bool AS is_locked
+FROM test_plans
+WHERE id = $1;
+
+-- name: IsTestRunPlanLocked :one
+-- Whether the test run belongs to a locked test plan, false for test runs outside a plan
+SELECT COALESCE(tp.is_locked, FALSE)::bool AS is_locked
+FROM test_runs tr
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE tr.id = $1;
+
+-- name: IsTestRunResultPlanLocked :one
+-- Whether the test run result belongs to a locked test plan
+SELECT COALESCE(tp.is_locked, FALSE)::bool AS is_locked
+FROM test_run_results r
+INNER JOIN test_runs tr ON tr.id = r.test_run_id
+LEFT JOIN test_plans tp ON tp.id = tr.test_plan_id
+WHERE r.id = $1;
+
+-- name: CanReopenTestPlan :one
+-- The plan creator, the project owner and super admins may reopen a test plan
+SELECT (
+    EXISTS (
+        SELECT 1
+        FROM test_plans tp
+        INNER JOIN projects p ON p.id = tp.project_id
+        WHERE tp.id = sqlc.arg(test_plan_id)::bigint
+          AND (tp.created_by_id = sqlc.arg(user_id)::int OR p.owner_user_id = sqlc.arg(user_id)::int)
+    )
+    OR EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = sqlc.arg(user_id)::int AND COALESCE(u.is_super_admin, FALSE)
+    )
+)::bool AS can_reopen;
 
 -- name: AddTestCaseToPlan :exec
 INSERT INTO test_plan_cases (test_plan_id, test_case_id, assigned_to_id, urgency)
@@ -830,7 +977,7 @@ WHERE id = $1;
 SELECT * FROM modules
 ORDER BY created_at DESC;
 
--- name: UpdateProjectModule :exec
+-- name: UpdateProjectModule :execrows
 UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, parent_module_id = $7, updated_at = now()
 WHERE id = $1;
 
@@ -1084,9 +1231,21 @@ SELECT * FROM reports WHERE project_id = $1 ORDER BY created_at DESC;
 SELECT * FROM reports WHERE id = $1;
 
 -- name: CreateReport :one
-INSERT INTO reports (id, project_id, name, type, status, created_at, file_path)
-VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+INSERT INTO reports (id, project_id, test_plan_id, name, type, status, created_at, file_path)
+VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
 RETURNING *;
+
+-- name: GetLatestTestPlanReport :one
+SELECT * FROM reports
+WHERE test_plan_id = $1
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- name: RefreshTestPlanHasReport :exec
+-- Sets has_report from whether any report is linked to the test plan
+UPDATE test_plans tp
+SET has_report = EXISTS (SELECT 1 FROM reports r WHERE r.test_plan_id = sqlc.arg(test_plan_id)::bigint)
+WHERE tp.id = sqlc.arg(test_plan_id)::bigint;
 
 -- name: DeleteReport :execrows
 DELETE FROM reports WHERE id = $1;

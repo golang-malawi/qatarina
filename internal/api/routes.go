@@ -105,6 +105,7 @@ func (api *API) routes() {
 	{
 		meV1.Get("/test-cases/inbox", apiv1.ListAssignedTestCases(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/inbox/unseen-count", apiv1.GetInboxUnseenCount(api.TestCasesService, api.logger))
+		meV1.Get("/test-cases/inbox/filter-options", apiv1.GetInboxFilterOptions(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/inbox/:testCaseID/navigation", apiv1.GetInboxNavigation(api.TestCasesService, api.logger))
 		meV1.Get("/test-cases/inbox/:testCaseID", apiv1.GetAssignedTestCase(api.TestCasesService, api.logger))
 		meV1.Post("/test-cases/inbox/:testCaseID/view", apiv1.MarkInboxTestCaseViewed(api.TestCasesService, api.logger))
@@ -153,6 +154,7 @@ func (api *API) routes() {
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
+		testPlansV1.Post("/:testPlanID/reopen", apiv1.ReopenTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/environment", apiv1.ChangeEnvironment(api.TestPlansService, api.logger))
 
 		testPlansV1.Post("/:testPlanID/test-cases/batch", apiv1.BatchAssignTestCasesToPlan(api.TestPlansService, api.logger))

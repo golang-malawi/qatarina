@@ -5,8 +5,9 @@ import {
   getInboxTestCaseById,
   getInboxUnseenCount,
   getInboxNavigation,
+  getInboxFilterOptions,
 } from "@/services/TestCaseService";
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { components } from "@/lib/api/v1";
 
 type AssignedTestCaseListResponse =
@@ -14,6 +15,8 @@ type AssignedTestCaseListResponse =
 type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 type InboxNavigationResponse =
   components["schemas"]["schema.InboxNavigationResponse"];
+type InboxFilterOptionsResponse =
+  components["schemas"]["schema.InboxFilterOptionsResponse"];
 
 export type TestCaseListQueryParams = {
   page?: number;
@@ -44,6 +47,58 @@ export const findTestCaseInboxQueryOptions = (
     },
   });
 
+// Filters for the inbox list, applied by the server so they cover the whole inbox
+export type InboxFilters = {
+  includeClosed: boolean;
+  search: string;
+  projectId: string;
+  environmentId: string;
+  module: string;
+};
+
+export const emptyInboxFilters: InboxFilters = {
+  includeClosed: false,
+  search: "",
+  projectId: "",
+  environmentId: "",
+  module: "",
+};
+
+export function hasActiveInboxFilters(filters: InboxFilters) {
+  return Boolean(
+    filters.search || filters.projectId || filters.environmentId || filters.module || filters.includeClosed,
+  );
+}
+
+export const INBOX_PAGE_SIZE = 50;
+
+// The inbox list loads page by page as you scroll. Used by both the list and grid views
+// (same key, so they share the cache). Keeps the ["testCases", "inbox"] prefix so
+// invalidating the inbox refreshes it.
+export const inboxListInfiniteQueryOptions = (filters: InboxFilters) =>
+  infiniteQueryOptions({
+    queryKey: ["testCases", "inbox", "list", filters],
+    queryFn: async ({ pageParam }): Promise<AssignedTestCaseListResponse> => {
+      const res = await getInboxTestCases({ ...filters, page: pageParam, pageSize: INBOX_PAGE_SIZE });
+      return (res?.data ?? res) as AssignedTestCaseListResponse;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const total = lastPage?.pagination?.total ?? 0;
+      const loaded = allPages.reduce((acc, page) => acc + (page?.test_cases?.length ?? 0), 0);
+      return loaded < total ? allPages.length + 1 : undefined;
+    },
+  });
+
+export const findInboxFilterOptionsQueryOptions = (includeClosed: boolean) =>
+  queryOptions({
+    queryKey: ["testCases", "inbox", "filter-options", includeClosed],
+    queryFn: async (): Promise<InboxFilterOptionsResponse> => {
+      const res = await getInboxFilterOptions(includeClosed);
+      return (res?.data ?? { projects: [], environments: [], modules: [] }) as InboxFilterOptionsResponse;
+    },
+  });
+
 // Shares the ["testCases", "inbox"] prefix so invalidating the inbox also refreshes the count
 export const findInboxUnseenCountQueryOptions = queryOptions({
   queryKey: ["testCases", "inbox", "unseen-count"],
@@ -54,12 +109,14 @@ export const findInboxUnseenCountQueryOptions = queryOptions({
   refetchInterval: 60_000,
 });
 
-export const findTestCaseInboxByIdQueryOptions =(id: string) =>
+// An inbox row is a test case in a test plan. Without a plan the server picks the
+// open assignment of the test case.
+export const findTestCaseInboxByIdQueryOptions = (id: string, testPlanID?: number) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", id],
+    queryKey: ["testCases", "inbox", id, testPlanID ?? 0],
     queryFn: async (): Promise<AssignedTestCase> => {
       // Fetch the test case directly so it is found no matter which inbox page it is on
-      const res = await getInboxTestCaseById(id);
+      const res = await getInboxTestCaseById(id, testPlanID);
       const match = (res?.data ?? res) as AssignedTestCase | undefined;
       if (!match?.id) {
         throw new Error(`Inbox test case ${id} not found`);
@@ -68,13 +125,18 @@ export const findTestCaseInboxByIdQueryOptions =(id: string) =>
     },
   });
 
-// Previous/next test cases and position in the inbox, in inbox order.
-// Shares the ["testCases", "inbox"] prefix so it refreshes along with the inbox.
-export const findInboxNavigationQueryOptions = (id: string) =>
+// Previous/next rows and position in the inbox, in inbox order and limited by the same
+// filters as the list. An inbox row is a test case in a test plan. Shares the
+// ["testCases", "inbox"] prefix so it refreshes along with the inbox.
+export const findInboxNavigationQueryOptions = (
+  id: string,
+  testPlanID: number,
+  filters: InboxFilters = emptyInboxFilters,
+) =>
   queryOptions({
-    queryKey: ["testCases", "inbox", id, "navigation"],
+    queryKey: ["testCases", "inbox", id, testPlanID, "navigation", filters],
     queryFn: async (): Promise<InboxNavigationResponse> => {
-      const res = await getInboxNavigation(id);
+      const res = await getInboxNavigation(id, testPlanID, filters);
       return (res?.data ?? res) as InboxNavigationResponse;
     },
   });

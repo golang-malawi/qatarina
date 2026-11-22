@@ -317,6 +317,8 @@ type Report struct {
 	CreatedAt sql.NullTime
 	FilePath  sql.NullString
 	UpdatedAt sql.NullTime
+	// The test plan the report was generated for
+	TestPlanID sql.NullInt64
 }
 
 type TestCase struct {

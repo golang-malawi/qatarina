@@ -49,15 +49,32 @@ export async function getTestCases() {
   return apiClient.request("get", "/v1/test-cases");
 }
 
-export async function getInboxTestCases(params?: {
+type InboxFilterParams = {
   includeClosed?: boolean;
-  page?: number;
-  pageSize?: number;
-}) {
+  search?: string;
+  projectId?: string;
+  environmentId?: string;
+  module?: string;
+};
+
+// Query parameters shared by the inbox list and Previous/Next navigation
+function inboxFilterQuery(params?: InboxFilterParams) {
+  return {
+    includeClosed: params?.includeClosed ?? false,
+    search: params?.search || undefined,
+    projects: params?.projectId || undefined,
+    environmentID: params?.environmentId ? Number(params.environmentId) : undefined,
+    module: params?.module || undefined,
+  };
+}
+
+export async function getInboxTestCases(
+  params?: InboxFilterParams & { page?: number; pageSize?: number },
+) {
   return apiClient.request("get", "/v1/me/test-cases/inbox", {
     params: {
       query: {
-        includeClosed: params?.includeClosed ?? false,
+        ...inboxFilterQuery(params),
         page: params?.page ?? 1,
         pageSize: params?.pageSize ?? 10,
       },
@@ -65,15 +82,30 @@ export async function getInboxTestCases(params?: {
   });
 }
 
-export async function getInboxTestCaseById(testCaseID: string) {
-  return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}", {
-    params: { path: { testCaseID } },
+export async function getInboxFilterOptions(includeClosed: boolean) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/filter-options", {
+    params: { query: { includeClosed } },
   });
 }
 
-export async function getInboxNavigation(testCaseID: string) {
+/**
+ * Fetches a test case from the inbox in a test plan. Without a test plan the
+ * server picks the open assignment of the test case.
+ */
+export async function getInboxTestCaseById(testCaseID: string, testPlanID?: number) {
+  return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}", {
+    params: { path: { testCaseID }, query: testPlanID ? { testPlanID } : {} },
+  });
+}
+
+// An inbox row is a test case in a test plan, so navigation needs both
+export async function getInboxNavigation(
+  testCaseID: string,
+  testPlanID: number,
+  filters?: InboxFilterParams,
+) {
   return apiClient.request("get", "/v1/me/test-cases/inbox/{testCaseID}/navigation", {
-    params: { path: { testCaseID } },
+    params: { path: { testCaseID }, query: { ...inboxFilterQuery(filters), testPlanID } },
   });
 }
 
@@ -81,9 +113,9 @@ export async function getInboxUnseenCount() {
   return apiClient.request("get", "/v1/me/test-cases/inbox/unseen-count");
 }
 
-export async function markInboxTestCaseViewed(testCaseID: string) {
+export async function markInboxTestCaseViewed(testCaseID: string, testPlanID: number) {
   return apiClient.request("post", "/v1/me/test-cases/inbox/{testCaseID}/view", {
-    params: { path: { testCaseID } },
+    params: { path: { testCaseID }, query: { testPlanID } },
   });
 }
 

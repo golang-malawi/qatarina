@@ -163,6 +163,9 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 	parentID := toNullInt32(request.ParentModuleID)
 	if parentID.Valid {
 		existing, err := m.db.GetOneModule(ctx, request.ID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, ErrNotFound
+		}
 		if err != nil {
 			return false, err
 		}
@@ -170,7 +173,7 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 			return false, err
 		}
 	}
-	err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
+	rows, err := m.db.UpdateProjectModule(ctx, dbsqlc.UpdateProjectModuleParams{
 		ID:             request.ID,
 		Name:           request.Name,
 		Code:           request.Code,
@@ -181,6 +184,9 @@ func (m *moduleServiceImpl) Update(ctx context.Context, request schema.UpdatePro
 	})
 	if err != nil {
 		return false, fmt.Errorf("failed to update module %v", err)
+	}
+	if rows == 0 {
+		return false, ErrNotFound
 	}
 
 	return true, nil

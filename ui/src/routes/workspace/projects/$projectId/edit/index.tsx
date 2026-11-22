@@ -33,7 +33,6 @@ function EditProject() {
           website_url: values.website_url ?? "",
           github_url: values.github_url ?? "",
           parent_project_id: Number(values.parent_project_id) || 0,
-          environments: values.environments ?? [],
         },
       });
 
@@ -63,7 +62,8 @@ function EditProject() {
         <DynamicForm
           schema={projectUpdateSchema}
           fields={[
-            ...projectCreationFields,
+            // Environments are managed on the project's Environments page
+            ...projectCreationFields.filter((field) => field.name !== "environments"),
             {
               name: "parent_project_id",
               label: t("projects.parent_project"),
@@ -84,7 +84,6 @@ function EditProject() {
             website_url: project.website_url ?? "",
             github_url: project.github_url ?? "",
             parent_project_id: String(project.parent_project_id ?? ""),
-            environments: [],
           }}
           onSubmit={handleSubmit}
           submitText={t("projects.update")}

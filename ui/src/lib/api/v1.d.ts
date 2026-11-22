@@ -438,7 +438,7 @@ export interface paths {
         };
         /**
          * Get a single Test Case from the current user's inbox
-         * @description Get a single Test Case assigned to the current user, regardless of which inbox page it is on
+         * @description Get a single Test Case assigned to the current user in a Test Plan, regardless of which inbox page it is on. Without testPlanID it picks the open assignment, or the latest one when every test plan it is in is closed.
          */
         get: operations["GetAssignedTestCase"];
         put?: never;
@@ -458,7 +458,7 @@ export interface paths {
         };
         /**
          * Get the previous and next Test Cases in the current user's inbox
-         * @description Get the neighbouring open Test Cases around a Test Case, following the inbox order, with its position. Empty IDs mean there is none in that direction.
+         * @description Get the neighbouring inbox rows around a Test Case in a Test Plan, following the inbox order and the same filters as the inbox list, with its position. Empty IDs mean there is none in that direction.
          */
         get: operations["GetInboxNavigation"];
         put?: never;
@@ -480,9 +480,29 @@ export interface paths {
         put?: never;
         /**
          * Mark a Test Case in the current user's inbox as viewed
-         * @description Mark a Test Case in the current user's inbox as viewed
+         * @description Mark a Test Case in a Test Plan in the current user's inbox as viewed, or in every Test Plan without testPlanID
          */
         post: operations["MarkInboxTestCaseViewed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/test-cases/inbox/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the filter options for the current user's inbox
+         * @description List the distinct projects, environments and modules found in the current user's inbox
+         */
+        get: operations["GetInboxFilterOptions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2040,7 +2060,7 @@ export interface paths {
         put?: never;
         /**
          * Update a Test Plan
-         * @description Update a Test Plan
+         * @description Update a Test Plan's kind, description, environment and dates. Fields left out keep their current value. Complete or locked plans can't be changed.
          */
         post: operations["UpdateTestPlan"];
         /**
@@ -2064,7 +2084,7 @@ export interface paths {
         put?: never;
         /**
          * Close a Test Plan
-         * @description Close a Test Plan
+         * @description Closes and locks a Test Plan and generates its report. The plan stays closed if the report fails, then report is empty and the report can be generated from the project reports
          */
         post: operations["CloseTestPlan"];
         delete?: never;
@@ -2204,6 +2224,26 @@ export interface paths {
          * @description Change environment of a Test Plan
          */
         post: operations["ChangeEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-plans/{testPlanID}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a closed Test Plan
+         * @description Unlocks a closed Test Plan so it can be changed again. Only the plan creator, the project owner or a super admin can reopen it. Its reports are kept
+         */
+        post: operations["ReopenTestPlan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2717,18 +2757,27 @@ export interface components {
             created_by_id?: number;
             description?: string;
             environment_id?: number;
+            environment_name?: string;
             external_id?: string;
             feature_or_module?: string;
             id?: string;
             is_closed?: boolean;
             is_draft?: boolean;
+            /**
+             * @description Whether the test plan was closed. Its test cases are only listed with include_closed
+             *     and results can no longer be recorded for them.
+             */
+            is_test_plan_closed?: boolean;
             is_viewed?: boolean;
             kind?: components["schemas"]["dbsqlc.TestKind"];
             preconditions?: string;
             priority?: string;
             project_id?: number;
+            project_title?: string;
             tags?: string[];
             test_plan_id?: number;
+            /** @description Description of the test plan, used as its name */
+            test_plan_name?: string;
             title?: string;
             updated_at?: string;
             urgency?: string;
@@ -2777,6 +2826,10 @@ export interface components {
             new_password: string;
             old_password: string;
             user_id: number;
+        };
+        "schema.CloseTestPlanResponse": {
+            message?: string;
+            report?: components["schemas"]["schema.ReportResponse"];
         };
         "schema.CommentAttachment": {
             content_type?: string;
@@ -2923,7 +2976,6 @@ export interface components {
         "schema.CreateTestPlan": {
             all_test_cases?: components["schemas"]["schema.ProjectTestCaseSelection"];
             assigned_to_id?: number;
-            closed_at?: string;
             created_by_id?: number;
             description: string;
             environment_id?: number;
@@ -3005,10 +3057,21 @@ export interface components {
             repository?: string;
         };
         "schema.ImportProjectRequest": Record<string, never>;
+        "schema.InboxFilterOption": {
+            label?: string;
+            value?: string;
+        };
+        "schema.InboxFilterOptionsResponse": {
+            environments?: components["schemas"]["schema.InboxFilterOption"][];
+            modules?: components["schemas"]["schema.InboxFilterOption"][];
+            projects?: components["schemas"]["schema.InboxFilterOption"][];
+        };
         "schema.InboxNavigationResponse": {
             next_id?: string;
+            next_test_plan_id?: number;
             position?: number;
             previous_id?: string;
+            previous_test_plan_id?: number;
             total?: number;
         };
         "schema.InboxUnseenCountResponse": {
@@ -3146,6 +3209,8 @@ export interface components {
             name?: string;
             project_id?: number;
             status?: string;
+            /** @description The test plan the report was generated for, 0 for older reports not linked to a plan */
+            test_plan_id?: number;
             type?: string;
         };
         "schema.ResetPasswordRequest": {
@@ -3292,6 +3357,8 @@ export interface components {
             passed_count?: number;
             pending_count?: number;
             project_id?: number;
+            /** @description The latest report generated for the test plan, only set when fetching one test plan */
+            report_id?: string;
             scheduled_end_at?: string;
             start_at?: string;
             test_cases?: components["schemas"]["schema.TestCaseResponseItem"][];
@@ -3432,6 +3499,13 @@ export interface components {
             script_path?: string;
             tags?: string[];
             title: string;
+        };
+        "schema.UpdateTestPlan": {
+            description?: string;
+            environment_id?: number;
+            kind?: string;
+            scheduled_end_at?: string;
+            start_at?: string;
         };
         "schema.UpdateTestPlanCaseUrgencyRequest": {
             /** @enum {string} */
@@ -3718,8 +3792,16 @@ export interface operations {
                 page?: number;
                 /** @description Page size */
                 pageSize?: number;
-                /** @description Include closed test cases */
+                /** @description Include closed test cases and test cases of closed test plans */
                 includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Environment ID to filter by */
+                environmentID?: number;
+                /** @description Feature or module name to filter by */
+                module?: string;
+                /** @description Search title, code or feature/module */
+                search?: string;
             };
             header?: never;
             path?: never;
@@ -3762,7 +3844,10 @@ export interface operations {
     };
     GetAssignedTestCase: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Test Plan ID */
+                testPlanID?: number;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
@@ -3816,7 +3901,20 @@ export interface operations {
     };
     GetInboxNavigation: {
         parameters: {
-            query?: never;
+            query: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+                /** @description Include closed test cases and test cases of closed test plans */
+                includeClosed?: boolean;
+                /** @description Comma-separated project IDs to filter by */
+                projects?: string;
+                /** @description Environment ID to filter by */
+                environmentID?: number;
+                /** @description Feature or module name to filter by */
+                module?: string;
+                /** @description Search title, code or feature/module */
+                search?: string;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
@@ -3870,7 +3968,10 @@ export interface operations {
     };
     MarkInboxTestCaseViewed: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Test Plan ID */
+                testPlanID?: number;
+            };
             header?: never;
             path: {
                 /** @description Test Case ID */
@@ -3898,6 +3999,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetInboxFilterOptions: {
+        parameters: {
+            query?: {
+                /** @description Include closed test cases */
+                includeClosed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.InboxFilterOptionsResponse"];
                 };
             };
             /** @description Internal Server Error */
@@ -5417,6 +5554,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7564,14 +7710,14 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Test Plan ID */
-                testPlanID: string;
+                testPlanID: number;
             };
             cookie?: never;
         };
-        /** @description Test Plan data */
+        /** @description Fields to change */
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": components["schemas"]["schema.UpdateTestPlan"];
             };
         };
         responses: {
@@ -7581,11 +7727,29 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.TestPlanResponseItem"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7671,11 +7835,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["schema.CloseTestPlanResponse"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8177,6 +8350,65 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    ReopenTestPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
