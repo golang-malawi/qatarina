@@ -758,6 +758,8 @@
   "common.cancel": "Cancel",
   "form.optional_field.add": "Add {{label}}",
   "form.optional_field.remove": "Remove {{label}}",
+  "form.array_field.add": "Add {{label}}",
+  "form.array_field.remove": "Remove {{label}} #{{index}}",
   "test_cases.relations.tab": "Relations",
   "test_cases.relations.title": "Related test cases",
   "test_cases.relations.empty": "No related test cases yet.",

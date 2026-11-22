@@ -27,6 +27,7 @@ export const projectCreationFields: FieldConfig[] = [
     name: 'environments',
     label: 'Environments',
     type: 'array',
+    itemLabel: 'Environment',
     helperText: 'Add one or more environments for this project',
     fields: [
       createFieldConfig('name', 'Environment Name', 'text', {
@@ -69,6 +70,7 @@ export const projectUpdateFields: FieldConfig[] = [
     name: 'environments',
     label: 'Environments',
     type: 'array',
+    itemLabel: 'Environment',
     helperText: 'Add one or more environments for this project',
     fields: [
       createFieldConfig('name', 'Environment Name', 'text', {
