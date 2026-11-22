@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -51,6 +52,7 @@ func ListReports(reportService services.ReportService, logger logging.Logger) fi
 //	@Param          request body schema.CreateReportRequest true "Report data"
 //	@Success        200 {object} schema.ReportResponse
 //	@Failure        400 {object} problemdetail.ProblemDetail
+//	@Failure        404 {object} problemdetail.ProblemDetail
 //	@Failure        500 {object} problemdetail.ProblemDetail
 //	@Router         /v1/projects/{projectID}/reports [post]
 func CreateReport(reportService services.ReportService, logger logging.Logger) fiber.Handler {
@@ -61,6 +63,13 @@ func CreateReport(reportService services.ReportService, logger logging.Logger) f
 		}
 		report, err := reportService.Create(c.Context(), req)
 		if err != nil {
+			switch {
+			case errors.Is(err, services.ErrNotFound):
+				return problemdetail.NotFound(c, "test plan not found")
+			case errors.Is(err, services.ErrTestPlanNotClosed), errors.Is(err, services.ErrTestPlanProjectMismatch):
+				return problemdetail.BadRequest(c, err.Error())
+			}
+			logger.Error("apiv1:reports", "failed to create report", "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to create report")
 		}
 		return c.JSON(schema.NewReportResponse(*report))
@@ -80,6 +89,10 @@ func DeleteReport(reportService services.ReportService, logger logging.Logger) f
 	return func(c *fiber.Ctx) error {
 		reportID := c.Params("reportID")
 		if err := reportService.DeleteByID(c.Context(), reportID); err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "report not found")
+			}
+			logger.Error("apiv1:reports", "failed to delete report", "reportID", reportID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to delete report")
 		}
 		return c.JSON(fiber.Map{"message": "Report deleted successfully"})
@@ -99,8 +112,11 @@ func DownloadReport(reportService services.ReportService, logger logging.Logger)
 	return func(c *fiber.Ctx) error {
 		reportID := c.Params("reportID")
 		report, err := reportService.GetByID(c.Context(), reportID)
+		if errors.Is(err, services.ErrNotFound) {
+			return problemdetail.NotFound(c, "report not found")
+		}
 		if err != nil {
-			return problemdetail.ServerErrorProblem(c, "report not found")
+			return problemdetail.ServerErrorProblem(c, "failed to load report")
 		}
 
 		if report.FilePath.Valid {
@@ -124,8 +140,11 @@ func ViewReport(reportService services.ReportService, logger logging.Logger) fib
 	return func(c *fiber.Ctx) error {
 		reportID := c.Params("reportID")
 		report, err := reportService.GetByID(c.Context(), reportID)
+		if errors.Is(err, services.ErrNotFound) {
+			return problemdetail.NotFound(c, "report not found")
+		}
 		if err != nil {
-			return problemdetail.ServerErrorProblem(c, "report not found")
+			return problemdetail.ServerErrorProblem(c, "failed to load report")
 		}
 
 		if report.FilePath.Valid {

@@ -18,8 +18,8 @@ import {
   useReportsQuery,
   useCreateReportMutation,
   useDeleteReportMutation,
-  downloadReport,
-  viewReportBlob,
+  openReportInNewTab,
+  saveReportFile,
   Report,
 } from "@/services/ReportService";
 import { useProjectTestPlansQuery } from "@/services/TestPlanService";
@@ -36,16 +36,6 @@ export const Route = createFileRoute("/(project)/projects/$projectId/reports/")(
   component: ReportsPage,
 });
 
-// Builds a download file name from the report name, keeping it safe to use
-// as a file name on any operating system.
-function reportFileName(name?: string) {
-  const safe = (name ?? "")
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "")
-    .replace(/\s+/g, "-");
-  return safe || "report";
-}
-
 function ReportsPage() {
   const { t } = useTranslation();
   const projectId = Route.useParams().projectId as string;
@@ -56,7 +46,10 @@ function ReportsPage() {
   const deleteMutation = useDeleteReportMutation();
 
   const { data: testPlansData } = useProjectTestPlansQuery(projectId);
-  const testPlans = (testPlansData?.test_plans ?? []).map((tp: any) => ({
+  // Reports can only be generated for closed test plans
+  const testPlans = (testPlansData?.test_plans ?? [])
+    .filter((tp: any) => tp.is_complete)
+    .map((tp: any) => ({
     id: tp.id,
     title: tp.description ?? tp.name ?? t("reports.untitled_plan"),
   }));
@@ -80,35 +73,31 @@ function ReportsPage() {
     );
   };
 
-  const handleDownload = async (reportID: string, reportName?: string) => {
-    const blob = await downloadReport(projectId, reportID);
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${reportFileName(reportName)}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  };
+  const handleDownload = (reportID: string, reportName?: string) =>
+    saveReportFile(projectId, reportID, reportName);
 
-  const handleView = async (reportID: string) => {
-    const blob = await viewReportBlob(projectId, reportID);
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, "_blank");
-  };
+  const handleView = (reportID: string) => openReportInNewTab(projectId, reportID);
 
   async function handleCreate(values: ReportCreationFormData) {
-    await createMutation.mutateAsync({
-      params: { path: { projectID: projectId } },
-      body: {
-        project_id: Number(projectId),
-        test_plan_id: Number(values.test_plan_id),
-        name: values.name,
-        type: values.type,
-        status: values.status,
-      },
-    });
+    try {
+      await createMutation.mutateAsync({
+        params: { path: { projectID: projectId } },
+        body: {
+          project_id: Number(projectId),
+          test_plan_id: Number(values.test_plan_id),
+          name: values.name,
+          type: values.type,
+          status: values.status,
+        },
+      });
+    } catch (err: any) {
+      toaster.create({
+        title: t("reports.create.error"),
+        description: err?.detail || err?.message,
+        type: "error",
+      });
+      return;
+    }
 
     toaster.create({ title: t("reports.create.success"), type: "success" });
     refetch();

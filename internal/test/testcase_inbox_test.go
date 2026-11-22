@@ -19,7 +19,8 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 
 	alpha := f.newTestCase(t, "Inbox Alpha")
 	beta := f.newTestCase(t, "Inbox Beta")
-	if _, err := f.createPlan(alpha, beta); err != nil {
+	plan, err := f.createPlan(alpha, beta)
+	if err != nil {
 		t.Fatalf("createPlan failed: %v", err)
 	}
 
@@ -72,15 +73,16 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 		})
 	}
 
-	// Previous/Next follow the filtered list. Inbox order is newest first, so with no
-	// module filter the order is [gamma, beta, alpha]; filtered to "Inbox Alpha" it is [gamma, alpha].
+	// Previous/Next follow the filtered list. Inbox order is newest test plan first, then
+	// newest test case, so with no module filter the order is [gamma, beta, alpha];
+	// filtered to "Inbox Alpha" it is [gamma, alpha].
 	gamma := f.newTestCase(t, "Inbox Alpha")
 	if _, err := f.createPlan(gamma); err != nil {
 		t.Fatalf("createPlan failed: %v", err)
 	}
 
 	unfiltered := base
-	nav, err := svc.FindInboxNavigation(ctx, &unfiltered, alpha)
+	nav, err := svc.FindInboxNavigation(ctx, &unfiltered, alpha, plan.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation failed: %v", err)
 	}
@@ -90,7 +92,7 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 
 	byModule := base
 	byModule.Module = "Inbox Alpha"
-	nav, err = svc.FindInboxNavigation(ctx, &byModule, alpha)
+	nav, err = svc.FindInboxNavigation(ctx, &byModule, alpha, plan.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation (module) failed: %v", err)
 	}
@@ -99,7 +101,7 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 	}
 
 	// A test case that doesn't match the filters still gets a position, so the page doesn't break
-	nav, err = svc.FindInboxNavigation(ctx, &byModule, beta)
+	nav, err = svc.FindInboxNavigation(ctx, &byModule, beta, plan.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation (non-matching current) failed: %v", err)
 	}

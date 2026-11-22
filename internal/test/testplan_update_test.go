@@ -73,7 +73,7 @@ func TestTestPlanUpdateDetails(t *testing.T) {
 	}
 
 	// A closed plan can't be edited
-	if err := f.plans.CloseTestPlan(ctx, int32(created.ID)); err != nil {
+	if _, err := f.plans.CloseTestPlan(ctx, int32(created.ID)); err != nil {
 		t.Fatalf("CloseTestPlan failed: %v", err)
 	}
 	if err := f.plans.UpdateDetails(ctx, schema.UpdateTestPlanDetails{ID: created.ID, Description: &description}); !errors.Is(err, services.ErrTestPlanClosed) {

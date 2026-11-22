@@ -91,9 +91,14 @@ type AssignedTestCase = components["schemas"]["schema.AssignedTestCase"];
 // Same file types the inbox test case view accepts
 const ATTACHMENT_ACCEPT = ".txt,.md,.pdf,.docx,.jpg,.jpeg,.png,.svg";
 
-// Drafts can't be tested yet and closed test cases no longer accept results,
-// same as the inbox test case view
-const isLocked = (tc: AssignedTestCase) => Boolean(tc.is_draft || tc.is_closed);
+// Drafts can't be tested yet, and closed test cases and test cases of closed test
+// plans no longer accept results, same as the inbox test case view
+const isLocked = (tc: AssignedTestCase) =>
+  Boolean(tc.is_draft || tc.is_closed || tc.is_test_plan_closed);
+
+// A row is a test case in a test plan, the same test case can show once per plan,
+// so typed statuses, notes and attachments are kept per row
+const rowKey = (tc: AssignedTestCase) => `${tc.test_plan_id ?? 0}:${tc.id ?? ""}`;
 
 // Tickable markdown checklist whose ticks are shared with the inbox test case view
 function SharedChecklist({
@@ -319,10 +324,10 @@ export function SheetView({
       status: "passed" | "failed";
     }) => {
       const resText = t("test_cases.sheet_view.executed_via", "Executed via Sheet View");
-      const noteText = sheetNotes[tc.id!] || "";
+      const noteText = sheetNotes[rowKey(tc)] || "";
 
       if (!tc.id) throw new Error("Test case ID is missing.");
-      if (isLocked(tc)) throw new Error("Draft and closed test cases can't be recorded.");
+      if (isLocked(tc)) throw new Error("Draft and closed test cases, and test cases of closed test plans, can't be recorded.");
       if (!currentUser?.user_id) throw new Error("User ID is missing.");
       if (!tc.project_id || !tc.test_plan_id) {
         throw new Error("Project ID or Test Plan ID is missing.");
@@ -358,7 +363,7 @@ export function SheetView({
 
       // Upload attachments once the result exists. The result is already saved at this
       // point, so report failed uploads separately instead of failing the whole record.
-      const files = sheetAttachments[tc.id] ?? [];
+      const files = sheetAttachments[rowKey(tc)] ?? [];
       const failedUploads: string[] = [];
       if (files.length > 0) {
         const resultId = response.data?.result_id;
@@ -388,7 +393,7 @@ export function SheetView({
         });
       }
       if (variables.tc.id) {
-        setRowAttachments(variables.tc.id, []);
+        setRowAttachments(rowKey(variables.tc), []);
       }
       queryClient.invalidateQueries({ queryKey: ["testCases", "inbox"] });
       queryClient.invalidateQueries(findTestCaseSummaryQueryOptions);
@@ -577,7 +582,7 @@ export function SheetView({
                 const rowBg = index % 2 === 0 ? "bg.surface" : "bg.canvas";
                 return (
                   <TestCaseRow
-                    key={tc.id}
+                    key={rowKey(tc)}
                     ref={isLast ? lastElementRef : null}
                     tc={tc}
                     rowBg={rowBg}
@@ -589,8 +594,8 @@ export function SheetView({
                     setSheetStatuses={setSheetStatuses}
                     sheetNotes={sheetNotes}
                     setSheetNotes={setSheetNotes}
-                    attachments={sheetAttachments[tc.id ?? ""] ?? []}
-                    onAttachmentsChange={(files) => tc.id && setRowAttachments(tc.id, files)}
+                    attachments={sheetAttachments[rowKey(tc)] ?? []}
+                    onAttachmentsChange={(files) => tc.id && setRowAttachments(rowKey(tc), files)}
                     onViewDetails={() => setSelectedTestCaseForDetails(tc)}
                     executeMutation={executeSheetMutation}
                   />
@@ -858,9 +863,11 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
     const { t } = useTranslation();
     const locked = isLocked(tc);
     const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-    const lockedReason = tc.is_closed
-      ? t("test_cases.sheet_view.locked_closed", "This test case is closed. Results can no longer be recorded.")
-      : t("test_cases.sheet_view.locked_draft", "Draft test cases can't be recorded until unmarked as draft.");
+    const lockedReason = tc.is_test_plan_closed
+      ? t("test_cases.sheet_view.locked_plan_closed", "This test plan is closed. Results can no longer be recorded.")
+      : tc.is_closed
+        ? t("test_cases.sheet_view.locked_closed", "This test case is closed. Results can no longer be recorded.")
+        : t("test_cases.sheet_view.locked_draft", "Draft test cases can't be recorded until unmarked as draft.");
 
     return (
       <Table.Row
@@ -868,7 +875,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         bg={rowBg}
         color="fg"
         _hover={{ bg: "brand.subtle" }}
-        opacity={tc.is_closed ? 0.6 : 1}
+        opacity={tc.is_closed || tc.is_test_plan_closed ? 0.6 : 1}
       >
         {/* Code Column */}
         <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
@@ -977,13 +984,13 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
         <Table.Cell border="1px solid" borderColor="border" py={1} px={2}>
           <select
             style={selectStyle}
-            value={sheetStatuses[tc.id!] || ""}
+            value={sheetStatuses[rowKey(tc)] || ""}
             disabled={locked}
             title={locked ? lockedReason : undefined}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
               setSheetStatuses({
                 ...sheetStatuses,
-                [tc.id!]: e.target.value as "passed" | "failed",
+                [rowKey(tc)]: e.target.value as "passed" | "failed",
               })
             }
           >
@@ -998,7 +1005,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
           <Textarea
             size="xs"
             placeholder={t("test_cases.sheet_view.comments_placeholder", "Comments...")}
-            value={sheetNotes[tc.id!] || ""}
+            value={sheetNotes[rowKey(tc)] || ""}
             disabled={locked}
             borderRadius="2px"
             borderColor="border.emphasized"
@@ -1013,7 +1020,7 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setSheetNotes({
                 ...sheetNotes,
-                [tc.id!]: e.target.value,
+                [rowKey(tc)]: e.target.value,
               })
             }
           />
@@ -1087,11 +1094,11 @@ const TestCaseRow = React.forwardRef<HTMLTableRowElement, TestCaseRowProps>(
           <Button
             size="2xs"
             colorPalette="brand"
-            disabled={locked || !sheetStatuses[tc.id!]}
+            disabled={locked || !sheetStatuses[rowKey(tc)]}
             title={locked ? lockedReason : undefined}
             loading={executeMutation.isPending}
             onClick={() => {
-              const chosenStatus = sheetStatuses[tc.id!];
+              const chosenStatus = sheetStatuses[rowKey(tc)];
               if (chosenStatus) {
                 executeMutation.mutate({ tc, status: chosenStatus });
               }

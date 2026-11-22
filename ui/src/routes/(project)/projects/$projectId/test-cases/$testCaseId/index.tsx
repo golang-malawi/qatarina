@@ -21,6 +21,7 @@ import { useTestCaseQuery, branchTestCase } from "@/services/TestCaseService";
 import {
   useProjectTestPlansQuery,
   assignTestersToTestPlan,
+  openTestPlans,
 } from "@/services/TestPlanService";
 import { useProjectTestersQuery } from "@/services/TesterService";
 import { toaster } from "@/components/ui/toaster";
@@ -91,6 +92,7 @@ function ViewTestCase() {
   const isDraft = Boolean(testCase.is_draft);
   const cannotAssign = moduleFrozen || isDraft;
   const isLockedToPlan = !!optimisticAssignment?.test_plan_id;
+  const openPlans = openTestPlans(testPlansQuery.data?.test_plans);
 
   const handleTabChange = (details: { value: string }) => {
     navigate({
@@ -352,8 +354,8 @@ function ViewTestCase() {
               </Alert.Root>
             )}
 
-            {/* Test Plans Checkbox Group */}
-            {testPlansQuery.data?.test_plans?.length ? (
+            {/* Test Plans Checkbox Group, closed test plans are locked so only open ones are offered */}
+            {openPlans.length ? (
               <CheckboxGroup
                 value={effectivePlanId ? [effectivePlanId] : []}
                 onValueChange={(value) => {
@@ -366,7 +368,7 @@ function ViewTestCase() {
                     Available test plans
                   </Fieldset.Legend>
                   <Fieldset.Content>
-                    {testPlansQuery.data.test_plans.map((plan: any) => (
+                    {openPlans.map((plan: any) => (
                       <Checkbox.Root
                         key={plan.id}
                         value={plan.id.toString()}
@@ -385,7 +387,7 @@ function ViewTestCase() {
               </CheckboxGroup>
             ) : (
               <Text fontSize="sm" color="fg.subtle">
-                No test plans available.
+                No open test plans available. Closed test plans can't take new test cases.
               </Text>
             )}
 

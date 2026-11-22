@@ -64,7 +64,11 @@ import {
   type TestCaseSelection,
 } from "@/services/TestCaseService";
 import { DraftsSkippedDialog } from "@/components/DraftsSkippedDialog";
-import { useProjectTestPlansQuery, assignTestersToTestPlan } from "@/services/TestPlanService";
+import {
+  useProjectTestPlansQuery,
+  assignTestersToTestPlan,
+  openTestPlans,
+} from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import { useProjectTestersQuery } from "@/services/TesterService";
 import { useTranslation } from "react-i18next";
@@ -421,9 +425,12 @@ export default function ListProjectTestCases() {
     }
   };
 
-  const projectTestPlans = Array.isArray(testPlansData)
-    ? testPlansData
-    : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [];
+  // Closed test plans are locked, so test cases can only be added to open ones
+  const projectTestPlans = openTestPlans(
+    Array.isArray(testPlansData)
+      ? testPlansData
+      : (testPlansData as any)?.test_plans ?? (testPlansData as any)?.data ?? [],
+  );
 
   const filteredProjects = projectsList
     .filter((p: any) => String(p.id) !== String(projectId))
@@ -764,7 +771,7 @@ export default function ListProjectTestCases() {
           <Box maxH="300px" overflowY="auto" pr={2}>
             {projectTestPlans.length === 0 ? (
               <Text fontSize="sm" color="fg.muted" py={4} textAlign="center">
-                No test plans found for this project.
+                No open test plans in this project. Closed test plans can't take new test cases.
               </Text>
             ) : (
               <CheckboxGroup

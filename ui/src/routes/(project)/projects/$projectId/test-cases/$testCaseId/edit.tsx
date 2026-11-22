@@ -21,7 +21,11 @@ import { testCaseCreationSchema } from "@/data/forms/test-case-schemas";
 import { createTestCaseFields } from "@/data/forms/test-case-field-configs";
 import { DEFAULT_PRIORITY, normalizePriority } from "@/common/constants/priority";
 import { AppDialog } from "@/components/ui/app-dialog";
-import { assignTestersToTestPlan, useProjectTestPlansQuery } from "@/services/TestPlanService";
+import {
+  assignTestersToTestPlan,
+  openTestPlans,
+  useProjectTestPlansQuery,
+} from "@/services/TestPlanService";
 import { useProjectQuery } from "@/services/ProjectService";
 import {
   useTestCaseQuery,
@@ -70,9 +74,10 @@ function EditTestCase() {
   const [selectedTesters, setSelectedTesters] = useState<string[]>([]);
   const [assigningToPlan, setAssigningToPlan] = useState(false);
 
-  // Automatically pre-select a test plan if available
+  // Automatically pre-select a test plan if available. Closed test plans are locked,
+  // so only open ones can be picked.
   useEffect(() => {
-    const plans = testPlansQuery.data?.test_plans;
+    const plans = openTestPlans(testPlansQuery.data?.test_plans);
     
     if (plans && plans.length > 0 && !selectedPlanId) {
       // Find a plan that contains the parent test case, or default to the first plan
@@ -384,7 +389,7 @@ function EditTestCase() {
       });
       toaster.success({ title: "Test case updated successfully" });
 
-      if (search.isBranched && testPlansQuery.data?.test_plans?.length) {
+      if (search.isBranched && openTestPlans(testPlansQuery.data?.test_plans).length) {
         setShowAssignPrompt(true);
       } else {
         navigateToList();
@@ -399,7 +404,7 @@ function EditTestCase() {
     }
   };
 
-  const testPlans = testPlansQuery.data?.test_plans || [];
+  const testPlans = openTestPlans(testPlansQuery.data?.test_plans);
   const testers = testersQuery.data?.testers || [];
 
   return (
@@ -492,7 +497,7 @@ function EditTestCase() {
               </RadioGroup.Root>
             ) : (
               <Text color="fg.muted" fontSize="sm">
-                No test plans found for this project.
+                No open test plans in this project.
               </Text>
             )}
           </Box>
