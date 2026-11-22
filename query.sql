@@ -977,7 +977,7 @@ WHERE id = $1;
 SELECT * FROM modules
 ORDER BY created_at DESC;
 
--- name: UpdateProjectModule :exec
+-- name: UpdateProjectModule :execrows
 UPDATE modules SET name = $2, code = $3, priority = $4, type = $5, description = $6, parent_module_id = $7, updated_at = now()
 WHERE id = $1;
 
