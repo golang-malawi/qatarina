@@ -20,7 +20,7 @@ import (
 func newCloseFixture(t *testing.T) (freezeFixture, services.ReportService) {
 	t.Helper()
 	f := newFreezeFixture(t)
-	reports := services.NewReportService(f.db, dbsqlc.New(f.db), logging.NewForTest())
+	reports := services.NewReportService(f.db, dbsqlc.New(f.db), logging.NewForTest(), f.reportDir)
 
 	// registered after the freeze fixture, so it runs before the plans and test cases are removed
 	t.Cleanup(func() {

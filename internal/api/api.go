@@ -45,7 +45,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 	moduleService := services.NewModuleService(dbConn, config.Platform.GetMaxModuleDepth())
 	projectService := services.NewProjectService(dbConn, logger, moduleService)
 	environmentService := services.NewEnvironmentService(dbConn)
-	reportService := services.NewReportService(rawDB.DB, dbConn, logger)
+	reportService := services.NewReportService(rawDB.DB, dbConn, logger, config.Reports.GetDir())
 
 	return &API{
 		logger:                  logger,
@@ -58,7 +58,7 @@ func NewAPI(config *config.Config, fs afero.Fs) *API {
 		ProjectsService:         projectService,
 		TestCasesService:        services.NewTestCaseService(rawDB.DB, dbConn, logger),
 		TestCaseRelationService: services.NewTestCaseRelationService(dbConn, logger),
-		TestPlansService:        services.NewTestPlanService(dbConn, logger),
+		TestPlansService:        services.NewTestPlanService(dbConn, logger, config.Reports.GetDir()),
 		TestRunsService:         services.NewTestRunService(rawDB.DB, dbConn, logger, fs, config.Attachments.GetMaxFileSize()),
 		UserService:             services.NewUserService(dbConn, logger, config.SMTP),
 		TesterService:           services.NewTesterService(dbConn, logger),

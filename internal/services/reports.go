@@ -25,13 +25,15 @@ type ReportService interface {
 }
 
 type reportServiceImpl struct {
-	db      *sql.DB
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	db        *sql.DB
+	queries   *dbsqlc.Queries
+	logger    logging.Logger
+	reportDir string
 }
 
-func NewReportService(db *sql.DB, queries *dbsqlc.Queries, logger logging.Logger) ReportService {
-	return &reportServiceImpl{db: db, queries: queries, logger: logger}
+// NewReportService creates the report service, writing generated PDFs under reportDir
+func NewReportService(db *sql.DB, queries *dbsqlc.Queries, logger logging.Logger, reportDir string) ReportService {
+	return &reportServiceImpl{db: db, queries: queries, logger: logger, reportDir: reportDir}
 }
 
 func (s *reportServiceImpl) ListByProject(ctx context.Context, projectID int64) ([]dbsqlc.Report, error) {
@@ -56,12 +58,12 @@ func (s *reportServiceImpl) Create(ctx context.Context, req *schema.CreateReport
 	if !plan.IsComplete.Bool {
 		return nil, ErrTestPlanNotClosed
 	}
-	return createTestPlanReport(ctx, s.queries, s.logger, plan, req.Name, req.Type, req.Status)
+	return createTestPlanReport(ctx, s.queries, s.logger, s.reportDir, plan, req.Name, req.Type, req.Status)
 }
 
-// createTestPlanReport generates the PDF report of a test plan, stores it linked to
-// the plan and marks the plan as having a report
-func createTestPlanReport(ctx context.Context, queries *dbsqlc.Queries, logger logging.Logger, plan dbsqlc.GetTestPlanRow, name, reportType, status string) (*dbsqlc.Report, error) {
+// createTestPlanReport generates the PDF report of a test plan under reportDir, stores
+// it linked to the plan and marks the plan as having a report
+func createTestPlanReport(ctx context.Context, queries *dbsqlc.Queries, logger logging.Logger, reportDir string, plan dbsqlc.GetTestPlanRow, name, reportType, status string) (*dbsqlc.Report, error) {
 	stats, err := queries.GetTestPlanRunStats(ctx, common.NewNullInt32(int32(plan.ID)))
 	if err != nil {
 		logger.Error("reports-service", "failed to fetch plan stats", "testPlanID", plan.ID, "error", err)
@@ -76,8 +78,7 @@ func createTestPlanReport(ctx context.Context, queries *dbsqlc.Queries, logger l
 
 	id := uuid.New()
 
-	// Ensure storage/reports directory exists
-	reportDir := "storage/reports"
+	// Ensure the reports directory exists
 	if err := os.MkdirAll(reportDir, os.ModePerm); err != nil {
 		logger.Error("reports-service", "failed to create reports directory", "dir", reportDir, "error", err)
 		return nil, fmt.Errorf("failed to prepare reports directory: %w", err)

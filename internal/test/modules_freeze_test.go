@@ -16,9 +16,10 @@ import (
 
 type freezeFixture struct {
 	moduleFixture
-	ownerID int64
-	plans   services.TestPlanService
-	runs    services.TestRunService
+	ownerID   int64
+	plans     services.TestPlanService
+	runs      services.TestRunService
+	reportDir string
 }
 
 // newFreezeFixture extends the module fixture with test plan and test run services,
@@ -32,7 +33,9 @@ func newFreezeFixture(t *testing.T) freezeFixture {
 	}
 
 	queries := dbsqlc.New(db)
-	f.plans = services.NewTestPlanService(queries, logging.NewForTest())
+	// reports are written to a temporary directory that Go removes when the test ends
+	f.reportDir = t.TempDir()
+	f.plans = services.NewTestPlanService(queries, logging.NewForTest(), f.reportDir)
 	f.runs = services.NewTestRunService(db, queries, logging.NewForTest(), nil, config.DefaultMaxFileSize)
 
 	// runs before the module fixture cleanup removes the project
