@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/golang-malawi/qatarina/internal/common"
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
@@ -32,9 +34,19 @@ type TestPlanService interface {
 	// ListComments returns a page of top-level comments (newest first) with their replies, and the total number of top-level comments
 	ListComments(ctx context.Context, testPlanID int64, limit, offset int32) ([]schema.CommentResponseItem, int64, error)
 	CreateComment(ctx context.Context, req *schema.CreateComment) (*schema.CommentResponseItem, error)
+	// UpdateComment changes a comment written by req.UserID, returning the storage paths of the
+	// attachments that were removed from it. It returns ErrNotFound when the comment is not on
+	// the test plan and ErrForbidden when someone else wrote it.
+	UpdateComment(ctx context.Context, req *schema.UpdateComment) (*schema.CommentResponseItem, []string, error)
 	// DeleteComment deletes a comment and its replies, returning the storage paths of their attachments
 	DeleteComment(ctx context.Context, commentID string) ([]string, error)
 	CreateCommentAttachment(ctx context.Context, params dbsqlc.CreateCommentAttachmentParams) (*schema.CommentAttachment, error)
+	// SetCommentReaction sets a user's emoji reaction on a comment, replacing their earlier one,
+	// and returns the comment's reactions. It returns ErrNotFound when the comment is not on
+	// the test plan and ErrInvalidReaction when emoji is not an emoji.
+	SetCommentReaction(ctx context.Context, testPlanID int64, commentID string, userID int64, emoji string) ([]schema.CommentReaction, error)
+	// RemoveCommentReaction removes a user's reaction from a comment and returns the comment's reactions
+	RemoveCommentReaction(ctx context.Context, testPlanID int64, commentID string, userID int64) ([]schema.CommentReaction, error)
 	GetCommentAttachment(ctx context.Context, attachmentID string) (*dbsqlc.TestPlanCommentAttachment, error)
 	ConvertCommentToTestCase(ctx context.Context, commentID string) (string, error)
 
@@ -657,6 +669,10 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64, li
 		commentID := a.CommentID.UUID.String()
 		attachmentsByComment[commentID] = append(attachmentsByComment[commentID], toCommentAttachment(a))
 	}
+	reactionsByComment, err := t.reactionsByComment(ctx, commentIDs)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	items := make(map[string]*schema.CommentResponseItem, len(rows))
 	childIDs := make(map[string][]string)
@@ -670,6 +686,7 @@ func (t *testPlanService) ListComments(ctx context.Context, testPlanID int64, li
 			UserName:    r.DisplayName.String,
 			Content:     r.Content,
 			Attachments: attachmentsByComment[r.ID.String()],
+			Reactions:   reactionsByComment[r.ID.String()],
 			CreatedAt:   r.CreatedAt.Time.Format(time.RFC3339),
 			UpdatedAt:   r.UpdatedAt.Time.Format(time.RFC3339),
 		}
@@ -770,6 +787,195 @@ func (t *testPlanService) CreateComment(ctx context.Context, req *schema.CreateC
 		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
 	}, nil
+}
+
+func (t *testPlanService) UpdateComment(ctx context.Context, req *schema.UpdateComment) (*schema.CommentResponseItem, []string, error) {
+	id, err := uuid.Parse(req.CommentID)
+	if err != nil {
+		return nil, nil, ErrNotFound
+	}
+	existing, err := t.queries.GetComment(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, ErrNotFound
+		}
+		return nil, nil, err
+	}
+	if existing.TestPlanID != req.TestPlanID {
+		return nil, nil, ErrNotFound
+	}
+	if existing.UserID != req.UserID {
+		return nil, nil, ErrForbidden
+	}
+
+	keepIDs := make([]uuid.UUID, 0, len(req.AttachmentIDs))
+	for _, raw := range req.AttachmentIDs {
+		attachmentID, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, nil, fmt.Errorf("invalid attachment ID: %w", err)
+		}
+		keepIDs = append(keepIDs, attachmentID)
+	}
+
+	if _, err := t.queries.UpdateCommentContent(ctx, dbsqlc.UpdateCommentContentParams{
+		ID:      id,
+		Content: req.Content,
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	commentRef := uuid.NullUUID{UUID: id, Valid: true}
+	if len(keepIDs) > 0 {
+		// Only unclaimed attachments the author uploaded to this test plan are linked,
+		// the ones already on the comment are left as they are
+		if _, err := t.queries.LinkCommentAttachments(ctx, dbsqlc.LinkCommentAttachmentsParams{
+			CommentID:     commentRef,
+			AttachmentIds: keepIDs,
+			TestPlanID:    req.TestPlanID,
+			UploadedByID:  req.UserID,
+		}); err != nil {
+			return nil, nil, fmt.Errorf("failed to link attachments: %w", err)
+		}
+	}
+	removedPaths, err := t.queries.DeleteCommentAttachmentsExcept(ctx, dbsqlc.DeleteCommentAttachmentsExceptParams{
+		CommentID: commentRef,
+		KeepIds:   keepIDs,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to remove attachments: %w", err)
+	}
+
+	row, err := t.queries.GetComment(ctx, id)
+	if err != nil {
+		return nil, removedPaths, err
+	}
+	attachmentRows, err := t.queries.ListCommentAttachmentsByComments(ctx, []uuid.UUID{id})
+	if err != nil {
+		return nil, removedPaths, err
+	}
+	attachments := make([]schema.CommentAttachment, 0, len(attachmentRows))
+	for _, a := range attachmentRows {
+		attachments = append(attachments, toCommentAttachment(a))
+	}
+
+	reactions, err := t.reactionsByComment(ctx, []uuid.UUID{id})
+	if err != nil {
+		return nil, removedPaths, err
+	}
+
+	var parentStr *string
+	if row.ParentCommentID.Valid {
+		s := row.ParentCommentID.UUID.String()
+		parentStr = &s
+	}
+	return &schema.CommentResponseItem{
+		ID:              row.ID.String(),
+		TestPlanID:      row.TestPlanID,
+		ParentCommentID: parentStr,
+		UserID:          row.UserID,
+		UserName:        row.DisplayName.String,
+		Content:         row.Content,
+		Attachments:     attachments,
+		Reactions:       reactions[id.String()],
+		CreatedAt:       row.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:       row.UpdatedAt.Time.Format(time.RFC3339),
+	}, removedPaths, nil
+}
+
+// reactionsByComment loads the reactions of the given comments, oldest first, keyed by comment ID
+func (t *testPlanService) reactionsByComment(ctx context.Context, commentIDs []uuid.UUID) (map[string][]schema.CommentReaction, error) {
+	rows, err := t.queries.ListCommentReactionsByComments(ctx, commentIDs)
+	if err != nil {
+		return nil, err
+	}
+	byComment := make(map[string][]schema.CommentReaction)
+	for _, r := range rows {
+		commentID := r.CommentID.String()
+		byComment[commentID] = append(byComment[commentID], schema.CommentReaction{
+			Emoji:    r.Emoji,
+			UserID:   r.UserID,
+			UserName: r.DisplayName.String,
+		})
+	}
+	return byComment, nil
+}
+
+// commentOnPlan parses a comment ID and checks the comment belongs to the test plan
+func (t *testPlanService) commentOnPlan(ctx context.Context, testPlanID int64, commentID string) (uuid.UUID, error) {
+	id, err := uuid.Parse(commentID)
+	if err != nil {
+		return uuid.Nil, ErrNotFound
+	}
+	comment, err := t.queries.GetComment(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, ErrNotFound
+		}
+		return uuid.Nil, err
+	}
+	if comment.TestPlanID != testPlanID {
+		return uuid.Nil, ErrNotFound
+	}
+	return id, nil
+}
+
+// isEmoji is a loose check that a reaction is an emoji rather than text: it must be short, have
+// no spaces, control characters or ASCII letters, and include a character outside ASCII
+// (keycap emoji such as 1️⃣ start with an ASCII digit)
+func isEmoji(s string) bool {
+	if s == "" || utf8.RuneCountInString(s) > 16 {
+		return false
+	}
+	hasNonASCII := false
+	for _, r := range s {
+		if unicode.IsSpace(r) || unicode.IsControl(r) || (r < utf8.RuneSelf && unicode.IsLetter(r)) {
+			return false
+		}
+		if r >= utf8.RuneSelf {
+			hasNonASCII = true
+		}
+	}
+	return hasNonASCII
+}
+
+func (t *testPlanService) SetCommentReaction(ctx context.Context, testPlanID int64, commentID string, userID int64, emoji string) ([]schema.CommentReaction, error) {
+	if !isEmoji(emoji) {
+		return nil, ErrInvalidReaction
+	}
+	id, err := t.commentOnPlan(ctx, testPlanID, commentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := t.queries.SetCommentReaction(ctx, dbsqlc.SetCommentReactionParams{
+		CommentID: id,
+		UserID:    userID,
+		Emoji:     emoji,
+	}); err != nil {
+		return nil, err
+	}
+	reactions, err := t.reactionsByComment(ctx, []uuid.UUID{id})
+	if err != nil {
+		return nil, err
+	}
+	return reactions[id.String()], nil
+}
+
+func (t *testPlanService) RemoveCommentReaction(ctx context.Context, testPlanID int64, commentID string, userID int64) ([]schema.CommentReaction, error) {
+	id, err := t.commentOnPlan(ctx, testPlanID, commentID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := t.queries.DeleteCommentReaction(ctx, dbsqlc.DeleteCommentReactionParams{
+		CommentID: id,
+		UserID:    userID,
+	}); err != nil {
+		return nil, err
+	}
+	reactions, err := t.reactionsByComment(ctx, []uuid.UUID{id})
+	if err != nil {
+		return nil, err
+	}
+	return reactions[id.String()], nil
 }
 
 func (t *testPlanService) DeleteComment(ctx context.Context, commentID string) ([]string, error) {
