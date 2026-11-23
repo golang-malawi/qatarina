@@ -91,20 +91,20 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 //
 //	@ID             GetInboxFilterOptions
 //	@Summary        List the filter options for the current user's inbox
-//	@Description    List the distinct projects, environments, test plans and modules found in the current user's inbox
+//	@Description    List the distinct projects, environments, test plans and modules found in the current user's inbox. With projects set, environments, test plans and modules only come from those projects.
 //	@Tags           test-cases
 //	@Accept         json
 //	@Produce        json
 //	@Param          includeClosed   query   bool    false   "Include closed test cases"
+//	@Param          projects        query   string  false   "Comma-separated project IDs to limit environments, test plans and modules to"
 //	@Success        200         {object}    schema.InboxFilterOptionsResponse
 //	@Failure        500         {object}    problemdetail.ProblemDetail
 //	@Router         /v1/me/test-cases/inbox/filter-options [get]
 func GetInboxFilterOptions(testCasesService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		userID := authutil.GetAuthUserID(ctx)
-		includeClosed := ctx.QueryBool("includeClosed", false)
+		params := parseInboxFilters(ctx)
 
-		options, err := testCasesService.FindInboxFilterOptions(ctx.Context(), userID, includeClosed)
+		options, err := testCasesService.FindInboxFilterOptions(ctx.Context(), params.UserID, params.IncludeClosed, params.Projects)
 		if err != nil {
 			logger.Error(loggedmodule.ApiTestCases, "failed to fetch inbox filter options", "error", err)
 			return problemdetail.ServerErrorProblem(ctx, "failed to fetch inbox filter options")

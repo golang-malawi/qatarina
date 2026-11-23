@@ -97,11 +97,11 @@ export const inboxListInfiniteQueryOptions = (filters: InboxFilters) =>
     },
   });
 
-export const findInboxFilterOptionsQueryOptions = (includeClosed: boolean) =>
+export const findInboxFilterOptionsQueryOptions = (includeClosed: boolean, projectId = "") =>
   queryOptions({
-    queryKey: ["testCases", "inbox", "filter-options", includeClosed],
+    queryKey: ["testCases", "inbox", "filter-options", includeClosed, projectId],
     queryFn: async (): Promise<InboxFilterOptionsResponse> => {
-      const res = await getInboxFilterOptions(includeClosed);
+      const res = await getInboxFilterOptions(includeClosed, projectId);
       return (res?.data ?? { projects: [], environments: [], test_plans: [], modules: [] }) as InboxFilterOptionsResponse;
     },
   });

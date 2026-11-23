@@ -84,9 +84,10 @@ export async function getInboxTestCases(
   });
 }
 
-export async function getInboxFilterOptions(includeClosed: boolean) {
+// With a project, environments, test plans and modules only come from that project
+export async function getInboxFilterOptions(includeClosed: boolean, projectId?: string) {
   return apiClient.request("get", "/v1/me/test-cases/inbox/filter-options", {
-    params: { query: { includeClosed } },
+    params: { query: { includeClosed, projects: projectId || undefined } },
   });
 }
 

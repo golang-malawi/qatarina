@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/golang-malawi/qatarina/internal/database/dbsqlc"
 	"github.com/golang-malawi/qatarina/internal/logging"
@@ -150,7 +151,7 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 		t.Errorf("non-matching current navigation total = %d, want 3 (2 matches + the current one)", nav.Total)
 	}
 
-	options, err := svc.FindInboxFilterOptions(ctx, f.ownerID, false)
+	options, err := svc.FindInboxFilterOptions(ctx, f.ownerID, false, nil)
 	if err != nil {
 		t.Fatalf("FindInboxFilterOptions failed: %v", err)
 	}
@@ -186,5 +187,58 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 	}
 	if second > first {
 		t.Errorf("expected newer test plan %d before %d, got %+v", gammaPlan.ID, plan.ID, options.TestPlans)
+	}
+
+	// A test case from another project in the same inbox
+	other := newFreezeFixture(t)
+	elsewhere := other.newTestCase(t, "Inbox Elsewhere")
+	otherPlan, err := other.plans.Create(ctx, &schema.CreateTestPlan{
+		ProjectID:      int64(other.projectID),
+		Kind:           "general",
+		Description:    "other project plan",
+		StartAt:        time.Now(),
+		ScheduledEndAt: time.Now().Add(24 * time.Hour),
+		AssignedToID:   f.ownerID,
+		CreatedByID:    other.ownerID,
+		UpdatedByID:    other.ownerID,
+		PlannedTests:   []schema.TestCaseAssignment{{TestCaseID: elsewhere, UserIDs: []int64{f.ownerID}}},
+	})
+	if err != nil {
+		t.Fatalf("createPlan (other project) failed: %v", err)
+	}
+	otherPlanValue := strconv.FormatInt(otherPlan.ID, 10)
+
+	values := func(opts []schema.InboxFilterOption) map[string]bool {
+		m := map[string]bool{}
+		for _, o := range opts {
+			m[o.Value] = true
+		}
+		return m
+	}
+
+	// Without a project every project's options are offered
+	all, err := svc.FindInboxFilterOptions(ctx, f.ownerID, false, nil)
+	if err != nil {
+		t.Fatalf("FindInboxFilterOptions (all projects) failed: %v", err)
+	}
+	if !values(all.Modules)["Inbox Elsewhere"] || !values(all.TestPlans)[otherPlanValue] {
+		t.Errorf("expected the other project's module and test plan without a project filter, got modules %+v, test plans %+v", all.Modules, all.TestPlans)
+	}
+
+	// With a project, environments, test plans and modules come only from that project,
+	// while every project stays selectable
+	scoped, err := svc.FindInboxFilterOptions(ctx, f.ownerID, false, []int32{f.projectID})
+	if err != nil {
+		t.Fatalf("FindInboxFilterOptions (one project) failed: %v", err)
+	}
+	if values(scoped.Modules)["Inbox Elsewhere"] || values(scoped.TestPlans)[otherPlanValue] {
+		t.Errorf("expected only the fixture project's options, got modules %+v, test plans %+v", scoped.Modules, scoped.TestPlans)
+	}
+	if !values(scoped.Modules)["Inbox Alpha"] || !values(scoped.TestPlans)[strconv.FormatInt(plan.ID, 10)] {
+		t.Errorf("expected the fixture project's module and test plan, got modules %+v, test plans %+v", scoped.Modules, scoped.TestPlans)
+	}
+	projects := values(scoped.Projects)
+	if !projects[strconv.Itoa(int(f.projectID))] || !projects[strconv.Itoa(int(other.projectID))] {
+		t.Errorf("expected both projects to stay selectable, got %+v", scoped.Projects)
 	}
 }

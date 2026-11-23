@@ -7,7 +7,7 @@ import {
   type InboxFilters,
 } from "@/data/queries/test-cases";
 import { Box, Flex } from "@chakra-ui/react";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SheetView } from "./sheetView";
@@ -62,9 +62,11 @@ function TestCasePageInbox() {
   };
 
   const { data: unseenCount = 0 } = useQuery(findInboxUnseenCountQueryOptions);
-  const { data: filterOptions } = useQuery(
-    findInboxFilterOptionsQueryOptions(filters.includeClosed),
-  );
+  const { data: filterOptions } = useQuery({
+    ...findInboxFilterOptionsQueryOptions(filters.includeClosed, filters.projectId),
+    // Keep the previous options showing while another project's options load
+    placeholderData: keepPreviousData,
+  });
   // Same query (and cache entry) as the list and grid; read here for the total in the toolbar
   const { data: listData } = useInfiniteQuery(inboxListInfiniteQueryOptions(filters));
   const totalCount = listData?.pages[0]?.pagination?.total;

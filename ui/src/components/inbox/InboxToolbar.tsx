@@ -143,7 +143,10 @@ export function InboxToolbar({
             allLabel={t("inbox.filter.all_projects", "All projects")}
             value={filters.projectId}
             options={projects}
-            onChange={(projectId) => onFiltersChange({ projectId })}
+            // The other dropdowns only list what is in the chosen project, so clear choices from another project
+            onChange={(projectId) =>
+              onFiltersChange({ projectId, environmentId: "", testPlanId: "", module: "" })
+            }
           />
         )}
         {environments.length > 0 && (

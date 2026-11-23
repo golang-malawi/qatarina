@@ -2372,7 +2372,8 @@ paths:
   /v1/me/test-cases/inbox/filter-options:
     get:
       description: List the distinct projects, environments, test plans and modules
-        found in the current user's inbox
+        found in the current user's inbox. With projects set, environments, test plans
+        and modules only come from those projects.
       operationId: GetInboxFilterOptions
       parameters:
       - description: Include closed test cases
@@ -2380,6 +2381,12 @@ paths:
         name: includeClosed
         schema:
           type: boolean
+      - description: Comma-separated project IDs to limit environments, test plans
+          and modules to
+        in: query
+        name: projects
+        schema:
+          type: string
       requestBody:
         content:
           application/json:

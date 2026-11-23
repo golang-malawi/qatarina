@@ -65,8 +65,9 @@ type TestCaseService interface {
 	// FindAllAssignedToUser fetches the user's inbox, one row per test case in a test plan. Closed
 	// runs and closed test plans are only included with IncludeClosed.
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
-	// FindInboxFilterOptions lists the projects, environments, test plans and modules present in the user's inbox
-	FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error)
+	// FindInboxFilterOptions lists the projects, environments, test plans and modules present in the user's inbox.
+	// With projects set, environments, test plans and modules only come from those projects.
+	FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool, projects []int32) (*schema.InboxFilterOptionsResponse, error)
 	// FindAssignedToUserByID fetches a test case from the user's inbox in the given test plan,
 	// regardless of which page it is on. With testPlanID 0 it picks the open assignment.
 	FindAssignedToUserByID(ctx context.Context, userID int64, testCaseID string, testPlanID int64) (*schema.AssignedTestCase, error)
@@ -759,10 +760,11 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 	return res, total, nil
 }
 
-func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error) {
+func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool, projects []int32) (*schema.InboxFilterOptionsResponse, error) {
 	rows, err := t.queries.TestCaseInboxFilterOptions(ctx, dbsqlc.TestCaseInboxFilterOptionsParams{
 		UserID:        userID,
 		IncludeClosed: includeClosed,
+		Projects:      projects,
 	})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("failed to load inbox filter options: %v", err)

@@ -5515,19 +5515,23 @@ WITH inbox AS (
       )
       AND tp.is_complete IS NOT TRUE
     ))
+),
+in_projects AS (
+  SELECT project_id, feature_or_module, environment_id, test_plan_id FROM inbox
+  WHERE $3::int[] IS NULL OR project_id = ANY($3::int[])
 )
 SELECT kind, value, label FROM (
   SELECT 'project'::text AS kind, p.id::text AS value, p.title::text AS label
   FROM inbox i INNER JOIN projects p ON p.id = i.project_id
   UNION
   SELECT 'environment'::text, e.id::text, e.name::text
-  FROM inbox i INNER JOIN environments e ON e.id = i.environment_id
+  FROM in_projects i INNER JOIN environments e ON e.id = i.environment_id
   UNION
   SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
-  FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+  FROM in_projects i WHERE COALESCE(i.feature_or_module, '') <> ''
   UNION
   SELECT 'test_plan'::text, tp.id::text, COALESCE(NULLIF(tp.description, ''), 'Test plan #' || tp.id)::text
-  FROM inbox i INNER JOIN test_plans tp ON tp.id = i.test_plan_id
+  FROM in_projects i INNER JOIN test_plans tp ON tp.id = i.test_plan_id
 ) options
 ORDER BY kind, CASE WHEN kind = 'test_plan' THEN -value::bigint ELSE 0 END, label
 `
@@ -5535,6 +5539,7 @@ ORDER BY kind, CASE WHEN kind = 'test_plan' THEN -value::bigint ELSE 0 END, labe
 type TestCaseInboxFilterOptionsParams struct {
 	UserID        int64
 	IncludeClosed bool
+	Projects      []int32
 }
 
 type TestCaseInboxFilterOptionsRow struct {
@@ -5545,9 +5550,11 @@ type TestCaseInboxFilterOptionsRow struct {
 
 // Distinct projects, environments, test plans and modules found in the user's inbox,
 // used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+// With projects set, environments, test plans and modules only come from those
+// projects; the project list always covers the whole inbox so the choice can change.
 // Test plans are listed newest first, the rest by name.
 func (q *Queries) TestCaseInboxFilterOptions(ctx context.Context, arg TestCaseInboxFilterOptionsParams) ([]TestCaseInboxFilterOptionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, testCaseInboxFilterOptions, arg.UserID, arg.IncludeClosed)
+	rows, err := q.db.QueryContext(ctx, testCaseInboxFilterOptions, arg.UserID, arg.IncludeClosed, pq.Array(arg.Projects))
 	if err != nil {
 		return nil, err
 	}

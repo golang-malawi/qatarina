@@ -498,7 +498,7 @@ export interface paths {
         };
         /**
          * List the filter options for the current user's inbox
-         * @description List the distinct projects, environments, test plans and modules found in the current user's inbox
+         * @description List the distinct projects, environments, test plans and modules found in the current user's inbox. With projects set, environments, test plans and modules only come from those projects.
          */
         get: operations["GetInboxFilterOptions"];
         put?: never;
@@ -3984,6 +3984,8 @@ export interface operations {
             query?: {
                 /** @description Include closed test cases */
                 includeClosed?: boolean;
+                /** @description Comma-separated project IDs to limit environments, test plans and modules to */
+                projects?: string;
             };
             header?: never;
             path?: never;
