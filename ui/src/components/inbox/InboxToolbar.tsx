@@ -171,7 +171,7 @@ export function InboxToolbar({
           >
             <option value="open">{t("inbox.filter.open_only", "Open only")}</option>
             {/* History adds closed test cases and test cases of closed test plans */}
-            <option value="all">{t("inbox.filter.show_history", "Show history")}</option>
+            <option value="all">{t("inbox.filter.open_and_closed", "Open and closed")}</option>
           </NativeSelect.Field>
           <NativeSelect.Indicator />
         </NativeSelect.Root>
