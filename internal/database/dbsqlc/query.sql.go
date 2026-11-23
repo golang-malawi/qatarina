@@ -5315,22 +5315,24 @@ WHERE pc.assigned_to_id = $1
   ))
   AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
   AND ($4::int = 0 OR tp.environment_id = $4::int)
-  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND ($5::int = 0 OR pc.test_plan_id = $5::int)
+  AND ($6::text = '' OR tc.feature_or_module = $6::text)
   AND (
-    $6::text = ''
-    OR tc.title ILIKE '%' || $6::text || '%'
-    OR tc.code ILIKE '%' || $6::text || '%'
-    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+    $7::text = ''
+    OR tc.title ILIKE '%' || $7::text || '%'
+    OR tc.code ILIKE '%' || $7::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $7::text || '%'
   )
 `
 
 type TestCaseCountByAssignedUserParams struct {
-	UserID        int64
-	IncludeClosed bool
-	Projects      []int32
-	EnvironmentID int32
-	Module        string
-	Search        string
+	UserID           int64
+	IncludeClosed    bool
+	Projects         []int32
+	EnvironmentID    int32
+	FilterTestPlanID int32
+	Module           string
+	Search           string
 }
 
 // Must use the same filters as TestCaseListByAssignedUser so pagination totals match the rows.
@@ -5340,6 +5342,7 @@ func (q *Queries) TestCaseCountByAssignedUser(ctx context.Context, arg TestCaseC
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
 		arg.EnvironmentID,
+		arg.FilterTestPlanID,
 		arg.Module,
 		arg.Search,
 	)
@@ -5500,7 +5503,7 @@ func (q *Queries) TestCaseGetByAssignedUser(ctx context.Context, arg TestCaseGet
 
 const testCaseInboxFilterOptions = `-- name: TestCaseInboxFilterOptions :many
 WITH inbox AS (
-  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id, pc.test_plan_id
   FROM test_plan_cases pc
   INNER JOIN test_cases tc ON tc.id = pc.test_case_id
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
@@ -5522,8 +5525,11 @@ SELECT kind, value, label FROM (
   UNION
   SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
   FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+  UNION
+  SELECT 'test_plan'::text, tp.id::text, COALESCE(NULLIF(tp.description, ''), 'Test plan #' || tp.id)::text
+  FROM inbox i INNER JOIN test_plans tp ON tp.id = i.test_plan_id
 ) options
-ORDER BY kind, label
+ORDER BY kind, CASE WHEN kind = 'test_plan' THEN -value::bigint ELSE 0 END, label
 `
 
 type TestCaseInboxFilterOptionsParams struct {
@@ -5537,8 +5543,9 @@ type TestCaseInboxFilterOptionsRow struct {
 	Label string
 }
 
-// Distinct projects, environments and modules found in the user's inbox,
+// Distinct projects, environments, test plans and modules found in the user's inbox,
 // used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+// Test plans are listed newest first, the rest by name.
 func (q *Queries) TestCaseInboxFilterOptions(ctx context.Context, arg TestCaseInboxFilterOptionsParams) ([]TestCaseInboxFilterOptionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, testCaseInboxFilterOptions, arg.UserID, arg.IncludeClosed)
 	if err != nil {
@@ -5581,12 +5588,13 @@ WITH inbox AS (
         ))
         AND ($5::int[] IS NULL OR tc.project_id = ANY($5::int[]))
         AND ($6::int = 0 OR tp.environment_id = $6::int)
-        AND ($7::text = '' OR tc.feature_or_module = $7::text)
+        AND ($7::int = 0 OR pc.test_plan_id = $7::int)
+        AND ($8::text = '' OR tc.feature_or_module = $8::text)
         AND (
-          $8::text = ''
-          OR tc.title ILIKE '%' || $8::text || '%'
-          OR tc.code ILIKE '%' || $8::text || '%'
-          OR tc.feature_or_module ILIKE '%' || $8::text || '%'
+          $9::text = ''
+          OR tc.title ILIKE '%' || $9::text || '%'
+          OR tc.code ILIKE '%' || $9::text || '%'
+          OR tc.feature_or_module ILIKE '%' || $9::text || '%'
         )
       )
     )
@@ -5617,14 +5625,15 @@ WHERE test_case_id = $1::uuid
 `
 
 type TestCaseInboxNavigationParams struct {
-	TestCaseID    uuid.UUID
-	TestPlanID    int64
-	UserID        int64
-	IncludeClosed bool
-	Projects      []int32
-	EnvironmentID int32
-	Module        string
-	Search        string
+	TestCaseID       uuid.UUID
+	TestPlanID       int64
+	UserID           int64
+	IncludeClosed    bool
+	Projects         []int32
+	EnvironmentID    int32
+	FilterTestPlanID int32
+	Module           string
+	Search           string
 }
 
 type TestCaseInboxNavigationRow struct {
@@ -5648,6 +5657,7 @@ func (q *Queries) TestCaseInboxNavigation(ctx context.Context, arg TestCaseInbox
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
 		arg.EnvironmentID,
+		arg.FilterTestPlanID,
 		arg.Module,
 		arg.Search,
 	)
@@ -5708,26 +5718,28 @@ WHERE pc.assigned_to_id = $1
   ))
   AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
   AND ($4::int = 0 OR tp.environment_id = $4::int)
-  AND ($5::text = '' OR tc.feature_or_module = $5::text)
+  AND ($5::int = 0 OR pc.test_plan_id = $5::int)
+  AND ($6::text = '' OR tc.feature_or_module = $6::text)
   AND (
-    $6::text = ''
-    OR tc.title ILIKE '%' || $6::text || '%'
-    OR tc.code ILIKE '%' || $6::text || '%'
-    OR tc.feature_or_module ILIKE '%' || $6::text || '%'
+    $7::text = ''
+    OR tc.title ILIKE '%' || $7::text || '%'
+    OR tc.code ILIKE '%' || $7::text || '%'
+    OR tc.feature_or_module ILIKE '%' || $7::text || '%'
   )
 ORDER BY pc.test_plan_id DESC, tc.created_at DESC, tc.id DESC
-LIMIT $8::int OFFSET $7::int
+LIMIT $9::int OFFSET $8::int
 `
 
 type TestCaseListByAssignedUserParams struct {
-	UserID        int64
-	IncludeClosed bool
-	Projects      []int32
-	EnvironmentID int32
-	Module        string
-	Search        string
-	RowOffset     int32
-	RowLimit      int32
+	UserID           int64
+	IncludeClosed    bool
+	Projects         []int32
+	EnvironmentID    int32
+	FilterTestPlanID int32
+	Module           string
+	Search           string
+	RowOffset        int32
+	RowLimit         int32
 }
 
 type TestCaseListByAssignedUserRow struct {
@@ -5767,6 +5779,7 @@ func (q *Queries) TestCaseListByAssignedUser(ctx context.Context, arg TestCaseLi
 		arg.IncludeClosed,
 		pq.Array(arg.Projects),
 		arg.EnvironmentID,
+		arg.FilterTestPlanID,
 		arg.Module,
 		arg.Search,
 		arg.RowOffset,

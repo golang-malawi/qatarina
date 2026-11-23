@@ -60,6 +60,7 @@ export function InboxToolbar({
 
   const projects = options?.projects ?? [];
   const environments = options?.environments ?? [];
+  const testPlans = options?.test_plans ?? [];
   const modules = options?.modules ?? [];
 
   return (
@@ -152,6 +153,15 @@ export function InboxToolbar({
             value={filters.environmentId}
             options={environments}
             onChange={(environmentId) => onFiltersChange({ environmentId })}
+          />
+        )}
+        {testPlans.length > 0 && (
+          <FilterSelect
+            label={t("inbox.filter.test_plan", "Test plan")}
+            allLabel={t("inbox.filter.all_test_plans", "All test plans")}
+            value={filters.testPlanId}
+            options={testPlans}
+            onChange={(testPlanId) => onFiltersChange({ testPlanId })}
           />
         )}
         {modules.length > 0 && (

@@ -54,6 +54,7 @@ type InboxFilterParams = {
   search?: string;
   projectId?: string;
   environmentId?: string;
+  testPlanId?: string;
   module?: string;
 };
 
@@ -64,6 +65,7 @@ function inboxFilterQuery(params?: InboxFilterParams) {
     search: params?.search || undefined,
     projects: params?.projectId || undefined,
     environmentID: params?.environmentId ? Number(params.environmentId) : undefined,
+    testPlanFilter: params?.testPlanId ? Number(params.testPlanId) : undefined,
     module: params?.module || undefined,
   };
 }

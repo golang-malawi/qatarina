@@ -498,7 +498,7 @@ export interface paths {
         };
         /**
          * List the filter options for the current user's inbox
-         * @description List the distinct projects, environments and modules found in the current user's inbox
+         * @description List the distinct projects, environments, test plans and modules found in the current user's inbox
          */
         get: operations["GetInboxFilterOptions"];
         put?: never;
@@ -3034,6 +3034,8 @@ export interface components {
             environments?: components["schemas"]["schema.InboxFilterOption"][];
             modules?: components["schemas"]["schema.InboxFilterOption"][];
             projects?: components["schemas"]["schema.InboxFilterOption"][];
+            /** @description Newest first */
+            test_plans?: components["schemas"]["schema.InboxFilterOption"][];
         };
         "schema.InboxNavigationResponse": {
             next_id?: string;
@@ -3759,6 +3761,8 @@ export interface operations {
                 projects?: string;
                 /** @description Environment ID to filter by */
                 environmentID?: number;
+                /** @description Test Plan ID to filter by */
+                testPlanFilter?: number;
                 /** @description Feature or module name to filter by */
                 module?: string;
                 /** @description Search title, code or feature/module */
@@ -3871,6 +3875,8 @@ export interface operations {
                 projects?: string;
                 /** @description Environment ID to filter by */
                 environmentID?: number;
+                /** @description Test Plan ID to filter by */
+                testPlanFilter?: number;
                 /** @description Feature or module name to filter by */
                 module?: string;
                 /** @description Search title, code or feature/module */

@@ -65,7 +65,7 @@ type TestCaseService interface {
 	// FindAllAssignedToUser fetches the user's inbox, one row per test case in a test plan. Closed
 	// runs and closed test plans are only included with IncludeClosed.
 	FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error)
-	// FindInboxFilterOptions lists the projects, environments and modules present in the user's inbox
+	// FindInboxFilterOptions lists the projects, environments, test plans and modules present in the user's inbox
 	FindInboxFilterOptions(ctx context.Context, userID int64, includeClosed bool) (*schema.InboxFilterOptionsResponse, error)
 	// FindAssignedToUserByID fetches a test case from the user's inbox in the given test plan,
 	// regardless of which page it is on. With testPlanID 0 it picks the open assignment.
@@ -694,14 +694,15 @@ func GenerateNextCode(ctx context.Context, db *dbsqlc.Queries, projectID int64, 
 
 func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params *schema.InboxFilterParams) ([]schema.AssignedTestCase, int64, error) {
 	rows, err := t.queries.TestCaseListByAssignedUser(ctx, dbsqlc.TestCaseListByAssignedUserParams{
-		UserID:        params.UserID,
-		RowLimit:      int32(params.PageSize),
-		RowOffset:     int32(params.Page),
-		IncludeClosed: params.IncludeClosed,
-		Projects:      params.Projects,
-		EnvironmentID: params.EnvironmentID,
-		Module:        params.Module,
-		Search:        params.Search,
+		UserID:           params.UserID,
+		RowLimit:         int32(params.PageSize),
+		RowOffset:        int32(params.Page),
+		IncludeClosed:    params.IncludeClosed,
+		Projects:         params.Projects,
+		EnvironmentID:    params.EnvironmentID,
+		FilterTestPlanID: params.TestPlanID,
+		Module:           params.Module,
+		Search:           params.Search,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -743,12 +744,13 @@ func (t *testCaseServiceImpl) FindAllAssignedToUser(ctx context.Context, params 
 
 	// Count query (same filters as the list, so pagination is accurate)
 	total, err := t.queries.TestCaseCountByAssignedUser(ctx, dbsqlc.TestCaseCountByAssignedUserParams{
-		UserID:        params.UserID,
-		IncludeClosed: params.IncludeClosed,
-		Projects:      params.Projects,
-		EnvironmentID: params.EnvironmentID,
-		Module:        params.Module,
-		Search:        params.Search,
+		UserID:           params.UserID,
+		IncludeClosed:    params.IncludeClosed,
+		Projects:         params.Projects,
+		EnvironmentID:    params.EnvironmentID,
+		FilterTestPlanID: params.TestPlanID,
+		Module:           params.Module,
+		Search:           params.Search,
 	})
 	if err != nil {
 		return res, 0, err
@@ -769,6 +771,7 @@ func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID
 	res := &schema.InboxFilterOptionsResponse{
 		Projects:     []schema.InboxFilterOption{},
 		Environments: []schema.InboxFilterOption{},
+		TestPlans:    []schema.InboxFilterOption{},
 		Modules:      []schema.InboxFilterOption{},
 	}
 	for _, row := range rows {
@@ -778,6 +781,8 @@ func (t *testCaseServiceImpl) FindInboxFilterOptions(ctx context.Context, userID
 			res.Projects = append(res.Projects, option)
 		case "environment":
 			res.Environments = append(res.Environments, option)
+		case "test_plan":
+			res.TestPlans = append(res.TestPlans, option)
 		case "module":
 			res.Modules = append(res.Modules, option)
 		}
@@ -792,14 +797,15 @@ func (t *testCaseServiceImpl) FindInboxNavigation(ctx context.Context, params *s
 	}
 
 	row, err := t.queries.TestCaseInboxNavigation(ctx, dbsqlc.TestCaseInboxNavigationParams{
-		UserID:        params.UserID,
-		TestCaseID:    id,
-		TestPlanID:    testPlanID,
-		IncludeClosed: params.IncludeClosed,
-		Projects:      params.Projects,
-		EnvironmentID: params.EnvironmentID,
-		Module:        params.Module,
-		Search:        params.Search,
+		UserID:           params.UserID,
+		TestCaseID:       id,
+		TestPlanID:       testPlanID,
+		IncludeClosed:    params.IncludeClosed,
+		Projects:         params.Projects,
+		EnvironmentID:    params.EnvironmentID,
+		FilterTestPlanID: params.TestPlanID,
+		Module:           params.Module,
+		Search:           params.Search,
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

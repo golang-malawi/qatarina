@@ -34,6 +34,7 @@ func parseInboxFilters(ctx *fiber.Ctx) *schema.InboxFilterParams {
 		IncludeClosed: ctx.QueryBool("includeClosed", false),
 		Projects:      projects,
 		EnvironmentID: int32(ctx.QueryInt("environmentID", 0)),
+		TestPlanID:    int32(ctx.QueryInt("testPlanFilter", 0)),
 		Module:        strings.TrimSpace(ctx.Query("module", "")),
 		Search:        strings.TrimSpace(ctx.Query("search", "")),
 	}
@@ -52,6 +53,7 @@ func parseInboxFilters(ctx *fiber.Ctx) *schema.InboxFilterParams {
 //	@Param          includeClosed   query   bool    false   "Include closed test cases and test cases of closed test plans"
 //	@Param          projects        query   string  false   "Comma-separated project IDs to filter by"
 //	@Param          environmentID   query   int     false   "Environment ID to filter by"
+//	@Param          testPlanFilter  query   int     false   "Test Plan ID to filter by"
 //	@Param          module          query   string  false   "Feature or module name to filter by"
 //	@Param          search          query   string  false   "Search title, code or feature/module"
 //	@Success        200         {object}    schema.AssignedTestCaseListResponse
@@ -89,7 +91,7 @@ func ListAssignedTestCases(testCasesService services.TestCaseService, logger log
 //
 //	@ID             GetInboxFilterOptions
 //	@Summary        List the filter options for the current user's inbox
-//	@Description    List the distinct projects, environments and modules found in the current user's inbox
+//	@Description    List the distinct projects, environments, test plans and modules found in the current user's inbox
 //	@Tags           test-cases
 //	@Accept         json
 //	@Produce        json
@@ -161,6 +163,7 @@ func GetAssignedTestCase(testCasesService services.TestCaseService, logger loggi
 //	@Param          includeClosed   query   bool    false   "Include closed test cases and test cases of closed test plans"
 //	@Param          projects        query   string  false   "Comma-separated project IDs to filter by"
 //	@Param          environmentID   query   int     false   "Environment ID to filter by"
+//	@Param          testPlanFilter  query   int     false   "Test Plan ID to filter by"
 //	@Param          module          query   string  false   "Feature or module name to filter by"
 //	@Param          search          query   string  false   "Search title, code or feature/module"
 //	@Success        200         {object}    schema.InboxNavigationResponse

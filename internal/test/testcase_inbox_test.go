@@ -77,12 +77,53 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 	// newest test case, so with no module filter the order is [gamma, beta, alpha];
 	// filtered to "Inbox Alpha" it is [gamma, alpha].
 	gamma := f.newTestCase(t, "Inbox Alpha")
-	if _, err := f.createPlan(gamma); err != nil {
+	gammaPlan, err := f.createPlan(gamma)
+	if err != nil {
 		t.Fatalf("createPlan failed: %v", err)
 	}
 
+	// Filtering by test plan keeps only that plan's test cases, in the list and the count
+	for _, tc := range []struct {
+		name   string
+		planID int64
+		want   []string
+	}{
+		{"first test plan", plan.ID, []string{alpha, beta}},
+		{"second test plan", gammaPlan.ID, []string{gamma}},
+		{"unknown test plan", -1, nil},
+	} {
+		params := base
+		params.TestPlanID = int32(tc.planID)
+		rows, total, err := svc.FindAllAssignedToUser(ctx, &params)
+		if err != nil {
+			t.Fatalf("FindAllAssignedToUser (%s) failed: %v", tc.name, err)
+		}
+		got := make([]string, 0, len(rows))
+		for _, r := range rows {
+			got = append(got, r.ID)
+		}
+		sort.Strings(got)
+		want := append([]string(nil), tc.want...)
+		sort.Strings(want)
+		assertIDs(t, got, want...)
+		if total != int64(len(want)) {
+			t.Errorf("%s: total = %d, want %d", tc.name, total, len(want))
+		}
+	}
+
+	// Previous/Next stay inside the chosen test plan
+	byPlan := base
+	byPlan.TestPlanID = int32(plan.ID)
+	nav, err := svc.FindInboxNavigation(ctx, &byPlan, alpha, plan.ID)
+	if err != nil {
+		t.Fatalf("FindInboxNavigation (test plan) failed: %v", err)
+	}
+	if nav.PreviousID != beta || nav.NextID != "" || nav.Total != 2 {
+		t.Errorf("test plan navigation = %+v, want previous %s (skipping gamma), no next, total 2", nav, beta)
+	}
+
 	unfiltered := base
-	nav, err := svc.FindInboxNavigation(ctx, &unfiltered, alpha, plan.ID)
+	nav, err = svc.FindInboxNavigation(ctx, &unfiltered, alpha, plan.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation failed: %v", err)
 	}
@@ -128,5 +169,22 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 	}
 	if !foundProject {
 		t.Errorf("expected fixture project %d in options, got %+v", f.projectID, options.Projects)
+	}
+
+	// Both fixture test plans are offered, the newer one first
+	planIndex := map[string]int{}
+	for i, p := range options.TestPlans {
+		if p.Label == "" {
+			t.Errorf("expected a label on test plan option %s", p.Value)
+		}
+		planIndex[p.Value] = i
+	}
+	first, okFirst := planIndex[strconv.FormatInt(plan.ID, 10)]
+	second, okSecond := planIndex[strconv.FormatInt(gammaPlan.ID, 10)]
+	if !okFirst || !okSecond {
+		t.Fatalf("expected test plans %d and %d in options, got %+v", plan.ID, gammaPlan.ID, options.TestPlans)
+	}
+	if second > first {
+		t.Errorf("expected newer test plan %d before %d, got %+v", gammaPlan.ID, plan.ID, options.TestPlans)
 	}
 }

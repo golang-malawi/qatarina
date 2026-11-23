@@ -373,6 +373,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   ))
   AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
   AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
   AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
   AND (
     sqlc.arg(search)::text = ''
@@ -383,11 +384,12 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
 ORDER BY pc.test_plan_id DESC, tc.created_at DESC, tc.id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
--- Distinct projects, environments and modules found in the user's inbox,
+-- Distinct projects, environments, test plans and modules found in the user's inbox,
 -- used to fill the inbox filter dropdowns. Same open/closed rule as the list.
+-- Test plans are listed newest first, the rest by name.
 -- name: TestCaseInboxFilterOptions :many
 WITH inbox AS (
-  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id
+  SELECT DISTINCT tc.project_id, tc.feature_or_module, tp.environment_id, pc.test_plan_id
   FROM test_plan_cases pc
   INNER JOIN test_cases tc ON tc.id = pc.test_case_id
   INNER JOIN test_plans tp ON tp.id = pc.test_plan_id
@@ -409,8 +411,11 @@ SELECT kind, value, label FROM (
   UNION
   SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
   FROM inbox i WHERE COALESCE(i.feature_or_module, '') <> ''
+  UNION
+  SELECT 'test_plan'::text, tp.id::text, COALESCE(NULLIF(tp.description, ''), 'Test plan #' || tp.id)::text
+  FROM inbox i INNER JOIN test_plans tp ON tp.id = i.test_plan_id
 ) options
-ORDER BY kind, label;
+ORDER BY kind, CASE WHEN kind = 'test_plan' THEN -value::bigint ELSE 0 END, label;
 
 -- name: TestCaseGetByAssignedUser :one
 -- One assignment from the user's inbox. With test_plan_id 0 it picks the user's open
@@ -480,6 +485,7 @@ WITH inbox AS (
         ))
         AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
         AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+        AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
         AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
         AND (
           sqlc.arg(search)::text = ''
@@ -530,6 +536,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   ))
   AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
   AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
+  AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
   AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
   AND (
     sqlc.arg(search)::text = ''

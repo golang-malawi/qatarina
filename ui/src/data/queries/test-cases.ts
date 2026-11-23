@@ -53,6 +53,7 @@ export type InboxFilters = {
   search: string;
   projectId: string;
   environmentId: string;
+  testPlanId: string;
   module: string;
 };
 
@@ -61,12 +62,18 @@ export const emptyInboxFilters: InboxFilters = {
   search: "",
   projectId: "",
   environmentId: "",
+  testPlanId: "",
   module: "",
 };
 
 export function hasActiveInboxFilters(filters: InboxFilters) {
   return Boolean(
-    filters.search || filters.projectId || filters.environmentId || filters.module || filters.includeClosed,
+    filters.search ||
+      filters.projectId ||
+      filters.environmentId ||
+      filters.testPlanId ||
+      filters.module ||
+      filters.includeClosed,
   );
 }
 
@@ -95,7 +102,7 @@ export const findInboxFilterOptionsQueryOptions = (includeClosed: boolean) =>
     queryKey: ["testCases", "inbox", "filter-options", includeClosed],
     queryFn: async (): Promise<InboxFilterOptionsResponse> => {
       const res = await getInboxFilterOptions(includeClosed);
-      return (res?.data ?? { projects: [], environments: [], modules: [] }) as InboxFilterOptionsResponse;
+      return (res?.data ?? { projects: [], environments: [], test_plans: [], modules: [] }) as InboxFilterOptionsResponse;
     },
   });
 
