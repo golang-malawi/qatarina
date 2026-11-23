@@ -441,6 +441,13 @@ type TestPlanCommentAttachment struct {
 	CreatedAt    sql.NullTime
 }
 
+type TestPlanCommentReaction struct {
+	CommentID uuid.UUID
+	UserID    int64
+	Emoji     string
+	CreatedAt sql.NullTime
+}
+
 type TestPlansCase struct {
 	TestPlanID uuid.UUID
 	TestCaseID uuid.UUID

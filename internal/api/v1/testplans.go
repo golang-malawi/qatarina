@@ -645,6 +645,146 @@ func CreateTestPlanComment(testPlanService services.TestPlanService, logger logg
 	}
 }
 
+// UpdateTestPlanComment godoc
+//
+// @ID      UpdateTestPlanComment
+// @Summary Edit a comment on a test plan
+// @Description Only the author can edit a comment. attachment_ids lists every attachment the comment keeps: existing ones left out are deleted, newly uploaded ones are added.
+// @Tags    test-plans, comments
+// @Accept  json
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   commentID  path string true "Comment ID"
+// @Param   request body schema.UpdateComment true "Comment payload"
+// @Success 200 {object} schema.CommentResponseItem
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 403 {object} problemdetail.ProblemDetail
+// @Failure 404 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments/{commentID} [put]
+func UpdateTestPlanComment(testPlanService services.TestPlanService, storage config.StorageConfiguration, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		req := new(schema.UpdateComment)
+		if validationErrors, err := common.ParseBodyThenValidate(c, req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse request")
+		}
+		if strings.TrimSpace(req.Content) == "" && len(req.AttachmentIDs) == 0 {
+			return problemdetail.BadRequest(c, "a comment needs either content or attachments")
+		}
+
+		testPlanID, err := c.ParamsInt("testPlanID")
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid test plan ID")
+		}
+		req.TestPlanID = int64(testPlanID)
+		req.CommentID = c.Params("commentID")
+		// Comments can only be edited by the person who wrote them
+		req.UserID = authutil.GetAuthUserID(c)
+
+		comment, removedPaths, err := testPlanService.UpdateComment(c.Context(), req)
+		removeCommentAttachmentFiles(storage, removedPaths, logger)
+		if err != nil {
+			switch {
+			case errors.Is(err, services.ErrNotFound):
+				return problemdetail.NotFound(c, "comment not found")
+			case errors.Is(err, services.ErrForbidden):
+				return problemdetail.Forbidden(c, "you can only edit your own comments")
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to update comment", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to update comment")
+		}
+		return c.JSON(comment)
+	}
+}
+
+// SetTestPlanCommentReaction godoc
+//
+// @ID      SetTestPlanCommentReaction
+// @Summary React to a comment with an emoji
+// @Description Each person has one reaction per comment; reacting again replaces it.
+// @Tags    test-plans, comments
+// @Accept  json
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   commentID  path string true "Comment ID"
+// @Param   request body schema.SetCommentReaction true "Reaction payload"
+// @Success 200 {array} schema.CommentReaction
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 404 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments/{commentID}/reaction [put]
+func SetTestPlanCommentReaction(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		req := new(schema.SetCommentReaction)
+		if validationErrors, err := common.ParseBodyThenValidate(c, req); err != nil {
+			if validationErrors {
+				return problemdetail.ValidationErrors(c, "invalid data", err)
+			}
+			return problemdetail.BadRequest(c, "failed to parse request")
+		}
+		testPlanID, err := c.ParamsInt("testPlanID")
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid test plan ID")
+		}
+
+		reactions, err := testPlanService.SetCommentReaction(c.Context(), int64(testPlanID), c.Params("commentID"), authutil.GetAuthUserID(c), req.Emoji)
+		if err != nil {
+			switch {
+			case errors.Is(err, services.ErrInvalidReaction):
+				return problemdetail.BadRequest(c, err.Error())
+			case errors.Is(err, services.ErrNotFound):
+				return problemdetail.NotFound(c, "comment not found")
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to set comment reaction", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to react to comment")
+		}
+		return c.JSON(nonNilReactions(reactions))
+	}
+}
+
+// RemoveTestPlanCommentReaction godoc
+//
+// @ID      RemoveTestPlanCommentReaction
+// @Summary Remove your reaction from a comment
+// @Tags    test-plans, comments
+// @Produce json
+// @Param   testPlanID path int true "Test Plan ID"
+// @Param   commentID  path string true "Comment ID"
+// @Success 200 {array} schema.CommentReaction
+// @Failure 400 {object} problemdetail.ProblemDetail
+// @Failure 404 {object} problemdetail.ProblemDetail
+// @Failure 500 {object} problemdetail.ProblemDetail
+// @Router  /v1/test-plans/{testPlanID}/comments/{commentID}/reaction [delete]
+func RemoveTestPlanCommentReaction(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID")
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "invalid test plan ID")
+		}
+
+		reactions, err := testPlanService.RemoveCommentReaction(c.Context(), int64(testPlanID), c.Params("commentID"), authutil.GetAuthUserID(c))
+		if err != nil {
+			if errors.Is(err, services.ErrNotFound) {
+				return problemdetail.NotFound(c, "comment not found")
+			}
+			logger.Error(loggedmodule.ApiTestPlans, "failed to remove comment reaction", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to remove reaction")
+		}
+		return c.JSON(nonNilReactions(reactions))
+	}
+}
+
+// nonNilReactions makes an empty reaction list encode as [] rather than null
+func nonNilReactions(reactions []schema.CommentReaction) []schema.CommentReaction {
+	if reactions == nil {
+		return []schema.CommentReaction{}
+	}
+	return reactions
+}
+
 // DeleteTestPlanComment godoc
 //
 // @ID      DeleteTestPlanComment

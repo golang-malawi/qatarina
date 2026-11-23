@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Image, Link, Stack, Text } from "@chakra-ui/react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useLinkPreviewQuery } from "@/services/TestPlanService";
 
 const URL_PATTERN = /https?:\/\/[^\s<>"'`]+/g;
@@ -15,41 +15,6 @@ function extractUrls(text?: string): string[] {
   if (!text) return [];
   const urls = (text.match(URL_PATTERN) ?? []).map((m) => splitUrl(m).url);
   return [...new Set(urls)];
-}
-
-// Renders text with URLs turned into links, keeping line breaks
-export function LinkifiedText({ text }: { text: string }) {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  for (const match of text.matchAll(URL_PATTERN)) {
-    const { url, trailing } = splitUrl(match[0]);
-    const start = match.index ?? 0;
-    parts.push(text.slice(lastIndex, start));
-    parts.push(
-      <Link
-        key={start}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        color="brand.fg"
-        textDecoration="underline"
-        textUnderlineOffset="2px"
-        wordBreak="break-all"
-      >
-        {url}
-      </Link>
-    );
-    parts.push(trailing);
-    lastIndex = start + match[0].length;
-  }
-  parts.push(text.slice(lastIndex));
-  return (
-    <>
-      {parts.map((part, i) => (
-        <Fragment key={i}>{part}</Fragment>
-      ))}
-    </>
-  );
 }
 
 function LinkPreviewCard({ url }: { url: string }) {

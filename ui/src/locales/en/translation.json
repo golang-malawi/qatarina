@@ -416,6 +416,7 @@
   "test_plans.comments.unexpected_error": "An unexpected error occurred",
   "test_plans.comments.view_replies": "View replies ({{total}})",
   "test_plans.comments.hide_replies": "Hide replies",
+  "test_plans.comments.send_hint_with_attachments": "Markdown supported · Paste or drop screenshots · Ctrl + Enter to send",
   "test_plans.comments.reply_placeholder": "Leave a reply...",
   "test_plans.comments.send_reply": "Reply",
   "test_plans.comments.reply_success": "Reply added",

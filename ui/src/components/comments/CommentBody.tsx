@@ -1,25 +1,60 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import { CommentAttachment } from "@/services/TestPlanService";
 import { CommentAttachments } from "@/components/comments/CommentAttachments";
-import { LinkifiedText, LinkPreviews } from "@/components/comments/LinkPreviews";
+import { LinkPreviews } from "@/components/comments/LinkPreviews";
+import { CommentMarkdown } from "@/components/comments/CommentMarkdown";
 import { attachmentTokenPattern } from "@/components/comments/attachmentTokens";
 
 type Segment = { kind: "text"; text: string } | { kind: "images"; attachments: CommentAttachment[] };
 
-const URL_IN_LINE = /https?:\/\//;
+const URL_IN_TEXT = /https?:\/\//;
+const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
 
-// Splits text after every line that holds a link, so each link's preview sits right below it
+// Removes fenced and inline code so links written inside code don't get preview cards
+function stripCode(text: string) {
+  const kept: string[] = [];
+  let fence: string | null = null;
+  for (const line of text.split("\n")) {
+    const marker = line.match(FENCE)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
+      continue;
+    }
+    if (marker) {
+      fence = marker;
+      continue;
+    }
+    kept.push(line.replace(/`[^`\n]*`/g, ""));
+  }
+  return kept.join("\n");
+}
+
+// Splits text at blank lines that follow a markdown block holding a link, so each link's
+// preview sits right below the paragraph or list it belongs to. Code fences are never split.
 function splitAtLinks(text: string): Segment[] {
   const segments: Segment[] = [];
   let block: string[] = [];
+  let fence: string | null = null;
+
+  const flush = () => {
+    const joined = block.join("\n");
+    if (joined.trim()) segments.push({ kind: "text", text: joined });
+    block = [];
+  };
+
   for (const line of text.split("\n")) {
-    block.push(line);
-    if (URL_IN_LINE.test(line)) {
-      segments.push({ kind: "text", text: block.join("\n") });
-      block = [];
+    const marker = line.match(FENCE)?.[1];
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
+    } else if (marker) {
+      fence = marker;
+    } else if (!line.trim() && URL_IN_TEXT.test(stripCode(block.join("\n")))) {
+      flush();
+      continue;
     }
+    block.push(line);
   }
-  if (block.join("").trim()) segments.push({ kind: "text", text: block.join("\n") });
+  flush();
   return segments;
 }
 
@@ -93,11 +128,9 @@ export function CommentBody({
               borderRadius="2xl"
               borderTopLeftRadius={i === 0 ? "sm" : "2xl"}
             >
-              <Text fontSize="sm" whiteSpace="pre-wrap" wordBreak="break-word" color="fg">
-                <LinkifiedText text={segment.text} />
-              </Text>
+              <CommentMarkdown text={segment.text} />
             </Box>
-            <LinkPreviews text={segment.text} />
+            <LinkPreviews text={stripCode(segment.text)} />
           </Box>
         )
       )}

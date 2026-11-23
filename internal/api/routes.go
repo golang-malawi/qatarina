@@ -164,9 +164,12 @@ func (api *API) routes() {
 		{
 			commentsV1.Get("", apiv1.ListTestPlanComments(api.TestPlansService, api.logger))
 			commentsV1.Post("", apiv1.CreateTestPlanComment(api.TestPlansService, api.logger))
+			commentsV1.Put("/:commentID", apiv1.UpdateTestPlanComment(api.TestPlansService, api.Config.Storage, api.logger))
 			commentsV1.Delete("/:commentID", apiv1.DeleteTestPlanComment(api.TestPlansService, api.Config.Storage, api.logger))
 			commentsV1.Post("/attachments", apiv1.UploadTestPlanCommentAttachment(api.TestPlansService, api.Config.Storage, api.logger))
 			commentsV1.Get("/attachments/:attachmentID", apiv1.GetTestPlanCommentAttachment(api.TestPlansService, api.Config.Storage, api.logger))
+			commentsV1.Put("/:commentID/reaction", apiv1.SetTestPlanCommentReaction(api.TestPlansService, api.logger))
+			commentsV1.Delete("/:commentID/reaction", apiv1.RemoveTestPlanCommentReaction(api.TestPlansService, api.logger))
 			commentsV1.Post("/:commentID/convert", apiv1.ConvertCommentToTestCase(api.TestPlansService, api.logger))
 		}
 	}
