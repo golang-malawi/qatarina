@@ -191,11 +191,11 @@ function ProjectOverview() {
         ) : (
           <Stack gap={2}>
             {activePlans.slice(0, MAX_ACTIVE_PLANS).map((plan) => {
-              const planPassed = plan.passed_count ?? 0;
               const planFailed = plan.failed_count ?? 0;
-              const total =
-                plan.num_test_cases ?? planPassed + planFailed + (plan.pending_count ?? 0);
-              const done = planPassed + planFailed;
+              // Each test case assigned to each tester, counted once when the tester has
+              // recorded it, so recording again never takes progress past 100%
+              const total = plan.assignments ?? 0;
+              const done = plan.tested_assignments ?? 0;
               const percent = total > 0 ? Math.round((done / total) * 100) : 0;
               const title = plan.description?.trim() || `Test Plan #${plan.id}`;
 
