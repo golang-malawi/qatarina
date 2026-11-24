@@ -1176,7 +1176,7 @@ SELECT
         WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
     ) AS assigned_testers_count,
     -- Each test case assigned to each tester, and how many of those the tester has
-    -- recorded at least once (the same rule as GetTestPlanTesterProgress)
+    -- recorded a result for (the same rule as GetTestPlanTesterProgress)
     (
         SELECT COUNT(*)
         FROM test_plan_cases pc
@@ -1191,6 +1191,7 @@ SELECT
               WHERE tr.test_plan_id = pc.test_plan_id
                 AND tr.test_case_id = pc.test_case_id
                 AND tr.tested_by_id = pc.assigned_to_id
+                AND tr.result_state IN ('passed', 'failed')
           )
     ) AS tested_assignments_count
 FROM test_runs

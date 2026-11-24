@@ -110,6 +110,11 @@ func TestTestPlans_TestedAssignmentsCountEachCaseOnce(t *testing.T) {
 		}
 	}
 
+	// A run without a result does not count either
+	if _, err := f.createRun(plan.ID, second); err != nil {
+		t.Fatalf("create pending run: %v", err)
+	}
+
 	got, err := f.plans.GetOneTestPlan(ctx, plan.ID)
 	if err != nil {
 		t.Fatalf("get plan: %v", err)
