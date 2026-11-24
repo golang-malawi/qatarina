@@ -2764,12 +2764,14 @@ SELECT
         WHERE tr.test_plan_id = pc.test_plan_id
           AND tr.test_case_id = pc.test_case_id
           AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
     ))::bigint AS tested_count,
     COUNT(*) FILTER (WHERE EXISTS (
         SELECT 1 FROM test_runs tr
         WHERE tr.test_plan_id = pc.test_plan_id
           AND tr.test_case_id = pc.test_case_id
           AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
           AND tr.is_closed
     ))::bigint AS reviewed_count
 FROM test_plan_cases pc
@@ -2788,9 +2790,10 @@ type GetTestPlanTesterProgressRow struct {
 }
 
 // Progress of each tester on a test plan, counted from their assignments.
-// An assigned test case is tested once the tester has recorded at least one
-// run for it (recording it again does not change the count), and reviewed
-// once one of those runs has been closed by the plan owner.
+// An assigned test case is tested once the tester has recorded a result
+// (passed or failed) for it at least once, recording it again does not change
+// the count, and reviewed once one of those runs has been closed by the plan
+// owner. A run without a result yet (pending) does not count.
 func (q *Queries) GetTestPlanTesterProgress(ctx context.Context, testPlanID int64) ([]GetTestPlanTesterProgressRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTestPlanTesterProgress, testPlanID)
 	if err != nil {
