@@ -3361,6 +3361,11 @@ export interface components {
         "schema.TestPlanResponseItem": {
             assigned_testers?: number;
             assigned_to_id?: number;
+            /**
+             * @description Assignments counts each test case assigned to each tester, TestedAssignments
+             *     those the tester has recorded at least once
+             */
+            assignments?: number;
             closed_at?: string;
             created_at?: string;
             created_by_id?: number;
@@ -3382,6 +3387,7 @@ export interface components {
             scheduled_end_at?: string;
             start_at?: string;
             test_cases?: components["schemas"]["schema.TestCaseResponseItem"][];
+            tested_assignments?: number;
             updated_at?: string;
             updated_by_id?: number;
         };
