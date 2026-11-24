@@ -1172,6 +1172,39 @@ SELECT
 FROM test_runs
 WHERE test_plan_id = $1;
 
+-- Progress of each tester on a test plan, counted from their assignments.
+-- An assigned test case is tested once the tester has recorded at least one
+-- run for it (recording it again does not change the count), and reviewed
+-- once one of those runs has been closed by the plan owner.
+-- name: GetTestPlanTesterProgress :many
+SELECT
+    pc.assigned_to_id::bigint AS tester_id,
+    COALESCE(
+        NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+        NULLIF(u.display_name, ''),
+        u.email,
+        ''
+    )::text AS tester_name,
+    COUNT(*)::bigint AS assigned_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+    ))::bigint AS tested_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.is_closed
+    ))::bigint AS reviewed_count
+FROM test_plan_cases pc
+LEFT JOIN users u ON u.id = pc.assigned_to_id
+WHERE pc.test_plan_id = $1
+GROUP BY pc.assigned_to_id, u.first_name, u.last_name, u.display_name, u.email
+ORDER BY pc.assigned_to_id;
+
 -- name: GetTestCaseExecutionSummary :many
 SELECT
     tr.test_case_id,
