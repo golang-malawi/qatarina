@@ -71,3 +71,20 @@ func TestTestPlans_TesterProgress(t *testing.T) {
 		t.Fatalf("after closing a run: got %+v, want %+v", got, want)
 	}
 }
+
+func TestTestPlans_AssignedTestersCountsTestersWhoHaveNotStarted(t *testing.T) {
+	f, _ := newCloseFixture(t)
+
+	plan, err := f.createPlan(f.newTestCase(t, ""), f.newTestCase(t, ""))
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+
+	got, err := f.plans.GetOneTestPlan(context.Background(), plan.ID)
+	if err != nil {
+		t.Fatalf("get plan: %v", err)
+	}
+	if got.AssignedTesters != 1 {
+		t.Fatalf("assigned testers before any run = %d, want 1", got.AssignedTesters)
+	}
+}

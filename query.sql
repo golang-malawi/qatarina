@@ -1168,9 +1168,15 @@ SELECT
     COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
     COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
     COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
-    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+    -- Testers assigned to the plan's test cases, including those who have not
+    -- recorded anything yet (0 marks assignments without a tester)
+    (
+        SELECT COUNT(DISTINCT pc.assigned_to_id)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+    ) AS assigned_testers_count
 FROM test_runs
-WHERE test_plan_id = $1;
+WHERE test_plan_id = sqlc.narg(test_plan_id);
 
 -- Progress of each tester on a test plan, counted from their assignments.
 -- An assigned test case is tested once the tester has recorded at least one
