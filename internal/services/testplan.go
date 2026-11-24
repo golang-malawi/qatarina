@@ -22,6 +22,9 @@ type TestPlanService interface {
 	FindAllByProjectID(context.Context, int64) ([]schema.TestPlanResponseItem, error)
 	FindAllByTestPlanID(context.Context, int32) ([]dbsqlc.ListTestRunsByPlanRow, error)
 	GetOneTestPlan(context.Context, int64) (*schema.TestPlanResponseItem, error)
+	// TesterProgress returns how many of their assigned test cases each tester on the plan
+	// has tested and how many of those the plan owner has reviewed
+	TesterProgress(ctx context.Context, testPlanID int64) ([]schema.TesterProgress, error)
 	Create(context.Context, *schema.CreateTestPlan) (*dbsqlc.GetTestPlanRow, error)
 	AddTestCaseToPlan(context.Context, *schema.AssignTestsToPlanRequest) (*dbsqlc.GetTestPlanRow, error)
 	DeleteByID(context.Context, int64) error
@@ -260,6 +263,26 @@ func (t *testPlanService) FindAllByProjectID(ctx context.Context, projectID int6
 // FindAllByTestPlanID implements TestPlanService
 func (t *testPlanService) FindAllByTestPlanID(ctx context.Context, testPlanID int32) ([]dbsqlc.ListTestRunsByPlanRow, error) {
 	return t.queries.ListTestRunsByPlan(ctx, sql.NullInt32{Int32: testPlanID, Valid: true})
+}
+
+func (t *testPlanService) TesterProgress(ctx context.Context, testPlanID int64) ([]schema.TesterProgress, error) {
+	rows, err := t.queries.GetTestPlanTesterProgress(ctx, testPlanID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tester progress for plan %d: %w", testPlanID, err)
+	}
+
+	progress := make([]schema.TesterProgress, 0, len(rows))
+	for _, row := range rows {
+		progress = append(progress, schema.TesterProgress{
+			TesterID:       row.TesterID,
+			TesterName:     row.TesterName,
+			AssignedCount:  row.AssignedCount,
+			TestedCount:    row.TestedCount,
+			AwaitingReview: row.TestedCount - row.ReviewedCount,
+			ReviewedCount:  row.ReviewedCount,
+		})
+	}
+	return progress, nil
 }
 
 type testCaseAssignment struct {
