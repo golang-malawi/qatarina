@@ -1174,7 +1174,25 @@ SELECT
         SELECT COUNT(DISTINCT pc.assigned_to_id)
         FROM test_plan_cases pc
         WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
-    ) AS assigned_testers_count
+    ) AS assigned_testers_count,
+    -- Each test case assigned to each tester, and how many of those the tester has
+    -- recorded at least once (the same rule as GetTestPlanTesterProgress)
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+    ) AS assignments_count,
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+          AND EXISTS (
+              SELECT 1 FROM test_runs tr
+              WHERE tr.test_plan_id = pc.test_plan_id
+                AND tr.test_case_id = pc.test_case_id
+                AND tr.tested_by_id = pc.assigned_to_id
+          )
+    ) AS tested_assignments_count
 FROM test_runs
 WHERE test_plan_id = sqlc.narg(test_plan_id);
 

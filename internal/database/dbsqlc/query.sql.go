@@ -2684,16 +2684,36 @@ SELECT
         SELECT COUNT(DISTINCT pc.assigned_to_id)
         FROM test_plan_cases pc
         WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
-    ) AS assigned_testers_count
+    ) AS assigned_testers_count,
+    -- Each test case assigned to each tester, and how many of those the tester has
+    -- recorded at least once (the same rule as GetTestPlanTesterProgress)
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
+    ) AS assignments_count,
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
+          AND EXISTS (
+              SELECT 1 FROM test_runs tr
+              WHERE tr.test_plan_id = pc.test_plan_id
+                AND tr.test_case_id = pc.test_case_id
+                AND tr.tested_by_id = pc.assigned_to_id
+          )
+    ) AS tested_assignments_count
 FROM test_runs
 WHERE test_plan_id = $1
 `
 
 type GetTestPlanRunStatsRow struct {
-	PassedCount          int64
-	FailedCount          int64
-	PendingCount         int64
-	AssignedTestersCount int64
+	PassedCount            int64
+	FailedCount            int64
+	PendingCount           int64
+	AssignedTestersCount   int64
+	AssignmentsCount       int64
+	TestedAssignmentsCount int64
 }
 
 func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID sql.NullInt32) (GetTestPlanRunStatsRow, error) {
@@ -2704,6 +2724,8 @@ func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID sql.NullIn
 		&i.FailedCount,
 		&i.PendingCount,
 		&i.AssignedTestersCount,
+		&i.AssignmentsCount,
+		&i.TestedAssignmentsCount,
 	)
 	return i, err
 }
