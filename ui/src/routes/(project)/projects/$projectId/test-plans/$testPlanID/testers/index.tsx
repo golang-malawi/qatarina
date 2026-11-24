@@ -12,9 +12,9 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { IconSearch, IconUsers } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
   ErrorState,
@@ -51,6 +51,9 @@ type PlanTester = {
   awaitingReview: number;
   reviewed: number;
 };
+
+// Anchor of the testers list, the close dialog links to it as #testers
+const TESTERS_ANCHOR = "testers";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
@@ -161,6 +164,16 @@ function TestPlanTestersPage() {
   );
   const totalTested = testers.reduce((total, tester) => total + tester.tested, 0);
 
+  // Links such as the close dialog's "Go to Testers" add #testers. The list sits below
+  // the plan header, so scroll to it once it has loaded.
+  const { hash } = useLocation();
+  const isReady = !testPlanQuery.isLoading && !usersQuery.isLoading && !progressQuery.isLoading;
+  useEffect(() => {
+    if (isReady && hash === TESTERS_ANCHOR) {
+      document.getElementById(TESTERS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isReady, hash]);
+
   if (testPlanQuery.isLoading || usersQuery.isLoading || progressQuery.isLoading) {
     return <LoadingState label={t("test_plans.loading")} />;
   }
@@ -170,7 +183,7 @@ function TestPlanTestersPage() {
   }
 
   return (
-    <Box w="full">
+    <Box w="full" id={TESTERS_ANCHOR} scrollMarginTop="4">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={{ base: 4, md: 6 }}>
           <Stack gap={2}>

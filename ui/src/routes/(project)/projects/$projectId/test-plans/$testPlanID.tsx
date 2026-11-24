@@ -38,6 +38,7 @@ import {
   closeTestPlan,
   reopenTestPlan,
   useTestPlanQuery,
+  useTestPlanTesterProgressQuery,
   changeTestPlanEnvironment,
 } from "@/services/TestPlanService";
 import { openReportInNewTab, saveReportFile } from "@/services/ReportService";
@@ -52,6 +53,10 @@ import $api from "@/lib/api/query";
 import { useTranslation } from "react-i18next";
 
 type TestPlanData = components["schemas"]["schema.TestPlanResponseItem"];
+
+// The close dialog names at most this many testers who have not finished, the rest
+// are counted and the owner is sent to the Testers tab for the full breakdown
+const MAX_LISTED_TESTERS = 5;
 
 type NavItem = {
   label: string;
@@ -88,6 +93,26 @@ function ViewTestPlan() {
     error: unknown;
     refetch: () => Promise<unknown>;
   };
+
+  // Used to warn, before closing, about assigned test cases that are not done yet
+  const { data: progressData } = useTestPlanTesterProgressQuery(testPlanID);
+  const testerProgress = progressData?.testers ?? [];
+  const notTestedOf = (p: (typeof testerProgress)[number]) =>
+    (p.assigned_count ?? 0) - (p.tested_count ?? 0);
+  // Furthest behind first, so the names shown are the ones worth following up
+  const behindTesters = testerProgress
+    .filter((p) => notTestedOf(p) > 0)
+    .sort((a, b) => notTestedOf(b) - notTestedOf(a));
+  const listedBehindTesters = behindTesters.slice(0, MAX_LISTED_TESTERS);
+  const unlistedTesterCount = behindTesters.length - listedBehindTesters.length;
+  const notTestedCount = behindTesters.reduce(
+    (total, p) => total + (p.assigned_count ?? 0) - (p.tested_count ?? 0),
+    0
+  );
+  const awaitingReviewCount = testerProgress.reduce(
+    (total, p) => total + (p.awaiting_review_count ?? 0),
+    0
+  );
 
   const { data: envData } = $api.useQuery(
     "get",
@@ -257,16 +282,82 @@ function ViewTestPlan() {
               <ConfirmDialog
                 title={t("test_plans.close.confirm_title")}
                 description={t("test_plans.close.confirm_description")}
-                confirmLabel={t("test_plans.close.confirm")}
+                confirmLabel={
+                  notTestedCount > 0
+                    ? t("test_plans.close.confirm_anyway")
+                    : t("test_plans.close.confirm")
+                }
                 cancelLabel={t("test_plans.cancel")}
-                confirmColorPalette="green"
+                confirmColorPalette={notTestedCount > 0 ? "orange" : "green"}
                 onConfirm={handleMarkComplete}
                 trigger={
                   <Button colorPalette="green" loading={isClosing} disabled={isClosing}>
                     {t("test_plans.close.mark_complete")}
                   </Button>
                 }
-              />
+              >
+                {(closeDialog) => (notTestedCount > 0 || awaitingReviewCount > 0) && (
+                  <Alert.Root status="warning" mt={4} alignItems="flex-start">
+                    <Alert.Indicator />
+                    <Alert.Content>
+                      <Alert.Title>{t("test_plans.close.outstanding_title")}</Alert.Title>
+                      <Alert.Description>
+                        <Stack gap={2} mt={1}>
+                          {notTestedCount > 0 && (
+                            <Box>
+                              <Text fontWeight="semibold">
+                                {t("test_plans.close.not_tested", {
+                                  count: notTestedCount,
+                                  testers: behindTesters.length,
+                                })}
+                              </Text>
+                              <Box as="ul" ps={5} listStyleType="disc">
+                                {listedBehindTesters.map((p) => (
+                                  <li key={p.tester_id}>
+                                    {t("test_plans.close.tester_not_tested", {
+                                      name: p.tester_name || `User ${p.tester_id}`,
+                                      count: notTestedOf(p),
+                                      total: p.assigned_count ?? 0,
+                                    })}
+                                  </li>
+                                ))}
+                              </Box>
+                              {unlistedTesterCount > 0 && (
+                                <Text mt={1}>
+                                  {t("test_plans.close.more_testers", { count: unlistedTesterCount })}{" "}
+                                  <Link
+                                    to="/projects/$projectId/test-plans/$testPlanID/testers"
+                                    params={{ projectId, testPlanID }}
+                                    hash="testers"
+                                    onClick={closeDialog}
+                                    style={{ textDecoration: "underline", fontWeight: 600 }}
+                                  >
+                                    {t("test_plans.close.open_testers")}
+                                  </Link>
+                                </Text>
+                              )}
+                            </Box>
+                          )}
+                          {awaitingReviewCount > 0 && (
+                            <Text>
+                              {t("test_plans.close.awaiting_review", { count: awaitingReviewCount })}{" "}
+                              <Link
+                                to="/projects/$projectId/test-plans/$testPlanID/test-runs"
+                                params={{ projectId, testPlanID }}
+                                search={{ review: "awaiting" }}
+                                onClick={closeDialog}
+                                style={{ textDecoration: "underline", fontWeight: 600 }}
+                              >
+                                {t("test_plans.close.review_runs")}
+                              </Link>
+                            </Text>
+                          )}
+                        </Stack>
+                      </Alert.Description>
+                    </Alert.Content>
+                  </Alert.Root>
+                )}
+              </ConfirmDialog>
             )}
           </HStack>
         }
