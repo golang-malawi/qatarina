@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { LuLayoutGrid, LuList, LuPlus, LuSearch, LuX } from "react-icons/lu";
 import { hasActiveInboxFilters, type InboxFilters } from "@/data/queries/test-cases";
 import type { components } from "@/lib/api/v1";
+import { FilterSelect } from "@/components/ui/filter-select";
 
 export type InboxView = "list" | "grid";
 
@@ -184,33 +185,5 @@ export function InboxToolbar({
         )}
       </Flex>
     </Flex>
-  );
-}
-
-function FilterSelect({
-  label,
-  allLabel,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  allLabel: string;
-  value: string;
-  options: { value?: string; label?: string }[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <NativeSelect.Root size="sm" w="auto" minW="36" maxW="56">
-      <NativeSelect.Field aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{allLabel}</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </NativeSelect.Field>
-      <NativeSelect.Indicator />
-    </NativeSelect.Root>
   );
 }
