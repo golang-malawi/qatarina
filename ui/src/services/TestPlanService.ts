@@ -38,6 +38,13 @@ export function useTestPlanQuery(testPlanID: string) {
   });
 }
 
+// How many of their assigned test cases each tester has tested and how many of those were reviewed
+export function useTestPlanTesterProgressQuery(testPlanID: string) {
+  return $api.useQuery("get", "/v1/test-plans/{testPlanID}/tester-progress", {
+    params: { path: { testPlanID } },
+  });
+}
+
 export function useCreateTestPlanMutation() {
   return $api.useMutation("post", "/v1/test-plans");
 }
