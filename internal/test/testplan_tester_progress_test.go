@@ -88,3 +88,33 @@ func TestTestPlans_AssignedTestersCountsTestersWhoHaveNotStarted(t *testing.T) {
 		t.Fatalf("assigned testers before any run = %d, want 1", got.AssignedTesters)
 	}
 }
+
+func TestTestPlans_TestedAssignmentsCountEachCaseOnce(t *testing.T) {
+	f, _ := newCloseFixture(t)
+	ctx := context.Background()
+
+	first, second := f.newTestCase(t, ""), f.newTestCase(t, "")
+	plan, err := f.createPlan(first, second)
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+
+	// Recording the same case three times is still one tested assignment
+	for range 3 {
+		run, err := f.createRun(plan.ID, first)
+		if err != nil {
+			t.Fatalf("create run: %v", err)
+		}
+		if err := f.commitRun(run.ID.String(), false); err != nil {
+			t.Fatalf("commit run: %v", err)
+		}
+	}
+
+	got, err := f.plans.GetOneTestPlan(ctx, plan.ID)
+	if err != nil {
+		t.Fatalf("get plan: %v", err)
+	}
+	if got.Assignments != 2 || got.TestedAssignments != 1 {
+		t.Fatalf("assignments = %d, tested = %d, want 2 and 1", got.Assignments, got.TestedAssignments)
+	}
+}
