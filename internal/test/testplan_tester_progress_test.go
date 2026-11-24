@@ -88,3 +88,22 @@ func TestTestPlans_AssignedTestersCountsTestersWhoHaveNotStarted(t *testing.T) {
 		t.Fatalf("assigned testers before any run = %d, want 1", got.AssignedTesters)
 	}
 }
+
+func TestTestPlans_PendingRunIsNotTested(t *testing.T) {
+	f, _ := newCloseFixture(t)
+
+	testCase := f.newTestCase(t, "")
+	plan, err := f.createPlan(testCase)
+	if err != nil {
+		t.Fatalf("create plan: %v", err)
+	}
+	// A run without a result yet, as when recording a result fails after the run was created
+	if _, err := f.createRun(plan.ID, testCase); err != nil {
+		t.Fatalf("create run: %v", err)
+	}
+
+	got := f.ownerProgress(t, plan.ID)
+	if got.TestedCount != 0 || got.AwaitingReview != 0 {
+		t.Fatalf("with only a pending run: got %+v, want nothing tested", got)
+	}
+}
