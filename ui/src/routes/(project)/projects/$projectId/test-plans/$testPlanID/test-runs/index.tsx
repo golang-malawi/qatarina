@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Badge,
   Box,
@@ -16,7 +16,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
 import {
   EmptyState,
@@ -45,6 +45,9 @@ type ResultFilter = "all" | "passed" | "failed" | "pending";
 // Awaiting review: a result was recorded but the plan owner has not closed the run yet
 type ReviewFilter = "all" | "awaiting" | "reviewed";
 const RESULT_FILTERS = ["passed", "failed", "pending"] as const;
+
+// Anchor of the test runs list, the close dialog links to it as #test-runs
+const TEST_RUNS_ANCHOR = "test-runs";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/"
@@ -142,6 +145,14 @@ function TestPlanTestRunsPage() {
     setReviewFilter("all");
   };
 
+  // The list sits below the plan header, so scroll to it once it has loaded
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!isLoading && hash === TEST_RUNS_ANCHOR) {
+      document.getElementById(TEST_RUNS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isLoading, hash]);
+
   if (isLoading) return <LoadingState label={t("test_plans.loading")} />;
   if (error) return <ErrorState title={t("test_plans.error")} />;
 
@@ -164,7 +175,7 @@ function TestPlanTestRunsPage() {
   };
 
   return (
-    <Box w="full">
+    <Box w="full" id={TEST_RUNS_ANCHOR} scrollMarginTop="4">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={{ base: 4, md: 6 }}>
           <Stack gap={2}>

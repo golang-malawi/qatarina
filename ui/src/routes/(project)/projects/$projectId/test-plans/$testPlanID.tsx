@@ -345,6 +345,7 @@ function ViewTestPlan() {
                                 to="/projects/$projectId/test-plans/$testPlanID/test-runs"
                                 params={{ projectId, testPlanID }}
                                 search={{ review: "awaiting" }}
+                                hash="test-runs"
                                 onClick={closeDialog}
                                 style={{ textDecoration: "underline", fontWeight: 600 }}
                               >
