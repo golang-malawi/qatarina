@@ -2334,6 +2334,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-plans/{testPlanID}/tester-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the testing progress of each tester on a test plan
+         * @description For each tester, the number of assigned test cases, how many they have tested (recorded at least once) and how many of those the plan owner has reviewed (closed)
+         */
+        get: operations["GetTestPlanTesterProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/test-plans/query": {
         parameters: {
             query?: never;
@@ -3426,6 +3446,17 @@ export interface components {
         };
         "schema.TesterListResponse": {
             testers?: components["schemas"]["schema.Tester"][];
+        };
+        "schema.TesterProgress": {
+            assigned_count?: number;
+            awaiting_review_count?: number;
+            reviewed_count?: number;
+            tested_count?: number;
+            tester_id?: number;
+            tester_name?: string;
+        };
+        "schema.TesterProgressListResponse": {
+            testers?: components["schemas"]["schema.TesterProgress"][];
         };
         "schema.TransferTestCaseRequest": {
             feature_or_module: string;
@@ -8643,6 +8674,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["schema.TestRunListResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["problemdetail.ProblemDetail"];
+                };
+            };
+        };
+    };
+    GetTestPlanTesterProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Test Plan ID */
+                testPlanID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["schema.TesterProgressListResponse"];
                 };
             };
             /** @description Bad Request */

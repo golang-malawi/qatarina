@@ -1544,6 +1544,29 @@ components:
           type: array
           uniqueItems: false
       type: object
+    schema.TesterProgress:
+      properties:
+        assigned_count:
+          type: integer
+        awaiting_review_count:
+          type: integer
+        reviewed_count:
+          type: integer
+        tested_count:
+          type: integer
+        tester_id:
+          type: integer
+        tester_name:
+          type: string
+      type: object
+    schema.TesterProgressListResponse:
+      properties:
+        testers:
+          items:
+            $ref: '#/components/schemas/schema.TesterProgress'
+          type: array
+          uniqueItems: false
+      type: object
     schema.TransferTestCaseRequest:
       properties:
         feature_or_module:
@@ -6551,6 +6574,46 @@ paths:
       tags:
       - test-plans
       - test-runs
+  /v1/test-plans/{testPlanID}/tester-progress:
+    get:
+      description: For each tester, the number of assigned test cases, how many they
+        have tested (recorded at least once) and how many of those the plan owner
+        has reviewed (closed)
+      operationId: GetTestPlanTesterProgress
+      parameters:
+      - description: Test Plan ID
+        in: path
+        name: testPlanID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/schema.TesterProgressListResponse'
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/problemdetail.ProblemDetail'
+          description: Internal Server Error
+      summary: Get the testing progress of each tester on a test plan
+      tags:
+      - test-plans
   /v1/test-plans/query:
     get:
       description: Search test plans
