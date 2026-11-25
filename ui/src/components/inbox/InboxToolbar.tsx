@@ -61,6 +61,7 @@ export function InboxToolbar({
 
   const projects = options?.projects ?? [];
   const environments = options?.environments ?? [];
+  const testPlans = options?.test_plans ?? [];
   const modules = options?.modules ?? [];
 
   return (
@@ -143,7 +144,10 @@ export function InboxToolbar({
             allLabel={t("inbox.filter.all_projects", "All projects")}
             value={filters.projectId}
             options={projects}
-            onChange={(projectId) => onFiltersChange({ projectId })}
+            // The other dropdowns only list what is in the chosen project, so clear choices from another project
+            onChange={(projectId) =>
+              onFiltersChange({ projectId, environmentId: "", testPlanId: "", module: "" })
+            }
           />
         )}
         {environments.length > 0 && (
@@ -153,6 +157,15 @@ export function InboxToolbar({
             value={filters.environmentId}
             options={environments}
             onChange={(environmentId) => onFiltersChange({ environmentId })}
+          />
+        )}
+        {testPlans.length > 0 && (
+          <FilterSelect
+            label={t("inbox.filter.test_plan", "Test plan")}
+            allLabel={t("inbox.filter.all_test_plans", "All test plans")}
+            value={filters.testPlanId}
+            options={testPlans}
+            onChange={(testPlanId) => onFiltersChange({ testPlanId })}
           />
         )}
         {modules.length > 0 && (
@@ -172,7 +185,7 @@ export function InboxToolbar({
           >
             <option value="open">{t("inbox.filter.open_only", "Open only")}</option>
             {/* History adds closed test cases and test cases of closed test plans */}
-            <option value="all">{t("inbox.filter.show_history", "Show history")}</option>
+            <option value="all">{t("inbox.filter.open_and_closed", "Open and closed")}</option>
           </NativeSelect.Field>
           <NativeSelect.Indicator />
         </NativeSelect.Root>

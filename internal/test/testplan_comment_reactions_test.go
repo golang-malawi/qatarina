@@ -16,7 +16,7 @@ import (
 func TestCommentReactions(t *testing.T) {
 	db := openTestDB()
 	ctx := context.Background()
-	svc := services.NewTestPlanService(dbsqlc.New(db), logging.NewForTest())
+	svc := services.NewTestPlanService(dbsqlc.New(db), logging.NewForTest(), t.TempDir())
 
 	var userIDs, planIDs []int64
 	var projectID int64
