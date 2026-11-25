@@ -94,7 +94,7 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 		{"unknown test plan", -1, nil},
 	} {
 		params := base
-		params.TestPlanID = int32(tc.planID)
+		params.TestPlanID = tc.planID
 		rows, total, err := svc.FindAllAssignedToUser(ctx, &params)
 		if err != nil {
 			t.Fatalf("FindAllAssignedToUser (%s) failed: %v", tc.name, err)
@@ -114,7 +114,7 @@ func TestInbox_ServerSideFiltersAndOptions(t *testing.T) {
 
 	// Previous/Next stay inside the chosen test plan
 	byPlan := base
-	byPlan.TestPlanID = int32(plan.ID)
+	byPlan.TestPlanID = plan.ID
 	nav, err := svc.FindInboxNavigation(ctx, &byPlan, alpha, plan.ID)
 	if err != nil {
 		t.Fatalf("FindInboxNavigation (test plan) failed: %v", err)

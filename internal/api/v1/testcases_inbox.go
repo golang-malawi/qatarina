@@ -34,7 +34,7 @@ func parseInboxFilters(ctx *fiber.Ctx) *schema.InboxFilterParams {
 		IncludeClosed: ctx.QueryBool("includeClosed", false),
 		Projects:      projects,
 		EnvironmentID: int32(ctx.QueryInt("environmentID", 0)),
-		TestPlanID:    int32(ctx.QueryInt("testPlanFilter", 0)),
+		TestPlanID:    int64(ctx.QueryInt("testPlanFilter", 0)),
 		Module:        strings.TrimSpace(ctx.Query("module", "")),
 		Search:        strings.TrimSpace(ctx.Query("search", "")),
 	}

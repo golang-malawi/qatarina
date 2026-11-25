@@ -7,7 +7,7 @@ type InboxFilterParams struct {
 	IncludeClosed bool    `json:"include_closed"`
 	Projects      []int32 `json:"projects"`       // Projects to filter by
 	EnvironmentID int32   `json:"environment_id"` // 0 means any environment
-	TestPlanID    int32   `json:"test_plan_id"`   // 0 means any test plan
+	TestPlanID    int64   `json:"test_plan_id"`   // 0 means any test plan
 	Module        string  `json:"module"`         // Feature or module name; empty means any
 	Search        string  `json:"search"`         // Matches title, code or feature/module
 }

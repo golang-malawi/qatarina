@@ -5429,7 +5429,7 @@ WHERE pc.assigned_to_id = $1
   ))
   AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
   AND ($4::int = 0 OR tp.environment_id = $4::int)
-  AND ($5::int = 0 OR pc.test_plan_id = $5::int)
+  AND ($5::bigint = 0 OR pc.test_plan_id = $5::bigint)
   AND ($6::text = '' OR tc.feature_or_module = $6::text)
   AND (
     $7::text = ''
@@ -5444,7 +5444,7 @@ type TestCaseCountByAssignedUserParams struct {
 	IncludeClosed    bool
 	Projects         []int32
 	EnvironmentID    int32
-	FilterTestPlanID int32
+	FilterTestPlanID int64
 	Module           string
 	Search           string
 }
@@ -5709,7 +5709,7 @@ WITH inbox AS (
         ))
         AND ($5::int[] IS NULL OR tc.project_id = ANY($5::int[]))
         AND ($6::int = 0 OR tp.environment_id = $6::int)
-        AND ($7::int = 0 OR pc.test_plan_id = $7::int)
+        AND ($7::bigint = 0 OR pc.test_plan_id = $7::bigint)
         AND ($8::text = '' OR tc.feature_or_module = $8::text)
         AND (
           $9::text = ''
@@ -5752,7 +5752,7 @@ type TestCaseInboxNavigationParams struct {
 	IncludeClosed    bool
 	Projects         []int32
 	EnvironmentID    int32
-	FilterTestPlanID int32
+	FilterTestPlanID int64
 	Module           string
 	Search           string
 }
@@ -5839,7 +5839,7 @@ WHERE pc.assigned_to_id = $1
   ))
   AND ($3::int[] IS NULL OR tc.project_id = ANY($3::int[]))
   AND ($4::int = 0 OR tp.environment_id = $4::int)
-  AND ($5::int = 0 OR pc.test_plan_id = $5::int)
+  AND ($5::bigint = 0 OR pc.test_plan_id = $5::bigint)
   AND ($6::text = '' OR tc.feature_or_module = $6::text)
   AND (
     $7::text = ''
@@ -5856,7 +5856,7 @@ type TestCaseListByAssignedUserParams struct {
 	IncludeClosed    bool
 	Projects         []int32
 	EnvironmentID    int32
-	FilterTestPlanID int32
+	FilterTestPlanID int64
 	Module           string
 	Search           string
 	RowOffset        int32

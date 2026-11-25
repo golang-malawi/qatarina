@@ -373,7 +373,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   ))
   AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
   AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
-  AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
+  AND (sqlc.arg(filter_test_plan_id)::bigint = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::bigint)
   AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
   AND (
     sqlc.arg(search)::text = ''
@@ -491,7 +491,7 @@ WITH inbox AS (
         ))
         AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
         AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
-        AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
+        AND (sqlc.arg(filter_test_plan_id)::bigint = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::bigint)
         AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
         AND (
           sqlc.arg(search)::text = ''
@@ -542,7 +542,7 @@ WHERE pc.assigned_to_id = sqlc.arg(user_id)
   ))
   AND (sqlc.arg(projects)::int[] IS NULL OR tc.project_id = ANY(sqlc.arg(projects)::int[]))
   AND (sqlc.arg(environment_id)::int = 0 OR tp.environment_id = sqlc.arg(environment_id)::int)
-  AND (sqlc.arg(filter_test_plan_id)::int = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::int)
+  AND (sqlc.arg(filter_test_plan_id)::bigint = 0 OR pc.test_plan_id = sqlc.arg(filter_test_plan_id)::bigint)
   AND (sqlc.arg(module)::text = '' OR tc.feature_or_module = sqlc.arg(module)::text)
   AND (
     sqlc.arg(search)::text = ''
