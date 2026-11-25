@@ -335,7 +335,7 @@ export default function ListProjectTestCases() {
       });
       return;
     }
-    if (drafts.count >= selectedCount) {
+    if ((drafts.count ?? 0) >= selectedCount) {
       toaster.error({
         title: t("test_cases.drafts_only.title"),
         description: t("test_cases.drafts_only.description"),
@@ -344,7 +344,7 @@ export default function ListProjectTestCases() {
       return;
     }
     setSkippedDraftIds(drafts.test_case_ids ?? []);
-    if (drafts.count > 0) {
+    if ((drafts.count ?? 0) > 0) {
       setPendingDrafts(drafts);
       return;
     }
