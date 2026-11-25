@@ -92,7 +92,7 @@ func newSelectAllFixture(t *testing.T, db *sql.DB) selectAllFixture {
 	}
 
 	f := selectAllFixture{
-		svc:            services.NewTestPlanService(dbsqlc.New(db), logging.NewForTest()),
+		svc:            services.NewTestPlanService(dbsqlc.New(db), logging.NewForTest(), t.TempDir()),
 		projectID:      projectID,
 		otherProjectID: otherProjectID,
 		tester1:        tester1,

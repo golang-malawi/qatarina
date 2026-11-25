@@ -64,14 +64,17 @@ type TestPlanService interface {
 var _ TestPlanService = &testPlanService{}
 
 type testPlanService struct {
-	queries *dbsqlc.Queries
-	logger  logging.Logger
+	queries   *dbsqlc.Queries
+	logger    logging.Logger
+	reportDir string
 }
 
-func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger) TestPlanService {
+// NewTestPlanService creates the test plan service; closing a plan writes its report PDF under reportDir
+func NewTestPlanService(conn *dbsqlc.Queries, logger logging.Logger, reportDir string) TestPlanService {
 	return &testPlanService{
-		queries: conn,
-		logger:  logger,
+		queries:   conn,
+		logger:    logger,
+		reportDir: reportDir,
 	}
 }
 
@@ -624,7 +627,7 @@ func (t *testPlanService) CloseTestPlan(ctx context.Context, testPlanID int32) (
 	if name == "" {
 		name = fmt.Sprintf("Test plan %d", plan.ID)
 	}
-	report, err := createTestPlanReport(ctx, t.queries, t.logger, plan, name+" report", "Summary", "Completed")
+	report, err := createTestPlanReport(ctx, t.queries, t.logger, t.reportDir, plan, name+" report", "Summary", "Completed")
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrTestPlanReportFailed, err)
 	}
@@ -1062,6 +1065,7 @@ func (t *testPlanService) ConvertCommentToTestCase(ctx context.Context, commentI
 	}
 	return id.String(), nil
 }
+
 var (
 	ErrTestPlanClosed           = errors.New("test plan is complete or locked and cannot be changed")
 	ErrTestPlanInvalidKind      = errors.New("test plan kind is not valid")
