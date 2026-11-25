@@ -1,5 +1,5 @@
 # Stage 1: Build the UI (Frontend)
-FROM node:20-alpine AS ui-builder
+FROM node:22-alpine AS ui-builder
 WORKDIR /app/ui
 
 COPY ui/package.json ui/package-lock.json* ./
@@ -11,7 +11,7 @@ COPY docs/ ../docs/
 RUN npx vite build
 
 # Stage 2: Build the Go Binary (Backend)
-FROM golang:1.25.5-alpine AS go-builder
+FROM golang:1.26.5-alpine AS go-builder
 RUN apk add --no-cache git
 
 WORKDIR /go/qatarina
