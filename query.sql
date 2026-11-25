@@ -418,7 +418,8 @@ SELECT kind, value, label FROM (
   SELECT 'module'::text, i.feature_or_module::text, i.feature_or_module::text
   FROM in_projects i WHERE COALESCE(i.feature_or_module, '') <> ''
   UNION
-  SELECT 'test_plan'::text, tp.id::text, COALESCE(NULLIF(tp.description, ''), 'Test plan #' || tp.id)::text
+  -- The id tells apart test plans with the same description
+  SELECT 'test_plan'::text, tp.id::text, (COALESCE(NULLIF(tp.description, ''), 'Test plan') || ' (#' || tp.id || ')')::text
   FROM in_projects i INNER JOIN test_plans tp ON tp.id = i.test_plan_id
 ) options
 ORDER BY kind, CASE WHEN kind = 'test_plan' THEN -value::bigint ELSE 0 END, label;
