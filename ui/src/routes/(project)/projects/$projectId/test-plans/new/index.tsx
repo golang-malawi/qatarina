@@ -184,7 +184,7 @@ function CreateNewTestPlan() {
         });
         return;
       }
-      if (drafts.count >= selectedCount) {
+      if ((drafts.count ?? 0) >= selectedCount) {
         toaster.create({
           title: t("test_cases.drafts_only.title"),
           description: t("test_cases.drafts_only.description"),
