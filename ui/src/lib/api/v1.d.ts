@@ -3225,11 +3225,11 @@ export interface components {
         };
         "schema.SelectionDraftsResponse": {
             /** @description Codes of the first drafts, for display */
-            codes?: string[];
+            codes: string[];
             /** @description Number of drafts in the selection */
-            count?: number;
+            count: number;
             /** @description IDs of every draft in the selection */
-            test_case_ids?: string[];
+            test_case_ids: string[];
         };
         "schema.SetCommentReaction": {
             emoji: string;
