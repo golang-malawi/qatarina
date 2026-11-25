@@ -62,11 +62,33 @@ function TestCasePageInbox() {
   };
 
   const { data: unseenCount = 0 } = useQuery(findInboxUnseenCountQueryOptions);
-  const { data: filterOptions } = useQuery({
+  const { data: filterOptions, isPlaceholderData: isStaleFilterOptions } = useQuery({
     ...findInboxFilterOptionsQueryOptions(filters.includeClosed, filters.projectId),
     // Keep the previous options showing while another project's options load
     placeholderData: keepPreviousData,
   });
+
+  // A chosen environment, test plan or module can drop out of the options, e.g. a closed
+  // test plan after switching back to open only. Clear it, otherwise the inbox stays
+  // filtered by something the dropdowns no longer show. Only fresh options are used,
+  // never the previous ones kept on screen while new ones load.
+  useEffect(() => {
+    if (!filterOptions || isStaleFilterOptions) return;
+    const isListed = (options: { value?: string }[] | undefined, value: string) =>
+      !value || (options ?? []).some((option) => option.value === value);
+    const changes: Partial<InboxFilters> = {};
+    if (!isListed(filterOptions.environments, filters.environmentId)) changes.environmentId = "";
+    if (!isListed(filterOptions.test_plans, filters.testPlanId)) changes.testPlanId = "";
+    if (!isListed(filterOptions.modules, filters.module)) changes.module = "";
+    if (Object.keys(changes).length > 0) updateFilters(changes);
+  }, [
+    filterOptions,
+    isStaleFilterOptions,
+    filters.environmentId,
+    filters.testPlanId,
+    filters.module,
+    updateFilters,
+  ]);
   // Same query (and cache entry) as the list and grid; read here for the total in the toolbar
   const { data: listData } = useInfiniteQuery(inboxListInfiniteQueryOptions(filters));
   const totalCount = listData?.pages[0]?.pagination?.total;
