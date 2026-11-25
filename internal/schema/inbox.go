@@ -5,8 +5,9 @@ type InboxFilterParams struct {
 	PageSize      int     `json:"page_size"`
 	Page          int     `json:"page"`
 	IncludeClosed bool    `json:"include_closed"`
-	Projects      []int32 `json:"projects"` // Projects to filter by
+	Projects      []int32 `json:"projects"`       // Projects to filter by
 	EnvironmentID int32   `json:"environment_id"` // 0 means any environment
+	TestPlanID    int64   `json:"test_plan_id"`   // 0 means any test plan
 	Module        string  `json:"module"`         // Feature or module name; empty means any
 	Search        string  `json:"search"`         // Matches title, code or feature/module
 }
@@ -17,11 +18,12 @@ type InboxFilterOption struct {
 	Label string `json:"label"`
 }
 
-// InboxFilterOptionsResponse lists the projects, environments and modules
-// present in the current user's inbox
+// InboxFilterOptionsResponse lists the projects, environments, test plans and
+// modules present in the current user's inbox
 type InboxFilterOptionsResponse struct {
 	Projects     []InboxFilterOption `json:"projects"`
 	Environments []InboxFilterOption `json:"environments"`
+	TestPlans    []InboxFilterOption `json:"test_plans"` // Newest first
 	Modules      []InboxFilterOption `json:"modules"`
 }
 

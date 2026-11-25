@@ -48,7 +48,7 @@ func New(cfg *config.Config, logger logging.Logger) *Server {
 		userService:     services.NewUserService(dbConn, logger, cfg.SMTP),
 		projectService:  services.NewProjectService(dbConn, logger, moduleService),
 		testCaseService: services.NewTestCaseService(rawDB.DB, dbConn, logger),
-		testPlanService: services.NewTestPlanService(dbConn, logger),
+		testPlanService: services.NewTestPlanService(dbConn, logger, cfg.Reports.GetDir()),
 		testerService:   services.NewTesterService(dbConn, logger),
 		// No tool uploads or reads files, so the services get no storage backend
 		testRunService:  services.NewTestRunService(rawDB.DB, dbConn, logger, nil, cfg.Attachments.GetMaxFileSize()),

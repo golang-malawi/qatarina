@@ -20,7 +20,7 @@ import (
 func newCloseFixture(t *testing.T) (freezeFixture, services.ReportService) {
 	t.Helper()
 	f := newFreezeFixture(t)
-	reports := services.NewReportService(f.db, dbsqlc.New(f.db), logging.NewForTest())
+	reports := services.NewReportService(f.db, dbsqlc.New(f.db), logging.NewForTest(), f.reportDir)
 
 	// registered after the freeze fixture, so it runs before the plans and test cases are removed
 	t.Cleanup(func() {
@@ -34,7 +34,6 @@ func newCloseFixture(t *testing.T) (freezeFixture, services.ReportService) {
 			}
 			rows.Close()
 		}
-		os.Remove("storage/reports") // only removed when empty
 		f.db.Exec(`DELETE FROM reports WHERE project_id = $1`, f.projectID)
 		f.db.Exec(`DELETE FROM test_run_results WHERE test_run_id IN (SELECT id FROM test_runs WHERE project_id = $1)`, f.projectID)
 		f.db.Exec(`DELETE FROM test_runs WHERE project_id = $1`, f.projectID)

@@ -20,6 +20,7 @@ type Config struct {
 	Runner      RunnerConfiguration     `mapstructure:"runner"`
 	Storage     StorageConfiguration    `mapstructure:"storage"`
 	Attachments AttachmentConfiguration `mapstructure:"attachments"`
+	Reports     ReportConfiguration     `mapstructure:"reports"`
 	MCP         MCPConfiguration        `mapstructure:"mcp"`
 }
 
@@ -120,6 +121,21 @@ type StorageConfiguration struct {
 	S3Region  string `mapstructure:"s3_region" envconfig:"QATARINA_STORAGE_S3_REGION"`
 	// S3Endpoint is optional and only needed for S3-compatible services such as MinIO
 	S3Endpoint string `mapstructure:"s3_endpoint" envconfig:"QATARINA_STORAGE_S3_ENDPOINT"`
+}
+
+// DefaultReportDir is where generated report PDFs are written when no directory is configured
+const DefaultReportDir = "storage/reports"
+
+type ReportConfiguration struct {
+	Dir string `mapstructure:"dir" envconfig:"QATARINA_REPORTS_DIR"`
+}
+
+// GetDir returns the configured report directory, falling back to DefaultReportDir when unset
+func (r *ReportConfiguration) GetDir() string {
+	if r == nil || r.Dir == "" {
+		return DefaultReportDir
+	}
+	return r.Dir
 }
 
 const DefaultMaxFileSize int64 = 10 * 1024 * 1024 // 10 MB
@@ -224,6 +240,9 @@ var DefaultConfig = Config{
 	},
 	Attachments: AttachmentConfiguration{
 		MaxFileSize: DefaultMaxFileSize,
+	},
+	Reports: ReportConfiguration{
+		Dir: DefaultReportDir,
 	},
 	MCP: MCPConfiguration{
 		Transport: MCPTransportHTTP,

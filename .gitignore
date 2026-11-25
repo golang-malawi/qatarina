@@ -62,6 +62,7 @@ production.yml
 /logs/
 /uploads/
 /storage/
+**/storage/reports/
 node_modules/
 ui/src/routeTree.gen.ts
 archive-jqPOyq
