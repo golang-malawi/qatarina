@@ -1182,9 +1182,70 @@ SELECT
     COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
     COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
     COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
-    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+    -- Testers assigned to the plan's test cases, including those who have not
+    -- recorded anything yet (0 marks assignments without a tester)
+    (
+        SELECT COUNT(DISTINCT pc.assigned_to_id)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+    ) AS assigned_testers_count,
+    -- Each test case assigned to each tester, and how many of those the tester has
+    -- recorded a result for (the same rule as GetTestPlanTesterProgress)
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+    ) AS assignments_count,
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = sqlc.narg(test_plan_id)::int AND pc.assigned_to_id <> 0
+          AND EXISTS (
+              SELECT 1 FROM test_runs tr
+              WHERE tr.test_plan_id = pc.test_plan_id
+                AND tr.test_case_id = pc.test_case_id
+                AND tr.tested_by_id = pc.assigned_to_id
+                AND tr.result_state IN ('passed', 'failed')
+          )
+    ) AS tested_assignments_count
 FROM test_runs
-WHERE test_plan_id = $1;
+WHERE test_plan_id = sqlc.narg(test_plan_id);
+
+-- Progress of each tester on a test plan, counted from their assignments.
+-- An assigned test case is tested once the tester has recorded a result
+-- (passed or failed) for it at least once, recording it again does not change
+-- the count, and reviewed once one of those runs has been closed by the plan
+-- owner. A run without a result yet (pending) does not count.
+-- name: GetTestPlanTesterProgress :many
+SELECT
+    pc.assigned_to_id::bigint AS tester_id,
+    COALESCE(
+        NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+        NULLIF(u.display_name, ''),
+        u.email,
+        ''
+    )::text AS tester_name,
+    COUNT(*)::bigint AS assigned_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
+    ))::bigint AS tested_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
+          AND tr.is_closed
+    ))::bigint AS reviewed_count
+FROM test_plan_cases pc
+LEFT JOIN users u ON u.id = pc.assigned_to_id
+WHERE pc.test_plan_id = $1
+GROUP BY pc.assigned_to_id, u.first_name, u.last_name, u.display_name, u.email
+ORDER BY pc.assigned_to_id;
 
 -- name: GetTestCaseExecutionSummary :many
 SELECT

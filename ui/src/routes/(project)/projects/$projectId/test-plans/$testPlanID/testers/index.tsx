@@ -8,18 +8,22 @@ import {
   Icon,
   Input,
   InputGroup,
+  Progress,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { IconSearch, IconUsers } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "@/components/ui/page-states";
-import { useTestPlanQuery } from "@/services/TestPlanService";
+import {
+  useTestPlanQuery,
+  useTestPlanTesterProgressQuery,
+} from "@/services/TestPlanService";
 import { useUsersQuery } from "@/services/UserService";
 import type { components } from "@/lib/api/v1";
 import { useTranslation } from "react-i18next";
@@ -43,7 +47,13 @@ type PlanTester = {
   email: string;
   role: string;
   assignments: number;
+  tested: number;
+  awaitingReview: number;
+  reviewed: number;
 };
+
+// Anchor of the testers list, the close dialog links to it as #testers
+const TESTERS_ANCHOR = "testers";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/testers/"
@@ -61,6 +71,20 @@ function TestPlanTestersPage() {
     isLoading: boolean;
     isError: boolean;
   };
+
+  const progressQuery = useTestPlanTesterProgressQuery(testPlanID);
+  const progressByTester = useMemo(() => {
+    const map = new Map<number, { tested: number; awaitingReview: number; reviewed: number }>();
+    (progressQuery.data?.testers ?? []).forEach((row) => {
+      if (row.tester_id === undefined) return;
+      map.set(row.tester_id, {
+        tested: row.tested_count ?? 0,
+        awaitingReview: row.awaiting_review_count ?? 0,
+        reviewed: row.reviewed_count ?? 0,
+      });
+    });
+    return map;
+  }, [progressQuery.data?.testers]);
 
   const usersQuery = useUsersQuery();
   const users = useMemo(
@@ -99,6 +123,7 @@ function TestPlanTestersPage() {
       .map((id): PlanTester => {
         const user = usersById.get(id);
         const assignments = assignmentCountByTester.get(id) ?? 0;
+        const progress = progressByTester.get(id);
         return {
           id,
           name: getUserName(user, id),
@@ -108,12 +133,21 @@ function TestPlanTestersPage() {
               ? t("test_plans.role.owner")
               : t("test_plans.role.assigned"),
           assignments,
+          tested: progress?.tested ?? 0,
+          awaitingReview: progress?.awaitingReview ?? 0,
+          reviewed: progress?.reviewed ?? 0,
         };
       })
       .sort(
         (a, b) => b.assignments - a.assignments || a.name.localeCompare(b.name)
       );
-  }, [assignmentCountByTester, testPlanQuery.data?.assigned_to_id, usersById, t]);
+  }, [
+    assignmentCountByTester,
+    progressByTester,
+    testPlanQuery.data?.assigned_to_id,
+    usersById,
+    t,
+  ]);
 
   const filteredTesters = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -128,8 +162,19 @@ function TestPlanTestersPage() {
     (total, tester) => total + tester.assignments,
     0
   );
+  const totalTested = testers.reduce((total, tester) => total + tester.tested, 0);
 
-  if (testPlanQuery.isLoading || usersQuery.isLoading) {
+  // Links such as the close dialog's "Go to Testers" add #testers. The list sits below
+  // the plan header, so scroll to it once it has loaded.
+  const { hash } = useLocation();
+  const isReady = !testPlanQuery.isLoading && !usersQuery.isLoading && !progressQuery.isLoading;
+  useEffect(() => {
+    if (isReady && hash === TESTERS_ANCHOR) {
+      document.getElementById(TESTERS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isReady, hash]);
+
+  if (testPlanQuery.isLoading || usersQuery.isLoading || progressQuery.isLoading) {
     return <LoadingState label={t("test_plans.loading")} />;
   }
 
@@ -138,7 +183,7 @@ function TestPlanTestersPage() {
   }
 
   return (
-    <Box w="full">
+    <Box w="full" id={TESTERS_ANCHOR} scrollMarginTop="4">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={{ base: 4, md: 6 }}>
           <Stack gap={2}>
@@ -154,7 +199,10 @@ function TestPlanTestersPage() {
                 {testers.length} {t("test_plans.testers.count")}
               </Badge>
               <Badge colorPalette="blue" variant="subtle">
-                {totalAssignments} {t("test_plans.testers.assignments")}
+                {t("test_plans.tested_of", {
+                  tested: totalTested,
+                  total: totalAssignments,
+                })}
               </Badge>
               <Badge colorPalette="gray" variant="subtle">
                 {filteredTesters.length} {t("test_plans.testers.shown")}
@@ -228,19 +276,7 @@ function TestPlanTestersPage() {
                     </HStack>
                   </Stack>
 
-                  <Stack gap={1}>
-                    <Text fontSize="xs" color="fg.subtle">
-                      {t("test_plans.assigned_cases")}
-                    </Text>
-                    <Heading size="lg" color="fg.heading">
-                      {tester.assignments}
-                    </Heading>
-                    <Text color="fg.subtle" fontSize="sm">
-                      {tester.assignments > 0
-                        ? t("test_plans.assigned_cases_description")
-                        : t("test_plans.no_assigned_cases")}
-                    </Text>
-                  </Stack>
+                  <TesterProgressSummary tester={tester} />
                 </Grid>
               </Card.Body>
             </Card.Root>
@@ -251,12 +287,55 @@ function TestPlanTestersPage() {
   );
 }
 
+function TesterProgressSummary({ tester }: { tester: PlanTester }) {
+  const { t } = useTranslation();
+  const { assignments, tested, awaitingReview, reviewed } = tester;
+  const percent = assignments > 0 ? Math.round((tested / assignments) * 100) : 0;
+  const done = assignments > 0 && tested >= assignments;
+
+  return (
+    <Stack gap={2}>
+      <Text fontSize="xs" color="fg.subtle">
+        {t("test_plans.testing_progress")}
+      </Text>
+      {assignments === 0 ? (
+        <Text color="fg.subtle" fontSize="sm">
+          {t("test_plans.no_assigned_cases")}
+        </Text>
+      ) : (
+        <>
+          <HStack justify="space-between" align="baseline" gap={3}>
+            <Heading size="lg" color="fg.heading">
+              {t("test_plans.tested_of", { tested, total: assignments })}
+            </Heading>
+            <Text fontSize="sm" color="fg.subtle" whiteSpace="nowrap">
+              {percent}%
+            </Text>
+          </HStack>
+          <Progress.Root
+            value={percent}
+            size="sm"
+            colorPalette={done ? "green" : "brand"}
+          >
+            <Progress.Track>
+              <Progress.Range />
+            </Progress.Track>
+          </Progress.Root>
+          <Text color="fg.subtle" fontSize="sm">
+            {t("test_plans.review_breakdown", { awaiting: awaitingReview, reviewed })}
+          </Text>
+        </>
+      )}
+    </Stack>
+  );
+}
+
 function getUserName(user?: UserRecord, fallbackId?: number) {
   if (!user) return `User ${fallbackId ?? ""}`.trim();
   const fullName = `${user.FirstName ?? ""} ${user.LastName ?? ""}`.trim();
   return (
-    user.displayName ||
     fullName ||
+    user.displayName ||
     user.username ||
     user.Email ||
     user.email ||

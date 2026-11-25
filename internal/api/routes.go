@@ -152,6 +152,7 @@ func (api *API) routes() {
 		testPlansV1.Post("/:testPlanID/test-cases", apiv1.AssignTestsToPlan(api.TestPlansService, api.logger))
 		testPlansV1.Get("/:testPlanID/script-test-cases", apiv1.GetScriptTestPlanTestCases(api.TestCasesService, api.logger))
 		testPlansV1.Get("/:testPlanID/test-runs", apiv1.GetTestPlanTestRuns(api.TestPlansService, api.logger))
+		testPlansV1.Get("/:testPlanID/tester-progress", apiv1.GetTestPlanTesterProgress(api.TestPlansService, api.logger))
 		testPlansV1.Delete("/:testPlanID", apiv1.DeleteTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/close", apiv1.CloseTestPlan(api.TestPlansService, api.logger))
 		testPlansV1.Post("/:testPlanID/reopen", apiv1.ReopenTestPlan(api.TestPlansService, api.logger))

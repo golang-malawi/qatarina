@@ -147,6 +147,34 @@ func GetTestPlanTestRuns(testPlanService services.TestPlanService, logger loggin
 	}
 }
 
+// GetTestPlanTesterProgress godoc
+//
+//	@ID				GetTestPlanTesterProgress
+//	@Summary		Get the testing progress of each tester on a test plan
+//	@Description	For each tester, the number of assigned test cases, how many they have tested (recorded at least once) and how many of those the plan owner has reviewed (closed)
+//	@Tags			test-plans
+//	@Accept			json
+//	@Produce		json
+//	@Param			testPlanID	path		string	true	"Test Plan ID"
+//	@Success		200			{object}	schema.TesterProgressListResponse
+//	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		500			{object}	problemdetail.ProblemDetail
+//	@Router			/v1/test-plans/{testPlanID}/tester-progress [get]
+func GetTestPlanTesterProgress(testPlanService services.TestPlanService, logger logging.Logger) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		testPlanID, err := c.ParamsInt("testPlanID", 0)
+		if err != nil || testPlanID <= 0 {
+			return problemdetail.BadRequest(c, "failed to parse test plan id from path")
+		}
+		progress, err := testPlanService.TesterProgress(c.Context(), int64(testPlanID))
+		if err != nil {
+			logger.Error(loggedmodule.ApiTestPlans, "failed to load tester progress", "error", err)
+			return problemdetail.ServerErrorProblem(c, "failed to load tester progress")
+		}
+		return c.JSON(schema.TesterProgressListResponse{Testers: progress})
+	}
+}
+
 // CreateTestPlan godoc
 //
 //	@ID				CreateTestPlan

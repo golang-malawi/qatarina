@@ -2678,16 +2678,43 @@ SELECT
     COUNT(*) FILTER (WHERE result_state = 'passed') AS passed_count,
     COUNT(*) FILTER (WHERE result_state = 'failed') AS failed_count,
     COUNT(*) FILTER (WHERE result_state = 'pending') AS pending_count,
-    COUNT(DISTINCT assigned_to_id) AS assigned_testers_count
+    -- Testers assigned to the plan's test cases, including those who have not
+    -- recorded anything yet (0 marks assignments without a tester)
+    (
+        SELECT COUNT(DISTINCT pc.assigned_to_id)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
+    ) AS assigned_testers_count,
+    -- Each test case assigned to each tester, and how many of those the tester has
+    -- recorded a result for (the same rule as GetTestPlanTesterProgress)
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
+    ) AS assignments_count,
+    (
+        SELECT COUNT(*)
+        FROM test_plan_cases pc
+        WHERE pc.test_plan_id = $1::int AND pc.assigned_to_id <> 0
+          AND EXISTS (
+              SELECT 1 FROM test_runs tr
+              WHERE tr.test_plan_id = pc.test_plan_id
+                AND tr.test_case_id = pc.test_case_id
+                AND tr.tested_by_id = pc.assigned_to_id
+                AND tr.result_state IN ('passed', 'failed')
+          )
+    ) AS tested_assignments_count
 FROM test_runs
 WHERE test_plan_id = $1
 `
 
 type GetTestPlanRunStatsRow struct {
-	PassedCount          int64
-	FailedCount          int64
-	PendingCount         int64
-	AssignedTestersCount int64
+	PassedCount            int64
+	FailedCount            int64
+	PendingCount           int64
+	AssignedTestersCount   int64
+	AssignmentsCount       int64
+	TestedAssignmentsCount int64
 }
 
 func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID sql.NullInt32) (GetTestPlanRunStatsRow, error) {
@@ -2698,6 +2725,8 @@ func (q *Queries) GetTestPlanRunStats(ctx context.Context, testPlanID sql.NullIn
 		&i.FailedCount,
 		&i.PendingCount,
 		&i.AssignedTestersCount,
+		&i.AssignmentsCount,
+		&i.TestedAssignmentsCount,
 	)
 	return i, err
 }
@@ -2719,6 +2748,80 @@ func (q *Queries) GetTestPlanStatusRatio(ctx context.Context) (GetTestPlanStatus
 	var i GetTestPlanStatusRatioRow
 	err := row.Scan(&i.Closed, &i.Open)
 	return i, err
+}
+
+const getTestPlanTesterProgress = `-- name: GetTestPlanTesterProgress :many
+SELECT
+    pc.assigned_to_id::bigint AS tester_id,
+    COALESCE(
+        NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''),
+        NULLIF(u.display_name, ''),
+        u.email,
+        ''
+    )::text AS tester_name,
+    COUNT(*)::bigint AS assigned_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
+    ))::bigint AS tested_count,
+    COUNT(*) FILTER (WHERE EXISTS (
+        SELECT 1 FROM test_runs tr
+        WHERE tr.test_plan_id = pc.test_plan_id
+          AND tr.test_case_id = pc.test_case_id
+          AND tr.tested_by_id = pc.assigned_to_id
+          AND tr.result_state IN ('passed', 'failed')
+          AND tr.is_closed
+    ))::bigint AS reviewed_count
+FROM test_plan_cases pc
+LEFT JOIN users u ON u.id = pc.assigned_to_id
+WHERE pc.test_plan_id = $1
+GROUP BY pc.assigned_to_id, u.first_name, u.last_name, u.display_name, u.email
+ORDER BY pc.assigned_to_id
+`
+
+type GetTestPlanTesterProgressRow struct {
+	TesterID      int64
+	TesterName    string
+	AssignedCount int64
+	TestedCount   int64
+	ReviewedCount int64
+}
+
+// Progress of each tester on a test plan, counted from their assignments.
+// An assigned test case is tested once the tester has recorded a result
+// (passed or failed) for it at least once, recording it again does not change
+// the count, and reviewed once one of those runs has been closed by the plan
+// owner. A run without a result yet (pending) does not count.
+func (q *Queries) GetTestPlanTesterProgress(ctx context.Context, testPlanID int64) ([]GetTestPlanTesterProgressRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTestPlanTesterProgress, testPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestPlanTesterProgressRow
+	for rows.Next() {
+		var i GetTestPlanTesterProgressRow
+		if err := rows.Scan(
+			&i.TesterID,
+			&i.TesterName,
+			&i.AssignedCount,
+			&i.TestedCount,
+			&i.ReviewedCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTestRun = `-- name: GetTestRun :one

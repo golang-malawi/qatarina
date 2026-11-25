@@ -63,6 +63,22 @@ type UpdateTestPlanCaseUrgencyRequest struct {
 	Urgency string `json:"urgency" validate:"required,oneof=low medium high urgent"`
 }
 
+// TesterProgress is how far one tester is through their test cases on a test plan.
+// A test case counts as tested once the tester has recorded it at least once,
+// and as reviewed once the plan owner has closed one of those recordings.
+type TesterProgress struct {
+	TesterID       int64  `json:"tester_id"`
+	TesterName     string `json:"tester_name"`
+	AssignedCount  int64  `json:"assigned_count"`
+	TestedCount    int64  `json:"tested_count"`
+	AwaitingReview int64  `json:"awaiting_review_count"`
+	ReviewedCount  int64  `json:"reviewed_count"`
+}
+
+type TesterProgressListResponse struct {
+	Testers []TesterProgress `json:"testers"`
+}
+
 type TestPlanResponseItem struct {
 	ID              int64  `json:"id"`
 	ProjectID       int32  `json:"project_id"`
@@ -81,9 +97,13 @@ type TestPlanResponseItem struct {
 	FailedCount     int64  `json:"failed_count"`
 	PendingCount    int64  `json:"pending_count"`
 	AssignedTesters int64  `json:"assigned_testers"`
-	IsComplete      bool   `json:"is_complete"`
-	IsLocked        bool   `json:"is_locked"`
-	HasReport       bool   `json:"has_report"`
+	// Assignments counts each test case assigned to each tester, TestedAssignments
+	// those the tester has recorded at least once
+	Assignments       int64 `json:"assignments"`
+	TestedAssignments int64 `json:"tested_assignments"`
+	IsComplete        bool  `json:"is_complete"`
+	IsLocked          bool  `json:"is_locked"`
+	HasReport         bool  `json:"has_report"`
 	// The latest report generated for the test plan, only set when fetching one test plan
 	ReportID  string                 `json:"report_id,omitempty"`
 	CreatedAt string                 `json:"created_at"`
@@ -96,27 +116,29 @@ func NewTestPlanListResponse(items []dbsqlc.TestPlan, queries *dbsqlc.Queries, c
 	for _, e := range items {
 		stats, _ := queries.GetTestPlanRunStats(ctx, sql.NullInt32{Int32: int32(e.ID), Valid: true})
 		res = append(res, TestPlanResponseItem{
-			ID:              e.ID,
-			ProjectID:       e.ProjectID,
-			EnvironmentID:   e.EnvironmentID.Int32,
-			AssignedToID:    e.AssignedToID,
-			CreatedByID:     e.CreatedByID,
-			UpdatedByID:     e.UpdatedByID,
-			Kind:            string(e.Kind),
-			Description:     e.Description.String,
-			StartAt:         e.StartAt.Time.Format(time.DateTime),
-			ScheduledEndAt:  e.ScheduledEndAt.Time.Format(time.DateTime),
-			ClosedAt:        e.ClosedAt.Time.Format(time.DateTime),
-			NumTestCases:    e.NumTestCases,
-			PassedCount:     stats.PassedCount,
-			FailedCount:     stats.FailedCount,
-			PendingCount:    stats.PendingCount,
-			AssignedTesters: stats.AssignedTestersCount,
-			IsComplete:      e.IsComplete.Bool,
-			IsLocked:        e.IsLocked.Bool,
-			HasReport:       e.HasReport.Bool,
-			CreatedAt:       e.CreatedAt.Time.Format(time.DateTime),
-			UpdatedAt:       e.UpdatedAt.Time.Format(time.DateTime),
+			ID:                e.ID,
+			ProjectID:         e.ProjectID,
+			EnvironmentID:     e.EnvironmentID.Int32,
+			AssignedToID:      e.AssignedToID,
+			CreatedByID:       e.CreatedByID,
+			UpdatedByID:       e.UpdatedByID,
+			Kind:              string(e.Kind),
+			Description:       e.Description.String,
+			StartAt:           e.StartAt.Time.Format(time.DateTime),
+			ScheduledEndAt:    e.ScheduledEndAt.Time.Format(time.DateTime),
+			ClosedAt:          e.ClosedAt.Time.Format(time.DateTime),
+			NumTestCases:      e.NumTestCases,
+			PassedCount:       stats.PassedCount,
+			FailedCount:       stats.FailedCount,
+			PendingCount:      stats.PendingCount,
+			AssignedTesters:   stats.AssignedTestersCount,
+			Assignments:       stats.AssignmentsCount,
+			TestedAssignments: stats.TestedAssignmentsCount,
+			IsComplete:        e.IsComplete.Bool,
+			IsLocked:          e.IsLocked.Bool,
+			HasReport:         e.HasReport.Bool,
+			CreatedAt:         e.CreatedAt.Time.Format(time.DateTime),
+			UpdatedAt:         e.UpdatedAt.Time.Format(time.DateTime),
 		})
 	}
 	return res

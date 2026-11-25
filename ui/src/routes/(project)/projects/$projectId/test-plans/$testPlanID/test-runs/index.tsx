@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Badge,
   Box,
@@ -15,8 +15,8 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { IconSearch, IconX, IconPaperclip, IconDownload } from "@tabler/icons-react";
 import {
   EmptyState,
@@ -24,6 +24,7 @@ import {
   LoadingState,
 } from "@/components/ui/page-states";
 import { toaster } from "@/components/ui/toaster";
+import { FilterSelect } from "@/components/ui/filter-select";
 import { MarkdownChecklist } from "@/components/MarkdownChecklist";
 import type { components } from "@/lib/api/v1";
 import { formatHumanDateTime } from "@/lib/date-time";
@@ -41,12 +42,27 @@ type TestRunItem = components["schemas"]["schema.TestRunResponse"] & {
   attachment_count?: number;
 };
 type ResultFilter = "all" | "passed" | "failed" | "pending";
+// Awaiting review: a result was recorded but the plan owner has not closed the run yet
+type ReviewFilter = "all" | "awaiting" | "reviewed";
+const RESULT_FILTERS = ["passed", "failed", "pending"] as const;
+
+// Anchor of the test runs list, the close dialog links to it as #test-runs
+const TEST_RUNS_ANCHOR = "test-runs";
 
 export const Route = createFileRoute(
   "/(project)/projects/$projectId/test-plans/$testPlanID/test-runs/"
 )({
+  // ?review=awaiting lets other pages link straight to the runs waiting for review
+  validateSearch: (search: Record<string, unknown>): { review?: ReviewFilter } => {
+    const review = search.review;
+    return review === "awaiting" || review === "reviewed" ? { review } : {};
+  },
   component: TestPlanTestRunsPage,
 });
+
+function isAwaitingReview(run: TestRunItem) {
+  return !run.is_closed && getResultState(run.result_state) !== "pending";
+}
 
 function TestPlanTestRunsPage() {
   const { t } = useTranslation();
@@ -55,7 +71,15 @@ function TestPlanTestRunsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [envFilter, setEnvFilter] = useState<number | "all">("all");
+  const { review: reviewFilter = "all" } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const setReviewFilter = (value: ReviewFilter) =>
+    navigate({
+      search: (prev) => ({ ...prev, review: value === "all" ? undefined : value }),
+      replace: true,
+    });
   const [closingRunId, setClosingRunId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["testRuns", testPlanID],
@@ -82,7 +106,10 @@ function TestPlanTestRunsPage() {
       const matchesFilter = resultFilter === "all" || runState === resultFilter;
       const matchesEnv =
         envFilter === "all" || run.environment_id === envFilter;
-      if (!matchesFilter || !matchesEnv) return false;
+      const matchesReview =
+        reviewFilter === "all" ||
+        (reviewFilter === "awaiting" ? isAwaitingReview(run) : !!run.is_closed);
+      if (!matchesFilter || !matchesEnv || !matchesReview) return false;
       if (!term) return true;
       const searchable = [
         run.id,
@@ -97,16 +124,34 @@ function TestPlanTestRunsPage() {
         .toLowerCase();
       return searchable.includes(term);
     });
-  }, [allRuns, resultFilter, envFilter, searchTerm]);
+  }, [allRuns, resultFilter, envFilter, reviewFilter, searchTerm]);
 
   const closedRuns = allRuns.filter((run) => run.is_closed).length;
-  const openRuns = allRuns.length - closedRuns;
-  const passedRuns = allRuns.filter(
-    (run) => getResultState(run.result_state) === "passed"
-  ).length;
-  const failedRuns = allRuns.filter(
-    (run) => getResultState(run.result_state) === "failed"
-  ).length;
+  const awaitingReviewRuns = allRuns.filter(isAwaitingReview).length;
+  const resultCounts = { passed: 0, failed: 0, pending: 0 };
+  allRuns.forEach((run) => {
+    resultCounts[getResultState(run.result_state) as Exclude<ResultFilter, "all">] += 1;
+  });
+
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    resultFilter !== "all" ||
+    reviewFilter !== "all" ||
+    envFilter !== "all";
+  const clearFilters = () => {
+    setSearchTerm("");
+    setResultFilter("all");
+    setEnvFilter("all");
+    setReviewFilter("all");
+  };
+
+  // The list sits below the plan header, so scroll to it once it has loaded
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!isLoading && hash === TEST_RUNS_ANCHOR) {
+      document.getElementById(TEST_RUNS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isLoading, hash]);
 
   if (isLoading) return <LoadingState label={t("test_plans.loading")} />;
   if (error) return <ErrorState title={t("test_plans.error")} />;
@@ -117,6 +162,10 @@ function TestPlanTestRunsPage() {
       await closeTestRun(runId);
       toaster.success({ title: t("test_plans.close_run.success") });
       await refetch();
+      // A closed run moves its test case from awaiting review to reviewed
+      queryClient.invalidateQueries({
+        queryKey: ["get", "/v1/test-plans/{testPlanID}/tester-progress"],
+      });
     } catch (closeError) {
       console.error("Failed to close test run", closeError);
       toaster.error({ title: t("test_plans.close_run.error") });
@@ -126,7 +175,7 @@ function TestPlanTestRunsPage() {
   };
 
   return (
-    <Box w="full">
+    <Box w="full" id={TEST_RUNS_ANCHOR} scrollMarginTop="4">
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={{ base: 4, md: 6 }}>
           <Stack gap={2}>
@@ -134,22 +183,39 @@ function TestPlanTestRunsPage() {
               {t("test_plans.runs")}
             </Heading>
             <Text color="fg.subtle">{t("test_plans.runs_description")}</Text>
+            {/* Each count is also a shortcut that filters the list to it */}
             <HStack gap={2} flexWrap="wrap">
-              <Badge colorPalette="brand" variant="subtle">
+              <SummaryBadge colorPalette="brand" onClick={clearFilters}>
                 {allRuns.length} {t("test_plans.runs.total")}
-              </Badge>
-              <Badge colorPalette="green" variant="subtle">
-                {passedRuns} {t("test_plans.runs.passed")}
-              </Badge>
-              <Badge colorPalette="red" variant="subtle">
-                {failedRuns} {t("test_plans.runs.failed")}
-              </Badge>
-              <Badge colorPalette="orange" variant="subtle">
-                {openRuns} {t("test_plans.runs.open")}
-              </Badge>
-              <Badge colorPalette="gray" variant="subtle">
-                {closedRuns} {t("test_plans.runs.closed")}
-              </Badge>
+              </SummaryBadge>
+              <SummaryBadge
+                colorPalette="green"
+                active={resultFilter === "passed"}
+                onClick={() => setResultFilter("passed")}
+              >
+                {resultCounts.passed} {t("test_plans.runs.passed")}
+              </SummaryBadge>
+              <SummaryBadge
+                colorPalette="red"
+                active={resultFilter === "failed"}
+                onClick={() => setResultFilter("failed")}
+              >
+                {resultCounts.failed} {t("test_plans.runs.failed")}
+              </SummaryBadge>
+              <SummaryBadge
+                colorPalette="orange"
+                active={reviewFilter === "awaiting"}
+                onClick={() => setReviewFilter("awaiting")}
+              >
+                {awaitingReviewRuns} {t("test_plans.runs.awaiting_review")}
+              </SummaryBadge>
+              <SummaryBadge
+                colorPalette="gray"
+                active={reviewFilter === "reviewed"}
+                onClick={() => setReviewFilter("reviewed")}
+              >
+                {closedRuns} {t("test_plans.runs.reviewed")}
+              </SummaryBadge>
             </HStack>
           </Stack>
         </Card.Body>
@@ -157,53 +223,64 @@ function TestPlanTestRunsPage() {
 
       <Card.Root border="sm" borderColor="border.subtle" bg="bg.surface" mb={5}>
         <Card.Body p={4}>
-          <Stack gap={3}>
-            <InputGroup startElement={<IconSearch size={16} />}>
+          <Flex gap={2} wrap="wrap" align="center">
+            <InputGroup
+              startElement={<IconSearch size={16} />}
+              flex="1"
+              minW={{ base: "full", md: "64" }}
+            >
               <Input
+                size="sm"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={t("test_plans.search_runs")}
               />
             </InputGroup>
-
-            <HStack gap={2} flexWrap="wrap">
-              {(["all", "passed", "failed", "pending"] as ResultFilter[]).map(
-                (value) => (
-                  <Button
-                    key={value}
-                    size="xs"
-                    variant={resultFilter === value ? "solid" : "outline"}
-                    colorPalette={resultFilter === value ? "brand" : "gray"}
-                    onClick={() => setResultFilter(value)}
-                  >
-                    {t(`test_plans.filter.${value}`)}
-                  </Button>
-                )
-              )}
-            </HStack>
-
-            <HStack gap={2} flexWrap="wrap">
-              <Button
-                size="xs"
-                variant={envFilter === "all" ? "solid" : "outline"}
-                colorPalette={envFilter === "all" ? "brand" : "gray"}
-                onClick={() => setEnvFilter("all")}
-              >
-                {t("test_plans.all_envs")}
+            <FilterSelect
+              label={t("test_plans.filter.result")}
+              allLabel={t("test_plans.filter.all_results")}
+              value={resultFilter === "all" ? "" : resultFilter}
+              options={RESULT_FILTERS.map((value) => ({
+                value,
+                label: `${t(`test_plans.filter.${value}`)} (${resultCounts[value]})`,
+              }))}
+              onChange={(value) => setResultFilter((value || "all") as ResultFilter)}
+            />
+            <FilterSelect
+              label={t("test_plans.review_filter.label")}
+              allLabel={t("test_plans.review_filter.all")}
+              value={reviewFilter === "all" ? "" : reviewFilter}
+              options={[
+                {
+                  value: "awaiting",
+                  label: `${t("test_plans.review_filter.awaiting")} (${awaitingReviewRuns})`,
+                },
+                {
+                  value: "reviewed",
+                  label: `${t("test_plans.review_filter.reviewed")} (${closedRuns})`,
+                },
+              ]}
+              onChange={(value) => setReviewFilter((value || "all") as ReviewFilter)}
+            />
+            {environments.length > 0 && (
+              <FilterSelect
+                label={t("test_plans.filter.environment")}
+                allLabel={t("test_plans.all_envs")}
+                value={envFilter === "all" ? "" : String(envFilter)}
+                options={environments.map((env) => ({
+                  value: String(env.id),
+                  label: env.name,
+                }))}
+                onChange={(value) => setEnvFilter(value ? Number(value) : "all")}
+              />
+            )}
+            {hasActiveFilters && (
+              <Button size="sm" variant="ghost" onClick={clearFilters}>
+                <IconX size={16} />
+                {t("test_plans.filter.clear")}
               </Button>
-              {environments.map((env) => (
-                <Button
-                  key={env.id}
-                  size="xs"
-                  variant={envFilter === env.id ? "solid" : "outline"}
-                  colorPalette={envFilter === env.id ? "brand" : "gray"}
-                  onClick={() => setEnvFilter(env.id!)}
-                >
-                  {env.name}
-                </Button>
-              ))}
-            </HStack>
-          </Stack>
+            )}
+          </Flex>
         </Card.Body>
       </Card.Root>
 
@@ -263,7 +340,11 @@ function TestPlanTestRunsPage() {
                           colorPalette={run.is_closed ? "gray" : "orange"}
                           variant="subtle"
                         >
-                          {run.is_closed ? t("test_plans.runs.closed") : t("test_plans.runs.open")}
+                          {run.is_closed
+                            ? t("test_plans.runs.reviewed")
+                            : isAwaitingReview(run)
+                              ? t("test_plans.runs.awaiting_review")
+                              : t("test_plans.runs.open")}
                         </Badge>
                         {run.attachment_count ? (
                           <Badge colorPalette="blue" variant="subtle">
@@ -441,6 +522,26 @@ function AttachmentSection({
         </Box>
       )}
     </Box>
+  );
+}
+
+function SummaryBadge({
+  colorPalette,
+  active = false,
+  onClick,
+  children,
+}: {
+  colorPalette: string;
+  active?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Badge asChild colorPalette={colorPalette} variant={active ? "solid" : "subtle"}>
+      <button type="button" onClick={onClick} style={{ cursor: "pointer" }}>
+        {children}
+      </button>
+    </Badge>
   );
 }
 

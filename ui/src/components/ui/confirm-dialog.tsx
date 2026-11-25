@@ -11,6 +11,9 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   confirmColorPalette?: "red" | "brand" | "green" | "orange" | "gray";
   onConfirm: () => Promise<void> | void;
+  // Extra content shown under the description, such as a warning. A function
+  // receives a callback that closes the dialog, e.g. for links inside it.
+  children?: ReactNode | ((close: () => void) => ReactNode);
 };
 
 export function ConfirmDialog({
@@ -21,6 +24,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   confirmColorPalette = "red",
   onConfirm,
+  children,
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +67,7 @@ export function ConfirmDialog({
       }
     >
       {description ? <Text color="fg.subtle">{description}</Text> : null}
+      {typeof children === "function" ? children(() => setOpen(false)) : children}
     </AppDialog>
   );
 }
