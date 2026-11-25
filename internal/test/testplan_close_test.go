@@ -34,7 +34,6 @@ func newCloseFixture(t *testing.T) (freezeFixture, services.ReportService) {
 			}
 			rows.Close()
 		}
-		os.Remove("storage/reports") // only removed when empty
 		f.db.Exec(`DELETE FROM reports WHERE project_id = $1`, f.projectID)
 		f.db.Exec(`DELETE FROM test_run_results WHERE test_run_id IN (SELECT id FROM test_runs WHERE project_id = $1)`, f.projectID)
 		f.db.Exec(`DELETE FROM test_runs WHERE project_id = $1`, f.projectID)
