@@ -283,14 +283,16 @@ type SelectionDraftsRequest struct {
 }
 
 // SelectionDraftsResponse lists the drafts in a selection, which are skipped when the
-// selection is assigned to testers
+// selection is assigned to testers. Every field is always sent; the required tags only
+// mark them as required in the API docs, so the generated client does not type them as
+// optional.
 type SelectionDraftsResponse struct {
 	// Number of drafts in the selection
-	Count int `json:"count"`
+	Count int `json:"count" validate:"required"`
 	// IDs of every draft in the selection
-	TestCaseIDs []string `json:"test_case_ids"`
+	TestCaseIDs []string `json:"test_case_ids" validate:"required"`
 	// Codes of the first drafts, for display
-	Codes []string `json:"codes"`
+	Codes []string `json:"codes" validate:"required"`
 }
 
 // ParsePriorityLevel converts a priority/urgency value from a request into its
