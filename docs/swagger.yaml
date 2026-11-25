@@ -1372,6 +1372,11 @@ components:
           type: integer
         assigned_to_id:
           type: integer
+        assignments:
+          description: |-
+            Assignments counts each test case assigned to each tester, TestedAssignments
+            those the tester has recorded at least once
+          type: integer
         closed_at:
           type: string
         created_at:
@@ -1417,6 +1422,8 @@ components:
             $ref: '#/components/schemas/schema.TestCaseResponseItem'
           type: array
           uniqueItems: false
+        tested_assignments:
+          type: integer
         updated_at:
           type: string
         updated_by_id:
