@@ -1130,6 +1130,10 @@ components:
             type: string
           type: array
           uniqueItems: false
+      required:
+      - codes
+      - count
+      - test_case_ids
       type: object
     schema.SetCommentReaction:
       properties:
