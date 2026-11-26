@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
     fix-bug:
-        if: github.event.label.name == 'bug' && contains(github.event.issue.body, '@hopesain')
+        if: github.event.label.name == 'claude-fix'
 
         runs-on: ubuntu-latest
 
@@ -131,7 +131,7 @@ jobs:
                        - Fill in the template at `.github/pull_request_template.md` for the PR body.
                        - Put `Closes #${{ github.event.issue.number }}` in the Description section.
                        - Do not add manual-testing lines to the PR body.
-                       - Add the `bug` label to the PR (`--label bug`).
+                       - Give the PR the same labels as the issue, except `claude-fix`.
 
                     Hard rules:
                     - Never add AI attribution anywhere: no `Co-Authored-By` trailers in commits,
