@@ -832,7 +832,6 @@ func ListBlockedTestCases(testCasesService services.TestCaseService, logger logg
 func SuggestTestCase(testCaseService services.TestCaseService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		req := new(schema.CreateSuggestedTestCaseRequest)
-		fmt.Printf("Debug: struct type = %T\n", req) // TODO DELETE TEST CODE
 		if validationErrors, err := common.ParseBodyThenValidate(c, req); err != nil {
 			if validationErrors {
 				return problemdetail.ValidationErrors(c, "invalid data in the request", err)
