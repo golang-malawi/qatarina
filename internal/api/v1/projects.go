@@ -89,9 +89,10 @@ func SearchProjects(projectService services.ProjectService, logger logging.Logge
 //	@Param			projectID	path		string	true	"Project ID"
 //	@Success		200			{object}	schema.ProjectResponse
 //	@Failure		400			{object}	problemdetail.ProblemDetail
+//	@Failure		404			{object}	problemdetail.ProblemDetail
 //	@Failure		500			{object}	problemdetail.ProblemDetail
 //	@Router			/v1/projects/{projectID} [get]
-func GetOneProject(projectService services.ProjectService) fiber.Handler {
+func GetOneProject(projectService services.ProjectService, logger logging.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID, err := c.ParamsInt("projectID", 0)
 		if err != nil {
@@ -99,7 +100,10 @@ func GetOneProject(projectService services.ProjectService) fiber.Handler {
 		}
 		project, err := projectService.FindByID(context.Background(), int64(projectID))
 		if err != nil {
-			// TODO: logging
+			if errors.Is(err, sql.ErrNoRows) {
+				return problemdetail.NotFound(c, "project not found")
+			}
+			logger.Error(loggedmodule.ApiProjects, "failed to fetch project", "projectID", projectID, "error", err)
 			return problemdetail.ServerErrorProblem(c, "failed to process request")
 		}
 		return c.JSON(schema.NewProjectResponse(project, nil))
